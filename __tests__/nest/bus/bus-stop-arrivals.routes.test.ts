@@ -71,7 +71,7 @@ import { FakeBusRouteAttributesRepository } from "../../helpers/fakes/bus/bus-ro
 import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.client.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.repository.fake";
-import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
+import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
 
@@ -159,7 +159,7 @@ async function boot(stores: Stores, now = AT_14_10_KST): Promise<import("http").
       { provide: BusScheduleRepository, useValue: stores.timetable },
       { provide: BusScheduleContentRepository, useValue: stores.content },
       { provide: BusEtaRepository, useValue: stores.estimates },
-      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
+      { provide: CalendarRepository, useValue: storedCalendarRepository() },
       { provide: Clock, useValue: { now: () => new Date(now) } },
     ],
     role: "api",

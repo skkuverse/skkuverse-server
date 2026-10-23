@@ -51,7 +51,7 @@ import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracki
 import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
-import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
+import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
@@ -485,7 +485,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
       ],
       overrides: [
         { provide: Clock, useValue: PILOT_NOON },
-        { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
+        { provide: CalendarRepository, useValue: storedCalendarRepository() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },

@@ -2,10 +2,12 @@
  * BusScheduleService over an in-memory timetable store: how a week resolves
  * (an override, then a rest day or holiday, then the pattern in effect, then
  * the fallback display), the week cache and its TTL, and the smart view's
- * opening day, suspension and noData. The holiday lookup is stubbed per test.
- * Each service's notices and suspension come from an in-memory content store
- * holding revision 1 of `bus-service-notices`; a test that needs other content
- * stores it as the next revision before its first read.
+ * opening day, suspension and noData. The non-operating-day label is stubbed
+ * per test. Each service's notices and suspension come from an in-memory
+ * content store holding revision 1 of `bus-service-notices`, and each date's
+ * day from a CalendarService over an in-memory calendar store holding revision
+ * 1 of `skku-rest-days`; a test that needs other content stores it as the next
+ * revision before its first read.
  */
 
 jest.mock("../../infra/logger", () => ({
@@ -22,11 +24,11 @@ jest.mock("./bus-schedule.rules", () => ({
 }));
 
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
-import { FakeCalendarService } from "../../../__tests__/helpers/fakes/calendar/calendar.service.fake";
 import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
-import { restDaysFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../../__tests__/helpers/bus/schedule-content";
+import { serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../../__tests__/helpers/bus/schedule-content";
+import { restDaysFixture, storedCalendarRepository, storedCalendarService } from "../../../__tests__/helpers/calendar/rest-days";
+import type { FakeCalendarRepository } from "../../../__tests__/helpers/fakes/calendar/calendar.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { CalendarService } from "../../calendar/calendar.service";
 import type { Clock } from "../../infra/clock";
 import type { BusScheduleContentRepository } from "../schedule-content/bus-schedule-content.repository";
 import { BusScheduleContentService } from "../schedule-content/bus-schedule-content.service";
@@ -42,18 +44,20 @@ const clock: Clock = { now: () => new Date() };
 
 let repository: FakeBusScheduleRepository;
 let content: FakeBusScheduleContentRepository;
+let calendar: FakeCalendarRepository;
 let service: BusScheduleService;
 
 const SUSPENSION = { from: "2026-06-21", until: "2026-08-31" };
 
 function scheduleServiceOver(timetable: FakeBusScheduleRepository, stored: FakeBusScheduleContentRepository): BusScheduleService {
-  const contentService = new BusScheduleContentService(asReal<BusScheduleContentRepository>(stored), clock);
-  return new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<CalendarService>(new FakeCalendarService()), contentService, clock);
+  const contentService = new BusScheduleContentService(asReal<BusScheduleContentRepository>(stored), storedCalendarService(clock, calendar), clock);
+  return new BusScheduleService(asReal<BusScheduleRepository>(timetable), contentService, clock);
 }
 
 beforeEach(() => {
   repository = new FakeBusScheduleRepository();
   content = storedScheduleContentRepository();
+  calendar = storedCalendarRepository();
   getNonOperatingDayLabel.mockImplementation(() => null);
   service = scheduleServiceOver(repository, content);
 });
@@ -219,7 +223,7 @@ describe("BusScheduleService.resolveWeek", () => {
     repository.patterns = [
       { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
     ];
-    getNonOperatingDayLabel.mockImplementation((_restDays: unknown, d: string) =>
+    getNonOperatingDayLabel.mockImplementation(({ date: d }: { date: string }) =>
       d === "2026-03-10" ? "삼일절 대체공휴일" : null,
     );
 
@@ -568,7 +572,7 @@ describe("pattern effective ranges", () => {
   it("a holiday inside the range resolves to no service with its label", async () => {
     // Arrange
     repository.patterns = [pilot];
-    getNonOperatingDayLabel.mockImplementation((_restDays: unknown, d: string) => (d === "2026-10-21" ? "휴일" : null));
+    getNonOperatingDayLabel.mockImplementation(({ date: d }: { date: string }) => (d === "2026-10-21" ? "휴일" : null));
 
     // Act
     const result = await service.resolveWeek("campus-inja", "2026-10-19");
@@ -1115,7 +1119,7 @@ describe("BusScheduleService over the stored schedule content", () => {
     repository.patterns = [WEEKDAYS, { ...WEEKDAYS, serviceId: "fasttrack-inja" }, { ...WEEKDAYS, serviceId: "campus-jain" }];
     repository.overrides = [{ serviceId: "campus-jain", date: "2026-03-11", type: "replace", label: "특별 운행", notices: [], entries: WEEKDAYS.entries }];
     const before = await service.resolveWeek("campus-inja", "2026-03-09");
-    content.storeRestDays({ ...restDaysFixture(), "2026-03-11": "학사휴교" });
+    calendar.storeRestDays({ ...restDaysFixture(), "2026-03-11": "학사휴교" });
 
     // Act
     jest.advanceTimersByTime(59_000);

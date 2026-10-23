@@ -64,7 +64,7 @@ import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtim
 import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.client.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.repository.fake";
-import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
+import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
 
@@ -138,7 +138,7 @@ async function bootWithStopPage(stores: Stores): Promise<import("http").Server> 
       { provide: BusScheduleRepository, useValue: new FakeBusScheduleRepository() },
       { provide: BusScheduleContentRepository, useValue: storedScheduleContentRepository() },
       { provide: BusEtaRepository, useValue: new FakeBusEtaRepository() },
-      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
+      { provide: CalendarRepository, useValue: storedCalendarRepository() },
       { provide: Clock, useValue: { now: () => new Date(NOW) } },
     ],
     role: "api",

@@ -45,12 +45,13 @@ import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
-import { serviceNoticesFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
+import { serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleContentRepository } from "../../helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 
 const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
 const ENTRY = { index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null };
@@ -65,10 +66,9 @@ interface TestApp {
 }
 
 // WHY: the clock reads the (possibly fake-timer) Date, so a test fixes or advances the time with jest.
-async function bootApp(content = storedScheduleContentRepository()): Promise<TestApp> {
+async function bootApp(content = storedScheduleContentRepository(), holidays = storedCalendarRepository()): Promise<TestApp> {
   const timetable = new FakeBusScheduleRepository();
   const estimates = new FakeBusEtaRepository();
-  const holidays = new FakeCalendarRepository();
   const app = await buildTestApp({
     imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusEtaModule, BusEtaSmartModule],
     overrides: [
@@ -727,9 +727,7 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart with no schedule con
 
   it("answers smart with 503 BUS_SCHEDULE_UNAVAILABLE when only the rest days are missing", async () => {
     // Arrange
-    const noRestDays = new FakeBusScheduleContentRepository();
-    noRestDays.storeServiceNotices(serviceNoticesFixture());
-    const unread = await bootApp(noRestDays);
+    const unread = await bootApp(storedScheduleContentRepository(), new FakeCalendarRepository());
     unread.timetable.patterns = [pattern("campus-inja", [1, 2, 3, 4, 5])];
 
     try {
@@ -811,7 +809,7 @@ describe("GET /bus/config across a content push", () => {
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
         { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
-        { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
+        { provide: CalendarRepository, useValue: storedCalendarRepository() },
         { provide: Clock, useValue: { now: () => new Date() } },
       ],
       role: "api",

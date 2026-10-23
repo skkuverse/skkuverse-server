@@ -32,7 +32,7 @@ import { storedRouteAttributesRepository } from "../bus/route-attributes";
 import { storedBusRoutePathRepository } from "../bus/bus-route-path";
 import { storedHsscRouteLineRepository } from "../bus/hssc-route-line";
 import { FakeBusCacheRepository } from "../fakes/bus/bus-cache.repository.fake";
-import { FakeCalendarRepository } from "../fakes/calendar/calendar.repository.fake";
+import { storedCalendarRepository } from "../calendar/rest-days";
 import { FakeMapRepository } from "../fakes/map/map.repository.fake";
 import { FakeMiniappsManifestClient } from "../fakes/miniapps/miniapps-manifest.client.fake";
 import { FakeMiniappsManifestRepository } from "../fakes/miniapps/miniapps-manifest.repository.fake";
@@ -54,7 +54,7 @@ export function buildApiReplicaApp(): Promise<NestExpressApplication> {
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: BusHsscRouteLineRepository, useValue: storedHsscRouteLineRepository() },
-      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
+      { provide: CalendarRepository, useValue: storedCalendarRepository() },
       { provide: MapRepository, useValue: new FakeMapRepository() },
       { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },
