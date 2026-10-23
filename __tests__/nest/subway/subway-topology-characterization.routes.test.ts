@@ -18,8 +18,9 @@
  * trains stand at the station, at upstream platforms, at no position and at
  * the next platform, so every train is served from the stored state and no
  * timetable is read; and whose content database holds revision 1 of
- * `subway-topology`, stored through the tool's own
- * scripts/lib/datasets/store.js. The topology is the dataset's; every expected value was pinned while it was still the committed registry file, of
+ * `subway-topology` and of `subway-station-coords`, stored through the tool's own
+ * scripts/lib/datasets/store.js. Each station's `coords` is revision 1's, which
+ * production did not serve on 2026-10-20: the expected station adds it to the capture's. The topology is the dataset's; every expected value was pinned while it was still the committed registry file, of
  * which revision 1 is a copy.
  *
  * At 00:20 and 02:00 KST on Wednesday 2026-10-21, the night window production
@@ -52,6 +53,7 @@ type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type TopologyHelpers = typeof import("../../helpers/subway/topology");
 type TimetableHelpers = typeof import("../../helpers/subway/timetables");
+type StationCoordsHelpers = typeof import("../../helpers/subway/station-coords");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -93,7 +95,7 @@ function expectedBody(stationId: StationId, lang: Lang) {
   return {
     meta: capture.meta,
     data: {
-      station: capture.station,
+      station: { ...capture.station, coords: stationCoordsFixture().stations[stationId] },
       lines: capture.lines.map(({ line, platformId, directions }) => {
         const doc = seededDocOf(platformId);
         return {
@@ -134,6 +136,7 @@ function toStoredDoc({ _id, generatedAt, serviceDate, directions }: SeededDoc): 
 }
 
 let mongod: TestMongod;
+let stationCoordsFixture: StationCoordsHelpers["stationCoordsFixture"];
 let db: Db;
 let app: NestExpressApplication;
 
@@ -147,6 +150,8 @@ beforeAll(async () => {
   const { subwayTopologyFixture } = require("../../helpers/subway/topology") as TopologyHelpers;
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "subway-topology", subwayTopologyFixture(), { by: "characterization@example.com", now: NOW });
+  ({ stationCoordsFixture } = require("../../helpers/subway/station-coords") as StationCoordsHelpers);
+  await store.create(content, "subway-station-coords", stationCoordsFixture(), { by: "characterization@example.com", now: NOW });
   const { storeSubwayTimetablesFixture } = require("../../helpers/subway/timetables") as TimetableHelpers;
   await storeSubwayTimetablesFixture(content, { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);

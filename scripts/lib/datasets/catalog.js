@@ -171,6 +171,8 @@ function loadCatalog(load) {
   const { laneCorridorDataset } = load("bus/eta/lane/bus-eta-lane.schema");
   const { corridorIssues } = load("bus/eta/lane/bus-eta-lane.rules");
   const { jongroRouteAttributesDataset } = load("bus/route-attributes/bus-route-attributes.schema");
+  const { hsscRouteLineDataset } = load("bus/hssc-route-line/bus-hssc-route-line.schema");
+  const { toRouteLineIssues } = load("bus/hssc-route-line/bus-hssc-route-line.rules");
   const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
   const { busStopsDataset } = load("bus/stops/bus-stops.schema");
   const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
@@ -187,6 +189,8 @@ function loadCatalog(load) {
   const { SUBWAY_NETWORK, SUBWAY_STATIONS } = load("subway/subway.constants");
   const { toNetworkIssues } = load("subway/subway.rules");
   const { subwayTopologyDataset } = load("subway/topology/subway-topology.schema");
+  const { subwayStationCoordsDataset } = load("subway/station-coords/subway-station-coords.schema");
+  const { toStationCoordsIssues } = load("subway/station-coords/subway-station-coords.rules");
   const { toRouteIssues, toTopologyIssues } = load("subway/topology/subway-topology.rules");
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
   const { findTimetable, toLineRoutes, toServiceWindowIssues, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
@@ -328,6 +332,13 @@ function loadCatalog(load) {
         issuesOf: (attributes) => toRouteAttributesIssues(attributes, jongroRoutes.ids()),
         referencesOf: () => [],
       },
+      // The HSSC loop as measured from GPS, which the map draws; it has no upstream, so it is data, not a sync (ADR 0018, D9).
+      "hssc-route-line": {
+        owner: "src/bus/hssc-route-line",
+        schema: hsscRouteLineDataset,
+        issuesOf: toRouteLineIssues,
+        referencesOf: () => [],
+      },
       // The local stops, the shuttle sequences and the HSSC line; the service ids, estimate opt-ins, travel strategies and
       // HSSC position count stay in code (ADR 0013, D2). Its stop ids are what later datasets may name. Its
       // sequences are checked against the target's stored timetables, whose stop times follow them.
@@ -353,6 +364,13 @@ function loadCatalog(load) {
         schema: subwayTopologyDataset,
         reads: ["subway-timetables"],
         issuesOf: topologyIssues,
+        referencesOf: () => [],
+      },
+      // Each served station's camera point, inside South Korea; the stations stay in code (ADR 0013, D2).
+      "subway-station-coords": {
+        owner: "src/subway/station-coords",
+        schema: subwayStationCoordsDataset,
+        issuesOf: (coords) => toStationCoordsIssues(coords, subwayStations.ids()),
         referencesOf: () => [],
       },
       // One table per operator line and day type, a part each; every served platform needs one per day type its source declares (docs/how-to/update-subway-timetables.md).

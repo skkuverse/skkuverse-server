@@ -57,6 +57,9 @@ export const BASE_LAYERS = [
   // QUIRK(naver-map): the app adds the lines in this order and the later lies on top: 07 over 08 where they share a road.
   { id: "jongro08_route", label: { ko: "종로08 노선", en: "Jongno 08 Route", zh: "钟路08路线" }, ...ROUTE_LINE_LAYER },
   { id: "jongro07_route", label: { ko: "종로07 노선", en: "Jongno 07 Route", zh: "钟路07路线" }, ...ROUTE_LINE_LAYER },
+  // WHY: the school's shuttle in its card's SKKU green, last so it lies on top where it shares a road with 08 and 07;
+  // a white edge, since the Jongno lines' dark green edge would vanish against a near-black line.
+  { id: "hssc_route", label: { ko: "인사캠 셔틀버스 노선", en: "HSSC Shuttle Bus Route", zh: "人文校区班车路线" }, ...ROUTE_LINE_LAYER, style: { ...ROUTE_LINE_LAYER.style, color: "003626", outlineColor: "FFFFFF" } },
 ] as const satisfies readonly LayerSpec[];
 
 // WHY: a minute: a stable URL cannot be immutable, and an ops correction must be live before anyone walks there.

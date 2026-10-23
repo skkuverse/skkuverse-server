@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed.",
+  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose.",
   "config": {
     "ko": {
       "status": 200,
@@ -130,6 +130,23 @@
                 "outlineColor": "1B5E20",
                 "minZoom": 13
               }
+            },
+            {
+              "id": "hssc_route",
+              "label": "인사캠 셔틀버스 노선",
+              "defaultVisibleWhen": {
+                "kind": "never"
+              },
+              "userConfigurable": true,
+              "endpoint": "/map/overlays/transit",
+              "chipGroupId": null,
+              "style": {
+                "color": "003626",
+                "width": 5,
+                "outlineWidth": 1.5,
+                "outlineColor": "FFFFFF",
+                "minZoom": 13
+              }
             }
           ],
           "chips": [
@@ -207,7 +224,7 @@
           }
         }
       },
-      "etag": "W/\"afc-fce+rlQ056gUFXyptZraCVW69AY\""
+      "etag": "W/\"c09-aJP0Da4ak3It/VEdxklZoMMS9qw\""
     },
     "en": {
       "status": 200,
@@ -338,6 +355,23 @@
                 "outlineColor": "1B5E20",
                 "minZoom": 13
               }
+            },
+            {
+              "id": "hssc_route",
+              "label": "HSSC Shuttle Bus Route",
+              "defaultVisibleWhen": {
+                "kind": "never"
+              },
+              "userConfigurable": true,
+              "endpoint": "/map/overlays/transit",
+              "chipGroupId": null,
+              "style": {
+                "color": "003626",
+                "width": 5,
+                "outlineWidth": 1.5,
+                "outlineColor": "FFFFFF",
+                "minZoom": 13
+              }
             }
           ],
           "chips": [
@@ -415,7 +449,7 @@
           }
         }
       },
-      "etag": "W/\"afa-oir0pqj3fVTSU0GceVUbHB7Lt4M\""
+      "etag": "W/\"c00-vjUYRtZNUjZhnbXiCyGUT9jEf1Q\""
     },
     "zh": {
       "status": 200,
@@ -546,6 +580,23 @@
                 "outlineColor": "1B5E20",
                 "minZoom": 13
               }
+            },
+            {
+              "id": "hssc_route",
+              "label": "人文校区班车路线",
+              "defaultVisibleWhen": {
+                "kind": "never"
+              },
+              "userConfigurable": true,
+              "endpoint": "/map/overlays/transit",
+              "chipGroupId": null,
+              "style": {
+                "color": "003626",
+                "width": 5,
+                "outlineWidth": 1.5,
+                "outlineColor": "FFFFFF",
+                "minZoom": 13
+              }
             }
           ],
           "chips": [
@@ -623,7 +674,7 @@
           }
         }
       },
-      "etag": "W/\"afb-UzIpRJIDiNoBDoIzJ1T53wiIUKc\""
+      "etag": "W/\"c03-/FMiZZFL+8aMZcsW8EikYz+snBc\""
     }
   },
   "event": {

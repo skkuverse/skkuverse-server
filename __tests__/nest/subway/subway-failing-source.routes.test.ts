@@ -38,6 +38,8 @@ import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
 import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
+import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
+import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwaySeoulApiClient } from "../../helpers/fakes/subway/subway-seoul-api.client.fake";
@@ -95,6 +97,7 @@ beforeEach(async () => {
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
+      { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository() },
       { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
       { provide: SubwaySeoulApiClient, useValue: apiClient },
       { provide: SubwaySeoulTrainmapClient, useValue: trainmapClient },

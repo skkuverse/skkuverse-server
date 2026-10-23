@@ -1,4 +1,5 @@
 import type { SupportedLang } from "../../infra/types";
+import type { LatLng } from "../../shared/lat-lng.types";
 import type { StoredTrainArrival, SubwayArrivalsDoc } from "../subway.document";
 import { toSubwayLine } from "../subway.rules";
 import type { PlatformDirection, SubwayDirection, SubwayPlatform, SubwayRegistry, SubwayStation } from "../subway.types";
@@ -46,7 +47,7 @@ function toWireLine({ platform, doc }: { platform: SubwayPlatform; doc: SubwayAr
 export function toSubwayStationArrivals(
   station: SubwayStation,
   platformDocs: ReadonlyArray<{ platform: SubwayPlatform; doc: SubwayArrivalsDoc }>,
-  { lang, registry }: { lang: SupportedLang; registry: SubwayRegistry },
+  { lang, registry, coords }: { lang: SupportedLang; registry: SubwayRegistry; coords: LatLng | null },
 ): SubwayStationArrivals {
-  return { station: { id: station.id, name: station.name[lang] }, lines: platformDocs.map((platformDoc) => toWireLine(platformDoc, lang, registry)) };
+  return { station: { id: station.id, name: station.name[lang], coords }, lines: platformDocs.map((platformDoc) => toWireLine(platformDoc, lang, registry)) };
 }
