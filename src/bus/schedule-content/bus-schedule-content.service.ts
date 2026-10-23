@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { CalendarService } from "../../calendar/calendar.service";
+import type { CalendarSnapshot } from "../../calendar/calendar.types";
 import { AppError } from "../../http/app.error";
 import { Clock } from "../../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
@@ -33,23 +34,20 @@ export class BusScheduleContentService {
   }
 
   async current(): Promise<ScheduleContent> {
-    const [{ revision, services }, calendarRevisionKey] = await Promise.all([
-      this.serviceNotices.get(),
-      this.askCalendar(() => this.calendar.revisionKey()),
-    ]);
+    const [{ revision, services }, calendar] = await Promise.all([this.serviceNotices.get(), this.currentCalendar()]);
     const contentOf = (serviceId: string) => (Object.hasOwn(services, serviceId) ? services[serviceId] : undefined);
     return {
-      revisionKey: `${revision}.${calendarRevisionKey}`,
-      dayOf: (dateStr) => this.askCalendar(() => this.calendar.dayOf(dateStr)),
+      revisionKey: `${revision}.${calendar.revisionKey}`,
+      dayOf: (dateStr) => calendar.dayOf(dateStr),
       noticesOf: (serviceId) => contentOf(serviceId)?.notices ?? [],
       suspendOf: (serviceId) => contentOf(serviceId)?.suspend ?? null,
     };
   }
 
   // WHY: the calendar answers 503 while it holds no school rest days; riders keep the schedule's own 503 for it.
-  private async askCalendar<T>(ask: () => Promise<T>): Promise<T> {
+  private async currentCalendar(): Promise<CalendarSnapshot> {
     try {
-      return await ask();
+      return await this.calendar.current();
     } catch (err) {
       if (err instanceof AppError && err.httpStatus === 503) throw new BusScheduleContentUnavailableError();
       throw err;

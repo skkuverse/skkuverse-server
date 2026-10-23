@@ -9,7 +9,8 @@ import { CalendarReadError, CalendarUnavailableError } from "./calendar.error";
 import { toSchoolRestDayLabel } from "./calendar.mapper";
 import { CalendarRepository } from "./calendar.repository";
 import { lookupRestDay, toAcademicPeriod, toAcademicYear, toRuleSemesters } from "./calendar.rules";
-import type { AcademicPeriod, CalendarDay, RestDaysRevision } from "./calendar.types";
+import type { AcademicCalendarDoc } from "./calendar.document";
+import type { AcademicPeriod, CalendarDay, CalendarSnapshot, RestDays, RestDaysRevision } from "./calendar.types";
 
 // SEE: docs/decisions/0010-server-architecture.md (D1): the door for other features, which import only a
 // .module or a .service.
@@ -41,11 +42,21 @@ export class CalendarService {
     return publicHolidayOn(dateStr);
   }
 
+  // WHY: one read of the rest days and the crawled years answers every day a caller asks, so a cache built from its
+  // days under `revisionKey` never mixes two revisions; the key changes with either but a public holiday.
+  async current(): Promise<CalendarSnapshot> {
+    const [{ revision, restDays }, academicYears] = await Promise.all([this.restDays.get(), this.repository.listAcademicYears()]);
+    const crawledVersions = [...academicYears].sort((a, b) => a.year - b.year).map((doc) => `${doc.year}@${doc.contentHash}`);
+    return {
+      revisionKey: [String(revision), ...crawledVersions].join("|"),
+      dayOf: (dateStr) => this.dayOf(dateStr, restDays, academicYears),
+    };
+  }
+
   // WHY: the public holiday is asked first, so a date it cannot take throws its RangeError even on a rest day. The
   // dataset's rest day wins over the crawled one, so an operator can correct or add one.
-  async dayOf(dateStr: string): Promise<CalendarDay> {
+  private async dayOf(dateStr: string, restDays: RestDays, academicYears: readonly AcademicCalendarDoc[]): Promise<CalendarDay> {
     const publicHoliday = await this.publicHolidayName(dateStr);
-    const [{ restDays }, academicYears] = await Promise.all([this.restDays.get(), this.repository.listAcademicYears()]);
     const academicYear = toAcademicYear(dateStr);
     const crawled = academicYears.find((doc) => doc.year === academicYear);
     const crawledRestDay = crawled?.restDays.find((row) => row.date === dateStr);
@@ -55,13 +66,6 @@ export class CalendarService {
       schoolRestDay: lookupRestDay(restDays, dateStr) ?? (crawledRestDay ? toSchoolRestDayLabel(crawledRestDay.title) : null),
       academicPeriod: crawled ? toAcademicPeriod(dateStr, crawled.semesters, "crawled") : await this.ruleAcademicPeriod(dateStr, academicYear),
     };
-  }
-
-  // WHY: changes whenever an answer of dayOf may change but a public holiday, so a cache built from it can key on it.
-  async revisionKey(): Promise<string> {
-    const [{ revision }, academicYears] = await Promise.all([this.restDays.get(), this.repository.listAcademicYears()]);
-    const crawledVersions = [...academicYears].sort((a, b) => a.year - b.year).map((doc) => `${doc.year}@${doc.contentHash}`);
-    return [String(revision), ...crawledVersions].join("|");
   }
 
   private async ruleAcademicPeriod(dateStr: string, academicYear: number): Promise<AcademicPeriod> {
