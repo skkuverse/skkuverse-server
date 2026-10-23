@@ -129,6 +129,13 @@
       "GET bus/stops/:stopId/arrivals"
     ]
   },
+  "bus-stop-list.busStopList": {
+    "source": "src/bus/stop-list/bus-stop-list.wire.ts",
+    "export": "busStopList",
+    "routes": [
+      "GET bus/stops"
+    ]
+  },
   "bus.arrival": {
     "source": "src/bus/bus.wire.ts",
     "export": "arrival",

@@ -1,0 +1,188 @@
+{
+  "_about": "Synthetic: GET /bus/stops on 2026-10-23 over the stores of __tests__/nest/bus/bus-stop-list.routes.test.ts (revision 1 of bus-stops, the Jongno registry and route lines production stored), trimmed from 94 stops to five in served order: an HSSC stop with no coordinates, two shuttle stops, the 종로02 loop terminal listed once and a pole 종로07 and 종로08 share.",
+  "data": {
+    "stops": [
+      {
+        "id": "hssc-hyehwa-exit1",
+        "name": {
+          "ko": "혜화역 1번출구",
+          "en": "Hyehwa Station (Shuttle Bus Stop)",
+          "zh": "Hyehwa Station (Shuttle Bus Stop)"
+        },
+        "coords": null,
+        "arsIds": null,
+        "campus": null,
+        "routes": [
+          {
+            "kind": "live",
+            "groupId": "hssc",
+            "label": {
+              "ko": "인사캠 셔틀버스",
+              "en": "HSSC Shuttle Bus",
+              "zh": "人文校区班车"
+            },
+            "stationIndex": 6,
+            "towards": {
+              "ko": "성균관대입구사거리",
+              "en": "SKKU Junction",
+              "zh": "SKKU Junction"
+            },
+            "action": "board"
+          }
+        ]
+      },
+      {
+        "id": "hssc-bus-lot",
+        "name": {
+          "ko": "학생회관 버스 주차장",
+          "en": "Student Union bus parking lot",
+          "zh": "学生会馆巴士停车场"
+        },
+        "coords": {
+          "lat": 37.587367,
+          "lng": 126.993643
+        },
+        "arsIds": null,
+        "campus": null,
+        "routes": [
+          {
+            "kind": "timetable",
+            "groupId": "campus",
+            "label": {
+              "ko": "인사캠 → 자과캠",
+              "en": "HSSC → NSC",
+              "zh": "人文校区 → 自然校区"
+            },
+            "serviceId": "campus-inja",
+            "routeType": "regular",
+            "action": "board"
+          },
+          {
+            "kind": "timetable",
+            "groupId": "campus",
+            "label": {
+              "ko": "인사캠 → 자과캠",
+              "en": "HSSC → NSC",
+              "zh": "人文校区 → 自然校区"
+            },
+            "serviceId": "campus-inja",
+            "routeType": "hakbu",
+            "action": "board"
+          }
+        ]
+      },
+      {
+        "id": "jeongja-exit3",
+        "name": {
+          "ko": "정자역 3번 출구",
+          "en": "Jeongja Stn. Exit 3",
+          "zh": "亭子站 3号出口"
+        },
+        "coords": {
+          "lat": 37.365499,
+          "lng": 127.107906
+        },
+        "arsIds": null,
+        "campus": null,
+        "routes": [
+          {
+            "kind": "timetable",
+            "groupId": "commute",
+            "label": {
+              "ko": "정자",
+              "en": "Jeongja",
+              "zh": "亭子"
+            },
+            "serviceId": "commute-jeongja",
+            "routeType": "up",
+            "action": "board"
+          }
+        ]
+      },
+      {
+        "id": "seoul-01881",
+        "name": {
+          "ko": "성균관대학교",
+          "en": "성균관대학교",
+          "zh": "성균관대학교"
+        },
+        "coords": {
+          "lat": 37.5884638684,
+          "lng": 126.9900035953
+        },
+        "arsIds": [
+          "01881"
+        ],
+        "campus": "hssc",
+        "routes": [
+          {
+            "kind": "live",
+            "groupId": "jongro02",
+            "label": {
+              "ko": "종로 02",
+              "en": "Jongro 02",
+              "zh": "钟路 02"
+            },
+            "stationIndex": 0,
+            "towards": {
+              "ko": "서울성곽.성대후문",
+              "en": "서울성곽.성대후문",
+              "zh": "서울성곽.성대후문"
+            },
+            "action": "board"
+          }
+        ]
+      },
+      {
+        "id": "seoul-01592",
+        "name": {
+          "ko": "혜화역1번출구",
+          "en": "혜화역1번출구",
+          "zh": "혜화역1번출구"
+        },
+        "coords": {
+          "lat": 37.5834729904,
+          "lng": 127.0017632862
+        },
+        "arsIds": [
+          "01592"
+        ],
+        "campus": "hssc",
+        "routes": [
+          {
+            "kind": "live",
+            "groupId": "jongro07",
+            "label": {
+              "ko": "종로 07",
+              "en": "Jongro 07",
+              "zh": "钟路 07"
+            },
+            "stationIndex": 16,
+            "towards": {
+              "ko": "혜화동로터리",
+              "en": "혜화동로터리",
+              "zh": "혜화동로터리"
+            },
+            "action": "board"
+          },
+          {
+            "kind": "live",
+            "groupId": "jongro08",
+            "label": {
+              "ko": "종로 08",
+              "en": "Jongro 08",
+              "zh": "钟路 08"
+            },
+            "stationIndex": 22,
+            "towards": {
+              "ko": "혜화동로터리",
+              "en": "혜화동로터리",
+              "zh": "혜화동로터리"
+            },
+            "action": "board"
+          }
+        ]
+      }
+    ]
+  }
+}

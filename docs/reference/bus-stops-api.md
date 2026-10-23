@@ -9,13 +9,13 @@ audience: internal
 
 # Bus Stops API
 
-> The contract for `GET /bus/stops/:stopId/arrivals`, the stop page: one answer per stop with every route the server serves there, each live line's arrivals as the live route serves them and the next shuttle runs, in one arrival shape ([ADR 0019](../decisions/0019-bus-live-api.md)), and for the `stopId` each realtime station of `/bus/config` links it by. Read it before building a screen on the response. How stops are identified and indexed is [explanation/bus-architecture.md](../explanation/bus-architecture.md); what each part's data is and how to edit it is [how-to/edit-bus-stops.md](../how-to/edit-bus-stops.md).
+> The contract for `GET /bus/stops`, the stop list of every stop with its coordinates and routes, and `GET /bus/stops/:stopId/arrivals`, the stop page: one answer per stop with every route the server serves there, each live line's arrivals as the live route serves them and the next shuttle runs, in one arrival shape ([ADR 0019](../decisions/0019-bus-live-api.md)), and for the `stopId` each realtime station of `/bus/config` links it by. Read it before building a screen on the response. How stops are identified and indexed is [explanation/bus-architecture.md](../explanation/bus-architecture.md); what each part's data is and how to edit it is [how-to/edit-bus-stops.md](../how-to/edit-bus-stops.md).
 
 ## Summary
 
 | | |
 | --- | --- |
-| Route | `GET /bus/stops/:stopId/arrivals` |
+| Route | `GET /bus/stops/:stopId/arrivals`; the stop list, `GET /bus/stops`, has [its own summary](#get-busstops) |
 | Auth | none |
 | Rate limit | `GeneralRateLimitMiddleware`, bound to `bus/stops` in `BusModule.configure` (`src/bus/bus.module.ts`) |
 | Wire type | `busStopArrivals` and `busStopArrivalsMeta` in `src/bus/stop-arrivals/bus-stop-arrivals.wire.ts`, published as `contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`; its arrivals and vehicles are `bus.arrival` and `bus.vehicle`, as on the live route ([bus-live-api.md](bus-live-api.md)) |
@@ -56,6 +56,82 @@ Every other field keeps its value and order, and the schedule groups and `statio
 | ETag | Each realtime group's and the all-groups ETag changed once when the field shipped, in every language; an alias push changes the ETags of the groups whose stations it renames and the all-groups ETag, and no other |
 | Never read | While a replica has never read a good `bus-stops`, the Jongro groups answer `503 BUS_STOPS_UNAVAILABLE` with no `Cache-Control`, like `/bus/config` and the `hssc`, `campus` and `commute` groups; `fasttrack` and the realtime data routes still serve |
 | Following one | `/bus/stops/<stopId>/arrivals` answers its page, or `404 BUS_STOP_NOT_FOUND` once the stop is gone (a pole TOPIS removed, a slug retired by a later alias): a client reads that as "stop gone" |
+
+## GET /bus/stops
+
+The stop list: every stop a served route stops at, once, with where it is and which routes stop there, for the map's stop pins, its 정류장 place category and a realtime line's station list. It carries no arrivals: a pin, a line's station or a list row opens the stop page by `id`.
+
+| | |
+| --- | --- |
+| Wire type | `busStopList` in `src/bus/stop-list/bus-stop-list.wire.ts`, published as `contracts/produced/bus-stop-list.busStopList.schema.json`; fixture `contracts/produced/fixtures/bus-stop-list.busStopList/hssc-shuttle-and-poles.json`, trimmed to five stops |
+| Controller | `src/bus/stop-list/bus-stop-list.controller.ts` |
+| Envelope | `{ meta: {}, data: { stops } }`: one body for every language, so no `meta.lang` and no `Accept-Language` in it |
+| `Cache-Control` | `public, max-age=300`; `public, max-age=60` while a Jongno route's registry or the route lines cannot be read |
+| `ETag` | `"stops-<md5 of the body>"`; `If-None-Match` with it answers `304` with no body. The body derives from the `bus-stops` revision, every stored stations version and every stored route line, so the tag moves when one of them changes what is served |
+| Tests | `__tests__/nest/bus/bus-stop-list.routes.test.ts`, the specs under `src/bus/stop-list/` and `BusStopIndexService.listStops` in `src/bus/stop-index/bus-stop-index.service.spec.ts` |
+
+```json
+{
+  "meta": {},
+  "data": {
+    "stops": [
+      {
+        "id": "hssc-hyehwa-exit1",
+        "name": { "ko": "혜화역 1번출구", "en": "Hyehwa Station (Shuttle Bus Stop)", "zh": "Hyehwa Station (Shuttle Bus Stop)" },
+        "coords": null, "arsIds": null, "campus": null,
+        "routes": [{ "kind": "live", "groupId": "hssc", "label": { "ko": "인사캠 셔틀버스", "en": "HSSC Shuttle Bus", "zh": "人文校区班车" }, "stationIndex": 6, "towards": { "ko": "성균관대입구사거리", "en": "SKKU Junction", "zh": "SKKU Junction" }, "action": "board" }]
+      },
+      {
+        "id": "jeongja-exit3",
+        "name": { "ko": "정자역 3번 출구", "en": "Jeongja Stn. Exit 3", "zh": "亭子站 3号出口" },
+        "coords": { "lat": 37.365499, "lng": 127.107906 }, "arsIds": null, "campus": null,
+        "routes": [{ "kind": "timetable", "groupId": "commute", "label": { "ko": "정자", "en": "Jeongja", "zh": "亭子" }, "serviceId": "commute-jeongja", "routeType": "up", "action": "board" }]
+      },
+      {
+        "id": "seoul-01592",
+        "name": { "ko": "혜화역1번출구", "en": "혜화역1번출구", "zh": "혜화역1번출구" },
+        "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"], "campus": "hssc",
+        "routes": [
+          { "kind": "live", "groupId": "jongro07", "label": { "ko": "종로 07", "en": "Jongro 07", "zh": "钟路 07" }, "stationIndex": 16, "towards": { "ko": "혜화동로터리", "en": "혜화동로터리", "zh": "혜화동로터리" }, "action": "board" },
+          { "kind": "live", "groupId": "jongro08", "label": { "ko": "종로 08", "en": "Jongro 08", "zh": "钟路 08" }, "stationIndex": 22, "towards": { "ko": "혜화동로터리", "en": "혜화동로터리", "zh": "혜화동로터리" }, "action": "board" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### A listed stop
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | The stop id the stop page takes and a realtime station of `/bus/config` serves as `stopId`; a pole a local stop aliases is listed once, under the local stop's slug |
+| `name` | `{ ko, en, zh }` | Each is what a request in that language is served on the stop page: a local stop's name, falling back to English, then Korean; a Jongno pole's stored TOPIS name, Korean in all three |
+| `coords` | `{ lat, lng }` or `null` | The stop's own, else its pole's on the stored route line; `null` while it has neither (every HSSC stop until a `bus-stops` push gives it coordinates, a pole while the route lines cannot be read). A client draws no pin for `null`. A realtime station's coordinates are its stop's: join `/bus/config` `station.stopId` on `id` |
+| `arsIds` | string array or `null` | The ARS numbers of the TOPIS poles it stands for: a pole's own, or those a local stop aliases; `null` for a local stop that aliases none |
+| `campus` | `"hssc"`, `"nsc"` or `null` | A catalog stop's `campus` in `bus-stops`; without one, `hssc` for a Jongno pole or a local stop aliasing one, since all three Jongno routes serve the HSSC campus, else `null` |
+| `routes` | array | One entry per served route at the stop, in the stop page's order, without arrivals |
+
+| Entry | Fields |
+| --- | --- |
+| A realtime line, `kind: "live"` | `groupId`, `label` (`{ ko, en, zh }`, the group's label), `stationIndex` (its index in the group's `/bus/config` stations), `towards` and `action`, each what the stop page's live entry serves in that language: `towards` is `{ ko, en, zh }`, the next station with a stop (a Jongno station's Korean name in all three; on the HSSC loop the next stop as its catalog stop is named), and `null` when the stop is the line's last station, its 종점; `action` is `alight` at an HSSC drop-off-only station, else `board` |
+| A shuttle, `kind: "timetable"` | `groupId`, `label` (`{ ko, en, zh }`, the service's label, which names its direction, so it has no `towards`), `serviceId`, `routeType` and `action` (`board` or `alight`) |
+
+`kind` is an open enum, as on the stop page: parse each entry on its own and skip one whose `kind` the build does not know.
+
+### Order
+
+The stop index's order, which is stable while its sources stay: the HSSC line's stops in line order, then the shuttle sequences' stops (`campus`, then `commute`, each service and route type in `/bus/config`'s order), then each Jongno route's poles in station order (종로02, 07, 08), each stop where it first appears. 종로02's loop terminal `01881` is listed once, and a pole two routes share once, at the first route that reaches it. A screen that sorts by distance or name sorts itself.
+
+### Errors and partial answers
+
+| Status | `error.code` | When |
+| --- | --- | --- |
+| `503` | `BUS_STOPS_UNAVAILABLE` | This replica has never read a good `bus-stops` value; no `Cache-Control`, as on the stop page |
+
+There is no `404`. A Jongno route whose stored registry cannot be read is left out, with the poles only it stops at, logged at error as `bus.stop_index.registry_unread`; while the route lines cannot be read, poles are listed with `coords: null`, logged at warn as `bus.stop_index.coords_unavailable`. Both answer `200` with the one-minute `Cache-Control`, and each log line comes at most once a minute.
+
+Every read goes through the caches the stop page already uses (the `bus-stops` dataset loader, the registry's and the route lines' cached loaders), one route-lines read per request, so the list costs no MongoDB read once they are warm and adds no read path.
 
 ## GET /bus/stops/:stopId/arrivals
 
