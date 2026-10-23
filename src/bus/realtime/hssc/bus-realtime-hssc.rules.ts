@@ -1,11 +1,13 @@
 import moment from "moment-timezone";
 import "moment/locale/ko";
 import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
-import type { HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
+import { HSSC_POSITION_COUNT } from "../../bus.constants";
+import type { HsscAnchorRow, HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
 import {
   HSSC_API_DATE_FORMAT,
   HSSC_EVENT_DATE_FORMAT,
   LIVE_STALE_MINUTES_AT_TURNAROUND,
+  MAX_BACKWARD_POSITIONS,
   STALE_MINUTES,
   STALE_MINUTES_AT_TURNAROUND,
   TURNAROUND_STATION_NAME,
@@ -54,17 +56,34 @@ export function toFeedEventKey(item: HsscApiBus): string {
 }
 
 // WHY: strict, so a row in another shape is left out of the event log rather than stored at a guessed instant.
-export function toFeedEventTiming(item: HsscApiBus): HsscFeedEventTiming | null {
+export function toFeedEventTiming(item: Pick<HsscApiBus, "seq" | "get_date">): HsscFeedEventTiming | null {
   const getDate = moment.tz(item.get_date, HSSC_API_DATE_FORMAT, "ko", true, KST_TIME_ZONE);
   if (!SEQ_PATTERN.test(item.seq) || !getDate.isValid()) return null;
   return { seq: parseInt(item.seq, 10), getDate: getDate.toDate() };
 }
 
+// WHY: an entry an older poller wrote has no anchor row, so the feed's row anchors (ADR 0012, D1).
 export function toHsscStopEvent(bus: HsscBusDoc): HsscStopEvent | null {
-  const timing = toFeedEventTiming(bus);
-  const firstSeenAt = moment.tz(bus.eventDate, HSSC_EVENT_DATE_FORMAT, true, KST_TIME_ZONE);
+  const row = bus.anchorRow ?? bus;
+  const timing = toFeedEventTiming(row);
+  const firstSeenAt = moment.tz(row.eventDate, HSSC_EVENT_DATE_FORMAT, true, KST_TIME_ZONE);
   if (!timing || !firstSeenAt.isValid()) return null;
-  return { vehicleId: bus.line_no, seq: timing.seq, inout: bus.inout, eventAt: timing.getDate, firstSeenAt: firstSeenAt.toDate() };
+  return { vehicleId: bus.line_no, seq: timing.seq, inout: row.inout, eventAt: timing.getDate, firstSeenAt: firstSeenAt.toDate() };
+}
+
+// WHY: the turnaround is never held off, since a lap ends there (ADR 0018, D8).
+function isBackwardInLap(from: HsscAnchorRow, to: HsscAnchorRow): boolean {
+  const backward = (toLinearSequence(parseInt(from.seq, 10)) - toLinearSequence(parseInt(to.seq, 10)) + HSSC_POSITION_COUNT) % HSSC_POSITION_COUNT;
+  return to.stationName !== TURNAROUND_STATION_NAME && backward >= 1 && backward <= MAX_BACKWARD_POSITIONS;
+}
+
+/** WHY: the bus's previous anchor row, held while still fresh against a feed row that puts the bus back in its lap. */
+export function toHeldAnchorRow(bus: HsscBusDoc, previous: readonly HsscBusDoc[], now: Date): HsscAnchorRow | null {
+  const seen = previous.find((previousBus) => previousBus.line_no === bus.line_no);
+  if (!seen) return null;
+  const { seq, inout, get_date, stationName, eventDate } = seen.anchorRow ?? seen;
+  const held = { seq, inout, get_date, stationName, eventDate };
+  return isLiveFresh(held, now) && isBackwardInLap(held, bus) ? held : null;
 }
 
 export function isUnparsedFeed(items: readonly HsscApiBus[]): boolean {
