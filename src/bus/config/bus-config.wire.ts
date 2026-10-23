@@ -13,6 +13,8 @@ const station = z.object({
   name: z.string(),
   subtitle: z.string().nullable(),
   stationNumber: z.string().nullable(),
+  /** WHY: the id of the direction in `directions` this station lies on; null where none joins it, never guessed. */
+  directionId: z.string().nullable(),
   ...{ isFirstStation: z.boolean(), isLastStation: z.boolean(), isRotationStation: z.boolean() },
   /** WHY: the bus passes here without stopping, so no arrival is ever served; a Jongno virtual stop also lacks a stopId. */
   isPassThrough: z.boolean(),
@@ -40,6 +42,8 @@ const realtimeScreen = z.object({
   refreshInterval: z.number(),
   lastStationIndex: z.int(),
   stations: z.array(station),
+  /** WHY: the line's directions in line order, each over contiguous station indexes (bus-live-api.md, Directions). */
+  directions: z.array(z.object({ id: z.string(), label: z.string(), fromIndex: z.int().min(0), toIndex: z.int().min(0) })),
   features: z.array(feature),
   /** WHY: a Jongro route's stations version; the realtime response carries the same while this config is current. */
   stationsVersion: z.string().optional(),

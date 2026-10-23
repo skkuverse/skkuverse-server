@@ -32,7 +32,7 @@ import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
 import type { LaneStrategies } from "../eta/lane/bus-eta-lane.types";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import type { BusStopsData } from "./bus-stops.document";
-import { etaOptIns, subwayStationErrors, toBusStopsIssues, validateStopCatalog } from "./bus-stops.rules";
+import { etaOptIns, storedLineAndAliasErrors, subwayStationErrors, toBusStopsIssues, validateStopCatalog } from "./bus-stops.rules";
 import type { ScheduleStopCatalog } from "./bus-stops.types";
 
 const SERVED_STATIONS = new Set(new SubwayStationsService().listStations().map((station) => station.id));
@@ -789,6 +789,33 @@ describe("toBusStopsIssues", () => {
     expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["hssc", "stations", 9, "stopId"], message: 'names the stop "hssc-main-gate-out", which position 2 names too' }]);
   });
 
+  // WHY: a null stopId is served as a pass-through on /bus/config while the HSSC estimates count stops by the code's pass-through
+  // positions, so the two must agree (ADR 0019 D4).
+  it("Position 4 left null: names its path, since the estimates count it as a stop", () => {
+    // Arrange
+    const data = fixture();
+    data.hssc.stations[4].stopId = null;
+
+    // Act & Assert
+    expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([
+      { path: ["hssc", "stations", 4, "stopId"], message: "is null, but the HSSC estimates count position 4 as a stop (isHsscPassThrough in src/bus/bus.rules.ts)" },
+    ]);
+  });
+
+  it("Position 5 given a stop: names its path and the stop, since the estimates pass it through", () => {
+    // Arrange
+    const data = fixture();
+    data.hssc.stations[5].stopId = "hssc-bus-lot";
+
+    // Act & Assert
+    expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([
+      {
+        path: ["hssc", "stations", 5, "stopId"],
+        message: 'names the stop "hssc-bus-lot" at position 5, which the HSSC estimates pass through (isHsscPassThrough in src/bus/bus.rules.ts)',
+      },
+    ]);
+  });
+
   it("One pole claimed twice: names both paths and 01618", () => {
     // Arrange
     const data = withStop("hssc-bus-lot", { arsIds: ["01618"] });
@@ -816,5 +843,31 @@ describe("toBusStopsIssues", () => {
 
     // Act & Assert
     expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["topis", "01876", "subwayStationId"], message: '"hyehwa4" is not a served subway station' }]);
+  });
+});
+
+describe("storedLineAndAliasErrors", () => {
+  const fixture = (): Record<string, any> => busStopsFixture();
+
+  it("finds none in revision 1, whose overlay and lane fit are not its checks", () => {
+    // Arrange
+    const data: Record<string, any> = { ...fixture(), topis: { "01876": { subwayStationId: "hyehwa4" } } };
+
+    // Act & Assert
+    expect(storedLineAndAliasErrors(data as BusStopsData)).toEqual([]);
+  });
+
+  it("names each HSSC line and alias issue at its path", () => {
+    // Arrange
+    const data = fixture();
+    data.hssc.stations[0].stopId = "hssc-nowhere";
+    data.stops[0].arsIds = ["01618"];
+    data.stops[1].arsIds = ["01618"];
+
+    // Act & Assert
+    expect(storedLineAndAliasErrors(data as BusStopsData)).toEqual([
+      'hssc.stations.0.stopId: names the stop "hssc-nowhere", which the dataset\'s stops do not hold',
+      "stops.1.arsIds.0: ARS number 01618 is aliased by stops.0.arsIds.0 too",
+    ]);
   });
 });

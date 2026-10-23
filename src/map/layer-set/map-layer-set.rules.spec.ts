@@ -299,3 +299,38 @@ describe("assertValidLinkChips", () => {
     expect(() => assertValidLinkChips(specs)).toThrow(/^FATAL \[map chips\]: 2 invalid chip definition\(s\):\n {2}- chip "a".*\n {2}- chip "b"/);
   });
 });
+
+const layersSpec = (id: string, layerIds: readonly string[]): unknown => ({
+  id,
+  emoji: "\u{1F68C}",
+  label: { ko: "노선" },
+  action: { kind: "layers", layerIds, camera: null },
+  isReset: false,
+  list: null,
+});
+
+describe("validateChipSpecs on a layers chip", () => {
+  it("passes base layers that no focus chip may reach, since it needs no chip group", () => {
+    // Act
+    const errors = validateChipSpecs(asSpecs([layersSpec("routes", ["jongro02_route", "hssc_route"])]), CATALOGUE);
+
+    // Assert
+    expect(errors).toEqual([]);
+  });
+
+  it("rejects a layer id that is not a layer, naming the chip", () => {
+    // Act
+    const errors = validateChipSpecs(asSpecs([layersSpec("routes", ["jongro02_route", "ghost_route"])]), CATALOGUE);
+
+    // Assert
+    expect(errors).toEqual(['chip "routes": "ghost_route" is not a layer']);
+  });
+
+  it("rejects an empty layerIds, a chip that would do nothing", () => {
+    // Act
+    const errors = validateChipSpecs(asSpecs([layersSpec("routes", [])]), CATALOGUE);
+
+    // Assert
+    expect(errors).toEqual(['chip "routes": layerIds must not be empty']);
+  });
+});

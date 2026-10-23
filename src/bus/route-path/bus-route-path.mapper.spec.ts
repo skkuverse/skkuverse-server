@@ -1,7 +1,8 @@
 /**
  * The route path mappers: TOPIS points and
  * stations into a line in `no` order as [lng, lat] and stations in `seq`
- * order with their turnaround flag; the stored document with its
+ * order with their turnaround flag and direction (null where TOPIS sent
+ * none); the stored document with its
  * version; and the read shape the map draws, by route id and code.
  */
 import type { RoutePathStation } from "./bus-route-path.document";
@@ -9,7 +10,7 @@ import { toFetchedRoutePath, toRoutePath, toRoutePathDocument } from "./bus-rout
 import { toPathVersion } from "./bus-route-path.rules";
 import type { TopisRouteStation } from "./bus-route-path.schema";
 
-const topisStation = (seq: number, transYn: "Y" | "N" = "N"): TopisRouteStation => ({
+const topisStation = (seq: number, transYn: "Y" | "N" = "N", direction: string | null = null): TopisRouteStation => ({
   station: `10090022${seq}`,
   arsId: `0161${seq}`,
   stationNm: `stop ${seq}`,
@@ -17,6 +18,7 @@ const topisStation = (seq: number, transYn: "Y" | "N" = "N"): TopisRouteStation 
   gpsX: Number(`126.99${seq}`),
   gpsY: 37.58,
   transYn,
+  direction,
 });
 const station = (sequence: number): RoutePathStation => ({ topisId: `t${sequence}`, arsId: `a${sequence}`, stationName: `s${sequence}`, sequence, lng: 127, lat: 37.5, isTurnaround: false });
 
@@ -39,8 +41,20 @@ describe("toFetchedRoutePath", () => {
       [126.993, 37.589],
     ]);
     expect(fetched.stations).toEqual([
-      { topisId: "100900221", arsId: "01611", stationName: "stop 1", sequence: 1, lng: 126.991, lat: 37.58, isTurnaround: false },
-      { topisId: "100900222", arsId: "01612", stationName: "stop 2", sequence: 2, lng: 126.992, lat: 37.58, isTurnaround: true },
+      { topisId: "100900221", arsId: "01611", stationName: "stop 1", sequence: 1, lng: 126.991, lat: 37.58, isTurnaround: false, direction: null },
+      { topisId: "100900222", arsId: "01612", stationName: "stop 2", sequence: 2, lng: 126.992, lat: 37.58, isTurnaround: true, direction: null },
+    ]);
+  });
+
+  it("keeps each station's direction, the turnaround's outbound one included, and null where TOPIS sent none", () => {
+    // Act
+    const { stations } = toFetchedRoutePath([], [topisStation(3, "N", "성균관대운동장"), topisStation(2, "Y", "이화사거리"), topisStation(1, "N", null)]);
+
+    // Assert
+    expect(stations.map((each) => [each.sequence, each.direction])).toEqual([
+      [1, null],
+      [2, "이화사거리"],
+      [3, "성균관대운동장"],
     ]);
   });
 });

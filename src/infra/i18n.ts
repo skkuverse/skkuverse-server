@@ -190,6 +190,9 @@ const translations: Translations = {
     en: "NSC → HSSC",
     zh: "自然校区 → 人文校区",
   },
+  "busconfig.lineDirection.towards": { ko: "{terminal} 방면", en: "To {terminal}", zh: "{terminal} 方向" },
+  "busconfig.lineDirection.fromCampus": { ko: "하교", en: "From campus", zh: "放学" },
+  "busconfig.lineDirection.toCampus": { ko: "등교", en: "To campus", zh: "上学" },
   "busconfig.holiday.samil": {
     ko: "삼일절",
     en: "Independence Movement Day",

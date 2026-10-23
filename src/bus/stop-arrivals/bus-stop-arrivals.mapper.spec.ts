@@ -2,17 +2,15 @@
  * How a stop page is assembled: the stop block, from its
  * config record for a local stop (coordinates from its pole when it has none, aliases as arsIds) or from its pole
  * for a TOPIS one; a live entry carrying the live route's station entry at its index and the vehicles it names
- * (ADR 0019, D12) with the action given (board, or alight at a drop-off-only station); a timetable entry carrying
- * its runs; and the HSSC line with each stop named as its catalog stop in the request language, which a live entry's
- * towards reads.
+ * (ADR 0019, D12) with the direction (right after towards) and the action given (board, or alight at a drop-off-only
+ * station); and a timetable entry carrying its runs. The HSSC line named by its catalog stops moved with
+ * toCatalogNamedLine to src/bus/bus.mapper.spec.ts.
  */
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import type { FoundStop } from "../stop-index/bus-stop-index.types";
 import type { Arrival, Vehicle } from "../bus.wire";
 import type { LiveGroup } from "../live/bus-live.wire";
-import type { HsscLineStation } from "../stops/bus-stops.document";
-import type { ScheduleStop } from "../stops/bus-stops.types";
-import { toCatalogNamedLine, toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
+import { toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
 
 const SNAPSHOT = { revision: 1 } as BusStopsSnapshot;
 const POLE = { arsId: "01592", topisId: "100900075", stationName: "혜화역1번출구" };
@@ -85,12 +83,13 @@ describe("toLiveEntry", () => {
 
   it("carries the live route's station entry at its index and only the vehicles its arrivals name", () => {
     // Act & Assert
-    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 16 }, group, { label: "종로 07", towards: "혜화동로터리", action: "board" })).toEqual({
+    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 16 }, group, { label: "종로 07", towards: "혜화동로터리", direction: null, action: "board" })).toEqual({
       kind: "live",
       groupId: "jongro07",
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
+      direction: null,
       action: "board",
       stationsVersion: "abc",
       updatedAt: "2026-10-20T14:09:55+09:00",
@@ -102,50 +101,17 @@ describe("toLiveEntry", () => {
 
   it("serves no data and no arrival at a station the live route states nothing for", () => {
     // Act & Assert
-    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 3 }, group, { label: "종로 07", towards: null, action: "board" })).toMatchObject({ operation: "noData", vehicles: [], arrivals: [] });
+    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 3 }, group, { label: "종로 07", towards: null, direction: null, action: "board" })).toMatchObject({ operation: "noData", vehicles: [], arrivals: [] });
   });
 
-  it("serves the action it is given, alight at a drop-off-only station, after towards", () => {
+  it("serves the action it is given, alight at a drop-off-only station, after towards and the direction", () => {
     // Act
-    const entry = toLiveEntry({ groupId: "hssc", stationIndex: 3 }, { ...group, groupId: "hssc", stationsVersion: null }, { label: "인사캠 셔틀버스", towards: "혜화동우체국", action: "alight" });
+    const entry = toLiveEntry({ groupId: "hssc", stationIndex: 3 }, { ...group, groupId: "hssc", stationsVersion: null }, { label: "인사캠 셔틀버스", towards: "혜화동우체국", direction: { id: "fromCampus", label: "하교" }, action: "alight" });
 
     // Assert
     expect(entry.action).toBe("alight");
-    expect(Object.keys(entry).slice(0, 6)).toEqual(["kind", "groupId", "label", "stationIndex", "towards", "action"]);
-  });
-});
-
-describe("toCatalogNamedLine", () => {
-  const station = (name: string, stopId: string | null): HsscLineStation => ({ stopId, name, isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] });
-  const line = [station("정문", "gate"), station("올림픽기념국민생활관 [하차전용]", "olympic-hall"), station("혜화동로터리 [미정차]", null)];
-  const stops: ScheduleStop[] = [
-    { id: "olympic-hall", name: { ko: "올림픽기념국민생활관", en: "Olympic Hall" } },
-    { id: "gate", name: { ko: "정문", en: "Main Gate of SKKU", zh: "正门" } },
-  ];
-
-  it.each([
-    ["ko", ["정문", "올림픽기념국민생활관"]],
-    ["en", ["Main Gate of SKKU", "Olympic Hall"]],
-    ["zh", ["正门", "Olympic Hall"]],
-  ] as const)("names each stop of the line as its catalog stop in %s, English before Korean where a language is missing", (lang, expected) => {
-    // Act
-    const named = toCatalogNamedLine(line, stops, lang);
-
-    // Assert
-    expect(named.slice(0, 2)).toEqual([
-      { name: expected[0], stopId: "gate" },
-      { name: expected[1], stopId: "olympic-hall" },
-    ]);
-  });
-
-  it("keeps a pass-through position, which has no stop, as the line names it", () => {
-    // Act & Assert
-    expect(toCatalogNamedLine(line, stops, "en")[2]).toEqual({ name: "혜화동로터리 [미정차]", stopId: null });
-  });
-
-  it("throws naming a stop id the catalog does not hold, which a push refuses", () => {
-    // Act & Assert
-    expect(() => toCatalogNamedLine(line, stops.slice(0, 1), "ko")).toThrow("gate");
+    expect(entry.direction).toEqual({ id: "fromCampus", label: "하교" });
+    expect(Object.keys(entry).slice(0, 7)).toEqual(["kind", "groupId", "label", "stationIndex", "towards", "direction", "action"]);
   });
 });
 

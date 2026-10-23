@@ -10,6 +10,9 @@
  * position the data flags drop-off only and board elsewhere, and an HSSC entry's towards is the next stop's catalog
  * name in the request language, as that stop's own page names it, never the line row's name with its marker; the
  * HSSC entry served in zh therefore heads towards "SKKU Junction", the stop's English name, since it has no Chinese one.
+ * Each live entry names the direction the live route's door answers for its station, asked with the request
+ * language and, on Jongno, the stations version the index placed it by (null on the HSSC line), and none where it
+ * answers none, the entry still served.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { storedBusRegistryService, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
@@ -108,6 +111,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     const { service, live, smart } = setup({ aliases: { "hssc-bus-lot": ["01618"] } });
     smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:00", "14:30"]));
     live.groups.set("jongro07", liveGroup("jongro07"));
+    live.directions.set(`jongro07:1:${versionOf("jongro07")}`, { id: "100900043", label: "To 이화사거리" });
 
     // Act
     const page = await service.findStopArrivals("seoul-01618", "en");
@@ -126,7 +130,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
         arrivals: [expect.objectContaining({ status: "scheduled", scheduledDepartureAt: "2026-10-20T14:30:00+09:00", runDepartureAt: "2026-10-20T14:30:00+09:00", isLastBus: true })],
       }),
       expect.objectContaining({ kind: "timetable", groupId: "campus", label: "HSSC → NSC", routeType: "hakbu" }),
-      { kind: "live", groupId: "jongro07", label: "Jongro 07", stationIndex: 1, towards: "비천당", action: "board", stationsVersion: versionOf("jongro07"), updatedAt: null, operation: "noData", vehicles: [], arrivals: [] },
+      { kind: "live", groupId: "jongro07", label: "Jongro 07", stationIndex: 1, towards: "비천당", direction: { id: "100900043", label: "To 이화사거리" }, action: "board", stationsVersion: versionOf("jongro07"), updatedAt: null, operation: "noData", vehicles: [], arrivals: [] },
     ]);
   });
 
@@ -164,13 +168,14 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     const arrival = { status: "enRoute" as const, expectedArrivalAt: "2026-10-20T14:12:00+09:00", expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, basis: "estimate" as const, stopsAway: 2, isLastBus: null, vehicleId: "32149", providerText: null };
     const bus = { id: "32149", plateNumber: null, occupancy: null, isLastBus: null, isLowFloor: null, position: null, trajectory: null };
     live.groups.set("hssc", liveGroup("hssc", { operation: "running", vehicles: [bus, { ...bus, id: "32150" }], stations: [{ stationIndex: 6, stopId: "hssc-hyehwa-exit1", arsId: null, operation: "running", arrivals: [arrival] }] }));
+    live.directions.set("hssc:6:null", { id: "toCampus", label: "上学" });
 
     // Act
     const page = await service.findStopArrivals("hssc-hyehwa-exit1", "zh");
 
     // Assert
     expect(page?.data.routes).toEqual([
-      { kind: "live", groupId: "hssc", label: "人文校区班车", stationIndex: 6, towards: "SKKU Junction", action: "board", stationsVersion: null, updatedAt: null, operation: "running", vehicles: [bus], arrivals: [arrival] },
+      { kind: "live", groupId: "hssc", label: "人文校区班车", stationIndex: 6, towards: "SKKU Junction", direction: { id: "toCampus", label: "上学" }, action: "board", stationsVersion: null, updatedAt: null, operation: "running", vehicles: [bus], arrivals: [arrival] },
     ]);
   });
 
@@ -324,5 +329,39 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     // Assert
     expect(page?.data.routes.map((route) => route.groupId)).toEqual(["jongro08"]);
     expect(leftOutLogs()).toEqual([]);
+  });
+});
+
+// WHY: a stop page stands alone (ADR 0019, D5), so it names the direction its /bus/config station lies on, as NAVER Map does.
+describe("BusStopArrivalsService live entry directions", () => {
+  it("names each Jongno entry's direction as the live door answers it for the index's stations version", async () => {
+    // Arrange
+    const { service, live } = setup();
+    live.groups.set("jongro07", liveGroup("jongro07"));
+    live.groups.set("jongro08", liveGroup("jongro08"));
+    live.directions.set(`jongro07:16:${versionOf("jongro07")}`, { id: "100900220", label: "To 성균관대운동장" });
+    live.directions.set("jongro08:22:synced-since", { id: "100900040", label: "To 명륜3가" });
+
+    // Act
+    const page = await service.findStopArrivals("seoul-01592", "en");
+
+    // Assert
+    expect(page?.data.routes).toEqual([
+      expect.objectContaining({ groupId: "jongro07", stationIndex: 16, direction: { id: "100900220", label: "To 성균관대운동장" } }),
+      expect.objectContaining({ groupId: "jongro08", stationIndex: 22, direction: null }),
+    ]);
+  });
+
+  it("names the HSSC entry's direction, asked with no stations version", async () => {
+    // Arrange
+    const { service, live } = setup();
+    live.groups.set("hssc", liveGroup("hssc"));
+    live.directions.set("hssc:3:null", { id: "fromCampus", label: "하교" });
+
+    // Act
+    const page = await service.findStopArrivals("hssc-olympic-hall", "ko");
+
+    // Assert
+    expect(page?.data.routes).toEqual([expect.objectContaining({ kind: "live", groupId: "hssc", stationIndex: 3, direction: { id: "fromCampus", label: "하교" } })]);
   });
 });

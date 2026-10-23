@@ -5,7 +5,7 @@ import config from "../../infra/config";
 import { UpstreamError } from "../../infra/upstream.error";
 import { SEOUL_BUS_API_URL } from "../bus.constants";
 import { toFetchedRoutePath } from "./bus-route-path.mapper";
-import { topisRouteInfoAnswer, topisRoutePoint, topisRouteStation } from "./bus-route-path.schema";
+import { topisRouteInfoAnswer, topisRoutePoint, topisRouteStationRow } from "./bus-route-path.schema";
 import type { FetchedRoutePath } from "./bus-route-path.types";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -20,7 +20,7 @@ export class BusRoutePathClient {
   async fetchRoutePath(busRouteId: string): Promise<FetchedRoutePath> {
     const [points, stations] = await Promise.all([
       this.fetchRows("getRoutePath", busRouteId, topisRoutePoint),
-      this.fetchRows("getStaionByRoute", busRouteId, topisRouteStation),
+      this.fetchRows("getStaionByRoute", busRouteId, topisRouteStationRow),
     ]);
     return toFetchedRoutePath(points, stations);
   }

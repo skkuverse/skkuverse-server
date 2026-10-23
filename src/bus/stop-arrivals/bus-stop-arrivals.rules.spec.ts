@@ -6,11 +6,11 @@
  * the smart view applied one; each run keeps its departure, and the day's last run of its route type is the last
  * bus; no run is listed unless the smart schedule is active. Where the stop shows no timetable time, a run is listed
  * until the later of its latest estimate's arrival (the newest fetched, served or not) and the served estimate it
- * shows, else by its departure, while the page shows only the served estimate. And the HSSC line's next station with a stop, which tells a rider the direction,
- * round the loop.
+ * shows, else by its departure, while the page shows only the served estimate. The HSSC line's next station with a stop moved with
+ * toTowards to src/bus/bus.rules.spec.ts, since GET /bus/stops heads its stations the same way.
  */
 import type { SmartSchedule } from "../schedule/bus-schedule.wire";
-import { toTimetableArrivals, toTowards } from "./bus-stop-arrivals.rules";
+import { toTimetableArrivals } from "./bus-stop-arrivals.rules";
 
 type Entry = SmartSchedule["days"][number]["schedule"][number];
 const entry = (time: string, stopTimes: Array<string | null>, extra: Partial<Entry> = {}): Entry => ({ time, routeType: "regular", stopTimes, ...extra });
@@ -273,24 +273,5 @@ describe("toTimetableArrivals with each run's latest estimate", () => {
 
     // Assert
     expect(departuresOf(arrivals)).toEqual(["2026-10-20T14:20:00+09:00", "2026-10-20T14:00:00+09:00"]);
-  });
-});
-
-describe("toTowards", () => {
-  const station = (name: string, stopId: string | null) => ({ name, stopId });
-  const line = [station("농구장", "a"), station("600주년(하교)", "b"), station("혜화동로터리", null), station("혜화역", "c")];
-
-  it.each([
-    [0, "600주년(하교)"],
-    [1, "혜화역"],
-    [3, "농구장"],
-  ])("station %i heads towards %s, the next with a stop round the loop", (stationIndex, expected) => {
-    // Act & Assert
-    expect(toTowards(line, stationIndex)).toBe(expected);
-  });
-
-  it("answers null on a line with no other stop", () => {
-    // Act & Assert
-    expect(toTowards([station("농구장", "a"), station("로터리", null)], 0)).toBeNull();
   });
 });

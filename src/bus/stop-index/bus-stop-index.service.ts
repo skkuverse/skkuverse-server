@@ -10,11 +10,12 @@ import { JONGRO_ROUTES } from "../bus.constants";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusRoutePathService } from "../route-path/bus-route-path.service";
+import type { RoutePaths } from "../route-path/bus-route-path.types";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { REGISTRY_RETRY_MS, STOP_INDEX_LOG_INTERVAL_MS } from "./bus-stop-index.constants";
 import { toPoleCoords } from "./bus-stop-index.mapper";
-import { toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
-import type { FoundStop, IndexedStop, StopIndex } from "./bus-stop-index.types";
+import { hasPoleAliases, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
+import type { FoundStop, IndexedStop, StopIndex, StopList } from "./bus-stop-index.types";
 
 interface BuiltIndex {
   key: string;
@@ -45,8 +46,16 @@ export class BusStopIndexService {
     const canonicalId = arsId === null ? stopId : (index.stopIdByArsId.get(arsId) ?? this.aliasOwnerWhileUnread(index, arsId));
     const stop = canonicalId === undefined ? undefined : index.stopById.get(canonicalId);
     if (stop) return { ...stop, snapshot: index.snapshot, coords: stop.localStop?.coords ?? (await this.poleCoordsOf(stop)) };
-    if (arsId !== null && index.registryFailure !== undefined) throw this.toRegistryUnavailable(index.registryFailure);
+    if (index.registryFailure !== undefined && this.isPoleOrAliasing(index, stopId, arsId)) throw this.toRegistryUnavailable(index.registryFailure);
     return null;
+  }
+
+  // WHY: the route lines are read once for every pole, so a list costs what one stop page does.
+  async listStops(): Promise<StopList> {
+    const index = await this.current();
+    const routePaths = await this.readRoutePathsOrNone();
+    const stops = [...index.stopById.values()].map((stop) => ({ ...stop, coords: stop.localStop?.coords ?? (routePaths && toPoleCoords(stop.poles, routePaths.routePaths)) }));
+    return { snapshot: index.snapshot, stops, isPartial: index.registryFailure !== undefined || routePaths === null || routePaths.hasMissingRoutes };
   }
 
   // WHY: a local stop is served as its config record, so a stop page and /bus/config cannot drift; a pole has none.
@@ -80,6 +89,11 @@ export class BusStopIndexService {
     return index.registryFailure === undefined ? undefined : index.snapshot.stopIdByArsId.get(arsId);
   }
 
+  // WHY: only a pole, or a local stop standing for one, may be served by a route the index left out; any other id is gone.
+  private isPoleOrAliasing(index: StopIndex, stopId: string, arsId: string | null): boolean {
+    return arsId !== null || hasPoleAliases(index.snapshot, stopId);
+  }
+
   private toRegistryUnavailable(failure: unknown): AppError {
     if (failure instanceof AppError) return failure;
     return new AppError("JONGRO_REGISTRY_UNAVAILABLE", "The Jongro station registry is unavailable", 503);
@@ -93,6 +107,16 @@ export class BusStopIndexService {
     } catch (err) {
       const ticket = this.logThrottle.take("coords");
       if (ticket) logger.warn({ event: "bus.stop_index.coords_unavailable", stopId: stop.id, suppressed: ticket.suppressed, err }, "Route lines unreadable; stop served without coordinates");
+      return null;
+    }
+  }
+
+  private async readRoutePathsOrNone(): Promise<RoutePaths | null> {
+    try {
+      return await this.routePaths.listRoutePaths();
+    } catch (err) {
+      const ticket = this.logThrottle.take("coords");
+      if (ticket) logger.warn({ event: "bus.stop_index.coords_unavailable", suppressed: ticket.suppressed, err }, "Route lines unreadable; stops listed without pole coordinates");
       return null;
     }
   }

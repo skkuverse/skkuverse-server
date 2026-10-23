@@ -93,12 +93,3 @@ export function toTimetableArrivals(schedules: SmartSchedule | ListedSchedules, 
     .slice(0, NEXT_RUN_COUNT)
     .map(({ arrival }) => arrival);
 }
-
-/** WHY: the next station of the HSSC loop a rider can get off at; its next position can be a rotary pass. */
-export function toTowards(line: ReadonlyArray<{ name: string; stopId: string | null }>, stationIndex: number): string | null {
-  for (let ahead = 1; ahead < line.length; ahead++) {
-    const station = line[(stationIndex + ahead) % line.length];
-    if (station?.stopId) return station.name;
-  }
-  return null;
-}

@@ -2,7 +2,8 @@
  * BusRoutePathClient over a mocked axios and the captured TOPIS busRouteInfo
  * answers of Jongno 07: the two URLs it sends (the
  * stored key as it is, never encoded twice), the line in `no` order as
- * [lng, lat] numbers and the stations with the turnaround flag; and every
+ * [lng, lat] numbers and the stations with the turnaround flag and the
+ * direction TOPIS names, which flips after the turnaround; and every
  * failure rejecting with no key in it: a refused key (HTTP 401), a header
  * code other than "0" ("4" included), an answer with no rows, a malformed row.
  */
@@ -86,7 +87,8 @@ describe("BusRoutePathClient.fetchRoutePath", () => {
       [13, "방송통신대앞", true],
       [22, "600주년기념관", false],
     ]);
-    expect(stations[0]).toEqual({ topisId: "100900220", arsId: "01617", stationName: "성균관대운동장", sequence: 1, lng: 126.99237, lat: 37.587863, isTurnaround: false });
+    expect(stations.map((s) => s.direction)).toEqual(["이화사거리", "이화사거리", "이화사거리", "성균관대운동장"]);
+    expect(stations[0]).toEqual({ topisId: "100900220", arsId: "01617", stationName: "성균관대운동장", sequence: 1, lng: 126.99237, lat: 37.587863, isTurnaround: false, direction: "이화사거리" });
   });
 
   it("rejects a refused key (HTTP 401) without the key in the error", async () => {

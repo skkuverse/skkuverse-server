@@ -48,6 +48,7 @@ import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, star
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
 import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
+import { withLineDirections, withoutLineDirections } from "../../helpers/bus/line-directions";
 import captured from "./fixtures/jongro-attributes-production.capture.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
 
@@ -217,7 +218,7 @@ const get = (url: string, lang: Lang) => request(app.getHttpServer()).get(url).s
 /** The captured body with every realtime station's stop id and each realtime screen's live fields (ADR 0019) appended, as served after the capture. */
 function configBodyFromWave4(lang: Lang): ConfigBody {
   const body = configCapture(lang).body;
-  return { ...body, data: { ...body.data, groups: body.data.groups.map((group) => withLiveScreen(withStationStopIds(group))) } };
+  return { ...body, data: { ...body.data, groups: body.data.groups.map((group) => withLineDirections(withLiveScreen(withStationStopIds(group)), lang, { hasStoredLines: false })) } };
 }
 
 describe("GET /bus/config", () => {
@@ -232,7 +233,7 @@ describe("GET /bus/config", () => {
     expect(res.status).toBe(configCapture(lang).status);
     expect(res.body).toEqual(expected);
     expect(res.text).toBe(JSON.stringify(expected));
-    expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(configCapture(lang).body.data);
+    expect(withoutLineDirections(withoutStationStopIds(withoutLiveScreen(res.body.data)))).toEqual(configCapture(lang).body.data);
     expect(res.headers["cache-control"]).toBe(CONFIG_CACHE_CONTROL);
     expect(res.headers.vary).toBe(VARY);
     expect(res.headers.etag).toBe(md5EtagOf(expected.data.groups));
@@ -256,7 +257,7 @@ describe("GET /bus/config/:groupId", () => {
     "answers in %s for %s the group production served, with only its stations' stop ids appended, and its ETag",
     async (lang, groupId) => {
       // Arrange
-      const group = withLiveScreen(withStationStopIds(groupOf(lang, groupId)));
+      const group = withLineDirections(withLiveScreen(withStationStopIds(groupOf(lang, groupId))), lang, { hasStoredLines: false });
       const expected = { meta: { lang }, data: group };
       const isRealtime = ["hssc", "jongro02", "jongro07", "jongro08"].includes(groupId);
 
@@ -267,7 +268,7 @@ describe("GET /bus/config/:groupId", () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual(expected);
       expect(res.text).toBe(JSON.stringify(expected));
-      expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(groupOf(lang, groupId));
+      expect(withoutLineDirections(withoutStationStopIds(withoutLiveScreen(res.body.data)))).toEqual(groupOf(lang, groupId));
       expect(res.headers["cache-control"]).toBe(CONFIG_CACHE_CONTROL);
       expect(res.headers.vary).toBe(VARY);
       expect(res.headers.etag).toBe(isRealtime ? md5EtagOf(group) : configCapture(lang).groupEtags[groupId]);

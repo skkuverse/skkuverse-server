@@ -25,6 +25,7 @@ import path from "path";
 import { UiScrollService } from "../../../src/ui/scroll/ui-scroll.service";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { storedBusRegistryService } from "../../helpers/bus/bus-registry";
+import { storedBusRoutePathService } from "../../helpers/bus/bus-route-path";
 import { storedRouteAttributesService } from "../../helpers/bus/route-attributes";
 import { storedBusStopsService } from "../../helpers/bus/bus-stops";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
@@ -72,7 +73,7 @@ function storedCampusBanners(): UiCampusRepository {
 const payloads: Record<string, () => unknown> = {
   "GET /ui/home/campus": () => new UiCampusService(storedCampusBanners(), fixtureMiniappsService(), clock).getCampusSheet("ko"),
   "GET /ui/home/scroll": () => new UiScrollService().listScrollCards("ko"),
-  "GET /bus/config": async () => new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService()).getBusGroups(),
+  "GET /bus/config": async () => new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService(), storedBusRoutePathService()).getBusGroups(),
   "the stored miniapps dataset's details": () => registryDetails,
 };
 

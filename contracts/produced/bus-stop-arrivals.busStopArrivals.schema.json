@@ -90,6 +90,28 @@
                   "null"
                 ]
               },
+              "direction": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "action": {
                 "type": "string",
                 "enum": [
@@ -453,6 +475,7 @@
               "label",
               "stationIndex",
               "towards",
+              "direction",
               "action",
               "stationsVersion",
               "updatedAt",

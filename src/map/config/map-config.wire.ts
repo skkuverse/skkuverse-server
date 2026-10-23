@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { linkActionType } from "../../shared/link-action.wire";
 
+// SEE: docs/reference/map-overlays-api.md ("8.9 Tabs"): absent `tabs` is the map tab, absent `opensIn` the tapped tab.
+const mapTab = z.enum(["map", "transit"]);
 const dailyWindow = z.object({ start: z.string(), end: z.string() });
 const layerVisibility = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("always") }),
@@ -20,14 +22,16 @@ const layer = z.object({
   endpoint: z.string(),
   chipGroupId: z.string().nullable(),
   style: layerStyle.optional(),
+  tabs: z.array(mapTab).optional(),
 });
 
 const cameraMotion = z.object({ zoom: z.number(), tilt: z.number(), bearing: z.number(), durationMs: z.number() });
-// CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/map/parser.ts drops a chip whose action kind is not in CHIP_ACTION_KINDS.
+// CONTRACT(skkuverse-app): skkuverse-app/apps/mobile/src/features/map/map.schema.ts drops a chip whose action kind is not in CHIP_ACTION_KINDS.
 const chipAction = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("webview"), url: z.string() }),
   z.object({ kind: z.literal("focus"), camera: cameraMotion.extend({ lat: z.number(), lng: z.number() }), layerIds: z.array(z.string()) }),
   z.object({ kind: z.literal("link"), actionType: linkActionType, actionValue: z.string() }),
+  z.object({ kind: z.literal("layers"), layerIds: z.array(z.string()), camera: cameraMotion.extend({ lat: z.number(), lng: z.number() }).nullable() }),
 ]);
 const facetOption = z.object({ id: z.string(), label: z.string(), window: z.object({ startAt: z.iso.datetime(), endAt: z.iso.datetime() }).nullable() });
 const chipList = z.object({
@@ -41,7 +45,7 @@ const chip = z.object({
   action: chipAction,
   isReset: z.boolean(),
   list: chipList.nullable(),
-});
+}).extend({ tabs: z.array(mapTab).optional(), opensIn: mapTab.optional() });
 
 const campus = z.object({ id: z.enum(["hssc", "nsc"]), label: z.string(), centerLat: z.number(), centerLng: z.number() });
 

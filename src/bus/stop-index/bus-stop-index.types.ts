@@ -59,3 +59,8 @@ export interface FoundStop extends IndexedStop {
   /** WHY: the stop's own, else its pole's on the stored route line, else none. */
   coords: LatLng | null;
 }
+
+export type LocatedStop = Omit<FoundStop, "snapshot">;
+
+/** WHY: each stop once, in the index's order; partial when a registry route or a route line could not be read. */
+export interface StopList { snapshot: BusStopsSnapshot; stops: LocatedStop[]; isPartial: boolean }

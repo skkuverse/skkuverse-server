@@ -5,6 +5,9 @@
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
  * refreshInterval 25) screen contents, and each realtime station's `stopId`, last, in the group and the all-groups body.
+ * Each realtime screen serves its directions (방면) and each station its `directionId`: 종로07's two from the stored route
+ * lines (an in-memory fake holding the lines stored on 2026-10-18, with the directions TOPIS named on 2026-10-23), split
+ * after its turnaround, and the HSSC line's 하교 and 등교, in the request language.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -12,10 +15,13 @@ import request from "supertest";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { busConfig, busGroup } from "../../../src/bus/config/bus-config.wire";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
+import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
+import { storedBusRoutePathRepository } from "../../helpers/bus/bus-route-path";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { Clock } from "../../../src/infra/clock";
+import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import appConfig from "../../../src/infra/config";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
@@ -31,11 +37,12 @@ let httpServer: import("http").Server;
 
 beforeAll(async () => {
   app = await buildTestApp({
-    imports: [BusStopsModule, BusConfigModule],
+    imports: [SchedulingModule, BusStopsModule, BusConfigModule],
     overrides: [
       { provide: BusRegistryRepository, useValue: registryRepository },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
+      { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
     ],
     role: "api",
@@ -479,11 +486,12 @@ describe("GET /bus/config/hssc for a bus-stops revision without HSSC subtitles",
     const data = busStopsFixture() as { hssc: { stations: Array<Record<string, unknown>> } };
     for (const station of data.hssc.stations) delete station.subtitle;
     bareApp = await buildTestApp({
-      imports: [BusStopsModule, BusConfigModule],
+      imports: [SchedulingModule, BusStopsModule, BusConfigModule],
       overrides: [
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },
+        { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
         { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
       ],
       role: "api",
@@ -520,11 +528,12 @@ describe("GET /bus/config realtime station drop-off only", () => {
     data.hssc.stations[3]!.isAlightOnly = true;
     data.hssc.stations[4]!.isAlightOnly = true;
     flaggedApp = await buildTestApp({
-      imports: [BusStopsModule, BusConfigModule],
+      imports: [SchedulingModule, BusStopsModule, BusConfigModule],
       overrides: [
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },
+        { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
         { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
       ],
       role: "api",
@@ -561,5 +570,39 @@ describe("GET /bus/config realtime station drop-off only", () => {
     const jongro = (config.body.data.groups as Group[]).filter((group) => group.id.startsWith("jongro"));
     expect(jongro).toHaveLength(3);
     for (const group of jongro) expect(group.screen.stations.every((station) => station.isAlightOnly === false)).toBe(true);
+  });
+});
+
+// WHY: NAVER Map shows a line's 방면 as tabs, and the owner asked for the same per realtime line (2026-10-23).
+describe("GET /bus/config/:groupId directions", () => {
+  type Screen = { directions: Array<{ id: string; label: string; fromIndex: number; toIndex: number }>; stations: Array<{ directionId: string | null }> };
+
+  it("serves 종로07's two TOPIS directions, split after its turnaround, with each station's direction", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/config/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const screen = res.body.data.screen as Screen;
+    expect(screen.directions).toEqual([
+      { id: "100900043", label: "이화사거리 방면", fromIndex: 0, toIndex: 12 },
+      { id: "100900220", label: "성균관대운동장 방면", fromIndex: 13, toIndex: 21 },
+    ]);
+    expect(screen.stations.map((station) => station.directionId)).toEqual([...Array(13).fill("100900043"), ...Array(9).fill("100900220")]);
+    expectWire(busGroup, res.body.data);
+  });
+
+  it("serves the HSSC line's 하교 and 등교 in English, and the same in the all-groups body", async () => {
+    // Act
+    const [hssc, config] = [await request(httpServer).get("/bus/config/hssc").set("Accept-Language", "en"), await request(httpServer).get("/bus/config").set("Accept-Language", "en")];
+
+    // Assert
+    expect((hssc.body.data.screen as Screen).directions).toEqual([
+      { id: "fromCampus", label: "From campus", fromIndex: 0, toIndex: 5 },
+      { id: "toCampus", label: "To campus", fromIndex: 6, toIndex: 10 },
+    ]);
+    expect(config.body.data.groups.find((group: { id: string }) => group.id === "hssc").screen.directions).toEqual((hssc.body.data.screen as Screen).directions);
+    expectWire(busGroup, hssc.body.data);
+    expectWire(busConfig, config.body.data);
   });
 });
