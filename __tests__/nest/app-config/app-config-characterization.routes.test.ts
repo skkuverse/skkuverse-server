@@ -79,7 +79,7 @@ describe("GET /app/config at the production capture", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.text).toBe(SERVED.text);
-    expect(res.headers["cache-control"]).toBe("public, max-age=300");
+    expect(res.headers["cache-control"]).toBe("public, max-age=60");
     expect(res.headers.vary).toBe("Accept-Language, Origin");
     expect(res.headers.etag).toBe(SERVED.etag);
   });

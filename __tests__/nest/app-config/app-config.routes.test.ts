@@ -64,7 +64,7 @@ describe("GET /app/config", () => {
     const res = await request(httpServer).get("/app/config");
 
     // Assert
-    expect(res.headers["cache-control"]).toBe("public, max-age=300");
+    expect(res.headers["cache-control"]).toBe("public, max-age=60");
   });
 
   it("publishes webview.bridgeOrigins derived from infra/origins", async () => {
