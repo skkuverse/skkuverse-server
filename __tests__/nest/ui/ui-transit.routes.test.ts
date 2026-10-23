@@ -284,6 +284,27 @@ describe("GET /ui/home/transit over other stored layouts", () => {
     expect(res.headers["cache-control"]).toBeUndefined();
   });
 
+  it("Campus tags: serves hssc on the hssc section and nsc on the nsc section, and no campus on the inter-campus section", async () => {
+    // Arrange
+    const layout = fixtureLayout() as { sections: Array<Record<string, unknown>> };
+    layout.sections[1]!.campus = "hssc";
+    layout.sections[2]!.campus = "nsc";
+    const server = await bootTransit(layout);
+
+    // Act
+    const res = await request(server).get("/ui/home/transit");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.sections.map((served: Record<string, unknown>) => [served.id, served.campus])).toEqual([
+      ["campus", undefined],
+      ["hssc", "hssc"],
+      ["nsc", "nsc"],
+    ]);
+    expect(Object.keys(res.body.data.sections[0])).not.toContain("campus");
+    expectWire(transitLayout, res.body.data);
+  });
+
   it("Station removed by a deploy: leaves out a stored station the server no longer serves and serves the rest with 200", async () => {
     // Arrange
     const layout = fixtureLayout() as { sections: Array<{ id: string; items: Array<Record<string, unknown>> }> };

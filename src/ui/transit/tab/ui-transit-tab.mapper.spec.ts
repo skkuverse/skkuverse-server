@@ -339,3 +339,27 @@ describe("toTransitSection", () => {
     );
   });
 });
+
+/** A section's `campus` tag is served as written; a section with no tag is served without the key, which means both campuses. */
+describe("toTransitSection campus tag", () => {
+  it.each(["hssc", "nsc"] as const)("serves a section tagged %s with that campus", (campus) => {
+    // Arrange
+    const tagged: SectionRaw = { ...section(LINK), campus };
+
+    // Act
+    const resolved = resolve(tagged);
+
+    // Assert
+    expect(resolved.campus).toBe(campus);
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+
+  it("serves a section with no tag without a campus key", () => {
+    // Act
+    const resolved = resolve(section(LINK));
+
+    // Assert
+    expect(Object.keys(resolved)).not.toContain("campus");
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+});

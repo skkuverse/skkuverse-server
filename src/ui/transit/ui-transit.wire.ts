@@ -39,8 +39,17 @@ const groupTransitItem = z.object({
 /** WHY: `kind` names the referent and gates which build draws the item; `action` alone says where a tap goes. */
 const transitItem = z.discriminatedUnion("kind", [busTransitItem, subwayTransitItem, linkTransitItem, groupTransitItem]);
 
-/** WHY: a null title draws no header above the section. */
-const transitSection = z.object({ type: z.literal("item_list"), id: z.string(), title: z.string().nullable(), items: z.array(transitItem) });
+/**
+ * WHY: a null title draws no header above the section. With no `campus` the section belongs to both campuses;
+ * the app reads it for ordering only.
+ */
+const transitSection = z.object({
+  type: z.literal("item_list"),
+  id: z.string(),
+  title: z.string().nullable(),
+  campus: z.enum(["hssc", "nsc"]).optional(),
+  items: z.array(transitItem),
+});
 
 /**
  * CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/transit/schema.ts parses this tolerantly and drops a
