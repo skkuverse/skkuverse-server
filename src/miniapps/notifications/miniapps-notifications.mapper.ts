@@ -1,6 +1,7 @@
 import type { SupportedLang } from "../../infra/types";
 import type { SentNotificationDoc } from "../miniapps.document";
 import { LOG_TITLE_CHARS, NO_RECORDED_OUTCOME_ERROR } from "./miniapps-notifications.constants";
+import type { PushMapTarget } from "./miniapps-notifications.schema";
 import type { MiniAppNotificationHistoryEntry, NotificationContent, SendOutcome, SendTrace } from "./miniapps-notifications.types";
 import type { MiniAppFeedEntry } from "./miniapps-notifications.wire";
 
@@ -16,14 +17,22 @@ const actionOf = ({ actionType, actionValue }: Pick<SentNotificationDoc, "action
   "actionType" | "actionValue"
 > => ({ ...(actionType ? { actionType } : {}), ...(actionValue ? { actionValue } : {}) });
 
-export function toSentNotification(content: NotificationContent, { id, miniAppId, sentAt, idempotencyKey }: NewNotification): SentNotificationDoc {
+const mapTargetOf = ({ chipId, placeId }: PushMapTarget): Pick<SentNotificationDoc, "chipId" | "placeId"> => ({
+  ...(chipId ? { chipId } : {}),
+  ...(placeId ? { placeId } : {}),
+});
+
+export function toSentNotification(
+  content: NotificationContent & PushMapTarget,
+  { id, miniAppId, sentAt, idempotencyKey }: NewNotification,
+): SentNotificationDoc {
   const { title_ko, body_ko, title_en, body_en } = content;
   const key = idempotencyKey === undefined ? {} : { idempotencyKey };
-  return { _id: id, miniAppId, title_ko, body_ko, title_en, body_en, ...actionOf(content), sentAt, delivery: null, ...key };
+  return { _id: id, miniAppId, title_ko, body_ko, title_en, body_en, ...actionOf(content), ...mapTargetOf(content), sentAt, delivery: null, ...key };
 }
 
-export function toNotificationContent({ title_ko, body_ko, title_en, body_en, ...rest }: SentNotificationDoc): NotificationContent {
-  return { title_ko, body_ko, title_en, body_en, ...actionOf(rest) };
+export function toNotificationContent({ title_ko, body_ko, title_en, body_en, ...rest }: SentNotificationDoc): NotificationContent & PushMapTarget {
+  return { title_ko, body_ko, title_en, body_en, ...actionOf(rest), ...mapTargetOf(rest) };
 }
 
 // WHY: a row with no recorded outcome may still be sending, so a repeat is told unknown, never invited to resend.

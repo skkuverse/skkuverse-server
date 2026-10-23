@@ -27,6 +27,9 @@ export interface SentNotificationDoc {
   body_en: string | null;
   actionType?: LinkActionType;
   actionValue?: string;
+  /** WHY: the push's map target; rows written before it existed lack both. */
+  chipId?: string;
+  placeId?: string;
   sentAt: Date;
   /** WHY: null is not "not delivered": `deliveryError` says whether the call may have reached devices. */
   delivery: DeliveryCounts | null;
