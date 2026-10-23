@@ -27,11 +27,17 @@ export interface AcademicPeriod {
   source: "crawled" | "rule";
 }
 
+/** WHY: where the label came from, so a reader can rank a public holiday between the dataset and the crawl. */
+export interface SchoolRestDay {
+  label: string;
+  source: "dataset" | "crawled";
+}
+
 /** WHY: every date question a feature asks, answered for one KST date (YYYY-MM-DD). */
 export interface CalendarDay {
   date: string;
   publicHoliday: string | null;
-  schoolRestDay: string | null;
+  schoolRestDay: SchoolRestDay | null;
   academicPeriod: AcademicPeriod;
 }
 

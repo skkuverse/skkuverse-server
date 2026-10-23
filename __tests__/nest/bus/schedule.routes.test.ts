@@ -695,6 +695,41 @@ describe("GET /bus/schedule/data/:serviceId/smart and /week while the academic c
   });
 });
 
+describe("GET /bus/schedule/data/:serviceId/week on a rest day of the crawled academic calendar", () => {
+  // The crawler's own 2026 document (__tests__/nest/calendar/fixtures/academic-calendars.json): 건학기념일 on
+  // 09-25 and 공부자탄강일 on 09-28; 2026-09-25 is also 추석 on the official calendar.
+  const crawled2026 = (JSON.parse(fs.readFileSync(path.join(__dirname, "../calendar/fixtures/academic-calendars.json"), "utf8")) as Record<string, Record<string, unknown>>)["2026"]!;
+
+  it("labels a crawled rest day with the public holiday on its date, and with its own title on any other", async () => {
+    // Arrange
+    holidays.storeRestDays({});
+    holidays.storeAcademicYear(crawled2026);
+    holidays.store(2026, [{ date: "2026-09-25", name: "추석" }]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/campus-inja/week?from=2026-09-21");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.days[4]).toMatchObject({ date: "2026-09-25", display: "noService", label: "추석" });
+    expectWire(scheduleWeek, res.body.data);
+  });
+
+  it("labels a crawled rest day on no public holiday with its title, less its class-day count", async () => {
+    // Arrange
+    holidays.storeRestDays({});
+    holidays.storeAcademicYear(crawled2026);
+    holidays.store(2026, []);
+
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/campus-inja/week?from=2026-09-28");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.days[0]).toMatchObject({ date: "2026-09-28", display: "noService", label: "공부자탄강일" });
+  });
+});
+
 describe("GET /bus/schedule/data/:serviceId/week on a day the official calendar lists", () => {
   it.each([
     ["Substitute holiday", "2026-03-02", "2026-03-02", "대체공휴일(삼일절)"],

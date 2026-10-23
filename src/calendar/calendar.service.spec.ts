@@ -175,7 +175,7 @@ describe("CalendarService.current dayOf", () => {
     const { service } = setup(storedCalendarRepository().store(2026, [...CALENDAR_2026, { date: "2026-09-28", name: "임시공휴일" }]));
 
     // Act & Assert
-    await expect(service.current().then((calendar) => calendar.dayOf("2026-09-28"))).resolves.toMatchObject({ date: "2026-09-28", publicHoliday: "임시공휴일", schoolRestDay: "공자탄신일" });
+    await expect(service.current().then((calendar) => calendar.dayOf("2026-09-28"))).resolves.toMatchObject({ date: "2026-09-28", publicHoliday: "임시공휴일", schoolRestDay: { label: "공자탄신일", source: "dataset" } });
     await expect(service.current().then((calendar) => calendar.dayOf("2026-03-02"))).resolves.toMatchObject({ date: "2026-03-02", publicHoliday: "대체공휴일(삼일절)", schoolRestDay: null });
     await expect(service.current().then((calendar) => calendar.dayOf("2026-03-03"))).resolves.toMatchObject({ date: "2026-03-03", publicHoliday: null, schoolRestDay: null });
   });
@@ -187,8 +187,8 @@ describe("CalendarService.current dayOf", () => {
     const { service } = setup(repository);
 
     // Act & Assert
-    await expect(service.current().then((calendar) => calendar.dayOf("2030-09-28"))).resolves.toMatchObject({ schoolRestDay: "공자탄신일 (특별)" });
-    await expect(service.current().then((calendar) => calendar.dayOf("2031-09-28"))).resolves.toMatchObject({ schoolRestDay: "공자탄신일" });
+    await expect(service.current().then((calendar) => calendar.dayOf("2030-09-28"))).resolves.toMatchObject({ schoolRestDay: { label: "공자탄신일 (특별)", source: "dataset" } });
+    await expect(service.current().then((calendar) => calendar.dayOf("2031-09-28"))).resolves.toMatchObject({ schoolRestDay: { label: "공자탄신일", source: "dataset" } });
   });
 
   it("answers CALENDAR_UNAVAILABLE (503) while no rest days were ever read", async () => {
@@ -234,8 +234,8 @@ describe("CalendarService.current dayOf", () => {
     // Assert
     expect(before.schoolRestDay).toBeNull();
     expect(beforeTtl.schoolRestDay).toBeNull();
-    expect(atTtl.schoolRestDay).toBe("학사휴교");
-    expect(afterInvalid.schoolRestDay).toBe("학사휴교");
+    expect(atTtl.schoolRestDay?.label).toBe("학사휴교");
+    expect(afterInvalid.schoolRestDay?.label).toBe("학사휴교");
   });
 });
 
@@ -289,7 +289,7 @@ describe("CalendarService.current", () => {
 
     // Assert
     expect(day).toMatchObject({ schoolRestDay: null, academicPeriod: { kind: "semester", term: 2, source: "crawled" } });
-    expect(await fresh.dayOf("2026-10-20")).toMatchObject({ schoolRestDay: "학사휴교", academicPeriod: { kind: "vacation", term: null } });
+    expect(await fresh.dayOf("2026-10-20")).toMatchObject({ schoolRestDay: { label: "학사휴교", source: "dataset" }, academicPeriod: { kind: "vacation", term: null } });
     expect(fresh.revisionKey).not.toBe(calendar.revisionKey);
   });
 });
@@ -501,8 +501,8 @@ describe("CalendarService.current dayOf school rest day from a crawled year", ()
     const { service } = setup(repository);
 
     // Act & Assert
-    await expect(service.current().then((calendar) => calendar.dayOf("2025-09-28"))).resolves.toMatchObject({ schoolRestDay: "공부자탄강일" });
-    await expect(service.current().then((calendar) => calendar.dayOf("2025-09-25"))).resolves.toMatchObject({ schoolRestDay: "건학기념일" });
+    await expect(service.current().then((calendar) => calendar.dayOf("2025-09-28"))).resolves.toMatchObject({ schoolRestDay: { label: "공부자탄강일", source: "crawled" } });
+    await expect(service.current().then((calendar) => calendar.dayOf("2025-09-25"))).resolves.toMatchObject({ schoolRestDay: { label: "건학기념일", source: "crawled" } });
     await expect(service.current().then((calendar) => calendar.dayOf("2025-09-26"))).resolves.toMatchObject({ schoolRestDay: null });
   });
 
@@ -511,7 +511,7 @@ describe("CalendarService.current dayOf school rest day from a crawled year", ()
     const { service } = setup(storedCalendarRepository().store(2026, CALENDAR_2026).storeAcademicYear(crawledYear("2026")));
 
     // Act & Assert
-    await expect(service.current().then((calendar) => calendar.dayOf("2026-09-28"))).resolves.toMatchObject({ schoolRestDay: "공자탄신일" });
+    await expect(service.current().then((calendar) => calendar.dayOf("2026-09-28"))).resolves.toMatchObject({ schoolRestDay: { label: "공자탄신일", source: "dataset" } });
   });
 
   it("answers no crawled rest day for a year it has no document of", async () => {

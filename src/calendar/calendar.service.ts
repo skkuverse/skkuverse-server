@@ -11,7 +11,7 @@ import { toSchoolRestDayLabel } from "./calendar.mapper";
 import { CalendarRepository } from "./calendar.repository";
 import { lookupRestDay, toAcademicPeriod, toAcademicYear, toRuleSemesters } from "./calendar.rules";
 import type { AcademicCalendarDoc } from "./calendar.document";
-import type { AcademicPeriod, CalendarDay, CalendarSnapshot, RestDays, RestDaysRevision } from "./calendar.types";
+import type { AcademicPeriod, CalendarDay, CalendarSnapshot, RestDays, RestDaysRevision, SchoolRestDay } from "./calendar.types";
 
 // SEE: docs/decisions/0010-server-architecture.md (D1): the door for other features, which import only a
 // .module or a .service.
@@ -82,13 +82,19 @@ export class CalendarService {
     const publicHoliday = await this.publicHolidayName(dateStr);
     const academicYear = toAcademicYear(dateStr);
     const crawled = academicYears.find((doc) => doc.year === academicYear);
-    const crawledRestDay = crawled?.restDays.find((row) => row.date === dateStr);
     return {
       date: dateStr,
       publicHoliday,
-      schoolRestDay: lookupRestDay(restDays, dateStr) ?? (crawledRestDay ? toSchoolRestDayLabel(crawledRestDay.title) : null),
+      schoolRestDay: this.schoolRestDayOn(dateStr, restDays, crawled),
       academicPeriod: crawled ? toAcademicPeriod(dateStr, crawled.semesters, "crawled") : await this.ruleAcademicPeriod(dateStr, academicYear),
     };
+  }
+
+  private schoolRestDayOn(dateStr: string, restDays: RestDays, crawled: AcademicCalendarDoc | undefined): SchoolRestDay | null {
+    const datasetLabel = lookupRestDay(restDays, dateStr);
+    if (datasetLabel !== null) return { label: datasetLabel, source: "dataset" };
+    const crawledRow = crawled?.restDays.find((row) => row.date === dateStr);
+    return crawledRow ? { label: toSchoolRestDayLabel(crawledRow.title), source: "crawled" } : null;
   }
 
   private async ruleAcademicPeriod(dateStr: string, academicYear: number): Promise<AcademicPeriod> {

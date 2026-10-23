@@ -15,9 +15,11 @@ export function isWeekStartInRange(from: string, now: Date): boolean {
   return day.isValid() && !day.isBefore(today.clone().subtract(1, "year")) && !day.isAfter(today.clone().add(1, "year"));
 }
 
-// WHY: the SKKU list wins over the public calendar, and holds the rest days that calendar does not list.
+// SEE: docs/decisions/0021-academic-calendar.md ("D4. The dataset overrides the crawl"): the dataset's rest day, then
+// the public holiday, then the crawled rest day.
 export function toNonOperatingDayLabel({ schoolRestDay, publicHoliday }: Pick<CalendarDay, "schoolRestDay" | "publicHoliday">): string | null {
-  return schoolRestDay || publicHoliday;
+  if (schoolRestDay?.source === "dataset") return schoolRestDay.label;
+  return publicHoliday || schoolRestDay?.label || null;
 }
 
 /** WHY: a day the smart view may open on: one with a timetable, or a no-service day that carries notices. */

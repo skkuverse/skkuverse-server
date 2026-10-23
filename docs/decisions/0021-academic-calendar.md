@@ -45,7 +45,9 @@ It reproduces all six boundaries SKKU published for 2024 to 2026. Rejected: "the
 
 ### D4. The dataset overrides the crawl
 
-A date's school rest day is the `skku-rest-days` label when the dataset names it (exact or yearly), and otherwise the crawled row's title less a class-day count in parentheses (2025's `공부자탄강일(수업일수 1/4)`). An operator corrects or adds a rest day with `npm run data` with no crawler change, and the dataset's labels already shown to riders do not change when the crawl lands.
+A date's school rest day is the `skku-rest-days` label when the dataset names it (exact or yearly), and otherwise the crawled row's title less a class-day count in parentheses (2025's `공부자탄강일(수업일수 1/4)`); `dayOf` says which source answered. An operator corrects or adds a rest day with `npm run data` with no crawler change, and the dataset's labels already shown to riders do not change when the crawl lands.
+
+A no-service day's label ranks three sources: the dataset's rest day, then the public holiday's name, then the crawled rest day (`toNonOperatingDayLabel`). A crawled rest day ranks below a public holiday because SKKU's calendar names its own observance where the official calendar names the day riders know: 2026-09-25 is both 건학기념일 in the crawl and 추석, and the shuttle shows 추석. The dataset still outranks a public holiday, as it did before the crawl (an operator's label is a deliberate choice).
 
 ## Consequences
 

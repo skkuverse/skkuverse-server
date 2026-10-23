@@ -30,7 +30,8 @@ export class FakeCalendarService implements PublicOf<CalendarService> {
   }
 
   private dayOf(dateStr: string): CalendarDay {
-    const schoolRestDay = lookupRestDay(toRestDays(this.restDayLabels), dateStr);
+    const label = lookupRestDay(toRestDays(this.restDayLabels), dateStr);
+    const schoolRestDay = label === null ? null : { label, source: "dataset" as const };
     return { date: dateStr, publicHoliday: this.names.get(dateStr) ?? null, schoolRestDay, academicPeriod: this.academicPeriod };
   }
 }
