@@ -5,7 +5,8 @@
  * observation time as a KST instant, and whether a bus stood still between
  * two observations (under 10 m), and whether it idles at its origin (at
  * index 0 with lastStTm 0, and not moved 10 m since the previous observation),
- * and since when a vehicle has stood at its current stop.
+ * and since when a vehicle has stood at its current stop, and which vehicle
+ * type TOPIS's busType code names (only 0, 1 and 2; anything else says nothing).
  */
 import {
   isIdlingAtOrigin,
@@ -14,6 +15,7 @@ import {
   isUsableHeaderCd,
   toArrivalsKey,
   toAtStopSince,
+  toBusType,
   toDwell,
   toObservedAt,
   toPositionsKey,
@@ -250,5 +252,25 @@ describe("toAtStopSince", () => {
   ])("%s → %s", (_case, expected, before, current) => {
     // Act & Assert
     expect(toAtStopSince(before, current)).toBe(expected);
+  });
+});
+
+describe("toBusType", () => {
+  it.each([
+    ["0", "general"],
+    ["1", "lowFloor"],
+    ["2", "articulated"],
+    [" 1 ", "lowFloor"],
+    ["3", null],
+    ["01", null],
+    ["-1", null],
+    ["", null],
+    [" ", null],
+    ["Y", null],
+    [null, null],
+    [undefined, null],
+  ])("%j → %j", (text, expected) => {
+    // Act & Assert
+    expect(toBusType(text)).toBe(expected);
   });
 });

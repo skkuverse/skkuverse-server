@@ -37,5 +37,6 @@ export function toJongroBusPosition(
     observedAt: sighting.observedAt,
     isStationary,
     ...(atStopSince !== undefined && { atStopSince }),
+    ...(sighting.busType !== undefined && { busType: sighting.busType }),
   };
 }

@@ -90,6 +90,8 @@ export const vehicle = z.object({
   plateNumber: z.string().nullable(),
   occupancy: z.object({ level: crowding, passengerCount: z.int().nullable() }).nullable(),
   isLastBus: z.boolean().nullable(),
+  /** WHY: the vehicle's own, from its position row, else the arrival row naming it, never both (ADR 0019, D13); null when unsaid. */
+  isLowFloor: z.boolean().nullable(),
   position: vehiclePosition.nullable(),
   trajectory: z.array(trajectoryKnot).min(1).nullable(),
 });

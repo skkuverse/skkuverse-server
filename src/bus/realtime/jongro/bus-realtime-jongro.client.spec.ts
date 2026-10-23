@@ -6,7 +6,9 @@
  * overnight answer) read as an empty list, and any other answer without a
  * list rejected; a position row's vehicle, section, stop flag and KST
  * observation time kept, a row with one of them malformed rejected, and its
- * lastStTm kept as a number when it is one. Each URL is built from the route's
+ * lastStTm kept as a number when it is one, and both endpoints' busType kept
+ * as the vehicle's type, left out when TOPIS sends none or a code it does not
+ * document. Each URL is built from the route's
  * TOPIS id and SEOUL_BUS_SERVICE_KEY at the call, so importing the route config
  * needs no key, and a role that does not poll refuses to build one (ADR 0012, D4).
  */
@@ -14,6 +16,7 @@ jest.mock("axios", () => ({ get: jest.fn() }));
 
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
 import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-positions.json";
+import busTypesFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-bus-types.json";
 import { JONGRO_ROUTES } from "../../bus.constants";
 import { toJongroRoute } from "../../bus.mapper";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
@@ -528,5 +531,56 @@ describe("BusRealtimeJongroClient outside a polling role", () => {
       if (previous === undefined) delete process.env.ROLE;
       else process.env.ROLE = previous;
     }
+  });
+});
+
+// WHY: the low-floor flag is the vehicle's, which both endpoints name per bus (2026-10-23 capture: route 07's bus 5538 is
+// busType 1 on its position row and on every arrival slot naming it); a value TOPIS does not document is no information.
+describe("BusRealtimeJongroClient bus type", () => {
+  it("keeps each position row's busType as the sighting's bus type", async () => {
+    // Arrange
+    respond(busTypesFixture.positions);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sightings.map(({ plainNo, busType }) => [plainNo, busType])).toEqual([
+      ["서울70사5537", "general"],
+      ["서울70사5538", "lowFloor"],
+    ]);
+  });
+
+  it("keeps each arrival slot's busType as its bus's type", async () => {
+    // Arrange
+    respond(busTypesFixture.arrivals);
+
+    // Act
+    const arrivals = await new BusRealtimeJongroClient().fetchArrivals(route07);
+
+    // Assert
+    const station = arrivals.find(({ sequence }) => sequence === "12")!;
+    expect(station.buses.map(({ plainNo, busType }) => [plainNo, busType])).toEqual([
+      ["서울70사5538", "lowFloor"],
+      ["서울70사5536", "general"],
+    ]);
+  });
+
+  it.each([["missing", undefined], ["undocumented", "9"], ["blank", ""]])("leaves a %s busType out of the sighting and the arrival bus", async (_case, code) => {
+    // Arrange
+    const [position] = busTypesFixture.positions.msgBody.itemList;
+    const [, row] = busTypesFixture.arrivals.msgBody.itemList;
+    axios.get
+      .mockResolvedValueOnce({ data: { ...busTypesFixture.positions, msgBody: { itemList: [{ ...position, busType: code }] } } })
+      .mockResolvedValueOnce({ data: { ...busTypesFixture.arrivals, msgBody: { itemList: [{ ...row, busType1: code, busType2: code }] } } });
+
+    // Act
+    const [sighting] = await new BusRealtimeJongroClient().fetchSightings(route07);
+    const [arrival] = await new BusRealtimeJongroClient().fetchArrivals(route07);
+
+    // Assert
+    expect(sighting).not.toHaveProperty("busType");
+    expect(arrival!.buses[0]).not.toHaveProperty("busType");
+    expect(arrival!.buses[1]).not.toHaveProperty("busType");
   });
 });

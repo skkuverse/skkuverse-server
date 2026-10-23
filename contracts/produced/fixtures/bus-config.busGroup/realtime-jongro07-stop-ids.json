@@ -51,7 +51,8 @@
         "positionSource": "gps",
         "occupancy": true,
         "plateNumber": true,
-        "lastBus": true
+        "lastBus": true,
+        "lowFloor": true
       }
     }
   }

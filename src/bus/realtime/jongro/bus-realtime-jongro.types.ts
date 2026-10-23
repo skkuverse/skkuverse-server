@@ -1,3 +1,5 @@
+import type { JongroBusType } from "../../cache/bus-cache.document";
+
 export interface JongroBusSighting {
   stationId: string;
   latitude: string;
@@ -18,6 +20,7 @@ export interface JongroBusSighting {
   observedAt: string;
   /** QUIRK(topis): seconds to the terminal, 0 only at sectOrd 1; absent when the row carries no number. */
   lastStTm?: number;
+  busType?: JongroBusType;
 }
 
 /** WHY: since when a bus has been at its last passed station (ISO instant), and for how many seconds. */

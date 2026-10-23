@@ -206,13 +206,17 @@
                 },
                 "lastBus": {
                   "type": "boolean"
+                },
+                "lowFloor": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "positionSource",
                 "occupancy",
                 "plateNumber",
-                "lastBus"
+                "lastBus",
+                "lowFloor"
               ]
             }
           },
