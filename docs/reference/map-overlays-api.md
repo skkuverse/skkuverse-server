@@ -899,7 +899,7 @@ this order:
 | `jongro07_route` | 종로07 노선 / Jongno 07 Route / 钟路07路线 |
 | `hssc_route` | 인사캠 셔틀버스 노선 / HSSC Shuttle Bus Route / 人文校区班车路线 |
 
-Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true` and `chipGroupId: null`;
+Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true`, `chipGroupId: null` and `tabs: ["transit"]` (§8.9);
 the Jongno ones share the same style, `{ color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20",
 minZoom: 13 }`: the opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches
 this route only once a user turns a line on. The app's `MapRouteOverlay` reads `color`, `width`,
@@ -1084,7 +1084,8 @@ interface MapCamera extends CameraMotion { lat: number; lng: number }
 type MapChipAction =
   | { kind: "webview"; url: string }
   | { kind: "focus"; camera: MapCamera; layerIds: string[] }
-  | { kind: "link"; actionType: "miniapp" | "external" | "webview" | "route"; actionValue: string };
+  | { kind: "link"; actionType: "miniapp" | "external" | "webview" | "route"; actionValue: string }
+  | { kind: "layers"; layerIds: string[]; camera: MapCamera | null };
 
 interface MapChip {
   id: string;
@@ -1093,6 +1094,8 @@ interface MapChip {
   action: MapChipAction;
   isReset: boolean;                               // true on exactly the synthesised chip
   list: MapChipList | null;                       // the list this chip opens — §8.8
+  tabs?: ("map" | "transit")[];                   // absent: the map tab only — §8.9
+  opensIn?: "map" | "transit";                    // absent: the tab it was tapped on — §8.9
 }
 ```
 
@@ -1125,6 +1128,12 @@ and ships absolute, every other value ships as written. App builds whose `CHIP_A
 (`skkuverse-app/packages/shared/src/map/parser.ts`) lacks `link` drop such a chip, so on them it is
 invisible rather than broken. Only `BASE_CHIPS` authors `link` chips; a festival file's chips are
 `focus` chips.
+
+`layers` turns on every layer it names and touches no other. Unlike `focus` it asks no chip group, so
+it may name base layers such as the route lines, which carry `chipGroupId: null`. A `null` camera
+means the camera does not move. Builds without `layers` in `CHIP_ACTION_KINDS` drop the chip
+(`skkuverse-app/apps/mobile/src/features/map/map.schema.ts`, and `packages/shared/src/map/parser.ts`
+on app `main`). Only `BASE_CHIPS` authors one.
 
 ### 8.2 What a chip tap may change — two rules
 
@@ -1185,7 +1194,8 @@ The row always opens with the **base chips**, `BASE_CHIPS` in
 건물코드 (route `/search`), 분실물 (web view `/skku/lostandfound`) and 문의하기 (external, the Kakao
 channel chat), each with `isReset: false` and `list: null`. They are the campus sheet's former service
 buttons; the first four tiles of the home grid carry the same links for builds that drop a `link`
-chip. While a layer set is live, **the reset chip, then every chip authored in the layer set's
+chip. A fifth base chip, 셔틀 노선 (`shuttle_routes`, Shuttle Routes / 班车路线), is the transit tab's
+(`tabs: ["transit"]`): a `layers` chip that turns on the four route line layers with a `null` camera. While a layer set is live, **the reset chip, then every chip authored in the layer set's
 config**, in file order, follow them. Outside an activation window `chips` is the base chips alone.
 
 **The reset chip is synthesised, not authored.** Its id is `<layerSetId>_all` (`eskara-2026_all`), its
@@ -1249,6 +1259,7 @@ The rules:
 | a chip's `layerIds` do not straddle two groups | `validateChipSpecs` |
 | chip ids are unique — including against the synthesised reset chip's | `validateChipSpecs`, the only place that collision is visible at all |
 | a `webview` URL passes `toWebviewUrl` | `validateChipSpecs` |
+| a `layers` chip names at least one layer, and each is in the catalogue; no chip group is asked | `validateChipSpecs` |
 | a `link` action passes `isBrokenLinkAction` (a known mini-app target, an https URL, a web view URL, a root-relative route) | `assertValidLinkChips` |
 | at least one layer is not `defaultVisibleWhen.kind: "never"`, so the reset chip is scoped to something | `crossReferenceIssue` |
 | every `DailyWindow` bound is `"HH:MM"` on a 24-hour clock — `"24:00"` and `"7:00"` refused | `layerSetFile` |
@@ -1344,6 +1355,26 @@ rules are enforced at push and at read (§8.6).
 
 Everything here is additive. An app that predates it drops `list`, `facets` and `orderByOption` in
 its parsers and keeps listing places unfiltered in `order`.
+
+### 8.9 Tabs
+
+The app's map tab and transit tab share one map, and each tab draws it through its own lens
+(app ADR 0022). A layer's or a chip's `tabs` names the tabs whose lens shows it. A layer is still
+subject to `defaultVisibleWhen` on a tab that lists it. An absent `tabs` means `["map"]`, which is
+how installed builds read every layer and chip, since they ignore the field. A chip's `opensIn`
+names the tab a tap switches to; absent, the tap stays on the tab it was made on.
+
+| Layer or chip | `tabs` |
+| --- | --- |
+| `building_numbers`, `building_labels`, `campus_geometry` | `["map", "transit"]` |
+| the route line layers (`jongro02_route`, `jongro08_route`, `jongro07_route`, `hssc_route`) | `["transit"]` |
+| every festival layer, and every chip but `shuttle_routes` | absent: the map tab only |
+| the `shuttle_routes` chip | `["transit"]` |
+
+A route line layer keeps `chipGroupId: null` on the transit tab. Installed builds read a grouped
+layer as festival content and hide its toggle, so grouping the route lines would take the Jongno
+route toggles away from them. That is why the transit tab's chip is a `layers` chip, which asks no
+group, rather than a `focus` chip.
 
 ## 9. Known gaps
 

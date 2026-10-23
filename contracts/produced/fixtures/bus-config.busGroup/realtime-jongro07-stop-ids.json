@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/jongro07 captured from production 2026-10-20 (Accept-Language ko, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to the first two, each with the stopId each realtime station carries (hand-added: production served no stopId at the capture) The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23.",
+  "_about": "GET /bus/config/jongro07 captured from production 2026-10-20 (Accept-Language ko, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to the first two, each with the stopId each realtime station carries (hand-added: production served no stopId at the capture) The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23. Each realtime screen's directions (right after stations) and each station's directionId (right after stationNumber) are added by hand, as the server serves them since 2026-10-23 (ADR 0019, D16).",
   "data": {
     "id": "jongro07",
     "screenType": "realtime",
@@ -23,6 +23,7 @@
           "name": "성균관대운동장",
           "subtitle": null,
           "stationNumber": "01617",
+          "directionId": "100900043",
           "isFirstStation": true,
           "isLastStation": false,
           "isRotationStation": false,
@@ -36,6 +37,7 @@
           "name": "학생회관",
           "subtitle": null,
           "stationNumber": "01618",
+          "directionId": "100900043",
           "isFirstStation": false,
           "isLastStation": false,
           "isRotationStation": false,
@@ -43,6 +45,20 @@
           "isAlightOnly": false,
           "transferLines": [],
           "stopId": "seoul-01618"
+        }
+      ],
+      "directions": [
+        {
+          "id": "100900043",
+          "label": "이화사거리 방면",
+          "fromIndex": 0,
+          "toIndex": 12
+        },
+        {
+          "id": "100900220",
+          "label": "성균관대운동장 방면",
+          "fromIndex": 13,
+          "toIndex": 21
         }
       ],
       "features": [],

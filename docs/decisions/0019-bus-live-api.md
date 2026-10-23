@@ -9,7 +9,7 @@ audience: internal
 
 # 0019. Bus Live API — One Arrival Shape for Every Source
 
-> Why `GET /bus/live/:groupId` and the stop page serve every realtime line, Jongno and HSSC alike, and every timetabled shuttle run in one arrival and one vehicle shape, and how the old realtime route is retired. Read it before you add a source, a field or an enum value to either route. Accepted 2026-10-22, D13 to D15 added 2026-10-23; the wire and the client rules are in [bus-live-api.md](../reference/bus-live-api.md), the flows in [bus architecture](../explanation/bus-architecture.md).
+> Why `GET /bus/live/:groupId` and the stop page serve every realtime line, Jongno and HSSC alike, and every timetabled shuttle run in one arrival and one vehicle shape, and how the old realtime route is retired. Read it before you add a source, a field or an enum value to either route. Accepted 2026-10-22, D13 to D16 added 2026-10-23; the wire and the client rules are in [bus-live-api.md](../reference/bus-live-api.md), the flows in [bus architecture](../explanation/bus-architecture.md).
 
 ## Context
 
@@ -106,9 +106,23 @@ Owner, 2026-10-23. The HSSC shuttle's 하교 direction stops at 올림픽기념�
 - A live entry's `towards` names the next stop as that stop's own page names it (its catalog stop, in the request language), never by the line row's name, so no marker leaks into it.
 - The names lose `[하차전용]` by a later `bus-stops` push, once the app OTA that reads `isAlightOnly` and `action` is adopted; until then the names keep it, so an installed bundle still shows it.
 
+### D16. Directions are a line attribute: TOPIS's terminals, the HSSC's 등교 and 하교
+
+Owner, 2026-10-23 (option A): NAVER Map shows a line's 방면 as tabs (종로07: 이화사거리 방면, 성균관대운동장 방면), and a client needs the same split to list one direction's stations and to move a bus between tabs at the turnaround.
+
+- A direction is the line's, like `isPassThrough`, so `/bus/config` states it once per realtime screen as `directions: [{ id, label, fromIndex, toIndex }]`, in line order over contiguous station indexes, and each station's `directionId`; the live route repeats neither (D15).
+- On Jongno it is TOPIS's own: `busRouteInfo/getStaionByRoute` names on each station the terminal the bus heads to (`direction`), which the daily route-path sync already fetched and now stores ([ADR 0014, D8](0014-jongro-realtime-from-topis.md)). The label flips at the station after the turnaround (`transYn: Y`): 종로07's 방송통신대앞 (seq 13) still reads 이화사거리, matching NAVER's tabs on all three routes. The server joins it to each registry station by sequence and TOPIS id, never by position alone: a station the two stores place apart, or a route with no stored line, has `directionId: null` and is never given its neighbour's; labels that do not form one block each serve no direction at all.
+- A Jongno direction's `id` is the TOPIS station id of the terminal it heads to: the next direction's first station, the line's first for the last one (종로07: `100900043` 이화사거리, `100900220` 성균관대운동장). TOPIS's text names a place, not a station (`종각역YMCA` for 종각역.YMCA, `종로5가` for 종로5가역.광장시장), so the id is derived from the line, not the text, and stays while the terminal does.
+- The HSSC feed has no direction, so the owner fixed it in code: 하교 (`fromCampus`) at positions 0 to 5, 농구장 to the first rotary pass, and 등교 (`toCampus`) at 6 to 10, 혜화역 1번출구 to 600주년기념관 (`HSSC_DIRECTIONS`, `src/bus/config/bus-config.constants.ts`).
+- The label is built by the server in the request language: Jongno `<terminal> 방면`, `To <terminal>`, `<terminal> 方向`, with TOPIS's Korean terminal name in every language as stop names are; HSSC 하교/등교, From campus/To campus, 放学/上学 (`src/infra/i18n.ts`).
+- The stop page's live entry carries `direction: { id, label } | null` beside `towards`, since it stands alone (D5): `towards` is the next stop, `direction` the 방면 the station lies on.
+
+Not chosen: a split from the registry's turnaround stop alone, which places the flip the same way but names no terminal, and labels kept by hand per route, a second source that drifts from TOPIS.
+
 ## Consequences
 
 - No user sees the new routes before the OTA, so there is no mixed state; the client takes over the minute and 곧 도착 rules (D10).
 - Two measured weekdays back the HSSC estimates (ADR 0018); a month of `hssc_feed_events` and TOPIS captures is the planned revision, and the window of D1 with it.
 - A run at an alighting stop has no timetable time there, so it is listed until the arrival of its most recently fetched unexpired estimate, even a live value older than the 15 minutes the smart view serves one, then the baseline prediction, and only with neither by its departure (owner, 2026-10-22), but never before the served estimate the page shows for it (2026-10-22). That estimate decides only the listing: the page shows the served estimate or none, so a stale value never shows as a time. The smart view applies it from the same cached read (`BusEtaSmartService.resolveLatestEstimates`); a run of the following week keeps its served estimate.
+- Directions shipped in the `/bus/config` realtime screens and the stop page on 2026-10-23 (D16): each realtime ETag changed once. Production's stored route lines carry no direction until the poller's first route-path sync after the deploy, which runs at its start and rewrites every line because the path version now hashes the field; until then a Jongno screen serves `directions: []` and null ids, never an error.
 - TOPIS's low-floor type is served as `isLowFloor` (D13); its full-bus flag (`isFullFlag`, `"0"` on every row on 2026-10-23) is not cached, and adding it to the vehicle is additive.

@@ -1,0 +1,232 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "stops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "object",
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              },
+              "zh": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ko",
+              "en",
+              "zh"
+            ]
+          },
+          "coords": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "lat": {
+                    "type": "number"
+                  },
+                  "lng": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "lat",
+                  "lng"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "arsIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "campus": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "hssc",
+                  "nsc"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "live"
+                    },
+                    "groupId": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en",
+                        "zh"
+                      ]
+                    },
+                    "stationIndex": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "towards": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en",
+                            "zh"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "board",
+                        "alight"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "groupId",
+                    "label",
+                    "stationIndex",
+                    "towards",
+                    "action"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "timetable"
+                    },
+                    "groupId": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en",
+                        "zh"
+                      ]
+                    },
+                    "serviceId": {
+                      "type": "string"
+                    },
+                    "routeType": {
+                      "type": "string"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "board",
+                        "alight"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "groupId",
+                    "label",
+                    "serviceId",
+                    "routeType",
+                    "action"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "coords",
+          "arsIds",
+          "campus",
+          "routes"
+        ]
+      }
+    }
+  },
+  "required": [
+    "stops"
+  ]
+}

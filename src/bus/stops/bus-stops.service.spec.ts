@@ -3,7 +3,8 @@
  * read over an in-memory store and a fixed clock. `current()` answers one revision as `{ revision, catalog, hssc,
  * stopIdByArsId }`: the catalog's stops and sequences and the HSSC line, frozen and built once per revision, cached
  * for DATASET_CACHE_TTL_MS so a push is served within a minute, and kept through a failed reload for
- * DATASET_STALE_WINDOW_MS. With no good value it throws the 503 BusStopsUnavailableError. `servedSequences` resolves
+ * DATASET_STALE_WINDOW_MS. A revision the catalog, subway, HSSC line or alias checks refuse is never served. With no
+ * good value it throws the 503 BusStopsUnavailableError. `servedSequences` resolves
  * a snapshot's sequences in one language, as the config groups serve them.
  *
  * Ported from src/bus/stops/bus-stops.config.spec.ts (old → new): "returns the committed catalog, frozen, against
@@ -15,7 +16,9 @@ jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
 import { FakeBusStopsRepository } from "../../../__tests__/helpers/fakes/bus/bus-stops.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { logText } from "../../../__tests__/helpers/log-text";
 import type { Clock } from "../../infra/clock";
+import logger from "../../infra/logger";
 import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../../shared/dataset.constants";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import { SERVICE_CONFIG } from "../bus.constants";
@@ -205,6 +208,55 @@ describe("BusStopsService.current with a revision the catalog checks refuse", ()
 
     // Assert
     expect(served.revision).toBe(1);
+  });
+});
+
+// WHY: a revision stored past the push checks (by hand, or by an older tool) must not reach the stop index: an HSSC
+// position naming no stop breaks the stop page with a 500, and an alias claimed twice serves whichever stop is last.
+describe("BusStopsService.current with a revision the HSSC line or alias checks refuse", () => {
+  const invalidEvents = () => jest.mocked(logger.error).mock.calls.filter((call) => (call[0] as { event?: string }).event === "bus.stops.invalid");
+
+  const withHsscStop = (stopId: string): BusStopsData => {
+    const data = fixture();
+    data.hssc.stations[0] = { ...data.hssc.stations[0]!, stopId };
+    return data;
+  };
+
+  const withAliases = (aliases: Record<string, string[]>): BusStopsData => {
+    const data = fixture();
+    data.stops = data.stops.map((stop) => (aliases[stop.id] ? { ...stop, arsIds: aliases[stop.id] } : stop));
+    return data;
+  };
+
+  it("never serves a revision whose HSSC line names a stop the dataset does not hold, and logs it once", async () => {
+    // Arrange
+    const { repository, stops, advanceTo } = setup();
+    repository.storeStops(withHsscStop("hssc-nowhere"));
+
+    // Act
+    await expect(stops.current()).rejects.toBeInstanceOf(BusStopsUnavailableError);
+    advanceTo(DATASET_CACHE_TTL_MS);
+    await expect(stops.current()).rejects.toBeInstanceOf(BusStopsUnavailableError);
+
+    // Assert
+    expect(invalidEvents()).toHaveLength(1);
+    expect(logText(invalidEvents()[0])).toContain("hssc-nowhere");
+  });
+
+  it("keeps serving the last good revision after a push that aliases one ARS number twice", async () => {
+    // Arrange
+    const { repository, stops, advanceTo } = setup();
+    repository.storeStops(fixture());
+    await stops.current();
+    repository.storeStops(withAliases({ "hssc-bus-lot": ["01618"], "hssc-600th": ["01618"] }));
+
+    // Act
+    advanceTo(DATASET_CACHE_TTL_MS);
+    const served = await stops.current();
+
+    // Assert
+    expect(served.revision).toBe(1);
+    expect(logText(invalidEvents()[0])).toContain("01618");
   });
 });
 

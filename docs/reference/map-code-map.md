@@ -70,6 +70,7 @@ Read them in this order: each depends only on the ones before it.
 | Add next year's festival | a new entry in `map-layer-sets` (`npm run data`), its places, then its window ([configure map overlays](../how-to/configure-map-overlays.md#add-or-edit-a-festival)) | No |
 | Remove a festival's layer set | close its window first, then push `map-layer-sets` without it | No |
 | Add a permanent chip | `BASE_CHIPS` in `map-layer-set.constants.ts` | Yes |
+| Show a base layer or chip on the transit tab | its `tabs` in `BASE_LAYERS` or `BASE_CHIPS` (absent is the map tab only) | Yes; installed builds ignore `tabs` |
 | Change how a pin or zone is drawn | `BASE_LAYERS[].style`, `EVENT_LAYER_STYLE`, `EVENT_SHAPE_STYLE` | Yes |
 | Recolour the Jongno route lines, change which one lies on top, or turn them on by default | `ROUTE_LINE_LAYER` in `map.constants.ts` (one style in the routes' `themeColor`, and the default), the order of their `BASE_LAYERS` entries | Yes; the default reaches installed apps with the next `/map/config` |
 | Fix a Jongno route's geometry | nothing in `src/map/`: `src/bus/route-path/` syncs it from TOPIS daily ([configure map overlays](../how-to/configure-map-overlays.md)) | No |

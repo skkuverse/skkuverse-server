@@ -30,6 +30,8 @@ import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
+import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
+import { storedBusRoutePathRepository } from "../../helpers/bus/bus-route-path";
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.service";
@@ -74,6 +76,7 @@ async function bootApp(content = storedScheduleContentRepository()): Promise<Tes
       { provide: BusScheduleContentRepository, useValue: content },
       { provide: BusEtaRepository, useValue: estimates },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
+      { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: HolidaysRepository, useValue: holidays },
       { provide: Clock, useValue: { now: () => new Date() } },
     ],
@@ -807,6 +810,7 @@ describe("GET /bus/config across a content push", () => {
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
+        { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
         { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
         { provide: Clock, useValue: { now: () => new Date() } },
       ],

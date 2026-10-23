@@ -23,8 +23,5 @@ export const TURNAROUND_SEQ = 5;
 // 120 s past the travel median; past it the bus is stalled or the feed stopped. The client keeps an overdue arrival as long (ADR 0018, D6).
 export const MAX_OVERDUE_SECONDS = 120;
 
-// QUIRK(hssc): seq 1 and 10 are the two passes of the Hyehwa Rotary, where the shuttle does not board anyone.
-export const NON_STOP_SEQS: readonly number[] = [1, 10];
-
 // QUIRK(hssc): seq 10 reports its departure as LEFT_LAST, every other stop as LEFT.
 export const DEPARTURE_INOUTS: readonly string[] = ["LEFT", "LEFT_LAST"];

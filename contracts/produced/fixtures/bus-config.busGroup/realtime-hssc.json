@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/hssc captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stations cut to the first two; the always-null screen.routeOverlay since dropped from the contract The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23.",
+  "_about": "GET /bus/config/hssc captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stations cut to the first two; the always-null screen.routeOverlay since dropped from the contract The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23. Each realtime screen's directions (right after stations) and each station's directionId (right after stationNumber) are added by hand, as the server serves them since 2026-10-23 (ADR 0019, D16).",
   "data": {
     "id": "hssc",
     "screenType": "realtime",
@@ -23,6 +23,7 @@
           "name": "농구장",
           "subtitle": "Basketball Court (Shuttle Bus Stop)",
           "stationNumber": null,
+          "directionId": "fromCampus",
           "isFirstStation": true,
           "isLastStation": false,
           "isRotationStation": false,
@@ -35,12 +36,27 @@
           "name": "학생회관",
           "subtitle": "Student Center",
           "stationNumber": null,
+          "directionId": "fromCampus",
           "isFirstStation": false,
           "isLastStation": false,
           "isRotationStation": false,
           "isPassThrough": false,
           "isAlightOnly": false,
           "transferLines": []
+        }
+      ],
+      "directions": [
+        {
+          "id": "fromCampus",
+          "label": "하교",
+          "fromIndex": 0,
+          "toIndex": 5
+        },
+        {
+          "id": "toCampus",
+          "label": "등교",
+          "fromIndex": 6,
+          "toIndex": 10
         }
       ],
       "features": [

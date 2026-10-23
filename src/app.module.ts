@@ -34,6 +34,7 @@ import { BusLiveHsscModule } from "./bus/live/hssc/bus-live-hssc.module";
 import { BusLiveGroupModule } from "./bus/live/group/bus-live-group.module";
 import { BusStopIndexModule } from "./bus/stop-index/bus-stop-index.module";
 import { BusStopArrivalsModule } from "./bus/stop-arrivals/bus-stop-arrivals.module";
+import { BusStopListModule } from "./bus/stop-list/bus-stop-list.module";
 import { BusShuttleGpsModule } from "./bus/private-file";
 import { BusShuttleStopModule } from "./bus/private-file";
 import { AppConfigModule } from "./app-config/app-config.module";
@@ -128,6 +129,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusLiveGroupModule,
     BusStopIndexModule,
     BusStopArrivalsModule,
+    BusStopListModule,
     BusShuttleGpsModule,
     BusShuttleStopModule,
     AppConfigModule,

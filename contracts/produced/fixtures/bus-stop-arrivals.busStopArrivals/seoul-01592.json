@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/seoul-01592/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a pole 종로07 and 종로08 share, 종로07 with one arrival and its tracked bus, a general one by its position row's busType); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/seoul-01592/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a pole 종로07 and 종로08 share, 종로07 with one arrival and its tracked bus, a general one by its position row's busType); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16).",
   "data": {
     "stop": {
       "id": "seoul-01592",
@@ -19,6 +19,10 @@
         "label": "종로 07",
         "stationIndex": 16,
         "towards": "혜화동로터리",
+        "direction": {
+          "id": "100900220",
+          "label": "성균관대운동장 방면"
+        },
         "action": "board",
         "stationsVersion": "0346768f2b776f45",
         "updatedAt": "2026-10-20T14:09:55+09:00",
@@ -83,6 +87,10 @@
         "label": "종로 08",
         "stationIndex": 22,
         "towards": "혜화동로터리",
+        "direction": {
+          "id": "100900040",
+          "label": "명륜3가 방면"
+        },
         "action": "board",
         "stationsVersion": "52e82cc449046288",
         "updatedAt": null,

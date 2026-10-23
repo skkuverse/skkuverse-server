@@ -33,6 +33,8 @@ import { BusRouteAttributesModule } from "../../../src/bus/route-attributes/bus-
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
+import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
+import { storedBusRoutePathRepository } from "../../helpers/bus/bus-route-path";
 import { Clock } from "../../../src/infra/clock";
 import { DATASET_CACHE_TTL_MS } from "../../../src/shared/dataset.constants";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
@@ -100,6 +102,7 @@ async function boot(stops: FakeBusStopsRepository): Promise<NestExpressApplicati
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: BusStopsRepository, useValue: stops },
+      { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: BusRealtimeJongroClient, useValue: new FakeBusRealtimeJongroClient() },
       { provide: UiTransitRepository, useValue: transitLayoutRepository() },
     ],

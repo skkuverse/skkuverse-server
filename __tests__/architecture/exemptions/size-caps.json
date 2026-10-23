@@ -1,6 +1,6 @@
 {
   "src/app.module.ts": {
-    "max": 190,
+    "max": 191,
     "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list. Its max rises with each module added: that commit carries the Architecture-Debt trailer for this file and needs no other reason."
   },
   "src/bus/bus.wire.ts": {
@@ -8,11 +8,11 @@
     "reason": "ADR 0010 D9, no domain seam: `arrival`, `vehicle`, `vehiclePosition` and `operation` are the one live arrival shape that GET /bus/live/:groupId and the stop page both serve (ADR 0019), and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the shapes the two routes share sit at the bus root beside the stop shapes /bus/config serves; each WHY a client reads to fall back on an open enum counts toward the cap."
   },
   "src/bus/config/bus-config.mapper.ts": {
-    "max": 183,
+    "max": 187,
     "reason": "ADR 0010 D9, no domain seam: toBusGroups is the bus list as one ordered literal per group (hssc, campus, fasttrack, commute, then each Jongro route), and each group's field order is the ETag input; the realtime and schedule groups share the card, badge and station helpers, so a sub-module would hold group builders and nothing else."
   },
   "src/bus/config/bus-config.wire.ts": {
-    "max": 68,
+    "max": 71,
     "reason": "ADR 0010 D9, no domain seam: `busGroup` is the one /bus/config body installed apps parse (skkuverse-app/packages/shared/src/bus/parser.ts), its realtime and schedule screens pieces of it rather than flows; the realtime screen's live route fields (`liveEndpoint`, `isLoop`, `capabilities`, ADR 0019) took it past the role cap, and a sibling never imports another sub-module's wire (sub-modules.test.ts)."
   },
   "src/bus/realtime/group/bus-realtime-group.rules.ts": {
@@ -28,15 +28,15 @@
     "reason": "(An agent tooling note is left out of the public history.)"
   },
   "src/bus/realtime/hssc-eta/bus-realtime-hssc-eta.rules.ts": {
-    "max": 111,
+    "max": 112,
     "reason": "ADR 0010 D9, no reachable seam: the overdue bound (`isStalled`, ADR 0018 D6) and the layover (`isLayingOver`) decide the same anchor's lap times, layover and per-stop status from the same segment medians (`segmentOf`) the rest of the engine sums, and a sibling sub-module cannot hold them, since a sibling's rules are never imported across sub-modules (sub-modules.test.ts) and `BusLiveHsscService` is at the four-dependency constructor cap in eslint.config.js."
   },
   "src/bus/stops/bus-stops.rules.ts": {
-    "max": 402,
-    "reason": "ADR 0010 D9, no domain seam: the push checks `toBusStopsIssues` and `busStopsReferences` that scripts/lib/datasets/catalog.js runs, and the read check `BusStopsService` applies to every stored revision (`validateStopCatalog`, `subwayStationErrors`), are one validator of the `bus-stops` dataset: `toBusStopsIssues` reads the labels of `validateStopCatalog`'s messages back into dataset paths, so a sub-module holding the push half would be a Nest module with no provider, imported by nothing in src/, holding rules alone. The catalog checks list every issue in the words bus-stops.rules.spec.ts pins, so they stay hand-written beside the structural schema `busStopsDataset` (docs/plans/private-file)."
+    "max": 414,
+    "reason": "ADR 0010 D9, no domain seam: the push checks `toBusStopsIssues` and `busStopsReferences` that scripts/lib/datasets/catalog.js runs, and the read check `BusStopsService` applies to every stored revision (`validateStopCatalog`, `subwayStationErrors`, `storedLineAndAliasErrors`), are one validator of the `bus-stops` dataset: `toBusStopsIssues` reads the labels of `validateStopCatalog`'s messages back into dataset paths, so a sub-module holding the push half would be a Nest module with no provider, imported by nothing in src/, holding rules alone. The catalog checks list every issue in the words bus-stops.rules.spec.ts pins, so they stay hand-written beside the structural schema `busStopsDataset` (docs/plans/private-file)."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
-    "max": 158,
+    "max": 163,
     "reason": "ADR 0010 D9, no domain seam: one operator-edited layer set reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`), `checkedLayerSet` the cross-reference and served-chip checks at push and at read, and `MapLayerSetService` the base chips' checks (`assertValidChipSpecs`, `assertValidLinkChips`) when Nest builds it; the checks are not flows, so a sub-module would hold rules and nothing else."
   },
   "src/map/layer-set/map-layer-set.schema.ts": {
@@ -44,8 +44,8 @@
     "reason": "ADR 0010 D9, no domain seam: `layerSetFile` is one zod composite over one operator-edited layer set, `checkedLayerSet` runs its cross-reference and served-chip checks, `layerSetsDataset` is the `map-layer-sets` dataset a push checks and `storedLayerSets` the envelope MapLayerSetRepository parses, set by set; all four describe the one dataset, and its leaves (camera, i18n text, nullable defaults) are not flows, so a sub-module would hold schema pieces and nothing else."
   },
   "src/map/map.constants.ts": {
-    "max": 58,
-    "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers and then the HSSC route layer took it past the role cap."
+    "max": 63,
+    "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers, then the HSSC route layer and then the `tabs` each base layer states took it past the role cap."
   },
   "src/notices/list/notices-list.rules.ts": {
     "max": 182,

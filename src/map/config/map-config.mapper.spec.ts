@@ -15,6 +15,7 @@ import { fixtureLayerSet, fixtureLayerSetRepository } from "../../../__tests__/h
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
 import { BASE_LAYERS } from "../map.constants";
 import type { MapRepository } from "../map.repository";
+import type { LayerSpec } from "../map.types";
 import { toMapChips, toMapConfig, toMapLayers } from "./map-config.mapper";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
@@ -74,6 +75,7 @@ describe("toMapLayers", () => {
       "endpoint",
       "chipGroupId",
       "style",
+      "tabs",
     ]);
   });
 });
@@ -118,6 +120,66 @@ describe("toMapChips", () => {
       { kind: "link", actionType: "route", actionValue: "/search" },
       { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
     ]);
+  });
+});
+
+describe("toMapLayers on the tab lens", () => {
+  const route: LayerSpec = {
+    id: "route",
+    label: { ko: "노선" },
+    defaultVisibleWhen: { kind: "never" },
+    userConfigurable: true,
+    endpoint: "/map/overlays/transit",
+    chipGroupId: null,
+  };
+
+  it("sends the tabs a layer states, and leaves the key out when it states none", () => {
+    // Act
+    const [stated, unstated] = toMapLayers([{ ...route, tabs: ["transit"] }, route], "ko");
+
+    // Assert
+    expect(stated?.tabs).toEqual(["transit"]);
+    expect(unstated).not.toHaveProperty("tabs");
+  });
+});
+
+describe("toMapChips on the tab lens", () => {
+  const routes: MapChipSpec = {
+    id: "routes",
+    emoji: "🚌",
+    label: { ko: "노선" },
+    action: { kind: "layers", layerIds: ["jongro02_route", "hssc_route"], camera: null },
+    isReset: false,
+    list: null,
+  };
+
+  it("sends a layers chip's layer ids and a null camera when the chip does not move it", () => {
+    // Act
+    const [chip] = toMapChips([routes], "ko");
+
+    // Assert
+    expect(chip?.action).toEqual({ kind: "layers", layerIds: ["jongro02_route", "hssc_route"], camera: null });
+  });
+
+  it("sends a layers chip's camera when it states one", () => {
+    // Arrange
+    const moving: MapChipSpec = { ...routes, action: { kind: "layers", layerIds: ["hssc_route"], camera } };
+
+    // Act
+    const [chip] = toMapChips([moving], "ko");
+
+    // Assert
+    expect(chip?.action).toEqual({ kind: "layers", layerIds: ["hssc_route"], camera });
+  });
+
+  it("sends tabs and opensIn when a chip states them, and leaves both keys out when it does not", () => {
+    // Act
+    const [stated, unstated] = toMapChips([{ ...routes, tabs: ["map", "transit"], opensIn: "transit" }, routes], "ko");
+
+    // Assert
+    expect(stated).toMatchObject({ tabs: ["map", "transit"], opensIn: "transit" });
+    expect(unstated).not.toHaveProperty("tabs");
+    expect(unstated).not.toHaveProperty("opensIn");
   });
 });
 
@@ -184,7 +246,7 @@ describe("the chips /map/config serves", () => {
     // Act & Assert
     for (const chip of toMapChips(LAYER_SET.servedChipSpecs(CONFIG), "ko")) {
       expect(chip.icon).toEqual({ kind: "emoji", emoji: expect.any(String) });
-      expect(["webview", "focus", "link"]).toContain(chip.action.kind);
+      expect(["webview", "focus", "link", "layers"]).toContain(chip.action.kind);
     }
   });
 });

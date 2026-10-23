@@ -48,6 +48,10 @@ skkuverse-crawler's `bus-jongro` module, paused in production, polls TOPIS from 
 
 `getBusPosByRtid` names each bus's type (`busType`) and `getArrInfoByRouteAll` each slot's (`busType1`, `busType2`): `0` general, `1` low-floor, `2` articulated in TOPIS's guide. On 2026-10-23 the two agreed for every bus (종로07's 서울70사5538 read `1` on its position and on each slot naming it), and a slot with no bus read `0`. The poller keeps the three documented codes and leaves anything else out; the live route reads it per vehicle ([ADR 0019, D13](0019-bus-live-api.md)).
 
+### D8. A station's direction is TOPIS's, stored with the route line
+
+`getStaionByRoute` names on each station the terminal the bus heads to (`direction`). On 2026-10-23 it split 종로07 into 이화사거리 (seq 1 to 13) and 성균관대운동장 (14 to 22), 종로02 into 종각역YMCA and 성균관대학교, and 종로08 into 종로5가 and 명륜3가, each flipping at the station after the turnaround (`transYn: Y`), as NAVER Map's direction tabs do. The route-path sync, which already calls the operation daily, stores it per station in `jongro_route_paths` (no extra call); a row without one, or a blank one, stores `null`, and one that is not text fails the answer. The path version hashes it, so the first sync after the field shipped rewrote every stored line. `/bus/config` serves the split as each realtime line's directions ([ADR 0019, D16](0019-bus-live-api.md)).
+
 ## Consequences
 
 - Showing seconds, correcting a TOPIS prediction or trusting the passenger count needs new measurements first.

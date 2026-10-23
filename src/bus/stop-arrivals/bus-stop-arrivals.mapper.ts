@@ -1,9 +1,5 @@
-import { pick } from "../../infra/i18n";
-import type { SupportedLang } from "../../infra/types";
 import type { ServedStop } from "../bus.wire";
 import type { LiveGroup } from "../live/bus-live.wire";
-import type { HsscLineStation } from "../stops/bus-stops.document";
-import type { ScheduleStop } from "../stops/bus-stops.types";
 import type { FoundStop, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
 import type { LiveEntry, StopBlock, TimetableEntry } from "./bus-stop-arrivals.types";
 
@@ -24,14 +20,14 @@ export function toStopBlock(stop: FoundStop, record: ServedStop | null): StopBlo
 export function toLiveEntry(
   { groupId, stationIndex }: Pick<StopRoute, "groupId"> & { stationIndex: number },
   group: LiveGroup,
-  { label, towards, action }: Pick<LiveEntry, "label" | "towards" | "action">,
+  { label, towards, direction, action }: Pick<LiveEntry, "label" | "towards" | "direction" | "action">,
 ): LiveEntry {
   const station = group.stations.find((candidate) => candidate.stationIndex === stationIndex);
   const arrivals = station?.arrivals ?? [];
   const namedIds = new Set(arrivals.map(({ vehicleId }) => vehicleId));
   return {
     kind: "live",
-    ...{ groupId, label, stationIndex, towards, action },
+    ...{ groupId, label, stationIndex, towards, direction, action },
     ...{ stationsVersion: group.stationsVersion, updatedAt: group.updatedAt },
     operation: station?.operation ?? "noData",
     vehicles: group.vehicles.filter(({ id }) => namedIds.has(id)),
@@ -41,14 +37,4 @@ export function toLiveEntry(
 
 export function toTimetableEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">): TimetableEntry {
   return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals };
-}
-
-/** WHY: each stop of the HSSC line named as its own stop page names it; a position with no stop keeps the line's name. */
-export function toCatalogNamedLine(line: readonly HsscLineStation[], stops: readonly ScheduleStop[], lang: SupportedLang): Array<Pick<HsscLineStation, "name" | "stopId">> {
-  return line.map(({ name, stopId }) => {
-    if (stopId === null) return { name, stopId };
-    const stop = stops.find((candidate) => candidate.id === stopId);
-    if (!stop) throw new Error(`bus-stops: the HSSC line names stop ${stopId}, which a push refuses`);
-    return { name: pick(stop.name, lang) ?? stop.name.ko, stopId };
-  });
 }

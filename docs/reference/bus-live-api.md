@@ -162,6 +162,7 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 | A station | 하차전용 | Riders only get off there: show it as drop-off only, never as a boarding stop | `/bus/config` station `isAlightOnly`; on a stop page, the live entry's `action: "alight"` |
 | A bus | 막차 | Last-bus badge | `isLastBus` on the vehicle and every arrival naming it |
 | A bus | 저상 | Low-floor badge | the vehicle's `isLowFloor` when `true` (see Low floor below) |
+| A line | 방면 tabs | One tab per direction, its stations listed under it | `/bus/config` `screen.directions` and each station's `directionId` ([Directions](#directions)) |
 
 ## What the client computes
 
@@ -182,7 +183,7 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 
 ## In /bus/config
 
-Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupId` ends with three fields; every other field, `dataEndpoint` included, keeps its value, since installed bundles call whatever `dataEndpoint` says.
+Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupId` ends with three fields (its `directions` sit right after `stations`, [Directions](#directions)); every other field, `dataEndpoint` included, keeps its value, since installed bundles call whatever `dataEndpoint` says.
 
 | Field | `hssc` | `jongro02`, `jongro07`, `jongro08` | Meaning |
 | --- | --- | --- | --- |
@@ -203,6 +204,35 @@ Each station of a realtime screen also carries `isPassThrough`, right after `isR
 A client shows "미정차" instead of an arrival on a pass-through row. It never infers this from a missing `stopId`: a Jongno virtual stop has none either and is still a stop. On a drop-off-only row it shows the arrivals with a 하차전용 label and never offers boarding there; it never parses `[하차전용]` out of a name, which a later `bus-stops` push removes once the app reads the flag. The realtime ETags changed once more when each field shipped (both 2026-10-23), and a push that flags a position changes the `hssc` and all-groups ETags.
 
 These attributes are the station's, so `/bus/live/:groupId` does not repeat them on its stations: a client reads them from the `/bus/config` stations it draws the line from, by `stationIndex` (ADR 0019, D15).
+
+## Directions
+
+Each realtime screen of `/bus/config` and `/bus/config/:groupId` lists its line's directions (방면), as NAVER Map's direction tabs do, right after `stations`, and each station names the one it lies on as `directionId`, right after `stationNumber` ([ADR 0019, D16](../decisions/0019-bus-live-api.md)). Every other field keeps its value and order.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `screen.directions[]` | array | The directions in line order; empty when none can be served |
+| `.id` | string | Stable while the direction is: `fromCampus` (하교) and `toCampus` (등교) on the HSSC line; on Jongno the TOPIS station id of the terminal it heads to. Opaque: never parse it |
+| `.label` | string | In the request language: `이화사거리 방면`, `To 이화사거리`, `이화사거리 方向` (TOPIS's terminal name stays Korean); `하교`/`등교`, `From campus`/`To campus`, `放学`/`上学` |
+| `.fromIndex`, `.toIndex` | int | The first and last station index it covers, both included; directions never overlap |
+| `screen.stations[].directionId` | string \| null | The `id` of the direction the station lies on; null where none joins it |
+
+| Line | Directions |
+| --- | --- |
+| `hssc` | 하교 `fromCampus` 0–5 (농구장 → the first 혜화동로터리 pass), 등교 `toCampus` 6–10 (혜화역 1번출구 → 600주년기념관), fixed by the owner |
+| `jongro07` | `100900043` 이화사거리 방면 0–12, `100900220` 성균관대운동장 방면 13–21 |
+| `jongro02` | `100900116` 종각역YMCA 방면 0–12, `100900204` 성균관대학교 방면 13–26 |
+| `jongro08` | `100900191` 종로5가 방면 0–15, `100900040` 명륜3가 방면 16–30 |
+
+A Jongno direction is TOPIS's (`getStaionByRoute` `direction`, as of 2026-10-23): it flips at the station after the turnaround, so the turnaround stop itself (종로07's 방송통신대앞, index 12) belongs to the outbound direction. A station whose stored route line cannot be joined to it (a sync in flight between the two stores, a route with no stored line, a line stored before the field shipped) has `directionId: null` inside or between the ranges, and a route whose lines cannot be read serves `directions: []`: never a guess.
+
+How a client uses it:
+
+- **Tabs.** One tab per entry of `directions`, labeled `label`, listing the stations from `fromIndex` to `toIndex`. With `directions` empty, show the line without tabs.
+- **Buses.** A vehicle belongs to the tab whose range holds its position's `stationIndex`; a bus moves to the next tab when a poll places it past `toIndex`, which on Jongno happens after it leaves the turnaround. A trajectory knot whose `s` passes a range's `toIndex` crosses into the next tab, and on a loop (`isLoop`) past the last index into the first.
+- **Stop page.** A live entry names the same direction as `direction: { id, label }` ([bus-stops-api.md](bus-stops-api.md)).
+
+The realtime ETags and the all-groups ETag changed once when directions shipped, and change again when a route-path sync changes a Jongno station's direction; a schedule group's never.
 
 ## The deprecated realtime route
 

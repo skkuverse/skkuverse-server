@@ -28,7 +28,7 @@ function group(overrides: Partial<BusGroup> = {}): BusGroup {
     label: "인사캠 셔틀버스",
     visibility: { type: "always" },
     card: { themeColor: "003626", iconType: "shuttle", busTypeText: "성대", subtitle: "정차소 ↔ 600주년 기념관" },
-    screen: { dataEndpoint: "/bus/realtime/data/hssc", refreshInterval: 10, lastStationIndex: 10, stations: [], features: [], liveEndpoint: "/bus/live/hssc", isLoop: true, capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false, lowFloor: false } },
+    screen: { dataEndpoint: "/bus/realtime/data/hssc", refreshInterval: 10, lastStationIndex: 10, stations: [], directions: [], features: [], liveEndpoint: "/bus/live/hssc", isLoop: true, capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false, lowFloor: false } },
     ...overrides,
   };
 }

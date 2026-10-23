@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/hssc captured from production 2026-10-20 (Accept-Language en, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to indexes 4-6, each stop with the stopId each realtime station carries and the non-stop index 5 with none (hand-added: production served no stopId at the capture) The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23.",
+  "_about": "GET /bus/config/hssc captured from production 2026-10-20 (Accept-Language en, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to indexes 4-6, each stop with the stopId each realtime station carries and the non-stop index 5 with none (hand-added: production served no stopId at the capture) The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23. Each realtime screen's directions (right after stations) and each station's directionId (right after stationNumber) are added by hand, as the server serves them since 2026-10-23 (ADR 0019, D16).",
   "data": {
     "id": "hssc",
     "screenType": "realtime",
@@ -23,6 +23,7 @@
           "name": "혜화동우체국 [하차전용]",
           "subtitle": "Hyehwa Postoffice [Drop-off Only]",
           "stationNumber": null,
+          "directionId": "fromCampus",
           "isFirstStation": false,
           "isLastStation": false,
           "isRotationStation": false,
@@ -36,6 +37,7 @@
           "name": "혜화동로터리 [미정차]",
           "subtitle": "Hyehwa Rotary [Non-stop]",
           "stationNumber": null,
+          "directionId": "fromCampus",
           "isFirstStation": false,
           "isLastStation": false,
           "isRotationStation": false,
@@ -48,6 +50,7 @@
           "name": "혜화역 1번출구",
           "subtitle": "Hyehwa Station (Shuttle Bus Stop)",
           "stationNumber": null,
+          "directionId": "toCampus",
           "isFirstStation": false,
           "isLastStation": false,
           "isRotationStation": false,
@@ -60,6 +63,20 @@
             }
           ],
           "stopId": "hssc-hyehwa-exit1"
+        }
+      ],
+      "directions": [
+        {
+          "id": "fromCampus",
+          "label": "From campus",
+          "fromIndex": 0,
+          "toIndex": 5
+        },
+        {
+          "id": "toCampus",
+          "label": "To campus",
+          "fromIndex": 6,
+          "toIndex": 10
         }
       ],
       "features": [

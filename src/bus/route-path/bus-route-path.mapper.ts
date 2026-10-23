@@ -9,7 +9,7 @@ export function toFetchedRoutePath(points: readonly TopisRoutePoint[], stations:
     path: [...points].sort((a, b) => a.no - b.no).map((point) => [point.gpsX, point.gpsY]),
     stations: [...stations]
       .sort((a, b) => a.seq - b.seq)
-      .map((s) => ({ topisId: s.station, arsId: s.arsId, stationName: s.stationNm, sequence: s.seq, lng: s.gpsX, lat: s.gpsY, isTurnaround: s.transYn === "Y" })),
+      .map((s) => ({ topisId: s.station, arsId: s.arsId, stationName: s.stationNm, sequence: s.seq, lng: s.gpsX, lat: s.gpsY, isTurnaround: s.transYn === "Y", direction: s.direction })),
   };
 }
 
