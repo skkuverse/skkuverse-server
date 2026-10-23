@@ -3,7 +3,7 @@ title: Bus Stops API Reference
 type: reference
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -46,7 +46,7 @@ Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in
 | A Jongno station | `seoul-<stationNumber>`, or the local stop aliasing that ARS number; no key for a virtual stop (ARS number empty or `0`). A pole a route lists twice (종로02's `01881`) carries its id at both indexes |
 
 ```json
-{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "isPassThrough": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
+{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "isPassThrough": false, "isAlightOnly": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
 ```
 
 Every other field keeps its value and order, and the schedule groups and `stationEtas[]` gain nothing: removing every `stopId` key leaves the body served before the field, which is what installed apps parse (`parseRealtimeStation` reads named fields only). The field is `stopId` in `busGroup` (`src/bus/config/bus-config.wire.ts`), optional in `contracts/produced/bus-config.busGroup.schema.json`, with the fixtures `realtime-hssc-stop-ids.json` and `realtime-jongro07-stop-ids.json`.
@@ -68,7 +68,7 @@ Every other field keeps its value and order, and the schedule groups and `statio
     "stop": { "id": "seoul-01592", "name": "혜화역1번출구", "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"] },
     "routes": [
       {
-        "kind": "live", "groupId": "jongro07", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리",
+        "kind": "live", "groupId": "jongro07", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "action": "board",
         "stationsVersion": "0346768f2b776f45", "updatedAt": "2026-10-20T14:09:55+09:00", "operation": "running",
         "vehicles": [{ "id": "100000203", "plateNumber": "서울74사2703", "occupancy": { "level": "relaxed", "passengerCount": 9 }, "isLastBus": false, "position": { "...": "..." }, "trajectory": [] }],
         "arrivals": [{
@@ -77,13 +77,13 @@ Every other field keeps its value and order, and the schedule groups and `statio
           "stopsAway": 2, "isLastBus": false, "vehicleId": "100000203", "providerText": "4분10초후[2번째 전]"
         }]
       },
-      { "kind": "live", "groupId": "jongro08", "label": "종로 08", "stationIndex": 22, "towards": "혜화동로터리", "stationsVersion": "52e82cc449046288", "updatedAt": null, "operation": "noData", "vehicles": [], "arrivals": [] }
+      { "kind": "live", "groupId": "jongro08", "label": "종로 08", "stationIndex": 22, "towards": "혜화동로터리", "action": "board", "stationsVersion": "52e82cc449046288", "updatedAt": null, "operation": "noData", "vehicles": [], "arrivals": [] }
     ]
   }
 }
 ```
 
-The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busStopArrivals/seoul-01592.json`, its vehicle's position trimmed. Beside it, `hssc-bus-lot.json` is a shuttle stop that aliases a 종로07 pole, with timetable and live entries, and `hssc-hyehwa-exit1.json` an HSSC stop with two buses on their way.
+The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busStopArrivals/seoul-01592.json`, its vehicle's position trimmed. Beside it, `hssc-bus-lot.json` is a shuttle stop with timetable entries and a 종로07 live entry, served over a test store in which it aliases 종로07's pole `01618`: an illustration of an alias only, since production aliases no pole (none is confirmed on site, [edit-bus-stops.md](../how-to/edit-bus-stops.md#add-an-alias)). `hssc-hyehwa-exit1.json` is an HSSC stop with two buses on their way, and `hssc-olympic-hall.json` a drop-off-only HSSC stop, whose live entry's `action` is `alight`.
 
 ### The stop
 
@@ -106,8 +106,17 @@ The published schema (`contracts/produced/bus-stop-arrivals.busStopArrivals.sche
 
 | Entry | Fields |
 | --- | --- |
-| A realtime line, `kind: "live"` | `groupId` (`hssc`, `jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station with a stop: on a Jongno route the next station's name, `null` at the last index; on the HSSC loop the next station past the rotary passes), `stationsVersion` (a Jongno route's, `null` for HSSC), `updatedAt` and `operation` (the station's, `noData` where the live route states nothing), `vehicles` (those its arrivals name) and `arrivals`: exactly the live route's station entry at that index for the same stored state, so a bus standing at the stop is first, `arriving` with `stopsAway: 0` and no departure instant ([ADR 0019, D14](../decisions/0019-bus-live-api.md)) |
+| A realtime line, `kind: "live"` | `groupId` (`hssc`, `jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (below), `action` (`alight` at a drop-off-only HSSC stop, where riders may only get off, else `board`; always `board` on Jongno: the same field a timetable entry carries, [ADR 0019, D15](../decisions/0019-bus-live-api.md)), `stationsVersion` (a Jongno route's, `null` for HSSC), `updatedAt` and `operation` (the station's, `noData` where the live route states nothing), `vehicles` (those its arrivals name) and `arrivals`: exactly the live route's station entry at that index for the same stored state, so a bus standing at the stop is first, `arriving` with `stopsAway: 0` and no departure instant ([ADR 0019, D14](../decisions/0019-bus-live-api.md)) |
 | A shuttle, `kind: "timetable"` | `groupId` (`campus`, `commute`), `label` (the service's label), `serviceId`, `routeType`, `action` (`board` or `alight`), `operation` (the smart schedule's status: `running` when active, `suspended` or `noData`), `vehicles` (always empty) and `arrivals`, empty unless `operation` is `running` |
+
+A live entry's `towards` is the next station with a stop, so a client tells a line's two directions apart at one stop:
+
+| Line | `towards` |
+| --- | --- |
+| HSSC | The next stop past the rotary passes, named as its own stop page names it: its `bus-stops` stop's name in the request language, falling back to English, then Korean, never the line row's name (`올림픽기념국민생활관`, not `올림픽기념국민생활관 [하차전용]`). The loop always has one |
+| Jongno | The next station's stored TOPIS name, Korean in every language; `null` at the route's last index |
+
+`null` means the stop is the line's last station: the bus ends its run there, so a client shows 종점 in place of a direction.
 
 A timetable entry lists up to three runs, each an arrival ([bus-live-api.md](bus-live-api.md)) with `status: "scheduled"`, `stopsAway`, `vehicleId` and `providerText` null, and one more field:
 

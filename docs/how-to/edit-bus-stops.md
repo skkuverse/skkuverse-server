@@ -3,13 +3,13 @@ title: Edit Bus Stops
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
 # Edit Bus Stops
 
-> How to change a shuttle stop, its photo, street view or map guide, a stop sequence's labels, notes or length, or an HSSC station label, with `npm run data` and no deploy: pull `bus-stops`, edit, push to `_dev`, then to production, and roll back.
+> How to change a shuttle stop, its photo, street view or map guide, a stop sequence's labels, notes or length, or an HSSC station's label or drop-off-only flag, with `npm run data` and no deploy: pull `bus-stops`, edit, push to `_dev`, then to production, and roll back.
 
 ## Overview
 
@@ -18,7 +18,7 @@ The `bus-stops` dataset holds every local stop the server serves ([bus architect
 ```text
 { "stops":     [ { "id", "name", "detail"?, "coords"?, "photo"?, "panorama"?, "guide"?, "subwayStationId"?, "arsIds"? } ],
   "sequences": { "<serviceId>": { "<routeType>": [ { "stopId" | "label", "action", "timing", "note"?, "detail"? } ] } },
-  "hssc":      { "stations": [ { "stopId", "name", "subtitle"?, "isFirstStation", "isLastStation", "isRotationStation", "transferLines" } ] },
+  "hssc":      { "stations": [ { "stopId", "name", "subtitle"?, "isFirstStation", "isLastStation", "isRotationStation", "isAlightOnly"?, "transferLines" } ] },
   "topis"?:    { "<ARS number>": { "name"?: { "en"?, "zh"? }, "subwayStationId"? } } }
 ```
 
@@ -49,7 +49,7 @@ A push that changes a stop, a sequence or an alias reaches its page within a min
 | `guide` | Subway exit places, and walks of at most 500 m that start or end at the stop as the sequences use it |
 | `subwayStationId` | A station slug the subway module serves |
 | A sequence | At least two stops, the first boarding, one alighting; a stop once per sequence; an estimated one with its first stop scheduled and at most seven stops |
-| `hssc.stations` | Exactly `HSSC_POSITION_COUNT` positions in wire order, only the first flagged first and the last flagged last, each `stopId` a stop of this dataset or `null`, no stop named twice |
+| `hssc.stations` | Exactly `HSSC_POSITION_COUNT` positions in wire order, only the first flagged first and the last flagged last, each `stopId` a stop of this dataset or `null`, no stop named twice; `isAlightOnly`, when present, a boolean and never `true` at a position whose `stopId` is `null` |
 | `arsIds` | Five-digit ARS numbers, each claimed by one stop only |
 | A sequence against the stored timetables | Every entry of its service and route type in the target's `bus_campus.bus_schedules` (`_dev` without `--prod`) has one `stopTimes` time per stop, `null` only at an estimated stop; a refusal names the service, the route type and the first three entry times. A pattern that ended before today (KST) serves no date ahead: it is printed as `skipped` and not checked |
 
@@ -96,6 +96,22 @@ A sequence and its timetable are written by two tools, and each refuses a length
    npm run data -- push bus-stops --prod --note "jeongja-exit3 photo"
    npm run data -- check bus-stops --prod
    ```
+
+### Flag an HSSC stop drop-off only
+
+`isAlightOnly: true` on an HSSC position says riders may only get off there. Leave it out (or `false`) everywhere else; revisions stored before the field have none, which reads as `false`. `/bus/config` serves it as the station's `isAlightOnly` and the stop's page as its live entry's `action: "alight"` ([ADR 0019, D15](../decisions/0019-bus-live-api.md)). A pass-through position (`stopId: null`) is refused with it: no one gets off where the bus does not stop.
+
+1. Pull `_dev` and add the flag to the two 하교-direction drop-off stops, keeping every other field:
+
+   ```json
+   { "stopId": "hssc-olympic-hall", "name": "올림픽기념국민생활관 [하차전용]", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "isAlightOnly": true, "transferLines": [] }
+   ```
+
+   Do the same at `hssc-hyehwa-post-office` (index 4).
+2. Push to `_dev` with `--dry-run` first, then for real, and `check bus-stops`, as [above](#edit-a-stop-photo-guide-or-hssc-label). Within a minute `/bus/config/hssc` serves `isAlightOnly: true` at indexes 3 and 4 under a new ETag.
+3. Make the same edit in production, from a checkout at the deployed `main` that has the field: an older one refuses the key.
+
+Keep the `[하차전용]` (and `[미정차]`) markers in the names until the app OTA that reads `isAlightOnly`, `isPassThrough` and `action` is adopted: installed bundles still show only the name. Then remove them from each HSSC position's `name` in a later push; the stops' own names already carry none.
 
 ### Add an alias
 

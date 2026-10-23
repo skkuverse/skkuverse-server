@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-bus-lot/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a shuttle stop that aliases 종로07's pole 01618, so it lists the 인자셔틀's timetable entries and a 종로07 live entry); untrimmed.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-bus-lot/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a shuttle stop that aliases 종로07's pole 01618, so it lists the 인자셔틀's timetable entries and a 종로07 live entry); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23.",
   "data": {
     "stop": {
       "id": "hssc-bus-lot",
@@ -111,6 +111,7 @@
         "label": "종로 07",
         "stationIndex": 1,
         "towards": "비천당",
+        "action": "board",
         "stationsVersion": "0346768f2b776f45",
         "updatedAt": "2026-10-20T14:09:55+09:00",
         "operation": "running",

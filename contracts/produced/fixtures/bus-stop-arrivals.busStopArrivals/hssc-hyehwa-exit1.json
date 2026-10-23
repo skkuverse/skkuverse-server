@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-hyehwa-exit1/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (an HSSC stop with two buses on their way, each with its estimate); untrimmed.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-hyehwa-exit1/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (an HSSC stop with two buses on their way, each with its estimate); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23.",
   "data": {
     "stop": {
       "id": "hssc-hyehwa-exit1",
@@ -12,6 +12,7 @@
         "label": "인사캠 셔틀버스",
         "stationIndex": 6,
         "towards": "성균관대입구사거리",
+        "action": "board",
         "stationsVersion": null,
         "updatedAt": "2026-10-20T14:09:55+09:00",
         "operation": "running",

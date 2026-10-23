@@ -6,7 +6,11 @@
  * positions, an HSSC position's subtitle may be left out but is never empty
  * (the owner dropped the HSSC subtitles on 2026-10-23, so "fails an HSSC
  * position without subtitle" is gone on purpose), and every alias and overlay
- * key is a five-digit ARS number. The
+ * key is a five-digit ARS number. An HSSC position's isAlightOnly (drop-off
+ * only, owner 2026-10-23) is optional, so revision 2 as production stores it
+ * (no subtitles, no isAlightOnly) parses unchanged and gains no key, a
+ * present one must be a boolean, and a pass-through position (no stop) is
+ * never drop-off only. The
  * catalog's own checks run at push (toBusStopsIssues, bus-stops.rules.spec.ts).
  * storedBusStops, the stored document as the repository reads it, needs its
  * revision and data.
@@ -179,6 +183,67 @@ describe("busStopsDataset", () => {
   it("fails a root field the dataset does not hold, naming it", () => {
     // Act & Assert
     expect(messagesOf({ ...fixture(), places: [] })).toEqual([': Unrecognized key: "places"']);
+  });
+});
+
+// WHY: production stored revision 2 before the field existed, and every replica parses it again at read.
+describe("busStopsDataset isAlightOnly on an HSSC position", () => {
+  // Revision 2 as production stores it: revision 1 with every HSSC subtitle removed, and no isAlightOnly.
+  const revision2 = (): Record<string, any> => {
+    const data = fixture();
+    for (const station of data.hssc.stations) delete station.subtitle;
+    return data;
+  };
+
+  it("parses revision 2 as it is, adding no isAlightOnly key", () => {
+    // Act
+    const parsed = busStopsDataset.parse(revision2());
+
+    // Assert
+    expect(JSON.stringify(parsed)).toBe(JSON.stringify(revision2()));
+    expect(parsed.hssc.stations.some((station) => "isAlightOnly" in station)).toBe(false);
+  });
+
+  it.each([true, false])("keeps isAlightOnly %s on a position", (isAlightOnly) => {
+    // Arrange
+    const data = revision2();
+    data.hssc.stations[3].isAlightOnly = isAlightOnly;
+
+    // Act
+    const parsed = busStopsDataset.parse(data);
+
+    // Assert
+    expect(parsed.hssc.stations[3]?.isAlightOnly).toBe(isAlightOnly);
+    expect(parsed.hssc.stations[4]).not.toHaveProperty("isAlightOnly");
+  });
+
+  it.each([["the string true", "true"], ["one", 1], ["null", null]])("fails an isAlightOnly that is %s, naming its path", (_case, isAlightOnly) => {
+    // Arrange
+    const data = revision2();
+    data.hssc.stations[3].isAlightOnly = isAlightOnly;
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([expect.stringMatching(/^hssc\.stations\.3\.isAlightOnly: /)]);
+  });
+
+  it("passes the two drop-off-only stops of the 하교 direction flagged true, and a pass-through position flagged false", () => {
+    // Arrange
+    const data = revision2();
+    data.hssc.stations[3].isAlightOnly = true;
+    data.hssc.stations[4].isAlightOnly = true;
+    data.hssc.stations[5].isAlightOnly = false;
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([]);
+  });
+
+  it.each([5, 7])("Pass-through flagged drop-off only: refuses the 혜화동로터리 position %i, where no one gets off, naming its path", (index) => {
+    // Arrange
+    const data = revision2();
+    data.hssc.stations[index].isAlightOnly = true;
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([`hssc.stations.${index}.isAlightOnly: a position with no stop is passed without stopping, so it cannot be drop-off only`]);
   });
 });
 

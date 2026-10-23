@@ -14,8 +14,13 @@
  * an HSSC position its stored stop, a Jongno station the stop its pole
  * resolves to (the local stop aliasing it, else `seoul-<arsId>`), and a
  * station with none no key. The two HSSC stations pinned before stop ids
- * gained exactly their stop ids, on purpose, and then `isPassThrough` (false at
- * both, after `isRotationStation`) when the field shipped.
+ * gained exactly their stop ids, on purpose, then `isPassThrough` (false at
+ * both, after `isRotationStation`) when the field shipped, and then
+ * `isAlightOnly` (false at both, after `isPassThrough`) when that one did; the
+ * pass-through order pin moved one field for it.
+ *
+ * `isAlightOnly` is the stored HSSC position's flag (drop-off only), false where
+ * the data leaves it out and on every Jongno station.
  */
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
@@ -72,6 +77,7 @@ describe("mapStations", () => {
       isLastStation: false,
       isRotationStation: false,
       isPassThrough: false,
+      isAlightOnly: false,
       transferLines: [{ line: "4", color: "00A5DE" }],
       stopId: "hssc-hyehwa-exit1",
     });
@@ -91,6 +97,7 @@ describe("mapStations", () => {
       isLastStation: false,
       isRotationStation: false,
       isPassThrough: false,
+      isAlightOnly: false,
       transferLines: [],
       stopId: "hssc-basketball-court",
     });
@@ -350,7 +357,49 @@ describe("toBusGroups pass-through stations", () => {
     const [rotary, stop] = [stationsOf(jongroRoutes, "hssc")[5]!, stationsOf(jongroRoutes, "jongro07")[0]!];
 
     // Assert
-    expect(Object.keys(rotary).slice(-3)).toEqual(["isRotationStation", "isPassThrough", "transferLines"]);
-    expect(Object.keys(stop).slice(-4)).toEqual(["isRotationStation", "isPassThrough", "transferLines", "stopId"]);
+    expect(Object.keys(rotary).slice(-4)).toEqual(["isRotationStation", "isPassThrough", "isAlightOnly", "transferLines"]);
+    expect(Object.keys(stop).slice(-5)).toEqual(["isRotationStation", "isPassThrough", "isAlightOnly", "transferLines", "stopId"]);
+  });
+});
+
+// WHY: riders cannot board at the HSSC's two drop-off-only stops, and only a name marker said so (owner, 2026-10-23).
+describe("toBusGroups drop-off-only stations", () => {
+  type Station = Record<string, unknown> & { isAlightOnly?: unknown };
+  const stationsOf = (hsscStations: BusStopsData["hssc"]["stations"], id: string, routes = jongroRoutes) =>
+    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
+      .find((g) => g.id === id)!.screen as unknown as { stations: Station[] }).stations;
+  const flaggedLine = (flags: Record<number, boolean>) => HSSC_LINE.map((station, index) => (index in flags ? { ...station, isAlightOnly: flags[index]! } : station));
+
+  it("serves every HSSC position false when the stored line leaves the flag out, as revisions 1 and 2 do", () => {
+    // Act
+    const stations = stationsOf(HSSC_LINE, "hssc");
+
+    // Assert
+    expect(stations.map((station) => station.isAlightOnly)).toEqual(HSSC_LINE.map(() => false));
+  });
+
+  it("serves the stored flag: 올림픽기념국민생활관 and 혜화동우체국 (indexes 3 and 4) true, a stored false false", () => {
+    // Act
+    const stations = stationsOf(flaggedLine({ 3: true, 4: true, 6: false }), "hssc");
+
+    // Assert
+    expect(stations.map((station) => station.isAlightOnly)).toEqual([false, false, false, true, true, false, false, false, false, false, false]);
+  });
+
+  it("serves every Jongno station false", () => {
+    // Act
+    const byRoute = ["jongro02", "jongro07", "jongro08"].map((id) => stationsOf(flaggedLine({ 3: true }), id));
+
+    // Assert
+    for (const stations of byRoute) expect(stations.map((station) => station.isAlightOnly)).toEqual(stations.map(() => false));
+  });
+
+  it("serves isAlightOnly right after isPassThrough, so stopId stays each station's last field", () => {
+    // Act
+    const [olympicHall, stop] = [stationsOf(flaggedLine({ 3: true }), "hssc")[3]!, stationsOf(HSSC_LINE, "jongro07")[0]!];
+
+    // Assert
+    expect(Object.keys(olympicHall).slice(-4)).toEqual(["isPassThrough", "isAlightOnly", "transferLines", "stopId"]);
+    expect(Object.keys(stop).slice(-4)).toEqual(["isPassThrough", "isAlightOnly", "transferLines", "stopId"]);
   });
 });
