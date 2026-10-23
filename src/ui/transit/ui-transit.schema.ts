@@ -36,6 +36,7 @@ const transitSectionFile = z.strictObject({
   type: z.literal("item_list"),
   id: slug,
   title: localizedText.optional(),
+  campus: z.enum(["hssc", "nsc"]).optional(),
   items: z.array(transitItemFile).min(1),
 });
 

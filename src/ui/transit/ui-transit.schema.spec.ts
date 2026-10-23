@@ -240,3 +240,40 @@ describe("storedTransitLayout", () => {
     expect(storedTransitLayout.safeParse({ ...stored, data }).success).toBe(false);
   });
 });
+
+/**
+ * A section's optional `campus` tag: `hssc` or `nsc` places it on one campus for the app's ordering, and
+ * no tag places it on both. Any other value is refused at the section's path.
+ */
+describe("transitLayoutFile campus tag", () => {
+  it("parses a section tagged hssc, one tagged nsc and one with no tag", () => {
+    // Arrange
+    const tagged = layout(
+      section("campus", [{ kind: "bus", groupId: "campus" }]),
+      { ...section("hssc", [{ kind: "bus", groupId: "hssc" }]), campus: "hssc" },
+      { ...section("nsc", [{ kind: "bus", groupId: "commute" }]), campus: "nsc" },
+    );
+
+    // Act
+    const parsed = transitLayoutFile.safeParse(tagged);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.sections.map((parsedSection) => parsedSection.campus)).toEqual([undefined, "hssc", "nsc"]);
+  });
+
+  it.each<[string, unknown]>([
+    ["both", "both"],
+    ["an upper-case campus", "HSSC"],
+    ["null", null],
+  ])("refuses a section tagged %s, naming its campus", (_label, campus) => {
+    // Arrange
+    const tagged = layout({ ...section("hssc", [{ kind: "bus", groupId: "hssc" }]), campus });
+
+    // Act
+    const parsed = transitLayoutFile.safeParse(tagged);
+
+    // Assert
+    expect(parsed.error?.issues.map((issue) => issue.path)).toEqual([["sections", 0, "campus"]]);
+  });
+});
