@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
