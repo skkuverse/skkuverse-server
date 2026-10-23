@@ -447,6 +447,29 @@ describe("GET /bus/config realtime station stop ids", () => {
   });
 });
 
+// WHY: the app labels a pass-through row as non-stop instead of showing an arrival, which is never served there.
+describe("GET /bus/config realtime station pass-through", () => {
+  type Station = { isPassThrough?: unknown };
+  type Group = { id: string; screen: { stations: Station[] } };
+
+  it("serves the HSSC 혜화동로터리 positions (indexes 5 and 7) isPassThrough true, every other station false, as the wire declares", async () => {
+    // Act
+    const config = await request(httpServer).get("/bus/config");
+    const hssc = await request(httpServer).get("/bus/config/hssc");
+
+    // Assert
+    expect(config.status).toBe(200);
+    expect(hssc.status).toBe(200);
+    expectWire(busConfig, config.body.data);
+    expectWire(busGroup, hssc.body.data);
+    const flags = (hssc.body.data as Group).screen.stations.map((station) => station.isPassThrough);
+    expect(flags).toEqual([false, false, false, false, false, true, false, true, false, false, false]);
+    const jongro = (config.body.data.groups as Group[]).filter((group) => group.id.startsWith("jongro"));
+    expect(jongro).toHaveLength(3);
+    for (const group of jongro) expect(group.screen.stations.every((station) => station.isPassThrough === false)).toBe(true);
+  });
+});
+
 describe("GET /bus/config/hssc for a bus-stops revision without HSSC subtitles", () => {
   type Station = { name: string; subtitle: string | null };
 

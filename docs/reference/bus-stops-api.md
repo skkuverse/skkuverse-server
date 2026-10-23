@@ -46,7 +46,7 @@ Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in
 | A Jongno station | `seoul-<stationNumber>`, or the local stop aliasing that ARS number; no key for a virtual stop (ARS number empty or `0`). A pole a route lists twice (종로02's `01881`) carries its id at both indexes |
 
 ```json
-{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
+{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "isPassThrough": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
 ```
 
 Every other field keeps its value and order, and the schedule groups and `stationEtas[]` gain nothing: removing every `stopId` key leaves the body served before the field, which is what installed apps parse (`parseRealtimeStation` reads named fields only). The field is `stopId` in `busGroup` (`src/bus/config/bus-config.wire.ts`), optional in `contracts/produced/bus-config.busGroup.schema.json`, with the fixtures `realtime-hssc-stop-ids.json` and `realtime-jongro07-stop-ids.json`.

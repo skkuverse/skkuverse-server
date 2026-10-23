@@ -172,6 +172,14 @@ Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupI
 
 Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped.
 
+Each station of a realtime screen also carries `isPassThrough`, right after `isRotationStation`:
+
+| Field | `hssc` | `jongro02`, `jongro07`, `jongro08` | Meaning |
+| --- | --- | --- | --- |
+| `isPassThrough` | `true` at the two non-stop 혜화동로터리 positions (indexes 5 and 7), `false` elsewhere | always `false` | The bus passes without stopping, so this route never serves an arrival there |
+
+A client shows "미정차" instead of an arrival on such a row. It never infers this from a missing `stopId`: a Jongno virtual stop has none either and is still a stop. The realtime ETags changed once more when the field shipped (2026-10-23).
+
 ## The deprecated realtime route
 
 `GET /bus/realtime/data/:groupId`, which installed bundles call through `screen.dataEndpoint`, is frozen: its body is pinned byte for byte by `__tests__/nest/bus/bus-cache-characterization.routes.test.ts`, and its wire (`bus-realtime-group.realtimeGroup`) is published as deprecated. It answers two headers more:
