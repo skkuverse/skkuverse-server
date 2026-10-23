@@ -836,9 +836,13 @@ module.exports = [
           message: "Call verifyIdToken with the token alone: checkRevoked reads the user record, which needs a service-account credential.",
         },
         {
-          // A credential inside initializeApp's options is reported once, by the initializeApp selector.
-          selector:
-            "MemberExpression[object.name='admin'][property.name!=/^(?:auth|initializeApp)$/]:not(CallExpression[callee.property.name='initializeApp'] MemberExpression)",
+          // admin.auth and admin.initializeApp only as callees, so neither is read as a value and called later
+          // unchecked. A credential inside initializeApp's options is reported once, by the initializeApp selector.
+          selector: [
+            "MemberExpression[object.name='admin']",
+            ":not(CallExpression > MemberExpression.callee[property.name=/^(?:auth|initializeApp)$/])",
+            ":not(CallExpression[callee.property.name='initializeApp'] MemberExpression)",
+          ].join(""),
           message: "Only admin.auth() and admin.initializeApp() run without a credential: Firestore, messaging and the rest need a service account.",
         },
         {
@@ -846,6 +850,9 @@ module.exports = [
             "Identifier[name='admin']:not(:matches(ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier) > Identifier)",
             ":not(MemberExpression > Identifier.object)",
             ":not(TSExportAssignment > Identifier.expression)",
+            // A property or member named `admin` (`user.admin`, `{ admin: true }`) is not the binding.
+            ":not(MemberExpression[computed=false] > Identifier.property)",
+            ":not(:matches(Property, PropertyDefinition, MethodDefinition, TSPropertySignature, TSMethodSignature)[computed=false] > Identifier.key)",
           ].join(""),
           message: "Use `admin` only as `admin.auth()` or `admin.initializeApp()`: an alias, a destructuring or an argument escapes these checks.",
         },

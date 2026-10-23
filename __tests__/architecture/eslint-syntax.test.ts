@@ -478,6 +478,31 @@ describe("firebase/no-credential", () => {
     expect(counts).toEqual(sources.map(() => 1));
   });
 
+  it("rejects admin.auth and admin.initializeApp read as values, which a later call would use unchecked", () => {
+    // Arrange
+    const sources = [
+      'import admin from "../infra/private-file"; const a = admin.auth; a().getUser(u);',
+      'import admin from "firebase-admin"; const init = admin.initializeApp; init({ credential: c });',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("passes `admin` as a property name, which is no use of Firebase", () => {
+    // Arrange
+    const sources = ["const role = user.admin;", "const flags = { admin: true };", "type Roles = { admin: boolean };"];
+
+    // Act
+    const reported = sources.filter((source) => lint("firebase/no-credential", file, source).length > 0);
+
+    // Assert
+    expect(reported).toEqual([]);
+  });
+
   it("applies to src/ but not to its specs", () => {
     // Arrange
     const { files, ignores } = block("firebase/no-credential");
