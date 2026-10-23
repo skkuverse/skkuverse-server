@@ -3,7 +3,6 @@ import { toPoleStopId, toServedArsId } from "../../bus.rules";
 import type { Vehicle, VehiclePosition } from "../../bus.wire";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";
 import type { JongroReading, PlacedArrivalRow, TrackedPosition } from "../../realtime/group/bus-realtime-group.types";
-import { MAX_STATION_ARRIVALS } from "../bus-live.constants";
 import { toGroupOperation } from "../bus-live.rules";
 import type { LiveGroup, LiveStation } from "../bus-live.wire";
 import { POSITION_STATUS_BY_TRACKED_STATUS } from "./bus-live-jongro.constants";
@@ -14,9 +13,9 @@ import {
   toOccupancy,
   toOlderInstant,
   toPlateNumber,
+  toStationArrivals,
   toStationOperation,
   toVehicleStates,
-  withVehicleState,
 } from "./bus-live-jongro.rules";
 import type { JongroStationContext, JongroVehicleStates } from "./bus-live-jongro.types";
 
@@ -24,13 +23,13 @@ const SECOND_MS = 1000;
 
 function toStation(row: PlacedArrivalRow, { route, stopIdByArsId, states }: JongroStationContext): LiveStation {
   const arsId = route.registryStations[row.stationIndex]?.arsId ?? null;
-  const arrivals = row.slots.flatMap((slot) => toJongroArrival(slot, row.madeAtMs) ?? []).map((arrival) => withVehicleState(arrival, row.stationIndex, states));
+  const rowArrivals = row.slots.flatMap((slot) => toJongroArrival(slot, row.madeAtMs) ?? []);
   return {
     stationIndex: row.stationIndex,
     stopId: toPoleStopId(arsId, stopIdByArsId),
     arsId: toServedArsId(arsId),
     operation: toStationOperation(row.slots),
-    arrivals: arrivals.slice(0, MAX_STATION_ARRIVALS),
+    arrivals: toStationArrivals(rowArrivals, row.stationIndex, states),
   };
 }
 

@@ -52,9 +52,10 @@ export const realtimeArrival = z.object({
 // SEE: docs/reference/bus-live-api.md ("Open enums"): a client skips, or renders the providerText of, a value it does not know.
 const instant = z.iso.datetime({ offset: true });
 
-/** WHY: one bus or run at one station, every key present, null when unknown (ADR 0019, D1, D3, D4). */
+// WHY: one bus or run at one station, every key present, null when unknown (ADR 0019, D1, D3, D4). A bus standing at the station
+// is arriving, and atStop is gone (D14): clients parse status as an open enum (D3), so dropping a value breaks none.
 export const arrival = z.object({
-  status: z.enum(["atStop", "arriving", "enRoute", "waitingToDepart", "scheduled", "unknown"]),
+  status: z.enum(["arriving", "enRoute", "waitingToDepart", "scheduled", "unknown"]),
   expectedArrivalAt: instant.nullable(),
   expectedDepartureAt: instant.nullable(),
   scheduledArrivalAt: instant.nullable(),

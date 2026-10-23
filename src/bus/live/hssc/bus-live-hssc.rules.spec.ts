@@ -1,6 +1,6 @@
 /**
- * An HSSC bus in the live shape (ADR 0019, D1, D6, D7): an engine ETA is an estimated arrival (at the stop
- * with when it leaves, en route with when it comes, or waiting behind the layover), a bus laying over waits to
+ * An HSSC bus in the live shape (ADR 0019, D1, D6, D7, D14): an engine ETA is an estimated arrival (standing at the
+ * stop as arriving with no departure instant, en route with when it comes, or waiting behind the layover), a bus laying over waits to
  * depart, and a moving bus's trajectory runs through each stop's arrival and departure to the turnaround, s passing
  * the last index on the way back to station 0.
  */
@@ -32,13 +32,17 @@ describe("toHsscArrival", () => {
     });
   });
 
-  it("serves a bus at the stop with when it leaves", () => {
+  it("serves a bus standing at the stop as arriving, 0 stops away, with no departure instant", () => {
     // Act & Assert
-    expect(toHsscArrival({ ...common, status: "arriving", stopsAway: 0, departsAt: at("2026-10-20T01:00:40Z") })).toMatchObject({
-      status: "atStop",
-      expectedArrivalAt: null,
-      expectedDepartureAt: "2026-10-20T10:00:40+09:00",
+    // WHY: Seoul BIS signage shows a standing bus as arriving until it leaves (ADR 0019, D14); the dwell median is no departure time.
+    expect(toHsscArrival({ ...common, status: "arriving", stopsAway: 0, departsAt: at("2026-10-20T01:00:40Z") })).toEqual({
+      ...empty,
+      status: "arriving",
+      basis: "estimate",
       stopsAway: 0,
+      isLastBus: null,
+      vehicleId: "32149",
+      providerText: null,
     });
   });
 

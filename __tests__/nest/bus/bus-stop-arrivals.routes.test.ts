@@ -446,7 +446,7 @@ describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
     expectWire(busStopArrivals, res.body.data);
   });
 
-  it("a bus at the stop stands there until its dwell ends, and a bus just past it is a lap away behind the layover", async () => {
+  it("a bus at the stop is arriving there with no departure instant, and a bus just past it is a lap away behind the layover", async () => {
     // Arrange
     const stores = freshStores();
     stores.busCache.values.set("hssc", [hsscBus("32150", 0, "LEFT", "14:09:40"), hsscBus("32149", 0, "ENTERED", "14:09:00")]);
@@ -457,7 +457,7 @@ describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
 
     // Assert
     expect(routesOf(res.body)[0]!.arrivals).toMatchObject([
-      { status: "atStop", stopsAway: 0, vehicleId: "32149", expectedDepartureAt: "2026-10-20T14:11:54+09:00" },
+      { status: "arriving", stopsAway: 0, vehicleId: "32149", expectedArrivalAt: null, expectedDepartureAt: null },
       { status: "waitingToDepart", stopsAway: 9, vehicleId: "32150", expectedArrivalAt: null },
     ]);
   });

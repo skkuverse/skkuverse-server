@@ -17,3 +17,11 @@ export const POSITION_STATUS_BY_TRACKED_STATUS: Readonly<Record<TrackedStatus["s
   atStop: "atStop",
   waiting: "waitingToDepart",
 };
+
+// WHY: a bus standing at the station, arriving and 0 stops away until it leaves, with no instant: no departure countdown (ADR 0019, D14).
+export const STANDING_ARRIVAL: Readonly<Omit<Arrival, "vehicleId" | "isLastBus" | "providerText">> = {
+  status: "arriving",
+  ...{ expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
+  basis: "provider",
+  stopsAway: 0,
+};

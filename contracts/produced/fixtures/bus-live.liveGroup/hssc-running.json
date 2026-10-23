@@ -233,9 +233,9 @@
         "operation": "running",
         "arrivals": [
           {
-            "status": "atStop",
+            "status": "arriving",
             "expectedArrivalAt": null,
-            "expectedDepartureAt": "2026-10-20T10:00:04+09:00",
+            "expectedDepartureAt": null,
             "scheduledArrivalAt": null,
             "scheduledDepartureAt": null,
             "basis": "estimate",
