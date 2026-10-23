@@ -1194,8 +1194,9 @@ The row always opens with the **base chips**, `BASE_CHIPS` in
 건물코드 (route `/search`), 분실물 (web view `/skku/lostandfound`) and 문의하기 (external, the Kakao
 channel chat), each with `isReset: false` and `list: null`. They are the campus sheet's former service
 buttons; the first four tiles of the home grid carry the same links for builds that drop a `link`
-chip. A fifth base chip, 셔틀 노선 (`shuttle_routes`, Shuttle Routes / 班车路线), is the transit tab's
-(`tabs: ["transit"]`): a `layers` chip that turns on the four route line layers with a `null` camera. While a layer set is live, **the reset chip, then every chip authored in the layer set's
+chip. A fifth base chip, 셔틀 노선 (`shuttle_routes`, Shuttle Routes / 班车路线), shows in both tabs and
+opens in the map tab (`tabs: ["map", "transit"]`, `opensIn: "map"`): a `layers` chip that turns on the
+four route line layers with a `null` camera. While a layer set is live, **the reset chip, then every chip authored in the layer set's
 config**, in file order, follow them. Outside an activation window `chips` is the base chips alone.
 
 **The reset chip is synthesised, not authored.** Its id is `<layerSetId>_all` (`eskara-2026_all`), its
@@ -1366,12 +1367,16 @@ that parses it applies it only under the shared-map shell (`features.sharedMapSh
 `/app/config`); with the flag off it shows them as those builds do. A chip's `opensIn` names the
 tab a tap switches to; absent, the tap stays on the tab it was made on.
 
+A chip runs where its result shows. The transit tab's chips are a billboard for the map tab: a chip
+whose result is on the map lists both tabs and names `opensIn: "map"`, so a tap on the transit tab
+switches to the map tab and turns the chip on there.
+
 | Layer or chip | `tabs` |
 | --- | --- |
 | `building_numbers`, `building_labels`, `campus_geometry` | `["map", "transit"]` |
 | the route line layers (`jongro02_route`, `jongro08_route`, `jongro07_route`, `hssc_route`) | `["transit"]` |
 | every festival layer, and every chip but `shuttle_routes` | absent: the map tab only |
-| the `shuttle_routes` chip | `["transit"]` |
+| the `shuttle_routes` chip | `["map", "transit"]`, with `opensIn: "map"` |
 
 A route line layer keeps `chipGroupId: null` on the transit tab. Installed builds read a grouped
 layer as festival content and hide its toggle, so grouping the route lines would take the Jongno
