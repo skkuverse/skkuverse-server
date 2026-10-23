@@ -12,10 +12,10 @@ const LIVE_KEYS = ["liveEndpoint", "isLoop", "capabilities"] as const;
 /** The live fields of a realtime group, by its id; none for a schedule group. */
 export function liveScreenOf(groupId: string): Screen | undefined {
   if (groupId === "hssc") {
-    return { liveEndpoint: "/bus/live/hssc", isLoop: true, capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false } };
+    return { liveEndpoint: "/bus/live/hssc", isLoop: true, capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false, lowFloor: false } };
   }
   if (!groupId.startsWith("jongro")) return undefined;
-  return { liveEndpoint: `/bus/live/${groupId}`, isLoop: false, capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true } };
+  return { liveEndpoint: `/bus/live/${groupId}`, isLoop: false, capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true, lowFloor: true } };
 }
 
 /** A pinned group with its live fields appended to its screen, last; a schedule group as it was. */

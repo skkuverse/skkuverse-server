@@ -6,7 +6,7 @@ import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.d
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "../bus-realtime.mapper";
 import { toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
-import { isNoResultHeaderCd, isUsableHeaderCd, toObservedAt, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
+import { isNoResultHeaderCd, isUsableHeaderCd, toBusType, toObservedAt, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -18,7 +18,7 @@ interface TopisEnvelope<TRow> {
 }
 
 type BusSlot = "1" | "2";
-type TopisBusField = "vehId" | "plainNo" | "sectOrd" | "traTime" | "isLast" | "rerdie_Div" | "reride_Num" | "arrmsg";
+type TopisBusField = "vehId" | "plainNo" | "sectOrd" | "traTime" | "isLast" | "rerdie_Div" | "reride_Num" | "arrmsg" | "busType";
 
 // QUIRK(topis): each row names its first and second bus in fields suffixed 1 and 2, every value a string.
 type TopisArrivalRow = { [K in `${TopisBusField}${BusSlot}`]: string } & {
@@ -48,6 +48,7 @@ interface TopisPositionRow {
   stopFlag: string | null;
   dataTm: string | null;
   lastStTm?: string | null;
+  busType?: string | null;
 }
 
 @Injectable()
@@ -92,6 +93,7 @@ export class BusRealtimeJongroClient {
   }
 
   private toArrivalBus(row: TopisArrivalRow, slot: BusSlot, what: string): JongroArrivalBus {
+    const busType = toBusType(row[`busType${slot}`]);
     return {
       traTime: this.requireInteger(row, `traTime${slot}`, what),
       sectOrd: this.requireInteger(row, `sectOrd${slot}`, what),
@@ -102,6 +104,7 @@ export class BusRealtimeJongroClient {
       vehId: row[`vehId${slot}`],
       rerideDiv: toTopisInteger(row[`rerdie_Div${slot}`]),
       rerideNum: toTopisInteger(row[`reride_Num${slot}`]),
+      ...(busType !== null && { busType }),
     };
   }
 
@@ -126,6 +129,7 @@ export class BusRealtimeJongroClient {
       if (value === null) throw new UpstreamError(`TOPIS row has a malformed ${name} (${what})`, "topis");
       return value;
     };
+    const busType = toBusType(row.busType);
     return {
       stationId: field("lastStnId"),
       latitude: field("gpsY"),
@@ -140,6 +144,7 @@ export class BusRealtimeJongroClient {
       isAtStop: row.stopFlag?.trim() === "1",
       observedAt: parsed("dataTm", toObservedAt),
       lastStTm: toTopisInteger(row.lastStTm) ?? undefined,
+      ...(busType !== null && { busType }),
     };
   }
 }

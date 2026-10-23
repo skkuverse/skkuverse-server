@@ -11,6 +11,7 @@
         "plateNumber": null,
         "occupancy": null,
         "isLastBus": null,
+        "isLowFloor": null,
         "position": {
           "stationIndex": 6,
           "status": "inTransit",
@@ -69,6 +70,7 @@
         "plateNumber": null,
         "occupancy": null,
         "isLastBus": null,
+        "isLowFloor": null,
         "position": {
           "stationIndex": 2,
           "status": "atStop",
@@ -231,9 +233,9 @@
         "operation": "running",
         "arrivals": [
           {
-            "status": "atStop",
+            "status": "arriving",
             "expectedArrivalAt": null,
-            "expectedDepartureAt": "2026-10-20T10:00:04+09:00",
+            "expectedDepartureAt": null,
             "scheduledArrivalAt": null,
             "scheduledDepartureAt": null,
             "basis": "estimate",

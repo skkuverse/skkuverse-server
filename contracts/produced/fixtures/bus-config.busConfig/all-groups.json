@@ -1,5 +1,5 @@
 {
-  "_about": "generated 2026-10-18 from GET /bus/config on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config the same day. Re-capture from production after the deploy; every group kept, its stations, services, route badges and stops cut to the first two, each service to its first route type's stop sequence, cut to two stops, guide markers and walks cut to one, the walk to its first two points Each commute stop's map is removed by hand since 2026-10-18, which serves no commute stop a map; nothing else changed. The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them.",
+  "_about": "generated 2026-10-18 from GET /bus/config on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config the same day. Re-capture from production after the deploy; every group kept, its stations, services, route badges and stops cut to the first two, each service to its first route type's stop sequence, cut to two stops, guide markers and walks cut to one, the walk to its first two points Each commute stop's map is removed by hand since 2026-10-18, which serves no commute stop a map; nothing else changed. The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23.",
   "data": {
     "groups": [
       {
@@ -28,6 +28,7 @@
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             },
             {
@@ -38,6 +39,7 @@
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             }
           ],
@@ -53,7 +55,8 @@
             "positionSource": "stopEvents",
             "occupancy": false,
             "plateNumber": false,
-            "lastBus": false
+            "lastBus": false,
+            "lowFloor": false
           }
         }
       },
@@ -376,6 +379,7 @@
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             },
             {
@@ -386,6 +390,7 @@
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             }
           ],
@@ -397,7 +402,8 @@
             "positionSource": "gps",
             "occupancy": true,
             "plateNumber": true,
-            "lastBus": true
+            "lastBus": true,
+            "lowFloor": true
           }
         }
       },
@@ -427,6 +433,7 @@
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             },
             {
@@ -437,6 +444,7 @@
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             }
           ],
@@ -448,7 +456,8 @@
             "positionSource": "gps",
             "occupancy": true,
             "plateNumber": true,
-            "lastBus": true
+            "lastBus": true,
+            "lowFloor": true
           }
         }
       },
@@ -478,6 +487,7 @@
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             },
             {
@@ -488,6 +498,7 @@
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
+              "isPassThrough": false,
               "transferLines": []
             }
           ],
@@ -499,7 +510,8 @@
             "positionSource": "gps",
             "occupancy": true,
             "plateNumber": true,
-            "lastBus": true
+            "lastBus": true,
+            "lowFloor": true
           }
         }
       }

@@ -1,0 +1,103 @@
+{
+  "_about": "Captured from TOPIS on 2026-10-23 12:42 KST from production: buspos/getBusPosByRtid?busRouteId=100900004 (종로07) and arrive/getArrInfoByRouteAll?busRouteId=100900004, same moment. positions is trimmed to two of six rows (서울70사5538, busType 1, the route's one low-floor bus, and 서울70사5537, busType 0); arrivals to staOrd 1 (no vehicle in either slot, busType still 0) and 12 (5538 first with busType1 1, 5536 second with busType2 0); each row to the fields BusRealtimeJongroClient reads plus busType; msgHeader kept.",
+  "positions": {
+    "msgHeader": {
+      "headerCd": "0",
+      "headerMsg": "정상적으로 처리되었습니다."
+    },
+    "msgBody": {
+      "itemList": [
+        {
+          "lastStnId": "100900220",
+          "trnstnid": "100900028",
+          "gpsX": "126.99237",
+          "gpsY": "37.587863",
+          "plainNo": "서울70사5537",
+          "vehId": "100000103",
+          "sectOrd": "1",
+          "sectDist": "0",
+          "fullSectDist": "0.201",
+          "stopFlag": "0",
+          "dataTm": "20261023124020",
+          "lastStTm": "0",
+          "busType": "0"
+        },
+        {
+          "lastStnId": "100900017",
+          "trnstnid": "100900028",
+          "gpsX": "126.999557",
+          "gpsY": "37.588408",
+          "plainNo": "서울70사5538",
+          "vehId": "100000114",
+          "sectOrd": "8",
+          "sectDist": "0.167",
+          "fullSectDist": "0.321",
+          "stopFlag": "0",
+          "dataTm": "20261023124223",
+          "lastStTm": "1095",
+          "busType": "1"
+        }
+      ]
+    }
+  },
+  "arrivals": {
+    "msgHeader": {
+      "headerCd": "0",
+      "headerMsg": "정상적으로 처리되었습니다."
+    },
+    "msgBody": {
+      "itemList": [
+        {
+          "stId": "100900220",
+          "staOrd": "1",
+          "stNm": "성균관대운동장",
+          "mkTm": "2026-10-23 12:42:42.0",
+          "arsId": "01617",
+          "vehId1": "0",
+          "plainNo1": " ",
+          "sectOrd1": "0",
+          "traTime1": "0",
+          "isLast1": "0",
+          "rerdie_Div1": "0",
+          "reride_Num1": "0",
+          "arrmsg1": "출발대기",
+          "busType1": "0",
+          "vehId2": "0",
+          "plainNo2": " ",
+          "sectOrd2": "0",
+          "traTime2": "0",
+          "isLast2": "0",
+          "rerdie_Div2": "0",
+          "reride_Num2": "0",
+          "arrmsg2": "출발대기",
+          "busType2": "0"
+        },
+        {
+          "stId": "100000125",
+          "staOrd": "12",
+          "stNm": "혜화역3번출구.서울대병원입구",
+          "mkTm": "2026-10-23 12:42:42.0",
+          "arsId": "01221",
+          "vehId1": "100000114",
+          "plainNo1": "서울70사5538",
+          "sectOrd1": "9",
+          "traTime1": "232",
+          "isLast1": "0",
+          "rerdie_Div1": "2",
+          "reride_Num1": "11",
+          "arrmsg1": "3분52초후[3번째 전]",
+          "busType1": "1",
+          "vehId2": "100000035",
+          "plainNo2": "서울70사5536",
+          "sectOrd2": "5",
+          "traTime2": "487",
+          "isLast2": "0",
+          "rerdie_Div2": "2",
+          "reride_Num2": "2",
+          "arrmsg2": "8분7초후[7번째 전]",
+          "busType2": "0"
+        }
+      ]
+    }
+  }
+}

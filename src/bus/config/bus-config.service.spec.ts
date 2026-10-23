@@ -108,14 +108,14 @@ describe("BusConfigService.getBusGroups", () => {
       dataEndpoint: "/bus/realtime/data/hssc",
       liveEndpoint: "/bus/live/hssc",
       isLoop: true,
-      capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false },
+      capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false, lowFloor: false },
     });
     for (const id of ["jongro02", "jongro07", "jongro08"]) {
       expect(screens.get(id)).toMatchObject({
         dataEndpoint: `/bus/realtime/data/${id}`,
         liveEndpoint: `/bus/live/${id}`,
         isLoop: false,
-        capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true },
+        capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true, lowFloor: true },
       });
     }
   });

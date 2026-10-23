@@ -3,6 +3,8 @@
  * registry, route attributes and stops, and a clock at 10:00 KST on Tuesday 2026-10-20: a Jongno route's buses and
  * station arrivals, the HSSC line running, laying over, wrapping its loop and with no bus, each in the one live shape
  * with `no-store` and `meta.serverNow`; a schedule group answers 404 GROUP_NOT_LIVE and an unknown one GROUP_NOT_FOUND.
+ * Each vehicle's low-floor flag comes from TOPIS's bus type on the cached rows, null over rows a poller older than the
+ * field wrote and on the HSSC line, and the deprecated realtime route never serves the bus type.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -251,5 +253,71 @@ describe("GET /bus/live/:groupId for a group with no live route", () => {
     // Assert
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe(code);
+  });
+});
+
+// WHY: an api replica can read rows an older poller wrote during a deploy (ADR 0012), and the old route is frozen (ADR 0019, D11).
+describe("GET /bus/live/:groupId low floor", () => {
+  const seedJongro07 = (positionBusType?: "lowFloor", arrivalBusType?: "general") => {
+    busCache.values.set("jongro_locations_07", [jongroPositionDoc({ sequence: "6", ...(positionBusType && { busType: positionBusType }) })]);
+    const untracked = jongroArrivalBus({ staOrd: 1, sectOrd: 0, traTime: 180, vehId: "100000200", plainNo: "서울70사5536", arrmsg: "3분후[1번째 전]", ...(arrivalBusType && { busType: arrivalBusType }) });
+    busCache.values.set("jongro_stations_07", [jongroArrivalDoc({ stationId: "100900220", sequence: "1", eventDate: "2026-10-20 09:59:00.0", buses: [untracked] })]);
+  };
+
+  it("serves each Jongno vehicle's low-floor flag from its cached row", async () => {
+    // Arrange
+    seedJongro07("lowFloor", "general");
+
+    // Act
+    const res = await request(httpServer).get("/bus/live/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(liveGroup, res.body.data);
+    expect(res.body.data.vehicles.map(({ id, isLowFloor }: { id: string; isLowFloor: unknown }) => [id, isLowFloor])).toEqual([
+      ["100000103", true],
+      ["100000200", false],
+    ]);
+  });
+
+  it("serves null, not an error, over rows a poller older than the bus type wrote", async () => {
+    // Arrange
+    seedJongro07();
+
+    // Act
+    const res = await request(httpServer).get("/bus/live/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(liveGroup, res.body.data);
+    expect(res.body.data.vehicles.map(({ id, isLowFloor }: { id: string; isLowFloor: unknown }) => [id, isLowFloor])).toEqual([
+      ["100000103", null],
+      ["100000200", null],
+    ]);
+  });
+
+  it("serves null on the HSSC line, whose feed names no vehicle type", async () => {
+    // Arrange
+    busCache.values.set("hssc", [hsscBus("1", 6, "LEFT", "09:59:50")]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/live/hssc");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.vehicles.map(({ isLowFloor }: { isLowFloor: unknown }) => isLowFloor)).toEqual([null]);
+  });
+
+  it("keeps the bus type out of the deprecated realtime route", async () => {
+    // Arrange
+    seedJongro07("lowFloor", "general");
+
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.buses).toHaveLength(1);
+    expect(JSON.stringify(res.body)).not.toMatch(/busType|lowFloor|LowFloor/);
   });
 });

@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/jongro07.json: its one tracked vehicle.",
+  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/jongro07.json: its one tracked vehicle, low-floor.",
   "data": {
     "id": "100000103",
     "plateNumber": "서울74사5537",
@@ -8,6 +8,7 @@
       "passengerCount": 9
     },
     "isLastBus": false,
+    "isLowFloor": true,
     "position": {
       "stationIndex": 5,
       "status": "inTransit",

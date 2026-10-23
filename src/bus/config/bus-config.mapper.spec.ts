@@ -14,7 +14,8 @@
  * an HSSC position its stored stop, a Jongno station the stop its pole
  * resolves to (the local stop aliasing it, else `seoul-<arsId>`), and a
  * station with none no key. The two HSSC stations pinned before stop ids
- * gained exactly their stop ids, on purpose.
+ * gained exactly their stop ids, on purpose, and then `isPassThrough` (false at
+ * both, after `isRotationStation`) when the field shipped.
  */
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
@@ -70,6 +71,7 @@ describe("mapStations", () => {
       isFirstStation: false,
       isLastStation: false,
       isRotationStation: false,
+      isPassThrough: false,
       transferLines: [{ line: "4", color: "00A5DE" }],
       stopId: "hssc-hyehwa-exit1",
     });
@@ -88,6 +90,7 @@ describe("mapStations", () => {
       isFirstStation: true,
       isLastStation: false,
       isRotationStation: false,
+      isPassThrough: false,
       transferLines: [],
       stopId: "hssc-basketball-court",
     });
@@ -310,5 +313,44 @@ describe("toBusGroups stop ids on a Jongro route's stations", () => {
     // Assert
     expect(stations[0]).not.toHaveProperty("stopId");
     expect(stations[1]!.stopId).toBe(`seoul-${route.stations[1]!.stationNumber}`);
+  });
+});
+
+// WHY: the app labels a pass-through row as non-stop instead of showing an arrival, and cannot tell one from `stopId` alone,
+// since a Jongno virtual stop has none either.
+describe("toBusGroups pass-through stations", () => {
+  type Station = Record<string, unknown> & { isPassThrough?: unknown; stationNumber: string | null };
+  const stationsOf = (routes: AttributedJongroRoute[], id: string) =>
+    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
+      .find((g) => g.id === id)!.screen as unknown as { stations: Station[] }).stations;
+
+  it("marks the two non-stop 혜화동로터리 HSSC positions (indexes 5 and 7) as pass-through, and every other HSSC position not", () => {
+    // Act
+    const stations = stationsOf(jongroRoutes, "hssc");
+
+    // Assert
+    expect(stations.map((station) => station.isPassThrough)).toEqual([false, false, false, false, false, true, false, true, false, false, false]);
+  });
+
+  it("marks no Jongno station as pass-through, a virtual stop without a stop id included", () => {
+    // Arrange
+    const { route, attributes } = jongroRoutes[1]!;
+    const virtual = { ...route, stations: [{ ...route.stations[0]!, stationNumber: "0" }, ...route.stations.slice(1)] };
+
+    // Act
+    const byRoute = [...["jongro02", "jongro07", "jongro08"].map((id) => stationsOf(jongroRoutes, id)), stationsOf([{ route: virtual, attributes }], "jongro07")];
+
+    // Assert
+    expect(byRoute.at(-1)![0]).not.toHaveProperty("stopId");
+    for (const stations of byRoute) expect(stations.map((station) => station.isPassThrough)).toEqual(stations.map(() => false));
+  });
+
+  it("serves isPassThrough after isRotationStation, so stopId stays each station's last field", () => {
+    // Act
+    const [rotary, stop] = [stationsOf(jongroRoutes, "hssc")[5]!, stationsOf(jongroRoutes, "jongro07")[0]!];
+
+    // Assert
+    expect(Object.keys(rotary).slice(-3)).toEqual(["isRotationStation", "isPassThrough", "transferLines"]);
+    expect(Object.keys(stop).slice(-4)).toEqual(["isRotationStation", "isPassThrough", "transferLines", "stopId"]);
   });
 });
