@@ -190,6 +190,7 @@ const SRC_SYNTAX_PLUGIN = {
     "schema-casts": CORE_RESTRICTED_SYNTAX,
     "schema-imports": CORE_RESTRICTED_SYNTAX,
     "module-loads": CORE_RESTRICTED_SYNTAX,
+    "firebase-calls": CORE_RESTRICTED_SYNTAX,
     // An alias of no-restricted-imports, so the boundary blocks keep their own patterns.
     "import-paths": CORE_RULES.get("no-restricted-imports"),
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
@@ -790,6 +791,49 @@ module.exports = [
       "src-syntax/module-loads": [
         "error",
         { selector: "ImportExpression", message: "Import the module at the top of the file: the import boundaries do not read an `import()` call." },
+      ],
+    },
+  },
+  {
+    // (A perimeter detail is left out of the public history.)
+    name: "firebase/no-credential",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/firebase-calls": [
+        "error",
+        {
+          selector: "ImportDeclaration[source.value=/^firebase-admin\\//]",
+          message: "Use the firebase-admin namespace through src/infra/private-file: its subpath entry points reach services that need a credential.",
+        },
+        {
+          selector:
+            "ImportDeclaration[source.value=/^firebase-admin$|\\/infra\\/firebase$/] > :matches(ImportNamespaceSpecifier, ImportSpecifier, ImportDefaultSpecifier[local.name!='admin'])",
+          message: "Import Firebase as `import admin from …`: the firebase/no-credential selectors read the name `admin`.",
+        },
+        {
+          selector: [
+            "CallExpression[callee.property.name='initializeApp'] > ObjectExpression.arguments > :not(Property[key.name='projectId'])",
+            "CallExpression[callee.property.name='initializeApp']:not([arguments.length=1][arguments.0.type='ObjectExpression'])",
+          ].join(", "),
+          message: "initializeApp takes `{ projectId }` alone: the server holds no service-account credential.",
+        },
+        {
+          selector: "CallExpression[callee.property.name='verifyIdToken'][arguments.length!=1]",
+          message: "verifyIdToken takes the token alone: checkRevoked reads the user record, which needs a service-account credential.",
+        },
+        {
+          selector: "CallExpression > MemberExpression.callee[object.name='admin'][property.name!=/^(?:auth|initializeApp)$/]",
+          message: "Only admin.auth() and admin.initializeApp() run without a credential: Firestore, messaging and the rest need a service account.",
+        },
+        {
+          selector: [
+            "MemberExpression[object.callee.object.name='admin'][object.callee.property.name='auth'][property.name!='verifyIdToken']",
+            ":not(MemberExpression) > CallExpression[callee.object.name='admin'][callee.property.name='auth']",
+          ].join(", "),
+          message: "Call admin.auth().verifyIdToken() and nothing else on it: every other Auth call needs a service-account credential.",
+        },
       ],
     },
   },

@@ -139,7 +139,8 @@ const config = {
   },
 
   firebase: {
-    serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT || null,
+    // CONTRACT(skkuverse-app): skkuverse-app/.firebaserc names the one project whose ID tokens the app sends.
+    projectId: "skkubus-95723",
   },
 
   push: {

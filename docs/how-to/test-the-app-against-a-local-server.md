@@ -58,7 +58,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 
    The server listens on every interface, port `PORT` or 3000. Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
 
-   (A credential detail is left out of the public history.)
+   A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Start it with `RATE_LIMIT=on CACHE=on` while a tunnel is up — with the caches off, every request through it is a query on the shared cluster — and stop the tunnel when you are done.
 
 3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing (`skkuverse-app/LESSONS.md`). Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
 
@@ -86,7 +86,7 @@ A production override may only reduce outbound effects (`PUSH_DELIVERY=suppresse
 
 The switches cover what the server sends out. These are shared with production regardless:
 
-- (A credential detail is left out of the public history.)
+- **Firebase.** There is one project, `skkubus-95723`. A dev build registers its FCM token in production Firestore (`devices/`), so the phone receives real production pushes. The local server verifies production ID tokens with the project id alone and holds no service-account key.
 - **Atlas.** The `_dev` databases live on the production cluster, which is billed by peak ops/s. Never load-test locally. `NODE_ENV=production` with the dev `.env` resolves production database names. To run the production image locally, use `npm run verify:serve`, which overrides them.
 - **Seoul TOPIS quota.** The local bus pollers use the production service key and share its daily quota. `docs/project-docs.md` puts production's own use at about a third of it, and a full day of local polling adds about as much again.
 - **Web pages.** Webview and mini-app pages inside the app load from their production hosts and call the production API, even when native screens use the local server.
