@@ -9,7 +9,7 @@ audience: internal
 
 # 0019. Bus Live API — One Arrival Shape for Every Source
 
-> Why `GET /bus/live/:groupId` and the stop page serve every realtime line, Jongno and HSSC alike, and every timetabled shuttle run in one arrival and one vehicle shape, and how the old realtime route is retired. Read it before you add a source, a field or an enum value to either route. Accepted 2026-10-22, D13 and D14 added 2026-10-23; the wire and the client rules are in [bus-live-api.md](../reference/bus-live-api.md), the flows in [bus architecture](../explanation/bus-architecture.md).
+> Why `GET /bus/live/:groupId` and the stop page serve every realtime line, Jongno and HSSC alike, and every timetabled shuttle run in one arrival and one vehicle shape, and how the old realtime route is retired. Read it before you add a source, a field or an enum value to either route. Accepted 2026-10-22, D13 to D15 added 2026-10-23; the wire and the client rules are in [bus-live-api.md](../reference/bus-live-api.md), the flows in [bus architecture](../explanation/bus-architecture.md).
 
 ## Context
 
@@ -94,6 +94,17 @@ Owner, 2026-10-23, following Seoul's BIS stop signage: a rider does not need to 
 - Unchanged: `enRoute`, `unknown`, a timetable entry's `scheduled` status and both its departure instants (a shuttle's boarding time is timetable data, not a dwell), and a vehicle's position `status` (`inTransit`, `atStop`, `waitingToDepart`), which places its marker.
 
 The arrival `status` enum loses `atStop`. Removing a value is safe because a client parses statuses as an open enum (D3): a client that still knows `atStop` simply never receives it.
+
+### D15. Drop-off only is a station attribute, never a name marker
+
+Owner, 2026-10-23. The HSSC shuttle's 하교 direction stops at 올림픽기념국민생활관 and 혜화동우체국 only to let riders off, and only `[하차전용]` in their names said so, so a stop page's live entry looked boardable. As with a pass-through position, the fact is data a client reads, not text it parses:
+
+- `bus-stops` stores it per HSSC position as the optional `isAlightOnly` (absent is false, so a revision stored before it parses unchanged); a position with no stop is passed without stopping and is never drop-off only, which the dataset's schema refuses at push and at read.
+- `/bus/config` states it once per realtime station as `isAlightOnly`, right after `isPassThrough`, always false on Jongno, beside the other static station attributes the live route never repeats.
+- The stop page states it per live entry as `action`, `board` or `alight`, the same field and values a timetable entry carries, since a client opens a stop page without `/bus/config` (D5).
+- The live route's stations do not carry it. A live station is keyed by `stationIndex` into the `/bus/config` stations the client already holds to draw the line, and they state every static attribute once (`isPassThrough`, `isRotationStation`, transfer lines); D2's one shape is the arrival's and the vehicle's, which do not change. Repeating a fixed attribute on every poll would add a second source that could disagree with the config the line is drawn from. The stop page entry differs only because it stands alone.
+- A live entry's `towards` names the next stop as that stop's own page names it (its catalog stop, in the request language), never by the line row's name, so no marker leaks into it.
+- The names lose `[하차전용]` by a later `bus-stops` push, once the app OTA that reads `isAlightOnly` and `action` is adopted; until then the names keep it, so an installed bundle still shows it.
 
 ## Consequences
 

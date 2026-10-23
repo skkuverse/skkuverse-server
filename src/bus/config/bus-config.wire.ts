@@ -16,6 +16,8 @@ const station = z.object({
   ...{ isFirstStation: z.boolean(), isLastStation: z.boolean(), isRotationStation: z.boolean() },
   /** WHY: the bus passes here without stopping, so no arrival is ever served; a Jongno virtual stop also lacks a stopId. */
   isPassThrough: z.boolean(),
+  /** WHY: riders may only get off here, so a client shows the row as drop-off only; always false on a Jongno line. */
+  isAlightOnly: z.boolean(),
   transferLines: z.array(z.object({ line: z.string(), color: z.string() })),
   stopId: z.string().optional(),
 });

@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/hssc captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stations cut to the first two; the always-null screen.routeOverlay since dropped from the contract The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23.",
+  "_about": "GET /bus/config/hssc captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stations cut to the first two; the always-null screen.routeOverlay since dropped from the contract The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23.",
   "data": {
     "id": "hssc",
     "screenType": "realtime",
@@ -27,6 +27,7 @@
           "isLastStation": false,
           "isRotationStation": false,
           "isPassThrough": false,
+          "isAlightOnly": false,
           "transferLines": []
         },
         {
@@ -38,6 +39,7 @@
           "isLastStation": false,
           "isRotationStation": false,
           "isPassThrough": false,
+          "isAlightOnly": false,
           "transferLines": []
         }
       ],

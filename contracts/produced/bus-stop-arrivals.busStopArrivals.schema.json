@@ -90,6 +90,13 @@
                   "null"
                 ]
               },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "board",
+                  "alight"
+                ]
+              },
               "stationsVersion": {
                 "type": [
                   "string",
@@ -446,6 +453,7 @@
               "label",
               "stationIndex",
               "towards",
+              "action",
               "stationsVersion",
               "updatedAt",
               "operation",

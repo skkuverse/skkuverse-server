@@ -159,6 +159,7 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 | A run at a stop (stop page) | `scheduled` | The run's time at the stop, scheduled or estimated, departure at a boarding stop | arrival `status` on a timetable entry |
 | A station or line | `running`, `ended`, `noData` | The arrivals; 운행종료; no information | station and group `operation` |
 | A station | 미정차 | The line passes it without stopping | `/bus/config` station `isPassThrough` |
+| A station | 하차전용 | Riders only get off there: show it as drop-off only, never as a boarding stop | `/bus/config` station `isAlightOnly`; on a stop page, the live entry's `action: "alight"` |
 | A bus | 막차 | Last-bus badge | `isLastBus` on the vehicle and every arrival naming it |
 | A bus | 저상 | Low-floor badge | the vehicle's `isLowFloor` when `true` (see Low floor below) |
 
@@ -192,13 +193,16 @@ Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupI
 
 Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped, and once more when `lowFloor` did (2026-10-23).
 
-Each station of a realtime screen also carries `isPassThrough`, right after `isRotationStation`:
+Each station of a realtime screen also carries `isPassThrough`, right after `isRotationStation`, then `isAlightOnly`, so `stopId` stays its last field:
 
 | Field | `hssc` | `jongro02`, `jongro07`, `jongro08` | Meaning |
 | --- | --- | --- | --- |
 | `isPassThrough` | `true` at the two non-stop 혜화동로터리 positions (indexes 5 and 7), `false` elsewhere | always `false` | The bus passes without stopping, so this route never serves an arrival there |
+| `isAlightOnly` | `true` where `bus-stops` flags the position drop-off only (planned: 올림픽기념국민생활관 and 혜화동우체국, indexes 3 and 4, both on the 하교 direction), `false` elsewhere | always `false` | Riders may only get off here ([ADR 0019, D15](../decisions/0019-bus-live-api.md)) |
 
-A client shows "미정차" instead of an arrival on such a row. It never infers this from a missing `stopId`: a Jongno virtual stop has none either and is still a stop. The realtime ETags changed once more when the field shipped (2026-10-23).
+A client shows "미정차" instead of an arrival on a pass-through row. It never infers this from a missing `stopId`: a Jongno virtual stop has none either and is still a stop. On a drop-off-only row it shows the arrivals with a 하차전용 label and never offers boarding there; it never parses `[하차전용]` out of a name, which a later `bus-stops` push removes once the app reads the flag. The realtime ETags changed once more when each field shipped (both 2026-10-23), and a push that flags a position changes the `hssc` and all-groups ETags.
+
+These attributes are the station's, so `/bus/live/:groupId` does not repeat them on its stations: a client reads them from the `/bus/config` stations it draws the line from, by `stationIndex` (ADR 0019, D15).
 
 ## The deprecated realtime route
 
