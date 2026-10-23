@@ -21,8 +21,8 @@ import type { MapRepository } from "../map.repository";
 import { MapConfigService } from "./map-config.service";
 
 // building_numbers, building_labels, the inert `campus_geometry` layer that exists so
-// campus_shapes documents have a layerId they can legally name, and the three opt-in Jongno route lines.
-const BASE_LAYER_COUNT = 6;
+// campus_shapes documents have a layerId they can legally name, the three opt-in Jongno route lines and the HSSC line.
+const BASE_LAYER_COUNT = 7;
 
 /**
  * Revision 1 of the stored layer sets, the set production serves for the
@@ -185,7 +185,7 @@ describe("MapConfigService", () => {
     const ko = await svc.getMapConfig("ko");
 
     // Assert
-    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route"]);
+    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"]);
     expect(ko.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
 
@@ -208,7 +208,7 @@ describe("MapConfigService", () => {
     const ko = await svc.getMapConfig("ko");
 
     // Assert
-    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route"]);
+    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"]);
     expect(ko.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
 
@@ -256,6 +256,7 @@ describe("MapConfigService", () => {
       "jongro02_route",
       "jongro08_route",
       "jongro07_route",
+      "hssc_route",
     ]);
   });
 

@@ -3,7 +3,7 @@ title: Configure Map Overlays
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -217,6 +217,10 @@ userConfigurable: true,                   // was false
 That is a deploy. Until then the layer is the "defined but inert" quadrant that
 `userConfigurable`'s contract calls out as meaningful — better than shipping a
 control that does nothing.
+
+### Change the HSSC shuttle line
+
+(A collector detail is left out of the public history.)
 
 ### Change the Jongno route lines
 
