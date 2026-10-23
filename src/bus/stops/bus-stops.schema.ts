@@ -17,7 +17,7 @@ const stop = z.looseObject({ id: stopId, arsIds: z.array(arsId).optional() }).tr
 const hsscStation = z.strictObject({
   stopId: stopId.nullable(),
   name: z.string().min(1),
-  subtitle: z.string().min(1),
+  subtitle: z.string().min(1).optional(),
   isFirstStation: z.boolean(),
   isLastStation: z.boolean(),
   isRotationStation: z.boolean(),
