@@ -28,6 +28,11 @@ export const miniAppPushPayload = z.object({
   body_en: z.string().nullable(),
   actionType: linkActionType.optional(),
   actionValue: z.string().optional(),
+  /**
+   * (An operations detail is left out of the public history.)
+   */
+  chipId: z.string().optional(),
+  placeId: z.string().optional(),
 });
 
 /** WHY: the Cloud Function relays the data fields to the device unchanged, so the server owns them. */

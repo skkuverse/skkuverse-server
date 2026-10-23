@@ -69,6 +69,56 @@ describe("toNotificationContent", () => {
   });
 });
 
+/** A push's map target (`chipId`, `placeId`) is stored after the action and compared on a repeat; a null one is no key. */
+describe("toSentNotification with a map target", () => {
+  const CONTENT = { title_ko: "제목", body_ko: "본문", title_en: "Title", body_en: null, actionType: "route", actionValue: "/campus" } as const;
+
+  it("writes chipId and placeId after the action, before the send time", () => {
+    // Act
+    const doc = toSentNotification({ ...CONTENT, chipId: "eskara-2026_all", placeId: "bus_stop:hssc-600th" }, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT });
+
+    // Assert
+    expect(JSON.stringify(doc)).toBe(
+      JSON.stringify({
+        _id: "n1",
+        miniAppId: "eskara-2026",
+        title_ko: "제목",
+        body_ko: "본문",
+        title_en: "Title",
+        body_en: null,
+        actionType: "route",
+        actionValue: "/campus",
+        chipId: "eskara-2026_all",
+        placeId: "bus_stop:hssc-600th",
+        sentAt: SENT_AT,
+        delivery: null,
+      }),
+    );
+  });
+
+  it("writes neither key when both are null", () => {
+    // Act
+    const doc = toSentNotification({ ...CONTENT, chipId: null, placeId: null }, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT });
+
+    // Assert
+    expect(JSON.stringify(doc)).toBe(JSON.stringify(DOC));
+  });
+
+  it("takes the map target back from a row, so a repeat with another place is told apart", () => {
+    // Act & Assert
+    expect(toNotificationContent({ ...DOC, chipId: "day1", placeId: "subway_station:hyehwa" })).toEqual({
+      title_ko: "제목",
+      body_ko: "본문",
+      title_en: "Title",
+      body_en: null,
+      actionType: "route",
+      actionValue: "/campus",
+      chipId: "day1",
+      placeId: "subway_station:hyehwa",
+    });
+  });
+});
+
 describe("toReplayedOutcome", () => {
   it("answers a delivered row with its counts", () => {
     // Act & Assert
