@@ -160,7 +160,20 @@ class KorailNames(unittest.TestCase):
 
     def test_leaves_other_stations_unmapped(self):
         # Act & Assert
-        self.assertEqual([convert.korail_code(name, "test") for name in ("서동탄", "세마", "1지청", "관악")], [None, None, None, None])
+        self.assertEqual([convert.korail_code(name, "test") for name in ("서동탄", "세마", "도봉산", "구일")], [None, None, None, None])
+
+    def test_maps_the_stretch_from_anyang_to_hoegi_that_jongno_5_ga_needs(self):
+        # Arrange
+        names = ["관악", "석수", "금천구", "독산", "가산디", "구로", "신도림", "영등포", "신길", "대방", "노량진", "용산", "남영", "지하서", "시청", "종각", "1종로", "종로5", "1동대", "동묘앞", "신설동", "제기동", "1지청", "회기"]
+
+        # Act
+        codes = [convert.korail_code(name, "test") for name in names]
+
+        # Assert
+        self.assertEqual(codes, [
+            "KR-1-P146", "KR-1-P145", "KR-1-P144", "KR-1-P143", "KR-1-P142", "KR-1-141", "KR-1-140", "KR-1-139", "KR-1-138", "KR-1-137", "KR-1-136", "KR-1-135", "KR-1-134",
+            "S1-1-150", "S1-1-151", "S1-1-152", "S1-1-153", "S1-1-154", "S1-1-155", "S1-1-159", "S1-1-156", "S1-1-157", "S1-1-158", "KR-1-123",
+        ])
 
     def test_refuses_a_covered_looking_name_with_the_sheet_and_row(self):
         # Arrange
@@ -193,7 +206,7 @@ class KorailWorkbook(unittest.TestCase):
         self.cells = korail_sheet(UP_STATIONS, {1: ("K602", "천안", "1지청", local), 2: ("K1902", "천안", "서울", express), 3: ("S418", "성균관", "구로", late), 4: ("K604", "천안", "수원", skips)})
 
     def trains(self, cells=None, sheet="경부장항_평일_상"):
-        return {t["trainNo"]: t for t in convert.korail_trains(convert.read_workbook(xlsx({sheet: cells or self.cells, "경인_평일_상": {(4, 0): "열차번호"}})))}
+        return {t["trainNo"]: t for t in convert.korail_trains(convert.read_workbook(xlsx({sheet: cells or self.cells, "광명셔틀_평일_상": {(4, 0): "열차번호"}})))}
 
     def test_reads_stops_at_covered_stations_in_travel_order(self):
         # Act
@@ -245,6 +258,169 @@ class KorailWorkbook(unittest.TestCase):
         # Act & Assert
         with self.assertRaisesRegex(convert.ConvertError, "sheet name says down"):
             self.trains(sheet="경부장항_평일_하")
+
+
+class KorailGyeonginSheets(unittest.TestCase):
+    """종로5가 is served from the 경인 sheets too: their 인천-청량리 trains run through it. The 경인급행 sheets end at 용산."""
+
+    STATIONS = ["구로", "신도림", "영등포", "용산", "지하서", "시청", "종각", "1종로", "종로5", "1동대"]
+
+    def trains(self, sheet):
+        times = {name: (fraction(9, m), fraction(9, m, 30)) for name, m in zip(self.STATIONS, range(0, 20, 2))}
+        times["구로"] = (None, fraction(9, 0, 30))
+        times["1동대"] = (fraction(9, 18), None)
+        cells = korail_sheet(self.STATIONS, {1: ("K1102", "인천", "1지청", times)})
+        express = korail_sheet(["구로", "신도림", "영등포", "용산"], {1: ("K1202", "동인천", "용산", {"구로": (None, fraction(9, 0)), "용산": (fraction(9, 10), None)})})
+        workbook = convert.read_workbook(xlsx({sheet: cells, "경인급행_평일_상": express}))
+        return {t["trainNo"]: t for t in convert.korail_trains(workbook)}
+
+    def test_reads_a_gyeongin_sheet_train_that_stops_at_jongno_5_ga(self):
+        # Act
+        train = self.trains("경인_평일_상")["1102"]
+
+        # Assert
+        self.assertEqual(train["direction"], "up")
+        self.assertIn({"station": "S1-1-154", "arr": 9 * 3600 + 16 * 60, "dep": 9 * 3600 + 16 * 60 + 30}, train["stops"])
+
+    def test_a_local_may_pass_a_station_the_line_does_not_cover(self):
+        # Arrange
+        stations = ["덕계", "마전", "양주"] + self.STATIONS[::-1]
+        times = {name: (fraction(9, m), fraction(9, m, 30)) for name, m in zip(stations, range(0, 26, 2))}
+        times["덕계"] = (None, fraction(9, 0, 30))
+        times["마전"] = (None, fraction(9, 2, 30))
+        times["구로"] = (fraction(9, 24), None)
+        cells = korail_sheet(stations, {1: ("K2952", "덕계", "인천", times)})
+
+        # Act
+        trains = convert.korail_trains(convert.read_workbook(xlsx({"경인_평일_하": cells})))
+
+        # Assert
+        self.assertEqual([t["trainNo"] for t in trains], ["2952"])
+        self.assertEqual(trains[0]["stops"][0]["station"], "S1-1-155")
+
+    def test_leaves_the_gyeongin_express_sheet_unread(self):
+        # Act
+        numbers = sorted(self.trains("경인_평일_상"))
+
+        # Assert
+        self.assertEqual(numbers, ["1102"])
+
+
+class SeoulLineCoverage(unittest.TestCase):
+    """ADR 0022 D4: 사당 (lines 2 and 4), 금정 (line 4) and 종로5가 (line 1) are served, with every station between the
+    served platforms covered and about ten minutes beyond them (ADR 0017 D6)."""
+
+    def test_line_4_serves_hyehwa_sadang_and_geumjeong_from_suyu_to_sangnoksu(self):
+        # Arrange
+        line = line_of("4")
+
+        # Act
+        codes = convert.station_codes(line)
+
+        # Assert
+        self.assertEqual(line["served"], ("S1-4-420", "S1-4-433", "KR-4-443"))
+        self.assertEqual(codes, ["S1-4-%d" % n for n in range(414, 435)] + ["KR-4-%d" % n for n in range(435, 449)])
+        self.assertEqual(dict(line["stations"])["KR-4-443"], "1458")
+        self.assertEqual(dict(line["stations"])["KR-4-445"], "1763")
+
+    def test_line_2_serves_sadang_and_reaches_guro_digital_complex(self):
+        # Arrange
+        line = line_of("2")
+
+        # Act
+        codes = convert.station_codes(line)
+
+        # Assert
+        self.assertEqual(line["served"], ("S1-2-216", "S1-2-222", "S1-2-226"))
+        self.assertEqual(codes, ["S1-2-%d" % n for n in range(212, 233)])
+
+    def test_line_1_serves_sungkyunkwan_geumjeong_and_jongno_5_ga(self):
+        # Act
+        served = line_of("1")["served"]
+
+        # Assert
+        self.assertEqual(served, ("KR-1-0153", "KR-1-P149", "S1-1-154"))
+
+
+class SavedSeoulRows(unittest.TestCase):
+    """A Seoul answer saved under --seoul-rows is read back instead of called again; one not saved is fetched and saved."""
+
+    ROW = {"LINE_NUM": "04호선", "STATION_CD": "1458", "STATION_NM": "금정", "TRAIN_NO": "K4302", "ARRIVETIME": "05:18:00", "LEFTTIME": "05:18:30", "SUBWAYENAME": "불암산", "EXPRESS_YN": "G", "WEEK_TAG": "1", "INOUT_TAG": "1"}
+
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.directory = scratch.name
+        self.calls = []
+
+    def fetch(self, code, week, inout):
+        self.calls.append((code, week, inout))
+        return [dict(self.ROW)]
+
+    def test_fetches_an_unsaved_answer_once_and_saves_only_the_fields_read(self):
+        # Arrange
+        read = convert.saved_fetch(self.directory, self.fetch, "2026-10-25")
+
+        # Act
+        first = read("1458", "1", "1")
+        again = convert.saved_fetch(self.directory, self.fetch, "2026-10-26")("1458", "1", "1")
+
+        # Assert
+        self.assertEqual(self.calls, [("1458", "1", "1")])
+        self.assertEqual(first, [self.ROW])
+        self.assertEqual(again, [{key: self.ROW[key] for key in convert.SEOUL_ROW_FIELDS}])
+        with open(os.path.join(self.directory, "1458.json"), encoding="utf-8") as handle:
+            saved = json.load(handle)
+        self.assertEqual(saved["answers"]["1-1"], {"fetchedOn": "2026-10-25", "rows": [["K4302", "05:18:00", "05:18:30", "불암산", "G"]]})
+
+    def test_keeps_each_saved_tag_of_a_station(self):
+        # Arrange
+        read = convert.saved_fetch(self.directory, self.fetch, "2026-10-25")
+
+        # Act
+        read("1458", "1", "1")
+        read("1458", "3", "2")
+
+        # Assert
+        with open(os.path.join(self.directory, "1458.json"), encoding="utf-8") as handle:
+            self.assertEqual(sorted(json.load(handle)["answers"]), ["1-1", "3-2"])
+
+
+class PulledRows(unittest.TestCase):
+    """--seoul-keep-pulled rebuilds a covered station's rows from the pulled table, so only new stations are called."""
+
+    def table(self):
+        circle = {"trainNo": "2364", "direction": "up", "destination": "내선순환", "express": False, "stops": [
+            {"station": "S1-2-215", "arr": None, "dep": 66300},
+            {"station": "S1-2-216", "arr": 66420, "dep": 66450},
+        ]}
+        late = {"trainNo": "2365", "direction": "down", "destination": "신도림", "express": False, "stops": [
+            {"station": "S1-2-217", "arr": 87210, "dep": 87240},
+            {"station": "S1-2-216", "arr": 87330, "dep": None},
+        ]}
+        return convert.timetable("seoul-station-timetable", convert.SEOUL_API, "2026-10-18", "S1", "2", "weekday", ["S1-2-215", "S1-2-216", "S1-2-217"], [circle, late])
+
+    def test_rows_rebuilt_from_a_pulled_table_join_back_into_its_trains(self):
+        # Arrange
+        line = line_of("2")
+        table = self.table()
+
+        # Act
+        rows = convert.pulled_rows(table, line)
+        trains = []
+        for direction, inout in convert.SEOUL_INOUT:
+            by_station = [(code, rows.get((station_cd, inout), [])) for code, station_cd in line["stations"]]
+            trains += convert.seoul_trips(by_station, direction, line)
+
+        # Assert
+        self.assertEqual(convert.timetable("seoul-station-timetable", convert.SEOUL_API, "2026-10-18", "S1", "2", "weekday", table["stations"], trains), table)
+
+    def test_gives_no_rows_for_a_station_the_pulled_table_does_not_list(self):
+        # Act
+        rows = convert.pulled_rows(self.table(), line_of("2"))
+
+        # Assert
+        self.assertEqual(sorted({code for code, _ in rows}), ["0215", "0216", "0217"])
 
 
 class KorailDestinations(unittest.TestCase):
@@ -841,6 +1017,28 @@ class OneDirectionDestinations(unittest.TestCase):
         # Assert
         with self.assertRaisesRegex(convert.ConvertError, "'신도림'"):
             convert.check_one_direction(both, "test", line_of("2"))
+
+    def test_passes_line_1_trains_ending_at_guro_or_seoul_from_either_side(self):
+        # Arrange
+        trains = [self.train("0602", "up", "구로"), self.train("0603", "down", "구로"), self.train("1904", "up", "서울"), self.train("0605", "down", "서울")]
+
+        # Act
+        convert.check_one_direction(trains, "test", line_of("1"))
+
+        # Assert
+        with self.assertRaisesRegex(convert.ConvertError, "'청량리'"):
+            convert.check_one_direction(trains + [self.train("0606", "up", "청량리"), self.train("0607", "down", "청량리")], "test", line_of("1"))
+
+    def test_passes_line_4_trains_ending_at_geumjeong_or_sadang_from_either_side(self):
+        # Arrange
+        trains = [self.train("4706", "up", "금정"), self.train("4335", "down", "금정"), self.train("4684", "up", "사당"), self.train("4005", "down", "사당")]
+
+        # Act
+        convert.check_one_direction(trains, "test", line_of("4"))
+
+        # Assert
+        with self.assertRaisesRegex(convert.ConvertError, "'오이도'"):
+            convert.check_one_direction(trains + [self.train("4004", "up", "오이도"), self.train("4005", "down", "오이도")], "test", line_of("4"))
 
 
 if __name__ == "__main__":
