@@ -13,6 +13,13 @@
           "title": {
             "type": "string"
           },
+          "campus": {
+            "type": "string",
+            "enum": [
+              "hssc",
+              "nsc"
+            ]
+          },
           "lines": {
             "type": "array",
             "items": {
@@ -77,6 +84,7 @@
         "required": [
           "id",
           "title",
+          "campus",
           "lines",
           "coords"
         ]

@@ -4,8 +4,9 @@
  * their platforms, on lines 1, 4, 2, 3, 8, K1 and D1, which key the stored
  * arrival state, the timetables and the transit layout. The network passes the
  * schema the registry's identities passed (slugs, platform ids, colors,
- * one-character markers, Seoul ids), and every line's marker color reads as
- * small text on the app's light row background.
+ * one-character markers, Seoul ids), every station is filed under a campus,
+ * and every line's marker color reads as small text on the app's light row
+ * background.
  */
 import { SUBWAY_LINES, SUBWAY_STATIONS } from "./subway.constants";
 import { subwayNetwork } from "./subway.schema";
@@ -65,6 +66,23 @@ describe("SUBWAY_STATIONS", () => {
       ["gangnam", { ko: "강남", en: "Gangnam", zh: "江南" }, "강남"],
       ["yangjae", { ko: "양재", en: "Yangjae", zh: "良才" }, "양재"],
       ["gwanggyo-jungang", { ko: "광교중앙", en: "Gwanggyojungang", zh: "光教中央" }, "광교중앙"],
+    ]);
+  });
+
+  it("files each station under the campus whose section of the transit tab lists it: 혜화 under hssc, the rest under nsc", () => {
+    // Act
+    const campuses = SUBWAY_STATIONS.map((station) => [station.id, station.campus]);
+
+    // Assert
+    expect(campuses).toEqual([
+      ["sungkyunkwan", "nsc"],
+      ["hyehwa", "hssc"],
+      ["jeongja", "nsc"],
+      ["jamsil", "nsc"],
+      ["dogok", "nsc"],
+      ["gangnam", "nsc"],
+      ["yangjae", "nsc"],
+      ["gwanggyo-jungang", "nsc"],
     ]);
   });
 });

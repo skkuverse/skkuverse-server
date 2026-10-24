@@ -11,5 +11,5 @@ export function toServedStation(station: NetworkStation, lineOf: (code: string) 
     const { name, color, marker } = lineOf(code);
     return { code, name, color, marker };
   });
-  return { id: station.id, title: toStationTitle(station.name), lines };
+  return { id: station.id, title: toStationTitle(station.name), campus: station.campus, lines };
 }
