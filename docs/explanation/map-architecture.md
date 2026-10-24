@@ -42,7 +42,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | base chip | A permanent chip, served whether or not a festival is live and ahead of the festival's row | `BASE_CHIPS` | — |
 | link chip | A chip whose action is the shared link shape (`actionType`, `actionValue`) and changes no layer | `BASE_CHIPS` | — |
 | layers chip | A chip whose action turns the layers it names on, any layer, base ones included, and moves the camera only when it carries one | `BASE_CHIPS` | — |
-| tab (`MapTab`) | An app tab that shares the one map (`map`, `transit`); a layer's or chip's `tabs` are the tabs whose lens shows it, absent meaning the map tab | `LayerSpec.tabs`, `MapChipSpec.tabs` | — |
+| tab (`MapTab`) | An app tab that shares the one map (`map`, `transit`); a layer's or chip's `tabs` are the tabs whose lens shows it, absent meaning the map tab and empty meaning no tab | `LayerSpec.tabs`, `MapChipSpec.tabs` | — |
 | chip group | A layer's `chipGroupId`: the layers a chip may switch off; `null` means none ever | `LayerSpec.chipGroupId` | `exclusiveGroup` |
 | reset chip | The synthesised chip that goes back to the festival's default view | `resetChip` | — |
 | presentation (`ItemPresentation`) | A category's layer, pin priority, tap and location accuracy | `presentationFor` | `categoryStyle` |

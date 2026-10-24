@@ -105,6 +105,7 @@ describe("chip lists", () => {
         action: { kind: "link", actionType: "route", actionValue: "/search" },
         isReset: false,
         list: null,
+        tabs: [],
       },
       {
         id: "lost_found",

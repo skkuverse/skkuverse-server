@@ -21,7 +21,8 @@ export const BASE_CHIPS: readonly MapChipSpec[] = [
   },
   {
     id: "building_code", emoji: "🔢", label: { ko: "건물코드", en: "Building Code", zh: "建筑编号" },
-    action: { kind: "link", actionType: "route", actionValue: "/search" }, isReset: false, list: null,
+    // WHY: the shared-map shell's search field replaces it there; builds and shells that ignore `tabs` keep it in the map tab.
+    action: { kind: "link", actionType: "route", actionValue: "/search" }, isReset: false, list: null, tabs: [],
   },
   {
     id: "lost_found", emoji: "🧳", label: { ko: "분실물", en: "Lost & Found", zh: "失物招领" },

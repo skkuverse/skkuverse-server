@@ -1371,12 +1371,17 @@ A chip runs where its result shows. The transit tab's chips are a billboard for 
 whose result is on the map lists both tabs and names `opensIn: "map"`, so a tap on the transit tab
 switches to the map tab and turns the chip on there.
 
+An empty `tabs` means the chip appears in no tab of the shared-map shell. Builds and shells that
+ignore `tabs` keep it in the map tab, so an empty `tabs` retires a chip from the shared-map shell
+alone. The `building_code` chip has one because the shell's search field does its job.
+
 | Layer or chip | `tabs` |
 | --- | --- |
 | `building_numbers`, `building_labels`, `campus_geometry` | `["map", "transit"]` |
 | the route line layers (`jongro02_route`, `jongro08_route`, `jongro07_route`, `hssc_route`) | `["transit"]` |
-| every festival layer, and every chip but `shuttle_routes` | absent: the map tab only |
+| every festival layer, and every chip but `shuttle_routes` and `building_code` | absent: the map tab only |
 | the `shuttle_routes` chip | `["map", "transit"]`, with `opensIn: "map"` |
+| the `building_code` chip | `[]`: no tab of the shared-map shell, the map tab elsewhere |
 
 A route line layer keeps `chipGroupId: null` on the transit tab. Installed builds read a grouped
 layer as festival content and hide its toggle, so grouping the route lines would take the Jongno
