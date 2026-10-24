@@ -119,6 +119,7 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "link", actionType: "route", actionValue: "/map/hssc" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
       {
         id: "building_code",
@@ -136,6 +137,7 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "link", actionType: "webview", actionValue: "https://webview.skkuverse.com/skku/lostandfound" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
       {
         id: "inquiry",
@@ -144,6 +146,7 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
     ]);
   });

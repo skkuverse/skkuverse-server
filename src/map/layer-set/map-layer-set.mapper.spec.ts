@@ -97,6 +97,7 @@ describe("chip lists", () => {
         action: { kind: "link", actionType: "route", actionValue: "/map/hssc" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
       {
         id: "building_code",
@@ -114,6 +115,7 @@ describe("chip lists", () => {
         action: { kind: "link", actionType: "webview", actionValue: "/skku/lostandfound" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
       {
         id: "inquiry",
@@ -122,6 +124,7 @@ describe("chip lists", () => {
         action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
     ]);
   });
