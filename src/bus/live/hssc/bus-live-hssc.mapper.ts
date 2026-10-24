@@ -1,4 +1,4 @@
-import { toKstInstant } from "../../bus.mapper";
+import { toKstInstant } from "../../../shared/kst-date.util";
 import type { Vehicle } from "../../bus.wire";
 import { HSSC_GROUP_ID, MAX_STATION_ARRIVALS } from "../bus-live.constants";
 import { toGroupOperation } from "../bus-live.rules";

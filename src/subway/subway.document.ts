@@ -6,6 +6,7 @@ export interface StoredTrainArrival {
   express: boolean;
   arrivalAt: Date;
   source: "live" | "estimated" | "scheduled";
+  isFirstTrain: boolean;
   // WHY: a platform id under its stored name, as the history's.
   position: { stationId: string; state: TrainState } | null;
 }

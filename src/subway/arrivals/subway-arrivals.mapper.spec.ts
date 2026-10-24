@@ -11,7 +11,8 @@
  * station, each by id and by name in that language, and its trains; each
  * train its arrival instant as an ISO string and how many stops away it is,
  * from its stored position: 0 at the served station, 1 to 3 at an upstream
- * one, null with no position or one off the upstream list. A previous or
+ * one, null with no position or one off the upstream list, and whether it is
+ * the first train of its service day, as stored. A previous or
  * next stop it has no name for is served as null, as a terminus is, and the
  * rest of the line still serves.
  */
@@ -39,9 +40,10 @@ const DOC: SubwayArrivalsDoc = {
         express: false,
         arrivalAt: new Date("2026-10-16T11:42:50Z"),
         source: "live",
+        isFirstTrain: false,
         position: { stationId: "S1-4-421", state: "departed" },
       },
-      { trainNo: "4676", destination: "불암산", express: false, arrivalAt: new Date("2026-10-16T11:48:00Z"), source: "scheduled", position: null },
+      { trainNo: "4676", destination: "불암산", express: false, arrivalAt: new Date("2026-10-16T11:48:00Z"), source: "scheduled", isFirstTrain: false, position: null },
     ],
     down: [
       {
@@ -50,6 +52,7 @@ const DOC: SubwayArrivalsDoc = {
         express: false,
         arrivalAt: new Date("2026-10-16T11:41:20Z"),
         source: "estimated",
+        isFirstTrain: false,
         position: { stationId: "S1-4-420", state: "approaching" },
       },
       {
@@ -58,6 +61,7 @@ const DOC: SubwayArrivalsDoc = {
         express: false,
         arrivalAt: new Date("2026-10-16T11:45:00Z"),
         source: "estimated",
+        isFirstTrain: false,
         position: { stationId: "S1-4-418", state: "departed" },
       },
       {
@@ -66,6 +70,7 @@ const DOC: SubwayArrivalsDoc = {
         express: false,
         arrivalAt: new Date("2026-10-16T11:49:00Z"),
         source: "estimated",
+        isFirstTrain: false,
         position: { stationId: "S1-4-415", state: "arrived" },
       },
     ],
@@ -92,8 +97,8 @@ describe("toSubwayStationArrivals", () => {
               previousStation: { id: "S1-4-421", name: "동대문" },
               nextStation: { id: "S1-4-419", name: "한성대입구" },
               trains: [
-                { trainNo: "4674", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:42:50.000Z", stopsAway: 1, source: "live" },
-                { trainNo: "4676", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:48:00.000Z", stopsAway: null, source: "scheduled" },
+                { trainNo: "4674", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:42:50.000Z", stopsAway: 1, source: "live", isFirstTrain: false },
+                { trainNo: "4676", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:48:00.000Z", stopsAway: null, source: "scheduled", isFirstTrain: false },
               ],
             },
             {
@@ -102,15 +107,32 @@ describe("toSubwayStationArrivals", () => {
               previousStation: { id: "S1-4-419", name: "한성대입구" },
               nextStation: { id: "S1-4-421", name: "동대문" },
               trains: [
-                { trainNo: "4171", destination: "사당", express: false, arrivalAt: "2026-10-16T11:41:20.000Z", stopsAway: 0, source: "estimated" },
-                { trainNo: "4173", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:45:00.000Z", stopsAway: 2, source: "estimated" },
-                { trainNo: "4175", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:49:00.000Z", stopsAway: null, source: "estimated" },
+                { trainNo: "4171", destination: "사당", express: false, arrivalAt: "2026-10-16T11:41:20.000Z", stopsAway: 0, source: "estimated", isFirstTrain: false },
+                { trainNo: "4173", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:45:00.000Z", stopsAway: 2, source: "estimated", isFirstTrain: false },
+                { trainNo: "4175", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:49:00.000Z", stopsAway: null, source: "estimated", isFirstTrain: false },
               ],
             },
           ],
         },
       ],
     });
+  });
+
+  it("serves a train stored as the first of its service day as the first", () => {
+    // Arrange
+    const [first, ...rest] = DOC.directions.down;
+    const doc: SubwayArrivalsDoc = { ...DOC, directions: { up: [], down: [{ ...first!, isFirstTrain: true }, ...rest] } };
+
+    // Act
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc }], { lang: "ko", registry: REGISTRY, coords: HYEHWA_COORDS });
+
+    // Assert
+    const down = response.lines[0]?.directions.find((d) => d.direction === "down");
+    expect(down?.trains.map((t) => [t.trainNo, t.isFirstTrain])).toEqual([
+      ["4171", true],
+      ["4173", false],
+      ["4175", false],
+    ]);
   });
 
   it.each([

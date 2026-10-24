@@ -1,5 +1,5 @@
 {
- "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed. Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes.",
+ "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed. Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes. Changed 2026-10-24 with the behavior it pins (app ADR 0022, D4), no other value changed: each answer's meta gained serverNow, the clock at +09:00, each train gained isFirstTrain, from the earliest train of its direction at its platform in the instant's table, and each ETag was recomputed from the new bytes.",
  "instants": {
   "2026-10-20T15:20:00.000Z": {
    "sungkyunkwan": {
@@ -7,10 +7,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"27f-28s0mPzm5TsZD9Or6NHkJ5sgtMk\"",
+     "etag": "W/\"2a7-dPHkSf8uqO+qVuxoyn7EhzcZ3GQ\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -71,10 +72,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"286-6ltg28/SjbQXvaMLr/ShfBUACxE\"",
+     "etag": "W/\"2ae-HlgyN28m9WO9l94RNfJfmiYA03Y\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -135,10 +137,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"280-/C8eRZw9wrk/CfQ4xNIFI1GnA08\"",
+     "etag": "W/\"2a8-XY6yiYgp+H0twhVPuucVTperRzs\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -201,10 +204,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"545-DNmBJZ06RWEFZP7/oQAEMw1uXF0\"",
+     "etag": "W/\"5d6-HYrKMqrUf/dzri8wjkr0HravlxY\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -247,7 +251,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4222",
@@ -255,7 +260,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:39:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4704",
@@ -263,7 +269,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:58:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -285,7 +292,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:30:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4221",
@@ -293,7 +301,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:48:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -307,10 +316,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"53e-Hjh89tAgl/8apMQX5SjBNbmUoJ0\"",
+     "etag": "W/\"5cf-g+e5NI2Zb/rhv751aVGO1AFAbYQ\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -353,7 +363,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4222",
@@ -361,7 +372,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:39:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4704",
@@ -369,7 +381,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:58:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -391,7 +404,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:30:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4221",
@@ -399,7 +413,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:48:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -413,10 +428,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"543-Gvl2y0+b7oM7DnYL6/DGR3TihXY\"",
+     "etag": "W/\"5d4-Bpr0Cx3sbXrkm38Z0hXy0roJGiE\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -459,7 +475,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4222",
@@ -467,7 +484,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:39:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4704",
@@ -475,7 +493,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:58:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -497,7 +516,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:30:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "4221",
@@ -505,7 +525,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:48:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -521,10 +542,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"68c-evqHMOcSY1Ljj75/Y0SE/cFZlJU\"",
+     "etag": "W/\"708-W3Bc+FIrZquv8UN9Dkwqd/EnYFM\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -580,7 +602,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1329",
@@ -588,7 +611,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1331",
@@ -596,7 +620,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:45:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -646,7 +671,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -660,10 +686,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"699-Ng8+6KOyIU4xcMs+DlbI+uqIszk\"",
+     "etag": "W/\"715-M6IxCER5HpLeFGWKO6J1fmKpbMY\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -719,7 +746,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1329",
@@ -727,7 +755,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1331",
@@ -735,7 +764,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:45:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -785,7 +815,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -799,10 +830,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"68a-qSx1QZdTUI1an1v7U0FxsymAwCA\"",
+     "etag": "W/\"706-JorV2PveOlPXw62ojnm+EQbaFnA\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -858,7 +890,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1329",
@@ -866,7 +899,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1331",
@@ -874,7 +908,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:45:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -924,7 +959,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -940,10 +976,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a5d-QdWODsxsevkzDDSSqAFrZ/+YpIg\"",
+     "etag": "W/\"b6c-PAhDLPlvUeiZ8LViZDRjZWDGrI0\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -986,7 +1023,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2518",
@@ -994,7 +1032,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2520",
@@ -1002,7 +1041,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1024,7 +1064,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2509",
@@ -1032,7 +1073,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2513",
@@ -1040,7 +1082,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:49:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1077,7 +1120,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:50.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8322",
@@ -1085,7 +1129,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:20.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8324",
@@ -1093,7 +1138,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:59:50.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1115,7 +1161,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8321",
@@ -1123,7 +1170,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1137,10 +1185,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a62-XlkJ2IWB5o8G7jImUDjJYiQ3rms\"",
+     "etag": "W/\"b71-GDNfQeS3dP+0c8yiHza4QXzuQhk\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -1183,7 +1232,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2518",
@@ -1191,7 +1241,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2520",
@@ -1199,7 +1250,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1221,7 +1273,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2509",
@@ -1229,7 +1282,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2513",
@@ -1237,7 +1291,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:49:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1274,7 +1329,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:50.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8322",
@@ -1282,7 +1338,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:20.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8324",
@@ -1290,7 +1347,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:59:50.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1312,7 +1370,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8321",
@@ -1320,7 +1379,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1334,10 +1394,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a4f-Dr9Xt9AZzsArx2b0yi6ZjRC9vA0\"",
+     "etag": "W/\"b5e-gedRzU5KwV/r2Pe3LybivOXY/uY\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -1380,7 +1441,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2518",
@@ -1388,7 +1450,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2520",
@@ -1396,7 +1459,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1418,7 +1482,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2509",
@@ -1426,7 +1491,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2513",
@@ -1434,7 +1500,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:49:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1471,7 +1538,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:50.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8322",
@@ -1479,7 +1547,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:20.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8324",
@@ -1487,7 +1556,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:59:50.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1509,7 +1579,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "8321",
@@ -1517,7 +1588,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1533,10 +1605,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"707-wVoWAIM+sXMK5IT9+u15qGBucGQ\"",
+     "etag": "W/\"798-6Y0+r9975Rd1O0BNTHT3hlqGyXo\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -1579,7 +1652,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:23:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3434",
@@ -1587,7 +1661,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:41:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1609,7 +1684,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:24:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3413",
@@ -1617,7 +1693,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3415",
@@ -1625,7 +1702,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:42:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1680,10 +1758,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"70f-QNw4W+GnW4EMqzvE0y6N0su9pLY\"",
+     "etag": "W/\"7a0-5mw2NSBVbd/32dK7QWzGACVn9Ms\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -1726,7 +1805,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:23:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3434",
@@ -1734,7 +1814,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:41:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1756,7 +1837,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:24:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3413",
@@ -1764,7 +1846,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3415",
@@ -1772,7 +1855,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:42:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1827,10 +1911,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"705-+qvzIIJRi0Bjyrm3tbEmFAN4A3k\"",
+     "etag": "W/\"796-io95FIewP154PSDS23YyWWQODqw\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -1873,7 +1958,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:23:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3434",
@@ -1881,7 +1967,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:41:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -1903,7 +1990,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:24:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3413",
@@ -1911,7 +1999,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3415",
@@ -1919,7 +2008,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:42:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -1976,10 +2066,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"939-x70o6S3IseBXNeGtI6+5N8vEuRQ\"",
+     "etag": "W/\"a1e-5YfPiKeN22Dei4tIYPt4jVjkgck\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -2022,7 +2113,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2516",
@@ -2030,7 +2122,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2518",
@@ -2038,7 +2131,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2060,7 +2154,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:22:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2513",
@@ -2068,7 +2163,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:37:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2517",
@@ -2076,7 +2172,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2113,7 +2210,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:24:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1332",
@@ -2121,7 +2219,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:36:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2143,7 +2242,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2157,10 +2257,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"976-RhgQAk6oK/nO+kUfyvzHMbV3zQg\"",
+     "etag": "W/\"a5b-PT1g501Y7cW6gaSL7z5xypPBohI\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -2203,7 +2304,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2516",
@@ -2211,7 +2313,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2518",
@@ -2219,7 +2322,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2241,7 +2345,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:22:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2513",
@@ -2249,7 +2354,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:37:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2517",
@@ -2257,7 +2363,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2294,7 +2401,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:24:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1332",
@@ -2302,7 +2410,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:36:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2324,7 +2433,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2338,10 +2448,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"92b-sMNPfiLSZ7UwkfvMdGCtn7PhPa4\"",
+     "etag": "W/\"a10-/iF34dtARM9qjbIZaPxo8M+mBW4\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -2384,7 +2495,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:21:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2516",
@@ -2392,7 +2504,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:33:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2518",
@@ -2400,7 +2513,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2422,7 +2536,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:22:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2513",
@@ -2430,7 +2545,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:37:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "2517",
@@ -2438,7 +2554,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:54:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2475,7 +2592,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:24:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1332",
@@ -2483,7 +2601,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:36:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2505,7 +2624,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2521,10 +2641,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"8c0-5evJIXAPgL3V8Q+E5m8O5Fl46PI\"",
+     "etag": "W/\"990-HGebgqS+Sr6QbxjYc4Ww5ZkF26g\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -2567,7 +2688,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3434",
@@ -2575,7 +2697,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2597,7 +2720,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:20:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3413",
@@ -2605,7 +2729,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:28:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3415",
@@ -2613,7 +2738,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:38:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2650,7 +2776,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:22:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1332",
@@ -2658,7 +2785,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2680,7 +2808,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:29:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2694,10 +2823,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"8da-EvcygxGYhd0YdW7FwbwFWnP4lJk\"",
+     "etag": "W/\"9aa-vacuDOWRuYGnN8bQVN2vgz+23FE\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -2740,7 +2870,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3434",
@@ -2748,7 +2879,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2770,7 +2902,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:20:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3413",
@@ -2778,7 +2911,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:28:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3415",
@@ -2786,7 +2920,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:38:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2823,7 +2958,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:22:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1332",
@@ -2831,7 +2967,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2853,7 +2990,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:29:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2867,10 +3005,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"8bc-kedDpsJsUN5m5JAriFD9lKlr668\"",
+     "etag": "W/\"98c-+R1H0oSR2wUgP8NtUEKOOTgr5VU\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -2913,7 +3052,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:27:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3434",
@@ -2921,7 +3061,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:46:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -2943,7 +3084,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:20:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3413",
@@ -2951,7 +3093,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:28:30.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "3415",
@@ -2959,7 +3102,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:38:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -2996,7 +3140,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:22:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1332",
@@ -3004,7 +3149,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:34:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           },
@@ -3026,7 +3172,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:29:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -3042,10 +3189,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"393-dB3YzlTMiJlBWInMwfpZq6C8/Gw\"",
+     "etag": "W/\"3e5-KzzCAlSRYW1TP1X2DwwhCcy33mU\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -3101,7 +3249,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:28:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1327",
@@ -3109,7 +3258,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:38:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -3123,10 +3273,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"3a5-8C6j4DEepOv3NrQVLCPUo9H147E\"",
+     "etag": "W/\"3f7-V5WG/UVrO5VOjJeig7wGHyXUv38\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -3182,7 +3333,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:28:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1327",
@@ -3190,7 +3342,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:38:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -3204,10 +3357,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"391-qjSbVjjpt0dQOL++1pCsZXZ9iFQ\"",
+     "etag": "W/\"3e3-qnfyg4ujN666qLQi/ZY2ST1WplY\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T00:20:00+09:00"
       },
       "data": {
        "station": {
@@ -3263,7 +3417,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:28:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             },
             {
              "trainNo": "1327",
@@ -3271,7 +3426,8 @@
              "express": false,
              "arrivalAt": "2026-10-20T15:38:00.000Z",
              "stopsAway": null,
-             "source": "scheduled"
+             "source": "scheduled",
+             "isFirstTrain": false
             }
            ]
           }
@@ -3289,10 +3445,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"27f-2Tny9ULfQrIJOhH/dOqsgEzNm5Y\"",
+     "etag": "W/\"2a7-EPi2xuoN4coC5zUlMmZ+Rjy/qQM\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3353,10 +3510,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"286-q96fbBXE7ea5cbYTSy+KBd22NSc\"",
+     "etag": "W/\"2ae-bHuopWM16J4d+bpq/xeZV8eSUbA\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3417,10 +3575,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"280-wOCcJAI4wYCdh0r/KYry0rTpAX0\"",
+     "etag": "W/\"2a8-Olk8K/b1jGDtOiBpjP4/ufynWHU\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3483,10 +3642,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"292-nq3DX9pBy5CDa7CCDQsja9HPm+A\"",
+     "etag": "W/\"2ba-s/3c/7JqON1UtiN9D39wGTnBoHM\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3547,10 +3707,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"28b-rA621XiFQ3aH/gsaMbH/e3bbRi0\"",
+     "etag": "W/\"2b3-Kfcsc36hHqktVrJOAr94Bd3ERkc\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3611,10 +3772,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"290-5/DfV1ixba9BbG7IPGZkh0h89Ww\"",
+     "etag": "W/\"2b8-xqFub+x8awnxFCF3l1lcl3R4HbY\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3677,10 +3839,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"472-bBEBIc7coVYkhZgfv2wyz4Dx+7Q\"",
+     "etag": "W/\"49a-6OV3RZA4QyAMeD7CT+ByjjdGmxc\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3782,10 +3945,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"47f-RfBWUF5QlGovZXkxZgPE9nbX7M0\"",
+     "etag": "W/\"4a7-2hetJaZ2KmMFNafyrPxp3Lc4/FY\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3887,10 +4051,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"470-kugeSm9i4J1uu2N8XfbSKWfwPBc\"",
+     "etag": "W/\"498-uPUO+pJ+HGdIdZZH0nfLI5z01n8\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -3994,10 +4159,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"470-5beIXdq6Glhc4ZqieVSFlT8jhTw\"",
+     "etag": "W/\"498-8bkaLJDjHunPP5VE9kFH+Iz/rVk\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4099,10 +4265,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"475-AfhLEE7+Cueeu6MXLm03TEP3VOM\"",
+     "etag": "W/\"49d-M6SvCay/lDZH0VeXX7MT+1LqaXU\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4204,10 +4371,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"462-llwqWI7JeMsIhAMMShtbyIXC0b8\"",
+     "etag": "W/\"48a-0ABdoyr19J36GcO/ESR702TqmFo\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4311,10 +4479,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"460-6f6RIKMyXH8+zbKmh0fFWx8XEls\"",
+     "etag": "W/\"488-uJ2CL80Tk26ni/5BitUAHNjyFy4\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4416,10 +4585,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"468-5l5hnA7vZjb8ESDxQFhtkv2Jco8\"",
+     "etag": "W/\"490-Yon10vn33d61gNAZsTvUFLa/a/Y\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4521,10 +4691,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"45e-2zl5fxyq+P07LYhzXwtYTfTeHuM\"",
+     "etag": "W/\"486-XuTpP9Jdyxqwek0ZGOv4aghxvzo\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4628,10 +4799,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"460-rU6KL0ejqvQ4IN3rshuTuu03dio\"",
+     "etag": "W/\"488-t6lCS14PpmHmTi/6GjgWbuucKmE\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4733,10 +4905,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"49d-U/6rQOs24qJj/mg5gUEKZshA+5g\"",
+     "etag": "W/\"4c5-sswQjn/z6f7RoysFw2EW93J5In4\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4838,10 +5011,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"452-ehFiAjC4gPndOhwDXU/neTlJhn4\"",
+     "etag": "W/\"47a-LZElzCIhVn9eig3zqauG/N96DU8\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -4945,10 +5119,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"486-7TQSjMHvIFNngN1sIwx50aWeSr8\"",
+     "etag": "W/\"4ae-q5kwG+EyM2GfGe9qHL4zQHcnc0E\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -5050,10 +5225,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"4a0-hRF4gcSEnVVnDnUHtN2xml2OQP4\"",
+     "etag": "W/\"4c8-fBDtoquF+qOJA9LBGGWDdiVLkOU\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -5155,10 +5331,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"482-Ta7YqRWiOjBR8XPFE4OPZVg4mSE\"",
+     "etag": "W/\"4aa-WmIr26lP1NklaxNEvoL/NkRX8iQ\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -5262,10 +5439,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"286-4GBxBXMyem7V5/7mBc2EwMoqEhQ\"",
+     "etag": "W/\"2ae-v0D2Ps1hT7VGk6UTHZPYOIqcv+0\"",
      "body": {
       "meta": {
-       "lang": "ko"
+       "lang": "ko",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -5326,10 +5504,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"298-AIe015kVfDqaEiTglQ7liF1N8sY\"",
+     "etag": "W/\"2c0-M7oLrhCTSvyX6Zd1z1u9HZAGiWY\"",
      "body": {
       "meta": {
-       "lang": "en"
+       "lang": "en",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {
@@ -5390,10 +5569,11 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"284-fhBZbDjHAicvYOAC8gr6cn+WReg\"",
+     "etag": "W/\"2ac-LnBkmuVw5k1F2vY2rw/ASeEbjd8\"",
      "body": {
       "meta": {
-       "lang": "zh"
+       "lang": "zh",
+       "serverNow": "2026-10-21T02:00:00+09:00"
       },
       "data": {
        "station": {

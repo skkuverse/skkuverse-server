@@ -1,5 +1,5 @@
 {
-  "_about": "GET /subway/stations/S1-4-420/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire (GET /subway/stations/hyehwa/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords",
+  "_about": "GET /subway/stations/S1-4-420/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire (GET /subway/stations/hyehwa/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords; extended 2026-10-24 for the first-train flag, no other value changed: each train's isFirstTrain, false, as none was its service day's first train.",
   "data": {
     "station": {
       "id": "hyehwa",
@@ -41,7 +41,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-17T02:42:30.000Z",
                 "stopsAway": 2,
-                "source": "live"
+                "source": "live",
+                "isFirstTrain": false
               }
             ]
           },
@@ -63,7 +64,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-17T02:55:30.000Z",
                 "stopsAway": null,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               }
             ]
           }

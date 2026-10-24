@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: no festival was live in production when it was captured on 2026-10-19, and opening one is user-visible. What source commit f6d95889 answered (its src/map is production commit 5c0ee5a9's) over a real mongod with the eskara-2026 layer set, its activation open from 2026-10-01T00:00+09:00 to 2026-10-03T06:00+09:00, the 77 places of scripts/data/eskara-2026-places.json imported through scripts/lib/eventmap-db.js, and the clock at 2026-10-01T21:00+09:00: GET /map/config in ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details. Each entry is the status, the parsed body and the weak ETag. Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body.",
+  "_about": "Synthetic, never captured: no festival was live in production when it was captured on 2026-10-19, and opening one is user-visible. What source commit f6d95889 answered (its src/map is production commit 5c0ee5a9's) over a real mongod with the eskara-2026 layer set, its activation open from 2026-10-01T00:00+09:00 to 2026-10-03T06:00+09:00, the 77 places of scripts/data/eskara-2026-places.json imported through scripts/lib/eventmap-db.js, and the clock at 2026-10-01T21:00+09:00: GET /map/config in ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details. Each entry is the status, the parsed body and the weak ETag. Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip of each /map/config body gained the map tab and opensIn map on purpose (a chip runs where its result shows; app ADR 0022 D1), and its ETag was recomputed from the new body. On 2026-10-24 the building_code chip of each /map/config body gained an empty tabs on purpose (the shared-map shell's search field replaces it, so that shell lists it in no tab), and its ETag was recomputed from the new body.",
   "config": {
     "ko": {
       "status": 200,
@@ -366,7 +366,8 @@
                 "actionValue": "/search"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": []
             },
             {
               "id": "lost_found",
@@ -418,8 +419,10 @@
               "isReset": false,
               "list": null,
               "tabs": [
+                "map",
                 "transit"
-              ]
+              ],
+              "opensIn": "map"
             },
             {
               "id": "eskara-2026_all",
@@ -715,7 +718,7 @@
           }
         }
       },
-      "etag": "W/\"23f6-BxtqLrIvxscL7f88VRAX0CyUicI\""
+      "etag": "W/\"2416-MY5p0LsULrCvLHrVS3Nuk9k+Lyk\""
     },
     "en": {
       "status": 200,
@@ -1082,7 +1085,8 @@
                 "actionValue": "/search"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": []
             },
             {
               "id": "lost_found",
@@ -1134,8 +1138,10 @@
               "isReset": false,
               "list": null,
               "tabs": [
+                "map",
                 "transit"
-              ]
+              ],
+              "opensIn": "map"
             },
             {
               "id": "eskara-2026_all",
@@ -1431,7 +1437,7 @@
           }
         }
       },
-      "etag": "W/\"23c8-mQDIrhzSMcw8lz1IqdDOJlWaYbY\""
+      "etag": "W/\"23e8-VHqHc/ysIDGXtwOjMSyK91kKwYA\""
     },
     "zh": {
       "status": 200,
@@ -1798,7 +1804,8 @@
                 "actionValue": "/search"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": []
             },
             {
               "id": "lost_found",
@@ -1850,8 +1857,10 @@
               "isReset": false,
               "list": null,
               "tabs": [
+                "map",
                 "transit"
-              ]
+              ],
+              "opensIn": "map"
             },
             {
               "id": "eskara-2026_all",
@@ -2147,7 +2156,7 @@
           }
         }
       },
-      "etag": "W/\"23fa-CdeU9e1wEmD4kQWQ9o4zoij9+ro\""
+      "etag": "W/\"241a-qYLbcMycR4KYWaYYpFRdkJKVvu8\""
     }
   },
   "event": {

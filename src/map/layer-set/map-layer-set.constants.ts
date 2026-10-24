@@ -21,7 +21,8 @@ export const BASE_CHIPS: readonly MapChipSpec[] = [
   },
   {
     id: "building_code", emoji: "🔢", label: { ko: "건물코드", en: "Building Code", zh: "建筑编号" },
-    action: { kind: "link", actionType: "route", actionValue: "/search" }, isReset: false, list: null,
+    // WHY: the shared-map shell's search field replaces it there; builds and shells that ignore `tabs` keep it in the map tab.
+    action: { kind: "link", actionType: "route", actionValue: "/search" }, isReset: false, list: null, tabs: [],
   },
   {
     id: "lost_found", emoji: "🧳", label: { ko: "분실물", en: "Lost & Found", zh: "失物招领" },
@@ -35,7 +36,7 @@ export const BASE_CHIPS: readonly MapChipSpec[] = [
   {
     id: "shuttle_routes", emoji: "🚌", label: { ko: "셔틀 노선", en: "Shuttle Routes", zh: "班车路线" },
     action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
-    isReset: false, list: null, tabs: ["transit"],
+    isReset: false, list: null, tabs: ["map", "transit"], opensIn: "map",
   },
 ];
 

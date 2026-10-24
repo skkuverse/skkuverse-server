@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: the tab lens (layers[].tabs, chips[].tabs and the `layers` chip action, with the transit tab's shuttle_routes chip) is not deployed yet. The ko /map/config data of __tests__/nest/map/fixtures/map-production.capture.json as of 2026-10-23, which map-layer-set-characterization.routes.test.ts checks against the real map services with no festival live. Nothing trimmed.",
+  "_about": "Synthetic, never captured: the tab lens (layers[].tabs, chips[].tabs and the `layers` chip action, with the transit tab's shuttle_routes chip) is not deployed yet. The ko /map/config data of __tests__/nest/map/fixtures/map-production.capture.json as of 2026-10-24, which map-layer-set-characterization.routes.test.ts checks against the real map services with no festival live. Nothing trimmed.",
   "data": {
     "naver": {
       "styleId": "91a6fcf5-9d03-4762-99a5-7e58a5674628"
@@ -195,7 +195,8 @@
           "actionValue": "/search"
         },
         "isReset": false,
-        "list": null
+        "list": null,
+        "tabs": []
       },
       {
         "id": "lost_found",
@@ -247,8 +248,10 @@
         "isReset": false,
         "list": null,
         "tabs": [
+          "map",
           "transit"
-        ]
+        ],
+        "opensIn": "map"
       }
     ],
     "cameraDefaults": {

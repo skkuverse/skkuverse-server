@@ -37,7 +37,7 @@ function setup() {
 
 function storedAgo(ageMs: number, platformId: string): SubwayArrivalsDoc {
   const generatedAt = new Date(NOW.getTime() - ageMs);
-  const live = { trainNo: "4674", destination: "불암산", express: false, arrivalAt: new Date("2026-10-16T11:42:50Z"), source: "live" as const, position: null };
+  const live = { trainNo: "4674", destination: "불암산", express: false, arrivalAt: new Date("2026-10-16T11:42:50Z"), source: "live" as const, isFirstTrain: false, position: null };
   return { _id: platformId, generatedAt, serviceDate: "2026-10-16", directions: { up: [live], down: [] } };
 }
 

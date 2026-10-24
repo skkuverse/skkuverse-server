@@ -105,6 +105,7 @@ describe("chip lists", () => {
         action: { kind: "link", actionType: "route", actionValue: "/search" },
         isReset: false,
         list: null,
+        tabs: [],
       },
       {
         id: "lost_found",
@@ -129,7 +130,8 @@ describe("chip lists", () => {
         action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
         isReset: false,
         list: null,
-        tabs: ["transit"],
+        tabs: ["map", "transit"],
+        opensIn: "map",
       },
     ]);
   });

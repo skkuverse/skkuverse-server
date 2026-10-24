@@ -185,6 +185,9 @@
                           "estimated",
                           "scheduled"
                         ]
+                      },
+                      "isFirstTrain": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -193,7 +196,8 @@
                       "express",
                       "arrivalAt",
                       "stopsAway",
-                      "source"
+                      "source",
+                      "isFirstTrain"
                     ]
                   }
                 }

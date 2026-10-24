@@ -4,7 +4,7 @@ import { withMeta } from "../../../http/response.interceptor";
 import type { WithMeta } from "../../../http/response.types";
 import { Clock } from "../../../infra/clock";
 import type { SupportedLang } from "../../../infra/types";
-import { toKstInstant } from "../../bus.mapper";
+import { toKstInstant } from "../../../shared/kst-date.util";
 import { BusConfigService } from "../../config/bus-config.service";
 import type { PlacedStation, StationDirection } from "../../config/bus-config.types";
 import { BusLiveHsscService } from "../hssc/bus-live-hssc.service";

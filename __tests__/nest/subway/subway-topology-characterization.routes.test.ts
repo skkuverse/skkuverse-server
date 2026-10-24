@@ -61,6 +61,7 @@ const STATION_IDS = ["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "ga
 type StationId = (typeof STATION_IDS)[number];
 
 const NOW = new Date(captured.capturedAt);
+const SERVER_NOW = "2026-10-20T10:12:46+09:00";
 let clockAt = NOW;
 const CLOCK: Clock = { now: () => new Date(clockAt) };
 const VARY = "Accept-Language, Origin";
@@ -89,11 +90,15 @@ type CapturedStation = (typeof captured.stations)[StationId]["ko"];
 
 const seededDocOf = (platformId: string): SeededDoc => seeded.docs.find((doc) => doc._id === platformId)!;
 
-/** The body: the capture's static fields, and each seeded train with its pinned stops away. */
+/**
+ * The body: the capture's static fields, and each seeded train with its pinned stops away. Production served no
+ * `meta.serverNow` or `isFirstTrain` on 2026-10-20: the expected meta adds the clock at +09:00 to the capture's, and
+ * each train its seeded `isFirstTrain` (app ADR 0022, D4).
+ */
 function expectedBody(stationId: StationId, lang: Lang) {
   const capture: CapturedStation = captured.stations[stationId][lang];
   return {
-    meta: capture.meta,
+    meta: { ...capture.meta, serverNow: SERVER_NOW },
     data: {
       station: { ...capture.station, coords: stationCoordsFixture().stations[stationId] },
       lines: capture.lines.map(({ line, platformId, directions }) => {
@@ -104,13 +109,14 @@ function expectedBody(stationId: StationId, lang: Lang) {
           generatedAt: doc.generatedAt,
           directions: directions.map(({ direction, name, previousStation, nextStation }) => {
             const key = direction as "up" | "down";
-            const trains = doc.directions[key].map(({ trainNo, destination, express, arrivalAt, source }, i) => ({
+            const trains = doc.directions[key].map(({ trainNo, destination, express, arrivalAt, source, isFirstTrain }, i) => ({
               trainNo,
               destination,
               express,
               arrivalAt,
               stopsAway: STOPS_AWAY[platformId]![key][i],
               source,
+              isFirstTrain,
             }));
             return { direction, name, previousStation, nextStation, trains };
           }),
