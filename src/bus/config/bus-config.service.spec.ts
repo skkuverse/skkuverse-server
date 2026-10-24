@@ -765,7 +765,7 @@ describe("BusConfigService.findStationDirection", () => {
 
 // WHY: 7800 is polled and served on /bus/live but listed on no card (docs/plans/7800-unified-arrivals.md, Q2), and
 // has no stored attributes; the config reads neither its registry nor its line, while a stop page still names the
-// direction its station lies on (review finding: the direction lookup was gated on listing).
+// direction its station lies on, read from its stored stations and line rather than from a group.
 describe("BusConfigService with 7800 unlisted", () => {
   const version7800 = registryDoc7800().stationsVersion;
   const store7800 = () => {

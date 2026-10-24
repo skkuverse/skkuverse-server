@@ -5,7 +5,8 @@
  * and the stops of revision 1. It answers in the one live shape (ADR 0019) at 17:51:10 KST: 80 stations, both slots of
  * the origin waiting to depart, TOPIS's `[0번째 전]` one stop away, stops away counting only the stations a bus stops
  * at, no occupancy, no low-floor answer for TOPIS's busType 2, and no stop id at any pole no local stop aliases. With
- * nothing stored, as with REGIONAL_BUS off, it answers noData. The frozen realtime route serves no 7800.
+ * its stations stored but no bus_cache key (a stopped poller, or REGIONAL_BUS off after one stored them), it answers
+ * noData. The frozen realtime route serves no 7800.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -184,8 +185,8 @@ describe("GET /bus/live/gyeonggi7800 over 7800's capture", () => {
   });
 });
 
-describe("GET /bus/live/gyeonggi7800 with nothing stored", () => {
-  it("answers noData with no vehicle and no station, as for a stopped poller or REGIONAL_BUS off", async () => {
+describe("GET /bus/live/gyeonggi7800 with its stations stored and nothing in bus_cache", () => {
+  it("answers noData with no vehicle and no station, as for a stopped poller", async () => {
     // Arrange
     busCache.values.clear();
     busCache.updatedAtByKey.clear();

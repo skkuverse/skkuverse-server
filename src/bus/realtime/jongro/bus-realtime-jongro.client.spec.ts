@@ -14,8 +14,9 @@
  * 7800, which TOPIS answers by its GBIS route id, reads the same way.
  * An answer saying the key's daily quota is spent, in TOPIS's envelope or the
  * data.go.kr gateway's (code 22), rejects like any refusal and also logs
- * `bus.topis.quota_exceeded` with the data.go.kr operation, which an alert
- * reads: every TOPIS route of that operation stops until the quota resets.
+ * `bus.topis.quota_exceeded` with the data.go.kr operation, at most once a
+ * minute per operation, which an alert reads: every TOPIS route of that
+ * operation stops until the quota resets.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
@@ -656,7 +657,7 @@ describe("BusRealtimeJongroClient over a spent daily quota", () => {
 
     // Act & Assert
     await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({ name: "UpstreamError", upstream: "topis", headerCd: "22" });
-    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07" }]);
+    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 }]);
   });
 
   it("Gateway answers its XML refusal in a 200: rejects and logs the positions operation", async () => {
@@ -665,7 +666,7 @@ describe("BusRealtimeJongroClient over a spent daily quota", () => {
 
     // Act & Assert
     await expect(new BusRealtimeJongroClient().fetchSightings(ROUTE_7800)).rejects.toMatchObject({ name: "UpstreamError", headerCd: "22" });
-    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getBusPosByRtidList", code: "7800" }]);
+    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getBusPosByRtidList", code: "7800", suppressed: 0 }]);
   });
 
   it("Gateway refuses with an HTTP error: rejects with that error and logs the operation", async () => {
@@ -675,7 +676,31 @@ describe("BusRealtimeJongroClient over a spent daily quota", () => {
 
     // Act & Assert
     await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toBe(refused);
-    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07" }]);
+    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 }]);
+  });
+
+  it("logs a spent quota once a minute per operation, counting the lines it left out", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: new Date("2026-10-24T14:00:00Z") });
+    const client = new BusRealtimeJongroClient();
+    respond(GATEWAY_REFUSAL);
+
+    // Act
+    try {
+      for (const route of [route07, ROUTE_7800, route07]) await client.fetchArrivals(route).catch(() => undefined);
+      await client.fetchSightings(route07).catch(() => undefined);
+      jest.setSystemTime(new Date("2026-10-24T14:01:00Z"));
+      await client.fetchArrivals(ROUTE_7800).catch(() => undefined);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    // Assert
+    expect(quotaLines()).toEqual([
+      { event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 },
+      { event: "bus.topis.quota_exceeded", operation: "getBusPosByRtidList", code: "07", suppressed: 0 },
+      { event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "7800", suppressed: 2 },
+    ]);
   });
 
   it("logs nothing for another refusal, a per-second limit or a failed request", async () => {

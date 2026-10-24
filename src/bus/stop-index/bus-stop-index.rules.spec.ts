@@ -309,6 +309,22 @@ describe("toStopIndex", () => {
     expect(routesAt(index, "hssc-600th")?.map((route) => route.groupId)).toEqual(["campus", "campus"]);
   });
 
+  it("names another stop's ARS alias of a pole a TOPIS alias claims as serving nothing", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-600th")!.arsIds = ["01618"];
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.topisIds = ["100900221"];
+    });
+    const routes = await routesOf();
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.unmatchedArsIds).toEqual(["01618"]);
+    expect(index.unmatchedTopisIds).toEqual([]);
+  });
+
   it("serves nothing for a TOPIS alias no stored station has, and names it", async () => {
     // Arrange
     const snapshot = await snapshotOf((data) => {
