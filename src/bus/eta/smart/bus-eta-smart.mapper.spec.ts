@@ -146,6 +146,18 @@ describe("toDayRuns", () => {
     ]);
   });
 
+  it("takes the last run of the day per route type, so a later run of another type leaves a type's last run its last bus", () => {
+    // Act
+    const runs = toDayRuns(
+      "campus-inja",
+      { date: "2026-10-23", schedule: [{ time: "13:00", routeType: "regular" }, { time: "14:00", routeType: "regular" }, { time: "14:20", routeType: "hakbu" }] },
+      { routeTypes: [], sequences: {}, estimates: new Map() },
+    );
+
+    // Assert
+    expect(runs.map((run) => run?.isLastOfDay)).toEqual([false, true, true]);
+  });
+
   it("answers null for an entry with no route type or no departure, in the entry's place", () => {
     // Act
     const runs = toDayRuns("commute-jamsil", day([{ routeType: "down", stopTimes: [] }, { time: "21:00", stopTimes: [] }, { time: "21:00", routeType: "down" }]), {

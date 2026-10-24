@@ -12,7 +12,7 @@ const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: 
 jest.mock("../../../infra/logger", () => mockLogger);
 
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
-import { storedScheduleContentService } from "../../../../__tests__/helpers/bus/schedule-content";
+import { serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../../infra/clock";
@@ -240,6 +240,20 @@ describe("BusEtaSmartService.listRuns", () => {
     // Assert
     expect(runs[0]!.estimate).toBeNull();
     expect(runs[0]!.stopTimes[1]).toEqual({ shownAt: null, isEstimated: false, latestEstimateAt: null });
+  });
+
+  it("answers a suspended service as suspended with no run, even when two weeks are asked for", async () => {
+    // Arrange
+    const content = storedScheduleContentRepository();
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-10-12", until: "2026-10-16" }));
+    const suspendedSchedule = new BusScheduleService(asReal<BusScheduleRepository>(new FakeBusScheduleRepository()), storedScheduleContentService(clock, content), clock);
+    const suspended = new BusEtaSmartService(suspendedSchedule, asReal<BusEtaRepository>(estimates), storedBusStopsService(), clock);
+
+    // Act
+    const runList = await suspended.listRuns("campus-inja", { from: NOW, weekCount: 2 });
+
+    // Assert
+    expect(runList).toEqual({ status: "suspended", runs: [] });
   });
 
   it("answers a schedule that is not active with its status and no run", async () => {
