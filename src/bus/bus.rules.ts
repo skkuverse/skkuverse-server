@@ -14,6 +14,14 @@ export function isHsscPassThrough(stationIndex: number): boolean {
   return HSSC_PASS_THROUGH_STATION_INDEXES.includes(stationIndex);
 }
 
+// QUIRK(topis): a station a bus passes without stopping is named `…(미정차)` on every row (7800, captured 2026-10-24), the
+// one mark it always carries: its ARS number is 0 on most, but a five-digit number on three of 7800's 19.
+const PASS_THROUGH_NAME_SUFFIX = "(미정차)";
+
+export function isTopisPassThrough(stationName: string): boolean {
+  return stationName.trim().endsWith(PASS_THROUGH_NAME_SUFFIX);
+}
+
 const refuseChange = (): never => {
   throw new TypeError("a frozen collection cannot change");
 };

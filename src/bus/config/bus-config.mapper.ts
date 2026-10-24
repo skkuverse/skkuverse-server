@@ -1,7 +1,7 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
 import { ESTIMATES_MAX_AGE_S, HSSC_POSITION_COUNT } from "../bus.constants";
-import { serviceConfigOf, toPoleStopId } from "../bus.rules";
+import { isTopisPassThrough, serviceConfigOf, toPoleStopId } from "../bus.rules";
 import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
 import type { JongroStation } from "../registry/bus-registry.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
@@ -40,8 +40,8 @@ export function mapStations(stations: ReadonlyArray<AnyStation>, directionIds: R
     stationNumber: ("stationNumber" in station && station.stationNumber) || null,
     directionId: directionIdAt(directionIds, index),
     ...{ isFirstStation: station.isFirstStation, isLastStation: station.isLastStation, isRotationStation: station.isRotationStation },
-    // WHY: only an HSSC position (no stationName) passes through; a Jongno virtual stop also has a null stop id.
-    isPassThrough: !("stationName" in station) && station.stopId === null,
+    // WHY: an HSSC position with no stop passes through, a TOPIS station by its name; a Jongno virtual stop has no stop id.
+    isPassThrough: "stationName" in station ? isTopisPassThrough(station.stationName) : station.stopId === null,
     isAlightOnly: "isAlightOnly" in station && station.isAlightOnly === true,
     transferLines: station.transferLines,
     ...(station.stopId ? { stopId: station.stopId } : {}),

@@ -32,11 +32,13 @@
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
 import { routeAttributesFixture } from "../../../__tests__/helpers/bus/route-attributes";
+import arrivals7800 from "../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import { JONGRO_ROUTES } from "../bus.constants";
 import { SERVICE_CONFIG } from "../bus.constants";
+import { toPoleStopId } from "../bus.rules";
 import type { JongroRouteAttributes } from "../bus.types";
 import type { BusStopsData } from "../stops/bus-stops.document";
-import type { AttributedJongroRoute } from "./bus-config.types";
+import type { AnyStation, AttributedJongroRoute } from "./bus-config.types";
 import { HSSC_STOP_IDS } from "../../../__tests__/helpers/bus/station-stop-ids";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { capturedRoutePathOf } from "../../../__tests__/helpers/bus/bus-route-path";
@@ -516,6 +518,40 @@ describe("toBusGroups per-route facts", () => {
 
     // Assert
     expect(groups.map((group) => group.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro08"]);
+  });
+});
+
+// WHY: TOPIS names a station a bus passes without stopping `…(미정차)` (7800, captured 2026-10-24); such a station is
+// pass-through even where its row carries an ARS number, and every stored Jongro station stays a stop.
+describe("mapStations on a TOPIS route with virtual stations", () => {
+  const rows = arrivals7800.msgBody.itemList;
+  const stations7800: AnyStation[] = rows.map((row, index) => ({
+    sequence: row.staOrd,
+    stationName: row.stNm,
+    stationNumber: row.arsId,
+    isFirstStation: index === 0,
+    isLastStation: index === rows.length - 1,
+    isRotationStation: row.stId === "121001315",
+    transferLines: [],
+    stopId: toPoleStopId(row.arsId, NO_ALIASES),
+  }));
+
+  it("serves 7800's 19 …(미정차) stations isPassThrough true and every other station false", () => {
+    // Act
+    const mapped = mapStations(stations7800, []);
+
+    // Assert
+    expect(mapped.filter((station) => station.isPassThrough).map((station) => station.index + 1)).toEqual([28, 29, 30, 32, 33, 34, 35, 36, 40, 42, 43, 45, 46, 47, 48, 49, 51, 52, 53]);
+    expect(mapped.filter((station) => !station.isPassThrough)).toHaveLength(61);
+  });
+
+  it("serves every stored Jongro station isPassThrough false", () => {
+    // Act
+    const mapped = jongroRoutes.flatMap(({ route }) => mapStations(route.stations.map((station) => ({ ...station, transferLines: [] })), []));
+
+    // Assert
+    expect(mapped.filter((station) => station.isPassThrough)).toEqual([]);
+    expect(mapped).toHaveLength(80);
   });
 });
 

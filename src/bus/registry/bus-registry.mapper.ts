@@ -1,3 +1,4 @@
+import { isTopisPassThrough } from "../bus.rules";
 import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument, RegistryStation } from "./bus-registry.document";
 import type { JongroStation, JongroStationMapping, ObservedStation, RegistryRoute } from "./bus-registry.types";
@@ -33,6 +34,7 @@ export function toRegistryRoute(route: JongroRoute, doc: JongroRouteDocument): R
     stations: toJongroStations(doc),
     mapping: toStationMapping(doc.stations),
     topisIds: doc.stations.map((station) => station.topisId),
+    passThroughOrds: new Set(doc.stations.filter((station) => isTopisPassThrough(station.stationName)).map((station) => station.sequence)),
   };
 }
 

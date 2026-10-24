@@ -8,13 +8,17 @@
  * src/bus/stop-index/bus-stop-index.rules.spec.ts is the first case below.
  * The TOPIS key's format check is src/infra/required-env.spec.ts's. The HSSC
  * line passes through the Hyehwa Rotary at positions 5 and 7, the stored line's
- * null stops and the positions the HSSC estimates skip.
+ * null stops and the positions the HSSC estimates skip. A TOPIS route passes
+ * through each station named `…(미정차)`, whatever ARS number its row carries:
+ * 19 of 7800's 80 in the 2026-10-24 capture, none of the Jongro routes'.
  * Where an HSSC station heads (the next position with a stop, round the loop)
  * and whether riders board or only get off there, which the stop page and the
  * stop list both serve: toTowards moved here unchanged from
  * src/bus/stop-arrivals/bus-stop-arrivals.rules.spec.ts.
  */
-import { deepFreeze, isHsscPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toTowards } from "./bus.rules";
+import arrivals7800 from "../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
+import registryRoutes from "../../__tests__/nest/bus/fixtures/jongro-registry-routes.json";
+import { deepFreeze, isHsscPassThrough, isTopisPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toTowards } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -114,6 +118,37 @@ describe("isHsscPassThrough", () => {
   ])("position %i → %s", (stationIndex, expected) => {
     // Act & Assert
     expect(isHsscPassThrough(stationIndex)).toBe(expected);
+  });
+});
+
+describe("isTopisPassThrough", () => {
+  it.each([
+    ["효행공원(미정차)", true],
+    [" 사당역사거리(미정차) ", true],
+    ["성균관대학교", false],
+    ["미정차정류장", false],
+    ["(미정차)앞", false],
+    ["혜화동로터리 [미정차]", false],
+  ])("%j → %s", (stationName, expected) => {
+    // Act & Assert
+    expect(isTopisPassThrough(stationName)).toBe(expected);
+  });
+
+  it("passes through 7800's 19 virtual stations, three of which carry an ARS number", () => {
+    // Arrange
+    const rows = arrivals7800.msgBody.itemList;
+
+    // Act
+    const passed = rows.filter((row) => isTopisPassThrough(row.stNm));
+
+    // Assert
+    expect(passed.map((row) => Number(row.staOrd))).toEqual([28, 29, 30, 32, 33, 34, 35, 36, 40, 42, 43, 45, 46, 47, 48, 49, 51, 52, 53]);
+    expect(passed.filter((row) => row.arsId !== "0").map((row) => row.arsId)).toEqual(["78420", "78155", "78352"]);
+  });
+
+  it("passes through none of the stored Jongro stations", () => {
+    // Act & Assert
+    expect(registryRoutes.routes.flatMap((route) => route.stations).filter((station) => isTopisPassThrough(station.stationName))).toEqual([]);
   });
 });
 

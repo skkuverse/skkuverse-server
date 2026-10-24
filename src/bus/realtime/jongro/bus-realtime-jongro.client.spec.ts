@@ -11,11 +11,14 @@
  * document. Each URL is built from the route's
  * TOPIS id and SEOUL_BUS_SERVICE_KEY at the call, so importing the route config
  * needs no key, and a role that does not poll refuses to build one (ADR 0012, D4).
+ * 7800, which TOPIS answers by its GBIS route id, reads the same way.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
 import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-positions.json";
+import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
+import positions7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-positions.json";
 import busTypesFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-bus-types.json";
 import { JONGRO_ROUTES } from "../../bus.constants";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
@@ -530,6 +533,41 @@ describe("BusRealtimeJongroClient outside a polling role", () => {
       if (previous === undefined) delete process.env.ROLE;
       else process.env.ROLE = previous;
     }
+  });
+});
+
+// WHY: TOPIS answers 7800 (GBIS route 200000150) exactly as a Jongro route (2026-10-24 capture), so the client reads it
+// unchanged: GPS on every bus, Gyeonggi plates, Sadang as the turnaround and busType 2, which the live route serves as no
+// low-floor answer (ADR 0019, D13).
+describe("BusRealtimeJongroClient over 7800's capture", () => {
+  const route7800 = { code: "7800", busRouteId: "200000150" };
+
+  it("reads all 15 position rows, busType 0 as general and 2 as articulated", async () => {
+    // Arrange
+    respond(positions7800);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route7800);
+
+    // Assert
+    expect(sightings).toHaveLength(15);
+    expect(new Set(sightings.map(({ turnaroundStationId }) => turnaroundStationId))).toEqual(new Set(["121001315"]));
+    expect(sightings.slice(0, 2).map(({ plainNo, busType }) => [plainNo, busType])).toEqual([
+      ["경기70사1145", "articulated"],
+      ["경기70사1132", "general"],
+    ]);
+  });
+
+  it("reads all 80 arrival rows, both directions, the virtual stations included", async () => {
+    // Arrange
+    respond(arrivals7800);
+
+    // Act
+    const arrivals = await new BusRealtimeJongroClient().fetchArrivals(route7800);
+
+    // Assert
+    expect(arrivals).toHaveLength(80);
+    expect(arrivals.find(({ sequence }) => sequence === "28")).toMatchObject({ stationName: "효행공원(미정차)", stationNumber: "0" });
   });
 });
 

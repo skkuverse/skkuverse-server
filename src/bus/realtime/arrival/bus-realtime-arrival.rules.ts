@@ -12,7 +12,7 @@ import {
   PASSENGER_COUNT_TYPE,
   TIMED_TEXT_PATTERN,
 } from "./bus-realtime-arrival.constants";
-import type { ArrivalState, Crowding, TimedText } from "./bus-realtime-arrival.types";
+import type { ArrivalState, Crowding, RouteArrivalFacts, TimedText } from "./bus-realtime-arrival.types";
 
 function toTimedText(arrmsg: string): TimedText | null {
   const match = TIMED_TEXT_PATTERN.exec(arrmsg.replace(BRACKET_TOKEN_PATTERN, " "));
@@ -85,4 +85,18 @@ export function toArrival(bus: JongroArrivalBus, seatCount: number): RealtimeArr
     passengerCount: toPassengerCount(bus),
     message: bus.arrmsg,
   };
+}
+
+// QUIRK(topis): staOrd − sectOrd also counts the stations between that the bus passes without stopping (7800's
+// toll gate (staOrd 31) reads `[5번째 전]` for a bus with two stops between, 2026-10-24); ADR 0019 D4 counts stops only.
+export function toStoppingStopsAway(bus: JongroArrivalBus, passThroughOrds: ReadonlySet<number>): number | null {
+  const stopsAway = toStopsAway(bus);
+  if (stopsAway === null) return null;
+  return stopsAway - [...passThroughOrds].filter((ord) => ord >= bus.sectOrd && ord < bus.staOrd).length;
+}
+
+// WHY: a route whose source never reports load serves none (ADR 0019, D2): TOPIS sends 7800's buses as type 2 with 0 aboard.
+export function toRouteArrival(bus: JongroArrivalBus, { seatCount, capabilities, passThroughOrds }: RouteArrivalFacts): RealtimeArrival {
+  const arrival = { ...toArrival(bus, seatCount), stopsAway: toStoppingStopsAway(bus, passThroughOrds) };
+  return capabilities.occupancy ? arrival : { ...arrival, crowding: null, passengerCount: null };
 }

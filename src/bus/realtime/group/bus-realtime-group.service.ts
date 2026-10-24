@@ -98,7 +98,7 @@ export class BusRealtimeGroupService {
         stationIndex,
         madeAtMs: toMadeAtMs(row.eventDate),
         slots: this.arrival
-          .toTimedArrivals(row.buses, route.seatCount)
+          .toTimedArrivals(row.buses, route)
           .map((slot) => (waitingVehicleIds.has(slot.bus.vehId) ? { ...slot, arrival: toWaitingArrival(slot.arrival) } : slot)),
       })),
     );
