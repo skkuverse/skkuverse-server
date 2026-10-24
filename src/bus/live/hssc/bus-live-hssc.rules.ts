@@ -1,4 +1,4 @@
-import { toKstInstant } from "../../bus.mapper";
+import { toKstInstant } from "../../../shared/kst-date.util";
 import type { Arrival, Vehicle, VehiclePosition } from "../../bus.wire";
 import type { HsscEta } from "../../realtime/hssc-eta/bus-realtime-hssc-eta.types";
 import type { HsscLiveBus } from "./bus-live-hssc.types";

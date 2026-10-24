@@ -1,4 +1,4 @@
-import { toKstInstant } from "../../bus.mapper";
+import { toKstInstant } from "../../../shared/kst-date.util";
 import { toPoleStopId, toServedArsId } from "../../bus.rules";
 import type { Vehicle, VehiclePosition } from "../../bus.wire";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";
