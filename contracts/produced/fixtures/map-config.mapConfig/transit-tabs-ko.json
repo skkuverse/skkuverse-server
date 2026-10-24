@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: the tab lens (layers[].tabs, chips[].tabs and the `layers` chip action, with the transit tab's shuttle_routes chip) is not deployed yet. The ko /map/config data of __tests__/nest/map/fixtures/map-production.capture.json as of 2026-10-24, which map-layer-set-characterization.routes.test.ts checks against the real map services with no festival live. Nothing trimmed.",
+  "_about": "Synthetic, never captured: the tab lens (layers[].tabs and chips[].tabs) is not deployed yet. Since the shuttle_routes chip was removed on 2026-10-24, no chip here carries the `layers` action or opensIn. The ko /map/config data of __tests__/nest/map/fixtures/map-production.capture.json as of 2026-10-24, which map-layer-set-characterization.routes.test.ts checks against the real map services with no festival live. Nothing trimmed.",
   "data": {
     "naver": {
       "styleId": "91a6fcf5-9d03-4762-99a5-7e58a5674628"
@@ -180,7 +180,11 @@
           "actionValue": "/map/hssc"
         },
         "isReset": false,
-        "list": null
+        "list": null,
+        "tabs": [
+          "map",
+          "transit"
+        ]
       },
       {
         "id": "building_code",
@@ -211,7 +215,11 @@
           "actionValue": "https://webview.skkuverse.com/skku/lostandfound"
         },
         "isReset": false,
-        "list": null
+        "list": null,
+        "tabs": [
+          "map",
+          "transit"
+        ]
       },
       {
         "id": "inquiry",
@@ -226,32 +234,11 @@
           "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
         },
         "isReset": false,
-        "list": null
-      },
-      {
-        "id": "shuttle_routes",
-        "label": "셔틀 노선",
-        "icon": {
-          "kind": "emoji",
-          "emoji": "🚌"
-        },
-        "action": {
-          "kind": "layers",
-          "layerIds": [
-            "jongro02_route",
-            "jongro08_route",
-            "jongro07_route",
-            "hssc_route"
-          ],
-          "camera": null
-        },
-        "isReset": false,
         "list": null,
         "tabs": [
           "map",
           "transit"
-        ],
-        "opensIn": "map"
+        ]
       }
     ],
     "cameraDefaults": {

@@ -119,6 +119,7 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "link", actionType: "route", actionValue: "/map/hssc" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
       {
         id: "building_code",
@@ -136,6 +137,7 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "link", actionType: "webview", actionValue: "https://webview.skkuverse.com/skku/lostandfound" },
         isReset: false,
         list: null,
+        tabs: ["map", "transit"],
       },
       {
         id: "inquiry",
@@ -144,43 +146,28 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
         isReset: false,
         list: null,
-      },
-      {
-        id: "shuttle_routes",
-        label: "셔틀 노선",
-        icon: { kind: "emoji", emoji: "🚌" },
-        action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
-        isReset: false,
-        list: null,
         tabs: ["map", "transit"],
-        opensIn: "map",
       },
     ]);
   });
 
-  it("carries the transit tab lens through the envelope, as the wire declares", async () => {
+  it("carries the transit tab lens through the envelope with no chip for the route lines, as the wire declares", async () => {
     // Act
     const res = await request(httpServer).get("/map/config");
 
     // Assert
     expect(res.status).toBe(200);
     expectWire(mapConfig, res.body.data);
-    const shuttleRoutes = res.body.data.chips.find((c: { id: string }) => c.id === "shuttle_routes");
-    expect(shuttleRoutes).toEqual({
-      id: "shuttle_routes",
-      label: "셔틀 노선",
-      icon: { kind: "emoji", emoji: "🚌" },
-      action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
-      isReset: false,
-      list: null,
-      tabs: ["map", "transit"],
-      opensIn: "map",
-    });
-    // `camera: null` has to survive serialization: it means "do not move", which an absent key does not say.
-    expect(JSON.stringify(shuttleRoutes.action)).toContain('"camera":null');
+    // The transit tab draws a picked bus's line itself, so a chip turning every route line on duplicated it.
+    const chipIds = res.body.data.chips.map((c: { id: string }) => c.id);
+    expect(chipIds).not.toContain("shuttle_routes");
+    expect(res.body.data.chips.filter((c: { action: { kind: string } }) => c.action.kind === "layers")).toEqual([]);
+    // The app's line sheet turns `<groupId>_route` on from this list to draw a selected line, so every route layer stays.
     const tabsById = new Map(res.body.data.layers.map((l: { id: string; tabs?: string[] }) => [l.id, l.tabs]));
     expect(tabsById.get("building_numbers")).toEqual(["map", "transit"]);
-    expect(tabsById.get("hssc_route")).toEqual(["transit"]);
+    for (const id of ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"]) {
+      expect(tabsById.get(id)).toEqual(["transit"]);
+    }
   });
 
   it("adds the festival chips while an activation is open", async () => {

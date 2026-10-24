@@ -41,7 +41,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | chip (`MapChipSpec`) | One pill above the map: a camera, the layers it turns on, and the list it opens; or a link it opens | `eventChipSpecs`, `BASE_CHIPS` | `filterButton` |
 | base chip | A permanent chip, served whether or not a festival is live and ahead of the festival's row | `BASE_CHIPS` | — |
 | link chip | A chip whose action is the shared link shape (`actionType`, `actionValue`) and changes no layer | `BASE_CHIPS` | — |
-| layers chip | A chip whose action turns the layers it names on, any layer, base ones included, and moves the camera only when it carries one | `BASE_CHIPS` | — |
+| layers chip | A chip whose action turns the layers it names on, any layer, base ones included, and moves the camera only when it carries one | `BASE_CHIPS`, which holds none today | — |
 | tab (`MapTab`) | An app tab that shares the one map (`map`, `transit`); a layer's or chip's `tabs` are the tabs whose lens shows it, absent meaning the map tab and empty meaning no tab | `LayerSpec.tabs`, `MapChipSpec.tabs` | — |
 | chip group | A layer's `chipGroupId`: the layers a chip may switch off; `null` means none ever | `LayerSpec.chipGroupId` | `exclusiveGroup` |
 | reset chip | The synthesised chip that goes back to the festival's default view | `resetChip` | — |
@@ -116,6 +116,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 
 ## Open questions
 
+- No chip carries the `layers` action or `opensIn` today. The wire keeps both because app builds parse them, and only `BASE_CHIPS` could author one, since a layer set authors only `focus` chips.
 - `npm run data` cannot refuse removing a layer set that an enabled activation names: the activations are in the eventmap database, outside the content database the tool reads.
 
 - Overlay `fields` and the `content` action type parse in the app and draw nothing.
