@@ -131,6 +131,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
     raw("shuttleEta.tmapAppKey", "TMAP_APP_KEY", "poller"),
     raw("subway.seoulApiKey", "SEOUL_SUBWAY_API_KEY", "poller"),
     raw("shuttle.token", "SHUTTLE_TOKEN", "poller"),
+    raw("gbis.serviceKey", "DATA_GO_KR_SERVICE_KEY", "poller"),
     // WHY: production must report errors somewhere; elsewhere Sentry is opt-in.
     ...(mode.isProduction ? [raw("sentry.dsn", "SENTRY_DSN", "all")] : []),
   ];

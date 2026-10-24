@@ -3,7 +3,7 @@ title: Jongro Realtime from TOPIS — What We Measured and Rely On
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-24
 audience: internal
 ---
 
@@ -43,6 +43,8 @@ The station list is compared with each tick's `getArrInfoByRouteAll` rows, which
 ### D6. skkuverse-crawler's bus module reads the registry before it runs again
 
 skkuverse-crawler's `bus-jongro` module, paused in production, polls TOPIS from its own copy of the route list from before the registry. It must read `jongro_routes` before it is re-enabled (`spencer0124/skkuverse#87`), and its calls count against the same TOPIS quota ([project-docs](../project-docs.md), "Daily Usage and Quota Check").
+
+Superseded 2026-10-24: skkuverse-crawler PR 87 deleted the module instead, so it never runs again and nothing outside this server calls TOPIS. The 6,480 `getArrInfoByRouteAllList` calls a day held for it were released the same day: arrivals run at 13,248 of 20,000, 6,752 to spare.
 
 ### D7. The bus type is the vehicle's, kept as TOPIS codes it
 

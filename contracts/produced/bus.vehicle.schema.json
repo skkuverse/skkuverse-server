@@ -47,6 +47,18 @@
         }
       ]
     },
+    "seatsLeft": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "isLastBus": {
       "type": [
         "boolean",
@@ -196,6 +208,7 @@
     "id",
     "plateNumber",
     "occupancy",
+    "seatsLeft",
     "isLastBus",
     "isLowFloor",
     "position",
