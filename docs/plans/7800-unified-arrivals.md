@@ -224,6 +224,8 @@ Each PR is test-first with `the test-first workflow` (ADR 0011, D9), merges to `
 
 PR 7 and PR 8 wait on outside facts (the GBIS capture, the app); PRs 5–6 do not depend on 7800 and can run in parallel with 2–4.
 
+**Status (2026-10-24).** PRs 1–4 are deployed. PRs 5 and 6 are built, pinned by `__tests__/nest/bus/stop-calls-characterization.routes.test.ts`, not yet deployed: `StopCall` is in `src/bus/bus.types.ts` and `toArrival` in `src/bus/bus.mapper.ts` (the bus root, since the type derives from the wire `arrival` and `src/shared` names no feature); the run read is `BusEtaSmartService.listRuns(serviceId, { from, weekCount })` rather than `{ from, until }`, since the stop page reads the following week only when the shown week lists fewer than three runs (review F2); §7.2 step 3 is not done: the stop page's live entries still read `LiveGroup`.
+
 Size and doc caps each PR must respect: `bus.wire.ts` (96), `bus-config.mapper.ts` (187), `bus-config.wire.ts` (71), `bus-realtime-group.rules.ts` (138) in `__tests__/architecture/exemptions/size-caps.json`; `docs/explanation/bus-architecture.md` is at the 200-line module-doc cap, so the PR that adds a glossary row (pass-through station, `topisIds`) trims first.
 
 ## 9. Open questions
