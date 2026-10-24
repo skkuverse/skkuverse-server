@@ -2,8 +2,9 @@ import type { TrainArrival } from "../estimate/subway-estimate.types";
 import type { StoredTrainArrival, SubwayArrivalsDoc } from "../subway.document";
 import type { SubwayDirection } from "../subway.types";
 
-function toStoredArrival({ trainNo, destination, express, arrivalAt, source, position }: TrainArrival): StoredTrainArrival {
-  return { trainNo, destination, express, arrivalAt, source, position: position && { stationId: position.platformId, state: position.state } };
+function toStoredArrival({ trainNo, destination, express, arrivalAt, source, position, isFirstTrain }: TrainArrival): StoredTrainArrival {
+  const storedPosition = position && { stationId: position.platformId, state: position.state };
+  return { trainNo, destination, express, arrivalAt, source, isFirstTrain, position: storedPosition };
 }
 
 export function toArrivalsDoc(

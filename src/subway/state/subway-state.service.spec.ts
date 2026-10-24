@@ -22,6 +22,7 @@ const shinbundang: StoredTrainArrival = {
   express: false,
   arrivalAt: at("21:04:10"),
   source: "estimated",
+  isFirstTrain: false,
   position: { stationId: "DX-D1-4311", state: "arrived" },
 };
 const suinBundang: StoredTrainArrival = { ...shinbundang, trainNo: "6180", destination: "왕십리", arrivalAt: at("21:06:00"), source: "scheduled", position: null };

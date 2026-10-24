@@ -124,6 +124,7 @@ describe("toStationArrivals", () => {
         arrivalAt: at("21:05:30"),
         source: "estimated",
         position: { platformId: UIWANG, state: "arrived" },
+        isFirstTrain: true,
       },
     ]);
   });
@@ -946,5 +947,85 @@ describe("toStationArrivals, from the timetable alone", () => {
 
     // Assert
     expect(arrival1935).toMatchObject({ arrivalAt: at("16:28:00"), source: "estimated", position: null });
+  });
+});
+
+const BEFORE_HYEHWA = "S1-4-419";
+
+/** 4509, the first down train through Hyehwa on the 2026-10-18 weekday table: Hyehwa 05:35:00–05:35:30, from the station before. */
+const T4509 = trainWithStops("4509", "down", [
+  [BEFORE_HYEHWA, null, "05:33:30"],
+  [HYEHWA, "05:35:00", "05:35:30"],
+]);
+
+/** 4511, the next down train: Hyehwa 05:49:00–05:49:30. */
+const T4511 = trainWithStops("4511", "down", [
+  [BEFORE_HYEHWA, null, "05:47:30"],
+  [HYEHWA, "05:49:00", "05:49:30"],
+]);
+
+/** 4004, an up train through Hyehwa at 05:30, earlier than every down train. */
+const T4004 = trainWithStops("4004", "up", [
+  ["S1-4-421", null, "05:28:30"],
+  [HYEHWA, "05:30:00", "05:30:30"],
+]);
+
+const firstTrainsAt = (overrides: Partial<EstimateInput>) =>
+  toStationArrivals(input({ platformId: HYEHWA, trains: [T4004, T4509, T4511], ...overrides })).arrivals.map((a) => [a.trainNo, a.isFirstTrain]);
+
+describe("toStationArrivals, marking the first train of the service day", () => {
+  it.each([
+    ["1 s before its departure", "05:35:29", [["4509", true], ["4511", false]]],
+    ["at its departure", "05:35:30", [["4509", true], ["4511", false]]],
+    ["1 s after its departure, when no train listed is the first", "05:35:31", [["4511", false]]],
+  ])("marks 4509, the earliest down train through 혜화 on its service day, %s", (_label, now, expected) => {
+    // Act & Assert
+    expect(firstTrainsAt({ direction: "down", now: at(now) })).toEqual(expected);
+  });
+
+  it("marks the earliest train, not the one the table lists first: 4509 though 4511 comes before it", () => {
+    // Act & Assert
+    expect(firstTrainsAt({ direction: "down", trains: [T4511, T4004, T4509], now: at("05:20:00") })).toEqual([
+      ["4509", true],
+      ["4511", false],
+    ]);
+  });
+
+  it("marks the earliest train of each direction on its own: 4004 up, though 4509 is first down", () => {
+    // Act & Assert
+    expect(firstTrainsAt({ direction: "up", now: at("05:20:00") })).toEqual([["4004", true]]);
+  });
+
+  it("does not count a train whose row passes 혜화 with no time there as the first", () => {
+    // Arrange
+    const passing: ScheduledTrain = { ...T4509, trainNo: "4501", stops: [{ platformId: HYEHWA, arrivalAt: null, departureAt: null }] };
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ platformId: HYEHWA, trains: [passing, T4509, T4511], now: at("05:20:00") }));
+
+    // Assert
+    expect(arrivals.map((a) => [a.trainNo, a.isFirstTrain])).toEqual([
+      ["4509", true],
+      ["4511", false],
+    ]);
+  });
+
+  it("keeps 4509 first while the tracker awaits it overdue", () => {
+    // Act
+    const { arrivals } = toStationArrivals(input({ platformId: HYEHWA, trains: [T4509, T4511], isTracked: true, now: at("05:37:00") }));
+
+    // Assert
+    expect(arrivals[0]).toMatchObject({ trainNo: "4509", source: "estimated", isFirstTrain: true });
+  });
+
+  it("keeps 4509 first when its published countdown serves it live", () => {
+    // Arrange
+    const row: CountdownRow = { trainNo: "4509", platformId: HYEHWA, generatedAt: at("05:30:00"), remainingSec: 330 };
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ platformId: HYEHWA, trains: [T4509, T4511], countdownRows: [row], now: at("05:30:10") }));
+
+    // Assert
+    expect(arrivals[0]).toMatchObject({ trainNo: "4509", source: "live", arrivalAt: at("05:35:30"), isFirstTrain: true });
   });
 });

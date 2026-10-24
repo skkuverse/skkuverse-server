@@ -21,8 +21,11 @@
  * order, 정자's 신분당 line named in Korean; each station carries its camera
  * point from the stored `subway-station-coords`, and a station the stored
  * coords lack still answers 200, its `coords` null, as the wire publishes it; a 신분당 trainset seen leaving 광교
- * is served at 광교중앙 as the run it is matched to; and the station, direction
- * and neighbor station names follow the request language.
+ * is served at 광교중앙 as the run it is matched to; the station, direction
+ * and neighbor station names follow the request language; each train says
+ * whether it is the first its direction runs through the station on the
+ * service day, 혜화's at 05:30 and none at 20:41; and `meta.serverNow` is the
+ * clock at +09:00, as the wire publishes it.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -30,7 +33,7 @@ import { CalendarModule } from "../../../src/calendar/calendar.module";
 import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
-import { subwayStationArrivals } from "../../../src/subway/arrivals/subway-arrivals.wire";
+import { subwayStationArrivals, subwayStationArrivalsMeta } from "../../../src/subway/arrivals/subway-arrivals.wire";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
 import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
 import { SubwayModule } from "../../../src/subway/subway.module";
@@ -116,7 +119,8 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.meta).toEqual({ lang: "ko" });
+    // WHY: serverNow is what app ADR 0022 D4 adds to meta, a deliberate change of this pin.
+    expect(res.body.meta).toEqual({ lang: "ko", serverNow: "2026-10-16T20:41:02+09:00" });
     expect(res.body.data.station).toEqual({ id: "hyehwa", name: "혜화", coords: { lat: 37.582336, lng: 127.001844 } });
     expect(res.body.data.lines).toHaveLength(1);
     expect(res.body.data.lines[0]).toMatchObject({
@@ -381,7 +385,8 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     const res = await getAt("20:41:02", "/subway/stations/sungkyunkwan/arrivals").set("Accept-Language", acceptLanguage);
 
     // Assert
-    expect(res.body.meta).toEqual({ lang });
+    // WHY: serverNow is what app ADR 0022 D4 adds to meta, a deliberate change of this pin.
+    expect(res.body.meta).toEqual({ lang, serverNow: "2026-10-16T20:41:02+09:00" });
     expect(res.body.data.station.name).toBe(stationName);
     expect(res.body.data.lines[0].line.name).toBe(lineName);
     expect(directionsOf(res.body).map((d: { name: string }) => d.name)).toEqual(directionNames);
@@ -399,6 +404,50 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.status).toBe(200);
     const neighbors = directionsOf(res.body).map((d: { previousStation: unknown; nextStation: unknown }) => [d.previousStation, d.nextStation]);
     expect(neighbors).toEqual([up, down]);
+  });
+
+  it("marks hyehwa's first train of the service day in each direction at 05:30 on a weekday, and no later train", async () => {
+    // Act
+    const res = await getAt("05:30:00", "/subway/stations/hyehwa/arrivals");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const [up, down] = directionsOf(res.body).map((d: { trains: Array<{ trainNo: string; isFirstTrain: boolean }> }) =>
+      d.trains.map((t) => [t.trainNo, t.isFirstTrain]),
+    );
+    expect(up.slice(0, 2)).toEqual([
+      ["4004", true],
+      ["4006", false],
+    ]);
+    expect(up.filter((pair) => pair[1] === true)).toHaveLength(1);
+    expect(down).toEqual([
+      ["4509", true],
+      ["4511", false],
+      ["4001", false],
+    ]);
+    expectWire(subwayStationArrivals, res.body.data);
+  });
+
+  it("marks no train first at 20:41, the first trains of the day long gone", async () => {
+    // Act
+    const res = await getAt("20:41:02", "/subway/stations/hyehwa/arrivals");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const firsts = directionsOf(res.body).flatMap((d: { trains: Array<{ isFirstTrain: boolean }> }) => d.trains.map((t) => t.isFirstTrain));
+    expect(firsts).toEqual(Array(6).fill(false));
+  });
+
+  it("serves meta.serverNow, the server's clock at +09:00 when it answered, as the wire publishes it", async () => {
+    // Act
+    const res = await getAt("20:41:02", "/subway/stations/hyehwa/arrivals");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const { lang, ...meta } = res.body.meta;
+    expect(lang).toBe("ko");
+    expect(meta).toEqual({ serverNow: "2026-10-16T20:41:02+09:00" });
+    expectWire(subwayStationArrivalsMeta, meta);
   });
 });
 
