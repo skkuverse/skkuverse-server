@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isHex6 } from "../infra/color";
+import { campus } from "../shared/campus.wire";
 import { MAX_UPSTREAM_PLATFORMS } from "./subway.constants";
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -49,7 +50,7 @@ const networkPlatform = z.strictObject({ id: platformId, line: z.string().min(1)
 
 const subwayPlatformFile = networkPlatform.extend({ directions: z.strictObject({ up: platformDirection, down: platformDirection }) });
 
-const stationFields = { id: z.string().regex(SLUG, { error: "must be a lowercase slug" }), name: localizedName, seoulName: z.string().min(1) };
+const stationFields = { id: z.string().regex(SLUG, { error: "must be a lowercase slug" }), name: localizedName, seoulName: z.string().min(1), campus };
 
 const subwayStationFile = z.strictObject({ ...stationFields, platforms: z.array(subwayPlatformFile).min(1) });
 

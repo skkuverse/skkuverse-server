@@ -1,7 +1,7 @@
 /**
  * A served station as other modules read it: its slug, its title (its name
  * with the station suffix each language writes, a space before it in English
- * only) and, in its platforms' order, each line's code, name, color and marker
+ * only), its campus and, in its platforms' order, each line's code, name, color and marker
  * from the code's lines, whose spec refuses a platform on an unlisted line.
  */
 import { SUBWAY_STATIONS } from "../subway.constants";
@@ -21,6 +21,7 @@ describe("toServedStation", () => {
     expect(served).toEqual({
       id: "hyehwa",
       title: { ko: "혜화역", en: "Hyehwa Station", zh: "惠化站" },
+      campus: "hssc",
       lines: [{ code: "4", name: { ko: "4호선", en: "Line 4", zh: "4号线" }, color: "00A5DE", marker: { text: { ko: "4", en: "4", zh: "4" }, color: "007FAB" } }],
     });
   });
@@ -33,6 +34,7 @@ describe("toServedStation", () => {
     expect(served).toEqual({
       id: "sungkyunkwan",
       title: { ko: "성균관대역", en: "Sungkyunkwan Univ. Station", zh: "成均馆大学站" },
+      campus: "nsc",
       lines: [{ code: "1", name: { ko: "1호선", en: "Line 1", zh: "1号线" }, color: "0052A4", marker: { text: { ko: "1", en: "1", zh: "1" }, color: "0052A4" } }],
     });
   });
