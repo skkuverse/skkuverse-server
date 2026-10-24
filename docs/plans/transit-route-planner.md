@@ -558,12 +558,10 @@ TOPIS meters each operation per key per day, 20,000 each ([project-docs.md](../p
 
 | `getArrInfoByRouteAllList` | Calls a day |
 | --- | --- |
-| Jongno 02, 07, 08, all day at 25 s: 3 × 86,400 / 25 (`src/bus/realtime/jongro/bus-realtime-jongro.constants.ts:3`) | 10,368 |
-| Reserved for the paused crawler shadow pollers: 3 × 2,160 | 6,480 |
-| Committed | 16,848 |
-| Left | 3,152 |
+| Jongno 02, 07, 08, all day at 25 s: 3 × 86,400 / 25 (`JONGRO_POLL_INTERVAL_MS`, `src/bus/bus.constants.ts`) | 10,368 |
+| Left | 9,632 |
 | 7800 at 30 s over a 20-hour window (05:00 to 01:00): 72,000 / 30 | 2,400 |
-| Left after 7800, crawler reserve kept | 752 |
+| Left after 7800 | 7,232 |
 
 - `TOPIS_ARRIVALS_POLL_INTERVAL_MS = 30_000`: TOPIS's data advances about every 20 s (the 2026-10-17 capture), and a rider's plan does not need Jongno's 25 s.
 - `TOPIS_ARRIVALS_DAILY_CAP = 2_600`, a `DailyCap("topis-arrivals", …)` in the poller process (`src/shared/daily-cap.util.ts`), separate from the probe's `topisDailyCap` (`src/infra/config.ts:178`), which meters another operation. The push check keeps the lines' planned calls under it, so a second line at the same window and cadence is refused until the cap, the window or the operation changes.
@@ -673,7 +671,7 @@ Tradeoffs accepted:
 | Where an option ends: 정문 for both campuses, as the mock does | 정문. The 7800 options then walk about 10 minutes from the stop, not the mock's 5 |
 | 학부대학 runs of the 인자셔틀: offer them to everyone | No: `campus-inja/regular` only, until it is confirmed who may board them |
 | NSC → HSSC via 7800: end with a walk from 혜화 or with 종로07 as the mock does | Walk first; add 종로07 by a data push once PR 5 lands |
-| 7800 cadence: 30 s, leaving 752 calls a day if the crawler's reserve is ever used | 30 s. If the crawler's TOPIS pollers return, move 7800 to the per-stop operation, whose 20,000 calls a day are unused |
+| 7800 cadence: 30 s, leaving 7,232 calls a day | 30 s |
 | Stale realtime: show an estimate from the headway or hide the option | Show it, as `basis: estimate` ("약 N분"), for up to 24 hours after the last good poll; hide it after that |
 | GBIS seat counts: is the data.go.kr application `15080346` approved | Check it; seats need their own poller and quota either way, so they stay out of the PoC |
 | `basis` vocabulary: ADR 0019's `provider` instead of `realtime` | Keep ADR 0019's, so every wire uses one vocabulary |

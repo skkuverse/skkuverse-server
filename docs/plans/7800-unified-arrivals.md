@@ -79,16 +79,16 @@ Fallback if TOPIS stops answering `200000150`: GBIS `getBusArrivalItemv2` for th
 
 Interval 30 s, all day, no service window: 86,400 / 30 = 2,880 calls a day on each of the two operations. All day because TOPIS's own `운행종료` text is what makes a station `ended` (ADR 0019, D8) and a gap in the poll would make the group `noData` overnight instead; a window would save 480 calls a day and add code.
 
-| data.go.kr operation | Today | 7800 | Total | With the crawler's reserve |
+| data.go.kr operation | Today | 7800 | Total | Margin |
 | --- | --- | --- | --- | --- |
-| `getArrInfoByRouteAllList` | Jongno 3 × 3,456 = 10,368 (`src/bus/realtime/jongro/bus-realtime-jongro.constants.ts:3`) | 2,880 | 13,248 | + 6,480 = **19,728** of 20,000 |
-| `getBusPosByRtidList` | Jongno 10,368 + probe ≤ 2,000 (`src/infra/config.ts:178`) | 2,880 | **≤ 15,248** | reserve is on `getBusPosByRouteStList`, a separate operation |
+| `getArrInfoByRouteAllList` | Jongno 3 × 3,456 = 10,368 (`JONGRO_POLL_INTERVAL_MS`, `src/bus/bus.constants.ts`) | 2,880 | **13,248** of 20,000 | 6,752 |
+| `getBusPosByRtidList` | Jongno 10,368 + probe ≤ 2,000 (`src/infra/config.ts:178`) | 2,880 | **≤ 15,248** of 20,000 | ≥ 4,752 |
 | `getArrInfoByRouteList` | 0 | 0 | 0 | the per-stop fallback inside TOPIS, untouched |
 | `busRouteInfo` `getStaionByRoute`, `getRoutePath` (10,000 each) | the daily route-path sync, about 1 per route | about 1 | ~4 | — |
 | GBIS `getBusLocationListv2` (1,000, 개발) | 0 | seats at 90 s, 05:00–01:00 = 800 | 800 | — |
 
 - The planner plan's arithmetic was already per operation and right for arrivals (`transit-route-planner.md`, "Cadence and the TOPIS budget"); it left positions out because its journey poller read no positions. Joining the live route costs the positions operation 2,880 as well.
-- 25 s instead of 30 s costs 3,456 a day and puts arrivals at 20,304 with the crawler's reserve: over. Keep 30 s, or drop the reserve (Q4).
+- 25 s instead of 30 s costs 3,456 a day on each operation, 576 more: arrivals at 13,824 and positions at ≤ 15,824 of 20,000, so 25 s fits. The 7800 owner (bis) keeps 30 s for now (Q4).
 - A laptop's `npm run dev` polls on the same key (`docs/project-docs.md`, "Daily Usage and Quota Check"). Production's positions operation at 15,248 leaves 4,752, so a laptop polling the Jongno routes fits about 11 hours a day instead of about 17, and one also polling 7800 about 8. Hence the switch in §4.
 
 ### 3.3 Seats
@@ -235,7 +235,7 @@ Size and doc caps each PR must respect: `bus.wire.ts` (96), `bus-config.mapper.t
 | Q1 | 7800 as a fourth TOPIS route in the bus pipeline (this plan), or the planner plan's separate `journey/` poller | The bus pipeline: `/bus/live`, the stop page, directions, trajectories and the planner all from one poll, and no second TOPIS client |
 | Q2 | List 7800 on `/bus/config` now | (An agent tooling note is left out of the public history.) |
 | Q3 | Stop ids for poles with no ARS number | Local stops aliasing TOPIS station ids (`topisIds`); the two 성균관대학교 poles now, 성균관대역 only when a route uses it |
-| Q4 | 30 s, keeping the crawler's 6,480 reserve (19,728 of 20,000), or 25 s like Jongno (needs the reserve released) | 30 s. If the reserve is released (the crawler needs a registry port before it can run, ADR 0014 D6), 25 s fits |
+| Q4 | 30 s, or 25 s like Jongno (arrivals 13,824 and positions ≤ 15,824 of 20,000: both fit) | 30 s for now, the 7800 owner's (bis) call; 25 s fits whenever it is wanted |
 | Q5 | Rename `jongro` code names (`realtime/jongro`, `JongroArrivalDoc`, …) to `topis` | Not in this sequence: a mechanical PR of its own after PR 4, stored key names unchanged |
 | Q6 | Group id for 7800 (`/bus/live/:groupId`) | `gyeonggi7800`; data and app both key on it, so decide before PR 4 |
 | Q7 | Seats via GBIS 위치 at 90 s on the 개발 cap, or wait for the 운영계정 | Capture first; ship at 90 s if the labels hold, register the 활용사례 in parallel |
