@@ -5,6 +5,8 @@ export const BUS_STOPS_LOG_INTERVAL_MS = 60_000;
 
 export const PANO_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 
+export const TOPIS_STATION_ID_PATTERN = /^\d{9}$/;
+
 export const MAX_WALK_M = 500;
 
 // QUIRK(naver): one directions call covers a run: start, up to five waypoints, goal.

@@ -35,6 +35,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         shuttleEtaEnabled: true,
         subwayEnabled: true,
         shuttleEnabled: true,
+        regionalBusEnabled: true,
       },
       errors: [],
     });
@@ -51,6 +52,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         shuttleEtaEnabled: false,
         subwayEnabled: false,
         shuttleEnabled: false,
+        regionalBusEnabled: false,
       },
       errors: [],
     });
@@ -121,6 +123,16 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(prod).toEqual({ switches: expect.objectContaining({ shuttleEnabled: false }), errors: [] });
   });
 
+  it("development may turn the regional bus pollers on, and production may turn them off", () => {
+    // Act
+    const dev = resolveRuntimeSwitches({ REGIONAL_BUS: "on" }, "development");
+    const prod = resolveRuntimeSwitches({ REGIONAL_BUS: "off" }, "production");
+
+    // Assert
+    expect(dev).toEqual({ switches: expect.objectContaining({ regionalBusEnabled: true }), errors: [] });
+    expect(prod).toEqual({ switches: expect.objectContaining({ regionalBusEnabled: false }), errors: [] });
+  });
+
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches({ PUSH_DELIVERY: "live" }, "development");
@@ -170,6 +182,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["SHUTTLE_ETA", "true"],
     ["SUBWAY", "yes"],
     ["SHUTTLE", "1"],
+    ["REGIONAL_BUS", "true"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
     // Act & Assert
     for (const mode of ["production", "development", "test"] as const) {
@@ -275,6 +288,14 @@ describe("where the switches may be set", () => {
     ])("%s run no Shuttle poller", (_label, env) => {
       // Assert
       expect(env).toMatch(/- SHUTTLE=off\n/);
+    });
+
+    it.each([
+      ["the api replicas", apiEnv],
+      ["the poller", pollerEnv],
+    ])("%s run no regional bus poller", (_label, env) => {
+      // Assert
+      expect(env).toMatch(/- REGIONAL_BUS=off\n/);
     });
   });
 });

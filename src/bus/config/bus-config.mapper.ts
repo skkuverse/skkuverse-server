@@ -1,7 +1,7 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
 import { ESTIMATES_MAX_AGE_S, HSSC_POSITION_COUNT } from "../bus.constants";
-import { serviceConfigOf, toPoleStopId } from "../bus.rules";
+import { isTopisPassThrough, serviceConfigOf, toPoleStopId } from "../bus.rules";
 import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
 import type { JongroStation } from "../registry/bus-registry.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
@@ -40,8 +40,8 @@ export function mapStations(stations: ReadonlyArray<AnyStation>, directionIds: R
     stationNumber: ("stationNumber" in station && station.stationNumber) || null,
     directionId: directionIdAt(directionIds, index),
     ...{ isFirstStation: station.isFirstStation, isLastStation: station.isLastStation, isRotationStation: station.isRotationStation },
-    // WHY: only an HSSC position (no stationName) passes through; a Jongno virtual stop also has a null stop id.
-    isPassThrough: !("stationName" in station) && station.stopId === null,
+    // WHY: an HSSC position with no stop passes through, a TOPIS station by its name; a Jongno virtual stop has no stop id.
+    isPassThrough: "stationName" in station ? isTopisPassThrough(station.stationName) : station.stopId === null,
     isAlightOnly: "isAlightOnly" in station && station.isAlightOnly === true,
     transferLines: station.transferLines,
     ...(station.stopId ? { stopId: station.stopId } : {}),
@@ -78,7 +78,7 @@ function toJongroGroup({ route, attributes, directions }: AttributedJongroRoute,
       directions: directions.directions,
       features: [],
       stationsVersion: route.stationsVersion,
-      ...{ liveEndpoint: `/bus/live/${route.id}`, ...JONGRO_LIVE_SCREEN },
+      ...{ liveEndpoint: `/bus/live/${route.id}`, ...JONGRO_LIVE_SCREEN, capabilities: route.capabilities },
     },
   };
 }
@@ -189,17 +189,17 @@ function toCommuteGroup(lang: SupportedLang, { sequences, stops }: ResolvedStops
 
 const FIXED_GROUP_IDS = ["hssc", "campus", "fasttrack", "commute"] as const;
 
-export function toBusGroupIds(routes: ReadonlyArray<Pick<JongroRoute, "id">>): string[] {
-  return [...FIXED_GROUP_IDS, ...routes.map((route) => route.id)];
+export function toBusGroupIds(routes: ReadonlyArray<Pick<JongroRoute, "id" | "isListed">>): string[] {
+  return [...FIXED_GROUP_IDS, ...routes.filter((route) => route.isListed).map((route) => route.id)];
 }
 
-/** WHY: the bus groups in the order the app lists them: hssc, campus, fasttrack, commute, then every Jongro route. */
+/** WHY: the bus groups in the order the app lists them: hssc, campus, fasttrack, commute, then every listed Jongro route. */
 export function toBusGroups({ lang, stops, hsscStations, stopIdByArsId, jongroRoutes, webviewOrigin }: BusGroupSources): BusGroup[] {
   return [
     toHsscGroup(lang, hsscStations, webviewOrigin),
     toCampusGroup(lang, stops.campus, webviewOrigin),
     toFasttrackGroup(lang),
     toCommuteGroup(lang, stops.commute, webviewOrigin),
-    ...jongroRoutes.map((jongroRoute) => toJongroGroup(jongroRoute, stopIdByArsId, lang)),
+    ...jongroRoutes.filter(({ route }) => route.isListed).map((jongroRoute) => toJongroGroup(jongroRoute, stopIdByArsId, lang)),
   ];
 }

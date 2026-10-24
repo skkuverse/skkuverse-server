@@ -1,3 +1,4 @@
+import type { JongroRouteCapabilities } from "../../bus.types";
 import type { JongroArrivalBus } from "../../cache/bus-cache.document";
 import type { RealtimeArrival } from "../group/bus-realtime-group.wire";
 
@@ -10,6 +11,13 @@ export type ArrivalStatePhrases = ReadonlyArray<readonly [ArrivalState, readonly
 export interface TimedText {
   minutes: number;
   seconds: number;
+}
+
+/** WHY: what reading a bus on its route takes: the seat count crowding compares with (none where the source reports no load), whether it reports load, and the ords it passes through. */
+export interface RouteArrivalFacts {
+  seatCount: number | null;
+  capabilities: Pick<JongroRouteCapabilities, "occupancy">;
+  passThroughOrds: ReadonlySet<number>;
 }
 
 /** WHY: a TOPIS bus with a text, its realtime arrival and the seconds its time comes to from the row's mkTm. */

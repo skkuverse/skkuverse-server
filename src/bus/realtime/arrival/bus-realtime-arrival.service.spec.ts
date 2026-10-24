@@ -3,7 +3,9 @@
  * station's arrivals through: a bus is listed when TOPIS gave it a text,
  * first bus first, each through the arrival rules with the route's seat count.
  * seatCountOf answers that seat count from the stored `jongro-route-attributes`
- * (ADR 0013, D6), and a 503 for a route the revision lacks.
+ * (ADR 0013, D6), and a 503 for a route the revision lacks. toTimedArrivals,
+ * the live route's door, reads each bus on its route: by its seat count, its
+ * source's load capability and the ords it passes through.
  */
 import { jongroArrivalBus, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import { routeAttributesFixture, storedRouteAttributesRepository, storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
@@ -64,10 +66,22 @@ describe("BusRealtimeArrivalService.toTimedArrivals", () => {
     const buses = [first, noArrivalBus({ arrmsg: "" })];
 
     // Act
-    const timed = arrivalService().toTimedArrivals(buses, 18);
+    const timed = arrivalService().toTimedArrivals(buses, { seatCount: 18, capabilities: { occupancy: true }, passThroughOrds: new Set() });
 
     // Assert
     expect(timed).toEqual([{ bus: first, arrival: arrivalService().toArrivals([first], 18)[0], travelSeconds: 40 }]);
+  });
+
+  it("reads each bus on its route: stopping stations only, and no load where the source reports none", () => {
+    // Arrange
+    // WHY: 7800's Uiwang toll gate row (staOrd 31) on 2026-10-24, whose bus's next stop is ord 26, with 28-30 virtual stations.
+    const bus = jongroArrivalBus({ arrmsg: "10분25초후[5번째 전]", traTime: 625, staOrd: 31, sectOrd: 26, vehId: "200010901", plainNo: "경기70사1649", rerideDiv: 2, rerideNum: 0 });
+
+    // Act
+    const [timed] = arrivalService().toTimedArrivals([bus], { seatCount: 45, capabilities: { occupancy: false }, passThroughOrds: new Set([28, 29, 30]) });
+
+    // Assert
+    expect(timed).toEqual({ bus, arrival: expect.objectContaining({ stopsAway: 2, crowding: null, passengerCount: null }), travelSeconds: 625 });
   });
 });
 

@@ -33,9 +33,10 @@ import { jongroArrivalDoc } from "../../../../__tests__/helpers/bus/bus-cache-do
 import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sighting";
 import originIdling from "../../../../__tests__/nest/bus/fixtures/jongro02-origin-idling-sightings.json";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import { ROUTE_7800, arrivalDocs7800, registryDoc7800, sightings7800 } from "../../../../__tests__/helpers/bus/topis-7800";
 import type { Clock } from "../../../infra/clock";
+import logger from "../../../infra/logger";
 import { JONGRO_ROUTES } from "../../bus.constants";
-import { toJongroRoute } from "../../bus.mapper";
 import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
@@ -45,7 +46,7 @@ import type { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { BusRealtimeJongroService } from "./bus-realtime-jongro.service";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 let now = NOW;
@@ -653,3 +654,24 @@ describe("BusRealtimeJongroService.refresh time at a stop", () => {
     expect(since).toEqual(["2026-10-18T18:08:49+09:00"]);
   });
 });
+
+// WHY: 7800 runs through this flow unchanged (docs/plans/7800-unified-arrivals.md, section 4), keyed by its code.
+describe("BusRealtimeJongroService.refresh over 7800's capture", () => {
+  it("stores its 80 arrival rows and 15 buses under its code, each bus on a stored station, and warns nothing", async () => {
+    // Arrange
+    registryRepository.routes.set("gyeonggi7800", registryDoc7800());
+    client.arrivals = arrivalDocs7800();
+    client.sightings = sightings7800();
+
+    // Act
+    await service.refresh(ROUTE_7800);
+
+    // Assert
+    expect((busCache.values.get("jongro_stations_7800") as JongroArrivalDoc[]).length).toBe(80);
+    expect(busCache.values.get("jongro_locations_7800") as unknown[]).toHaveLength(15);
+    expect(client.positionsRouteIds).toEqual(["200000150"]);
+    const logged = [...jest.mocked(logger.warn).mock.calls, ...jest.mocked(logger.error).mock.calls].map(([fields]) => (fields as { event?: string }).event);
+    expect(logged).toEqual([]);
+  });
+});
+

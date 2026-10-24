@@ -1,5 +1,5 @@
 import { ARS_ID_PATTERN, SERVICE_CONFIG, TOPIS_STOP_ID_PREFIX } from "./bus.constants";
-import type { ServiceConfigEntry } from "./bus.types";
+import type { ServiceConfigEntry, StopAliases } from "./bus.types";
 
 // WHY: own keys only, so a service id that names an Object.prototype member (`toString`) is unknown.
 export function serviceConfigOf(serviceId: string): ServiceConfigEntry | undefined {
@@ -12,6 +12,14 @@ const HSSC_PASS_THROUGH_STATION_INDEXES: readonly number[] = [5, 7];
 
 export function isHsscPassThrough(stationIndex: number): boolean {
   return HSSC_PASS_THROUGH_STATION_INDEXES.includes(stationIndex);
+}
+
+// QUIRK(topis): a station a bus passes without stopping is named `…(미정차)` on every row (7800, captured 2026-10-24), the
+// one mark it always carries: its ARS number is 0 on most, but a five-digit number on three of 7800's 19.
+const PASS_THROUGH_NAME_SUFFIX = "(미정차)";
+
+export function isTopisPassThrough(stationName: string): boolean {
+  return stationName.trim().endsWith(PASS_THROUGH_NAME_SUFFIX);
 }
 
 const refuseChange = (): never => {
@@ -53,6 +61,15 @@ export function toPoleStopId(arsId: string | null, stopIdByArsId: ReadonlyMap<st
   const poleArsId = toServedArsId(arsId);
   if (poleArsId === null) return null;
   return stopIdByArsId.get(poleArsId) ?? `${TOPIS_STOP_ID_PREFIX}${poleArsId}`;
+}
+
+// WHY: a TOPIS station's stop: the local stop aliasing its station id, else its ARS number, else its pole's own; a
+// route /bus/config does not list names only an aliased pole, so it adds no `seoul-` stop (ADR 0019, D5).
+export function toStationStopId({ arsId, topisId }: { arsId: string | null; topisId: string }, aliases: StopAliases, isListed: boolean): string | null {
+  const servedArsId = toServedArsId(arsId);
+  const aliasedStopId = aliases.stopIdByTopisId.get(topisId) ?? (servedArsId === null ? undefined : aliases.stopIdByArsId.get(servedArsId));
+  if (aliasedStopId !== undefined) return aliasedStopId;
+  return isListed ? toPoleStopId(arsId, aliases.stopIdByArsId) : null;
 }
 
 /** WHY: the next station of the HSSC loop a rider can get off at; its next position can be a rotary pass. */

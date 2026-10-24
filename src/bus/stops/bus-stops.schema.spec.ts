@@ -114,6 +114,16 @@ describe("busStopsDataset", () => {
     expect(messagesOf(withStop(13, { arsIds: [arsId] }))).toEqual(["stops.13.arsIds.0: must be a five-digit ARS number"]);
   });
 
+  it("passes a stop that aliases a nine-digit TOPIS station id, as 7800's 성균관대학교 pole 200000162, which has no ARS number", () => {
+    // Act & Assert
+    expect(messagesOf(withStop(13, { topisIds: ["200000162"] }))).toEqual([]);
+  });
+
+  it.each([["20000016"], ["2000001620"], ["20000016a"], [""], ["01618"]])("fails a TOPIS alias %j that is not a nine-digit station id, naming its path", (topisId) => {
+    // Act & Assert
+    expect(messagesOf(withStop(13, { topisIds: [topisId] }))).toEqual(["stops.13.topisIds.0: must be a nine-digit TOPIS station id"]);
+  });
+
   it("fails an overlay keyed by something other than a five-digit ARS number, naming the key", () => {
     // Act & Assert
     expect(messagesOf({ ...fixture(), topis: { "1592": { subwayStationId: "hyehwa" } } })).toEqual([expect.stringMatching(/^topis\.1592: /)]);

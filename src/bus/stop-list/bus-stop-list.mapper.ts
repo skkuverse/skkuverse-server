@@ -5,7 +5,7 @@ import { toStationAction, toTowards } from "../bus.rules";
 import type { HsscLineStation } from "../stops/bus-stops.document";
 import type { ScheduleStop } from "../stops/bus-stops.types";
 import type { LocatedStop, StopRoute } from "../stop-index/bus-stop-index.types";
-import { toStopCampus } from "./bus-stop-list.rules";
+import { toCampusPoles, toStopCampus } from "./bus-stop-list.rules";
 import type { ListedRoute, ListedStop, LocalizedText } from "./bus-stop-list.types";
 
 interface StopLines {
@@ -45,13 +45,13 @@ function toPoleNames({ id, poles: [pole] }: LocatedStop): LocalizedText {
 
 /** WHY: `names` are a local stop's config record names, one per language; a TOPIS pole has none and is its stored Korean name. */
 export function toListedStop(stop: LocatedStop, names: LocalizedText | null, lines: StopLines): ListedStop {
-  const arsIds = stop.localStop ? stop.localStop.arsIds : stop.poles.map((pole) => pole.arsId);
+  const arsIds = stop.localStop ? stop.localStop.arsIds : stop.poles.flatMap((pole) => pole.arsId ?? []);
   return {
     id: stop.id,
     name: names ?? toPoleNames(stop),
     coords: stop.coords,
     arsIds: arsIds ? [...arsIds] : null,
-    campus: toStopCampus(stop),
+    campus: toStopCampus({ localStop: stop.localStop, poles: toCampusPoles(stop) }),
     routes: stop.routes.map((route) => toListedRoute(route, lines)),
   };
 }

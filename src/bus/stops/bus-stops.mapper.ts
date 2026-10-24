@@ -116,8 +116,9 @@ export function toStopRecord(stop: ScheduleStop, lang: SupportedLang, subwayTitl
   return toServedStop(withoutGuide(stop), lang, subwayTitles);
 }
 
-/** WHY: one stored revision as its readers take it, frozen, with each alias keyed by its ARS number. */
+/** WHY: one stored revision as its readers take it, frozen, with each alias keyed by its ARS number or TOPIS station id. */
 export function toBusStopsSnapshot({ revision, data }: StoredBusStops): BusStopsSnapshot {
   const stopIdByArsId = new Map(data.stops.flatMap((stop) => (stop.arsIds ?? []).map((arsId) => [arsId, stop.id] as const)));
-  return deepFreeze({ revision, catalog: { stops: data.stops, sequences: data.sequences }, hssc: data.hssc.stations, stopIdByArsId });
+  const stopIdByTopisId = new Map(data.stops.flatMap((stop) => (stop.topisIds ?? []).map((topisId) => [topisId, stop.id] as const)));
+  return deepFreeze({ revision, catalog: { stops: data.stops, sequences: data.sequences }, hssc: data.hssc.stations, stopIdByArsId, stopIdByTopisId });
 }

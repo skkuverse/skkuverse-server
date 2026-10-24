@@ -3,8 +3,7 @@ import { createCachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
-import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
+import { TOPIS_ROUTES } from "../bus.constants";
 import type { JongroRoute } from "../bus.types";
 import { BusRoutePathClient } from "./bus-route-path.client";
 import { ROUTE_PATHS_LOG_INTERVAL_MS, ROUTE_PATHS_RETRY_MS, ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
@@ -13,7 +12,7 @@ import { BusRoutePathUnavailableError } from "./bus-route-path.error";
 import { toRoutePath, toRoutePathDocument } from "./bus-route-path.mapper";
 import { BusRoutePathRepository } from "./bus-route-path.repository";
 import { toPathShape, toPathSyncDecision } from "./bus-route-path.rules";
-import type { PathHoldReason, RoutePaths } from "./bus-route-path.types";
+import type { PathHoldReason, RoutePath, RoutePaths } from "./bus-route-path.types";
 
 interface HeldChange {
   stored: JongroRoutePathDocument | null;
@@ -41,10 +40,11 @@ export class BusRoutePathService {
     private readonly clock: Clock,
   ) {}
 
-  // WHY: a missing line is left out rather than drawn from a committed copy, and the daily sync writes it (ADR 0012, D3).
+  // WHY: a missing line is left out rather than drawn from a committed copy, and the daily sync writes it (ADR 0012, D3);
+  // the map draws the listed routes only.
   async listRoutePaths(): Promise<RoutePaths> {
     const byId = new Map((await this.readStored()).map((doc) => [doc._id, doc]));
-    const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+    const jongroRoutes = TOPIS_ROUTES.filter((route) => route.isListed);
     const missingIds = jongroRoutes.filter((route) => !byId.has(route.id)).map((route) => route.id);
     const ticket = missingIds.length > 0 ? this.logThrottle.take(`missing:${missingIds.join(",")}`) : null;
     if (ticket) {
@@ -57,6 +57,13 @@ export class BusRoutePathService {
       }),
       hasMissingRoutes: missingIds.length > 0,
     };
+  }
+
+  // WHY: an unlisted route's line is drawn nowhere, but its stations carry the directions a stop page names.
+  async findRoutePath(routeId: string): Promise<RoutePath | null> {
+    const route = TOPIS_ROUTES.find((candidate) => candidate.id === routeId);
+    const doc = (await this.readStored()).find((stored) => stored._id === routeId);
+    return route === undefined || doc === undefined ? null : toRoutePath(route, doc);
   }
 
   async sync(route: JongroRoute): Promise<void> {

@@ -205,6 +205,11 @@ const config = {
     },
   },
 
+  // WHY: the regional bus pollers spend production's TOPIS quota per operation, which has 272 calls a day to spare.
+  regionalBus: {
+    enabled: switches.regionalBusEnabled,
+  },
+
   holidays: {
     get serviceKey(): string {
       return roleScoped("DATA_GO_KR_SERVICE_KEY");
@@ -289,6 +294,7 @@ const config = {
     shuttleEta: string;
     subway: string;
     shuttle: string;
+    regionalBus: string;
   } {
     return {
       push: switches.pushDelivery,
@@ -298,6 +304,7 @@ const config = {
       shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
       subway: switches.subwayEnabled ? "on" : "off",
       shuttle: switches.shuttleEnabled ? "on" : "off",
+      regionalBus: switches.regionalBusEnabled ? "on" : "off",
     };
   },
 };

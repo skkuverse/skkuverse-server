@@ -86,6 +86,25 @@ describe("BusStopsService.current", () => {
     expect([...snapshot.stopIdByArsId]).toEqual([["01618", "hssc-bus-lot"]]);
   });
 
+  it("maps each TOPIS alias to the stop that claims it, apart from the ARS aliases, frozen", async () => {
+    // Arrange
+    const { repository, stops } = setup();
+    const aliased = fixture();
+    aliased.stops = aliased.stops.map((stop) => (stop.id === "hssc-bus-lot" ? { ...stop, arsIds: ["01618"], topisIds: ["200000162", "200000159"] } : stop));
+    repository.storeStops(aliased);
+
+    // Act
+    const snapshot = await stops.current();
+
+    // Assert
+    expect([...snapshot.stopIdByTopisId]).toEqual([
+      ["200000162", "hssc-bus-lot"],
+      ["200000159", "hssc-bus-lot"],
+    ]);
+    expect([...snapshot.stopIdByArsId]).toEqual([["01618", "hssc-bus-lot"]]);
+    expect(() => (snapshot.stopIdByTopisId as Map<string, string>).set("100900220", "hssc-600th")).toThrow(TypeError);
+  });
+
   it("answers a snapshot whose alias map and fields refuse a change (review F6)", async () => {
     // Arrange
     const { repository, stops } = setup();

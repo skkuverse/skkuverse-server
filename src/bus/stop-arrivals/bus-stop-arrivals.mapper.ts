@@ -6,7 +6,7 @@ import type { LiveEntry, StopBlock, TimetableEntry } from "./bus-stop-arrivals.t
 function toPoleBlock({ id, poles, coords }: FoundStop): StopBlock {
   const [pole] = poles;
   if (!pole) throw new Error(`bus-stops: stop ${id} is neither a local stop nor a pole, which the stop index never builds`);
-  return { id, name: pole.stationName, ...(coords && { coords }), arsIds: poles.map((each) => each.arsId) };
+  return { id, name: pole.stationName, ...(coords && { coords }), arsIds: poles.flatMap((each) => each.arsId ?? []) };
 }
 
 /** WHY: a local stop is its config record, drawn at its pole when it has no coordinates; a TOPIS pole is its stored station. */
