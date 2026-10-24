@@ -16,7 +16,7 @@ audience: internal
 The `bus-stops` dataset holds every local stop the server serves ([bus architecture](../explanation/bus-architecture.md)): the commute and campus shuttle stops, the HSSC stops, the shuttle stop sequences, and the HSSC line. It is one document of the content database, edited as a whole with `npm run data` ([edit-runtime-data.md](edit-runtime-data.md)). A push reaches `/bus/config`, its groups, the ui transit routes, the smart schedule's estimates and both estimate pollers within a minute, ETags included.
 
 ```text
-{ "stops":     [ { "id", "name", "detail"?, "coords"?, "photo"?, "panorama"?, "guide"?, "subwayStationId"?, "arsIds"?, "campus"? } ],
+{ "stops":     [ { "id", "name", "detail"?, "coords"?, "photo"?, "panorama"?, "guide"?, "subwayStationId"?, "arsIds"?, "topisIds"?, "campus"? } ],
   "sequences": { "<serviceId>": { "<routeType>": [ { "stopId" | "label", "action", "timing", "note"?, "detail"? } ] } },
   "hssc":      { "stations": [ { "stopId", "name", "subtitle"?, "isFirstStation", "isLastStation", "isRotationStation", "isAlightOnly"?, "transferLines" } ] },
   "topis"?:    { "<ARS number>": { "name"?: { "en"?, "zh"? }, "subwayStationId"? } } }
@@ -37,7 +37,7 @@ Every stop of a sequence or the HSSC line, and every Jongno pole, has a stop pag
 
 Every realtime station of `/bus/config` names its stop page as `stopId`, its last field: an HSSC position its `stopId` here, a Jongno station `seoul-<ARS number>` or the local stop aliasing it, and a position with none (the two non-stop 혜화동로터리 rows) no key ([bus-stops-api.md](../reference/bus-stops-api.md#stop-ids-on-the-realtime-stations)). A position with none is a pass-through: `/bus/config` serves it `isPassThrough: true` and the app shows "미정차" there, so a position's `stopId` is `null` exactly at the positions the code passes through (`isHsscPassThrough`), which the HSSC estimates never count as a stop; a push that leaves another position `null`, or names a stop at one of them, is refused.
 
-The same stops, each once, make the stop list, `GET /bus/stops`, which the app's map draws as pins ([bus-stops-api.md](../reference/bus-stops-api.md#get-busstops)): a stop with no `coords` is listed with `coords: null` and gets its pin once a push gives it coordinates, and a stop's `campus` files it under a campus, `null` when left out (a Jongno pole and a stop aliasing one are `hssc` without it). The app's map, its stop pins and its nearest-stop camera open only a stop with coordinates, so a push refuses a stop without `coords` that the HSSC line or a sequence names or that has `arsIds`, at `stops.<index>.coords`; a Jongno pole's coordinates come from its stored route line, which no push checks.
+The same stops, each once, make the stop list, `GET /bus/stops`, which the app's map draws as pins ([bus-stops-api.md](../reference/bus-stops-api.md#get-busstops)): a stop with no `coords` is listed with `coords: null` and gets its pin once a push gives it coordinates, and a stop's `campus` files it under a campus, `null` when left out (a Jongno pole and a stop aliasing one are `hssc` without it). The app's map, its stop pins and its nearest-stop camera open only a stop with coordinates, so a push refuses a stop without `coords` that the HSSC line or a sequence names or that has `arsIds` or `topisIds`, at `stops.<index>.coords`; a Jongno pole's coordinates come from its stored route line, which no push checks.
 
 A push that changes a stop, a sequence or an alias reaches its page within a minute, and an alias the `stopId` of its pole's stations in each Jongro group, whose ETag changes with it. A slug renamed or removed answers `404` on its page, so never rename a served one: the app may hold it.
 
@@ -45,7 +45,7 @@ A push that changes a stop, a sequence or an alias reaches its page within a min
 | --- | --- |
 | A stop's `id` | Lower-case words of `a-z` and `0-9` joined by single hyphens, unique, never starting with `seoul-` (a TOPIS pole's derived id). An id on the wire never changes: clients hold it |
 | `name`, `detail`, a label or note | `ko` required, `en` and `zh` never blank when present |
-| `coords` | Inside South Korea; required for a stop the HSSC line or a sequence names or that has `arsIds` (the app opens only a stop with coordinates, above), and for a stop with a `guide`. Only the push checks it: a stored revision without them still serves, with `coords: null` on the stop list |
+| `coords` | Inside South Korea; required for a stop the HSSC line or a sequence names or that has `arsIds` or `topisIds` (the app opens only a stop with coordinates, above), and for a stop with a `guide`. Only the push checks it: a stored revision without them still serves, with `coords: null` on the stop list |
 | `photo` | (A collector detail is left out of the public history.) |
 | `panorama` | A 22-character NAVER panorama id, integer `pan` (−180 to 180), `tilt` (−90 to 90) and `fov` (25 to 80) |
 | `guide` | Subway exit places, and walks of at most 500 m that start or end at the stop as the sequences use it |
@@ -53,6 +53,7 @@ A push that changes a stop, a sequence or an alias reaches its page within a min
 | A sequence | At least two stops, the first boarding, one alighting; a stop once per sequence; an estimated one with its first stop scheduled and at most seven stops |
 | `hssc.stations` | Exactly `HSSC_POSITION_COUNT` positions in wire order, only the first flagged first and the last flagged last, `stopId` `null` at the pass-through positions (`isHsscPassThrough`: 5 and 7) and a stop of this dataset everywhere else, no stop named twice; `isAlightOnly`, when present, a boolean and never `true` at a position whose `stopId` is `null` |
 | `arsIds` | Five-digit ARS numbers, each claimed by one stop only |
+| `topisIds` | Nine-digit TOPIS station ids, each claimed by one stop only: for a pole TOPIS gives no ARS number (7800's 성균관대학교 `200000162` and `200000159`); it wins over another stop's `arsIds` claim on the same pole. A server older than the field refuses the key |
 | `campus` | `hssc` or `nsc`, optional: `hssc` for a stop on the HSSC campus (the `hssc-` stops), `nsc` for one on the NSC campus (the `nsc-` stops), left out for a commute station stop, which serves neither campus. A server older than the field keeps it unread, so push it once the server that reads it is deployed |
 | A sequence against the stored timetables | Every entry of its service and route type in the target's `bus_campus.bus_schedules` (`_dev` without `--prod`) has one `stopTimes` time per stop, `null` only at an estimated stop; a refusal names the service, the route type and the first three entry times. A pattern that ended before today (KST) serves no date ahead: it is printed as `skipped` and not checked |
 
@@ -129,6 +130,8 @@ Keep the `[하차전용]` (and `[미정차]`) markers in the names until the app
 2. Push to `_dev` with `--dry-run` first, then for real, and `check bus-stops`, as above.
 3. Within a minute, `/bus/stops/seoul-01618/arrivals` answers the page of `hssc-bus-lot` with both its shuttle runs and 종로07, `/bus/config/jongro07` serves `stopId: "hssc-bus-lot"` on the station with `stationNumber` `01618` under a new ETag, and no `bus.stop_index.alias_unmatched` warning names the number (one does when no stored station has it).
 4. Make the same edit in production, push with `--prod` and `check bus-stops --prod`.
+
+A pole with no ARS number takes its TOPIS station id in `topisIds` the same way. On a route `/bus/config` does not list (7800), only an aliased pole is a stop: its station serves the local stop's `stopId` on `/bus/live/<groupId>`, the local stop's page lists the route, and the route's other poles stay off `GET /bus/stops`.
 
 Removing an alias is the same edit in reverse: the pole's own page `seoul-<ARS number>` serves again, and the stations name it.
 

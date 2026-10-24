@@ -22,8 +22,8 @@ import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import type { Position } from "../../shared/geojson.types";
 import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
 import { capturedRoutePathOf, storedJongroRoutePathDocuments } from "../../../__tests__/helpers/bus/bus-route-path";
+import { ROUTE_7800, fetchedRoutePath7800, routePathDoc7800 } from "../../../__tests__/helpers/bus/topis-7800";
 import type { BusRoutePathClient } from "./bus-route-path.client";
 import { ROUTE_PATHS_LOG_INTERVAL_MS, ROUTE_PATHS_RETRY_MS, ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
 import type { BusRoutePathRepository } from "./bus-route-path.repository";
@@ -31,7 +31,7 @@ import { toPathVersion } from "./bus-route-path.rules";
 import { BusRoutePathService } from "./bus-route-path.service";
 import type { FetchedRoutePath } from "./bus-route-path.types";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const NOW = new Date("2026-10-18T03:00:00Z");
 const clock: Clock = { now: () => NOW };
@@ -401,3 +401,56 @@ describe("BusRoutePathService.sync on an empty store", () => {
     ]);
   });
 });
+
+// WHY: 7800 is unlisted (docs/plans/7800-unified-arrivals.md, Q2): its line is synced like a Jongno one but drawn
+// nowhere, so the map's read leaves it out and only a read by id answers it.
+describe("BusRoutePathService over 7800's capture", () => {
+  it("inserts 7800's line at its first sync: 80 stations, 사당역 for seq 1-39 and 호매실동차고지 after, the turnaround at seq 39", async () => {
+    // Arrange
+    client.answers.set("200000150", fetchedRoutePath7800());
+
+    // Act
+    await service.sync(ROUTE_7800);
+
+    // Assert
+    const stored = repository.routePaths.get("gyeonggi7800")!;
+    expect([stored.busRouteId, stored.stations.length]).toEqual(["200000150", 80]);
+    expect(stored.stations.filter((station) => station.direction === "사당역").map((station) => station.sequence)).toEqual(Array.from({ length: 39 }, (_, index) => index + 1));
+    expect(stored.stations.filter((station) => station.isTurnaround).map((station) => station.topisId)).toEqual(["121001315"]);
+    expect(callsOf("warn", "bus.jongro.path_synced")).toHaveLength(1);
+  });
+
+  it("leaves 7800 out of the lines the map draws, and logs no missing line, with or without it stored", async () => {
+    // Arrange
+    storeLines();
+    const withoutLine = await service.listRoutePaths();
+    repository.routePaths.set("gyeonggi7800", routePathDoc7800(NOW));
+    service = new BusRoutePathService(asReal<BusRoutePathRepository>(repository), asReal<BusRoutePathClient>(client), clock);
+
+    // Act
+    const withLine = await service.listRoutePaths();
+
+    // Assert
+    expect([withoutLine, withLine].map(({ routePaths, hasMissingRoutes }) => [routePaths.map((routePath) => routePath.routeId), hasMissingRoutes])).toEqual([
+      [["jongro02", "jongro07", "jongro08"], false],
+      [["jongro02", "jongro07", "jongro08"], false],
+    ]);
+    expect(callsOf("error", "bus.jongro.path_missing")).toEqual([]);
+  });
+
+  it("answers 7800's stored line by id, and null before its first sync", async () => {
+    // Arrange
+    storeLines();
+    const beforeSync = await service.findRoutePath("gyeonggi7800");
+    repository.routePaths.set("gyeonggi7800", routePathDoc7800(NOW));
+    service = new BusRoutePathService(asReal<BusRoutePathRepository>(repository), asReal<BusRoutePathClient>(client), clock);
+
+    // Act
+    const afterSync = await service.findRoutePath("gyeonggi7800");
+
+    // Assert
+    expect(beforeSync).toBeNull();
+    expect([afterSync?.routeId, afterSync?.code, afterSync?.stations.length]).toEqual(["gyeonggi7800", "7800", 80]);
+  });
+});
+

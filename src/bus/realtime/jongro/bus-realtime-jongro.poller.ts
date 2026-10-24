@@ -1,8 +1,8 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
+import config from "../../../infra/config";
+import logger from "../../../infra/logger";
 import { PollerRegistryService } from "../../../scheduling/poller-registry.service";
-import { JONGRO_ROUTES } from "../../bus.constants";
-import { toJongroRoute } from "../../bus.mapper";
-import { POLL_INTERVAL_MS } from "./bus-realtime-jongro.constants";
+import { REGIONAL_ROUTES, TOPIS_ROUTES } from "../../bus.constants";
 import { BusRealtimeJongroService } from "./bus-realtime-jongro.service";
 
 @Injectable()
@@ -12,10 +12,16 @@ export class BusRealtimeJongroPoller implements OnModuleInit {
     private readonly jongro: BusRealtimeJongroService,
   ) {}
 
-  // WHY: one poller per route, so one dead route does not mark the others down.
+  // WHY: one poller per route, so one dead route does not mark the others down; REGIONAL_BUS=off (the development
+  // default) registers no regional route, whose TOPIS quota production has little to spare of.
   onModuleInit(): void {
-    for (const route of JONGRO_ROUTES.map(toJongroRoute)) {
-      this.registry.registerPoller(() => this.jongro.refresh(route), POLL_INTERVAL_MS, `jongro-${route.code}`);
+    for (const route of TOPIS_ROUTES) {
+      const name = `jongro-${route.code}`;
+      if (REGIONAL_ROUTES.includes(route) && !config.regionalBus.enabled) {
+        logger.info({ event: "bus.regional.disabled", poller: name }, "REGIONAL_BUS=off: poller not registered");
+        continue;
+      }
+      this.registry.registerPoller(() => this.jongro.refresh(route), route.pollIntervalMs, name);
     }
   }
 }

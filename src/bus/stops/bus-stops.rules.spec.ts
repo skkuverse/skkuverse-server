@@ -837,6 +837,27 @@ describe("toBusStopsIssues", () => {
     expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([]);
   });
 
+  it("One TOPIS station claimed twice: names the second path and 200000162", () => {
+    // Arrange
+    const data = withStop("hssc-bus-lot", { topisIds: ["200000162"] });
+    const owner = indexOfStop(data, "hssc-bus-lot");
+    const other = indexOfStop(data, "hssc-student-center");
+    data.stops[other] = { ...data.stops[other], topisIds: ["200000159", "200000162"] };
+
+    // Act & Assert
+    expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["stops", other, "topisIds", 1], message: `TOPIS station 200000162 is aliased by stops.${owner}.topisIds.0 too` }]);
+  });
+
+  it("passes two stops aliasing the two 성균관대학교 poles by TOPIS station, and an ARS alias beside them", () => {
+    // Arrange
+    const data = withStop("hssc-bus-lot", { topisIds: ["200000162"], arsIds: ["01618"] });
+    const other = indexOfStop(data, "hssc-600th");
+    data.stops[other] = { ...data.stops[other], topisIds: ["200000159"] };
+
+    // Act & Assert
+    expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([]);
+  });
+
   it("names an overlay entry's subway station the checked-out code does not serve", () => {
     // Arrange
     const data: Record<string, any> = { ...fixture(), topis: { "01592": { subwayStationId: "hyehwa" }, "01876": { subwayStationId: "hyehwa4" } } };
@@ -889,6 +910,20 @@ describe("toBusStopsIssues", () => {
 
       // Act & Assert
       expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([]);
+    });
+
+    it("Stop aliasing a TOPIS station without coordinates: names its coords path and its topisIds", () => {
+      // Arrange
+      const data = fixture();
+      data.stops.push({ id: "nsc-skku-to-sadang", name: { ko: "성균관대학교" }, topisIds: ["200000162"] });
+
+      // Act & Assert
+      expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([
+        {
+          path: ["stops", data.stops.length - 1, "coords"],
+          message: "stop nsc-skku-to-sadang: has no coords, but the HSSC line, a sequence or its topisIds serve it, and the app opens only a stop it can place on its map",
+        },
+      ]);
     });
 
     it("accepts a stop nothing serves without coordinates: no line, no sequence and an empty arsIds", () => {

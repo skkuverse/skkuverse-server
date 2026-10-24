@@ -11,11 +11,30 @@
  * Texts TOPIS did not send during that capture (the last-bus token, ended,
  * turnaround wait, no information and the spacing variants) are the forms
  * other open-source parsers of `arrmsg` on GitHub report.
+ *
+ * A bus read on its route (the live route's reading) counts only the stations
+ * it stops at between, leaving out the ones TOPIS names `…(미정차)` that
+ * its `[N번째 전]` counts, and serves no crowding or count on a route whose
+ * source reports no load: 7800's rows in topis-7800-arrivals.json, captured
+ * 2026-10-24, carry rerdie_Div 2 with reride_Num 0 on every bus.
  */
+import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
 import { jongroArrivalBus, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { JongroArrivalBus } from "../../cache/bus-cache.document";
-import { isLastBus, toArrival, toArrivalCarNumber, toArrivalState, toCrowding, toMinutes, toPassengerCount, toStopsAway, toTravelSeconds } from "./bus-realtime-arrival.rules";
+import {
+  isLastBus,
+  toArrival,
+  toArrivalCarNumber,
+  toArrivalState,
+  toCrowding,
+  toMinutes,
+  toPassengerCount,
+  toRouteArrival,
+  toStoppingStopsAway,
+  toStopsAway,
+  toTravelSeconds,
+} from "./bus-realtime-arrival.rules";
 
 type FixtureResponse = (typeof arrivalsFixture)["jongro07Running"];
 
@@ -300,5 +319,104 @@ describe("toArrival", () => {
       minutes: null,
       message: "결행",
     });
+  });
+});
+
+// 7800's virtual stations in the capture, the `…(미정차)` rows, held apart from the rule that recognizes them by name.
+const PASS_THROUGH_7800: ReadonlySet<number> = new Set([28, 29, 30, 32, 33, 34, 35, 36, 40, 42, 43, 45, 46, 47, 48, 49, 51, 52, 53]);
+const NO_PASS_THROUGH: ReadonlySet<number> = new Set();
+
+// The test's own reading of a captured 7800 row's bus slot, as BusRealtimeJongroClient reads it.
+function captured7800(staOrd: number, slot: "1" | "2"): JongroArrivalBus {
+  const row = arrivals7800.msgBody.itemList.find((candidate) => Number(candidate.staOrd) === staOrd) as Record<string, string>;
+  return {
+    traTime: Number(row[`traTime${slot}`]),
+    sectOrd: Number(row[`sectOrd${slot}`]),
+    staOrd,
+    arrmsg: row[`arrmsg${slot}`]!,
+    isLast: row[`isLast${slot}`] === "1",
+    plainNo: row[`plainNo${slot}`]!,
+    vehId: row[`vehId${slot}`]!,
+    rerideDiv: Number(row[`rerdie_Div${slot}`]),
+    rerideNum: Number(row[`reride_Num${slot}`]),
+  };
+}
+
+describe("toStoppingStopsAway", () => {
+  it.each([
+    [31, "1", "10분25초후[5번째 전]", 2],
+    [31, "2", "17분57초후[8번째 전]", 5],
+    [37, "1", "2분51초후[1번째 전]", 0],
+    [37, "2", "12분18초후[5번째 전]", 0],
+    [41, "1", "9분53초후[3번째 전]", 2],
+    [28, "1", "6분50초후[2번째 전]", 2],
+    [26, "1", "2분34초후[0번째 전]", 0],
+    [25, "2", "19분57초후[9번째 전]", 9],
+  ] as const)("serves 7800's staOrd %i slot %s (%s) %i stopping stations between", (staOrd, slot, arrmsg, expected) => {
+    // Arrange
+    const bus = captured7800(staOrd, slot);
+
+    // Act & Assert
+    expect([bus.arrmsg, toStoppingStopsAway(bus, PASS_THROUGH_7800)]).toEqual([arrmsg, expected]);
+  });
+
+  it("is null at 7800's origin, where TOPIS names no vehicle for either 출발대기", () => {
+    // Act & Assert
+    expect(["1", "2"].map((slot) => toStoppingStopsAway(captured7800(1, slot as "1" | "2"), PASS_THROUGH_7800))).toEqual([null, null]);
+  });
+
+  it("is TOPIS's own count on a route that passes through no station", () => {
+    // Arrange
+    const bus = capturedBus(arrivalsFixture.jongro07Running, "16", "2");
+
+    // Act & Assert
+    expect(toStoppingStopsAway(bus, NO_PASS_THROUGH)).toBe(toStopsAway(bus));
+  });
+});
+
+describe("toRouteArrival", () => {
+  const ROUTE_7800 = { seatCount: 45, capabilities: { occupancy: false }, passThroughOrds: PASS_THROUGH_7800 };
+
+  it("serves a captured 7800 bus with no crowding or count, its source reporting no load", () => {
+    // Arrange
+    const bus = captured7800(24, "1");
+
+    // Act & Assert
+    expect(toRouteArrival(bus, ROUTE_7800)).toEqual({
+      minutes: 3,
+      stopsAway: 1,
+      state: "running",
+      isLastBus: false,
+      carNumber: "1710",
+      crowding: null,
+      passengerCount: null,
+      message: "2분41초후[1번째 전]",
+    });
+  });
+
+  it("serves the same bus's placeholder load on a route whose source reports one, so the capability alone gates it", () => {
+    // Arrange
+    const bus = captured7800(24, "1");
+
+    // Act & Assert
+    expect(toRouteArrival(bus, { ...ROUTE_7800, capabilities: { occupancy: true } })).toMatchObject({ crowding: "relaxed", passengerCount: 0 });
+  });
+
+  it("counts a bus past 7800's virtual stations by the stations it stops at", () => {
+    // Act & Assert
+    expect(toRouteArrival(captured7800(31, "1"), ROUTE_7800).stopsAway).toBe(2);
+  });
+
+  it("reads 7800's [0번째 전] as running and its origin's 출발대기 as waiting", () => {
+    // Act & Assert
+    expect([toRouteArrival(captured7800(26, "1"), ROUTE_7800).state, toRouteArrival(captured7800(1, "1"), ROUTE_7800).state]).toEqual(["running", "waiting"]);
+  });
+
+  it("serves a Jongro bus exactly as toArrival does", () => {
+    // Arrange
+    const bus = capturedBus(arrivalsFixture.jongro07Waiting, "12", "2");
+
+    // Act & Assert
+    expect(toRouteArrival(bus, { seatCount: SEAT_COUNT, capabilities: { occupancy: true }, passThroughOrds: NO_PASS_THROUGH })).toEqual(toArrival(bus, SEAT_COUNT));
   });
 });

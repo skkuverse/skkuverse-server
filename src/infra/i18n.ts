@@ -105,6 +105,7 @@ const translations: Translations = {
     en: "Jongro 08",
     zh: "钟路 08",
   },
+  "busconfig.label.gyeonggi7800": { ko: "7800", en: "7800", zh: "7800" },
   "busconfig.label.fasttrack": {
     ko: "패스트트랙",
     en: "Fasttrack",

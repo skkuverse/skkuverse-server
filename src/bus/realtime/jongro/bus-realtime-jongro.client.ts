@@ -1,15 +1,19 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import config from "../../../infra/config";
+import { createLogThrottle } from "../../../infra/log-throttle";
+import logger from "../../../infra/logger";
 import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "../bus-realtime.mapper";
 import { toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
-import { isNoResultHeaderCd, isUsableHeaderCd, toBusType, toObservedAt, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
+import { isNoResultHeaderCd, isQuotaExceeded, isUsableHeaderCd, toBusType, toObservedAt, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 const REQUEST_TIMEOUT_MS = 10_000;
+// WHY: a spent quota refuses every tick until it resets; a line a minute per operation still feeds the 10-minute alert.
+const QUOTA_LOG_INTERVAL_MS = 60_000;
 
 // QUIRK(topis): the envelope both endpoints answer with; itemList is null on "4" (no result).
 interface TopisEnvelope<TRow> {
@@ -33,6 +37,10 @@ const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
 type TrackedPositionField = "vehId" | "sectOrd" | "sectDist" | "fullSectDist" | "dataTm";
 
+// QUIRK(topis): the data.go.kr operations whose daily quotas these calls spend (docs/project-docs.md, "Daily Usage and Quota Check").
+type TopisOperation = "getArrInfoByRouteAllList" | "getBusPosByRtidList";
+interface TopisCall { url: string; what: string; operation: TopisOperation; code: string }
+
 // QUIRK(topis): a getBusPosByRtid row; its coordinates are gpsX/gpsY (tmX/tmY come null), its turnaround stop
 // trnstnid, sectDist and fullSectDist km, stopFlag "1" at a stop, dataTm a KST yyyyMMddHHmmss, lastStTm seconds.
 interface TopisPositionRow {
@@ -53,30 +61,53 @@ interface TopisPositionRow {
 
 @Injectable()
 export class BusRealtimeJongroClient {
+  private readonly quotaThrottle = createLogThrottle(QUOTA_LOG_INTERVAL_MS);
+
   async fetchArrivals(route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroArrivalDoc[]> {
     const what = `jongro ${route.code} list`;
-    const rows = await this.fetchRows<TopisArrivalRow>(toJongroArrivalsUrl(route.busRouteId, config.api.seoulBusServiceKey), what);
+    const url = toJongroArrivalsUrl(route.busRouteId, config.api.seoulBusServiceKey);
+    const rows = await this.fetchRows<TopisArrivalRow>({ url, what, operation: "getArrInfoByRouteAllList", code: route.code });
     return rows.map((row) => this.toArrival(row, what));
   }
 
   async fetchSightings(route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroBusSighting[]> {
     const what = `jongro ${route.code} location`;
-    const rows = await this.fetchRows<TopisPositionRow>(toJongroPositionsUrl(route.busRouteId, config.api.seoulBusServiceKey), what);
+    const url = toJongroPositionsUrl(route.busRouteId, config.api.seoulBusServiceKey);
+    const rows = await this.fetchRows<TopisPositionRow>({ url, what, operation: "getBusPosByRtidList", code: route.code });
     return rows.map((row) => this.toSighting(row, what));
   }
 
   // WHY: "4" (no result) is an empty list, so the tick still writes; an answer with no list at all rejects.
-  private async fetchRows<TRow>(url: string, what: string): Promise<TRow[]> {
-    const response = await axios.get<TopisEnvelope<TRow>>(url, { timeout: REQUEST_TIMEOUT_MS });
-    const body = response.data;
+  private async fetchRows<TRow>(call: TopisCall): Promise<TRow[]> {
+    const body = await this.fetchBody<TRow>(call);
     const headerCd = body?.msgHeader?.headerCd;
     if (!isUsableHeaderCd(headerCd)) {
-      throw new UpstreamError(`TOPIS error code (${what})`, "topis", headerCd, body.msgHeader?.headerMsg);
+      throw new UpstreamError(`TOPIS error code (${call.what})`, "topis", headerCd, body.msgHeader?.headerMsg);
     }
     if (isNoResultHeaderCd(headerCd)) return [];
     const rows = body?.msgBody?.itemList;
-    if (!Array.isArray(rows)) throw new UpstreamError(`TOPIS response has no itemList (${what})`, "topis", headerCd);
+    if (!Array.isArray(rows)) throw new UpstreamError(`TOPIS response has no itemList (${call.what})`, "topis", headerCd);
     return rows;
+  }
+
+  // WHY: the gateway may refuse a spent quota with an HTTP error, whose body still says so; the request rejects either way.
+  private async fetchBody<TRow>(call: TopisCall): Promise<TopisEnvelope<TRow>> {
+    let body: TopisEnvelope<TRow>;
+    try {
+      body = (await axios.get<TopisEnvelope<TRow>>(call.url, { timeout: REQUEST_TIMEOUT_MS })).data;
+    } catch (err) {
+      if (isQuotaExceeded((err as { response?: { data?: unknown } }).response?.data)) this.logQuotaExceeded(call);
+      throw err;
+    }
+    if (!isQuotaExceeded(body)) return body;
+    this.logQuotaExceeded(call);
+    throw new UpstreamError(`TOPIS daily quota exceeded (${call.what})`, "topis", "22", "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR");
+  }
+
+  // WHY: a spent quota stops every TOPIS route of the operation until it resets, so it is told apart for its alert.
+  private logQuotaExceeded({ operation, code }: TopisCall): void {
+    const ticket = this.quotaThrottle.take(operation);
+    if (ticket) logger.error({ event: "bus.topis.quota_exceeded", operation, code, suppressed: ticket.suppressed }, "TOPIS refused a call over the key's daily quota");
   }
 
   private toArrival(row: TopisArrivalRow, what: string): JongroArrivalDoc {

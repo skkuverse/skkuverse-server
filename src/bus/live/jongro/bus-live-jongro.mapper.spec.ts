@@ -6,13 +6,20 @@
  * group fresh as its staler key. A vehicle is low-floor by one row: its position's bus type when it has a position, else
  * the arrival row its plate comes from.
  */
+import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import { jongroArrivalBus, jongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
+import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
+import { isTopisPassThrough } from "../../bus.rules";
+import type { JongroRouteCapabilities } from "../../bus.types";
+import type { JongroArrivalBus } from "../../cache/bus-cache.document";
+import { BusRealtimeArrivalService } from "../../realtime/arrival/bus-realtime-arrival.service";
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
 import type { JongroBusTracking, JongroReading } from "../../realtime/group/bus-realtime-group.types";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { toLiveJongroGroup } from "./bus-live-jongro.mapper";
 
 const POSITIONS_AT = new Date("2026-10-20T00:59:55Z");
+const NO_ALIASES = { stopIdByArsId: new Map<string, string>(), stopIdByTopisId: new Map<string, string>() };
 const ARRIVALS_AT = new Date("2026-10-20T00:59:50Z");
 const MADE_AT_MS = Date.parse("2026-10-20T00:59:00Z");
 
@@ -20,6 +27,7 @@ const route = {
   id: "jongro07",
   code: "07",
   busRouteId: "100900004",
+  isListed: true,
   stationsVersion: "0346768f2b776f45",
   turnaroundTopisId: "100900028",
   registryStations: [
@@ -77,7 +85,7 @@ function reading(extra: Partial<JongroReading> = {}): JongroReading {
 describe("toLiveJongroGroup", () => {
   it("serves a tracked bus as one vehicle and its row as a station with its arrivals", () => {
     // Act
-    const group = toLiveJongroGroup("jongro07", reading(), new Map());
+    const group = toLiveJongroGroup("jongro07", reading(), NO_ALIASES);
 
     // Assert
     expect(group).toEqual({
@@ -146,7 +154,7 @@ describe("toLiveJongroGroup", () => {
     const unseen = { bus: jongroArrivalBus({ vehId: "100000200", plainNo: "서울74사5600", staOrd: 2 }), arrival: running({ crowding: null, passengerCount: null, isLastBus: true }), travelSeconds: 300 };
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [unseen] }], positions: [] }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [unseen] }], positions: [] }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, isLastBus: true, isLowFloor: null, position: null, trajectory: null }]);
@@ -163,7 +171,7 @@ describe("toLiveJongroGroup", () => {
     ];
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles.map(({ id, isLastBus }) => [id, isLastBus])).toEqual([["100000103", true]]);
@@ -181,7 +189,7 @@ describe("toLiveJongroGroup", () => {
     const slot = { bus: jongroArrivalBus({ staOrd: 2, sectOrd: 2, traTime: 10, arrmsg: "곧 도착" }), arrival: running({ state: "arriving", stopsAway: 0, message: "곧 도착" }), travelSeconds: 10 };
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [slot] }], positions }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [slot] }], positions }), NO_ALIASES);
 
     // Assert
     expect(group.stations[0]?.arrivals).toMatchObject([{ status: "arriving", stopsAway: 0, expectedArrivalAt: null, expectedDepartureAt: null, vehicleId: "100000103", providerText: "곧 도착" }]);
@@ -196,7 +204,7 @@ describe("toLiveJongroGroup", () => {
     const rows = [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [behind, noBus("waiting", "출발대기")] }];
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows, positions }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions }), NO_ALIASES);
 
     // Assert
     expect(group.stations[0]?.arrivals.map(({ status, stopsAway, vehicleId, expectedDepartureAt, providerText }) => [status, stopsAway, vehicleId, expectedDepartureAt, providerText])).toEqual([
@@ -214,7 +222,7 @@ describe("toLiveJongroGroup", () => {
     const waiting = { ...tracking, status: "waiting" as const, progress: 0, nextStopInSec: null, trajectory: [] };
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ positions: [{ position: jongroPositionDoc({ sequence: "1" }), tracking: waiting, checkedAt: POSITIONS_AT }] }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ positions: [{ position: jongroPositionDoc({ sequence: "1" }), tracking: waiting, checkedAt: POSITIONS_AT }] }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles[0]).toMatchObject({ position: { status: "waitingToDepart", progress: 0, nextStationAt: null }, trajectory: null });
@@ -225,7 +233,7 @@ describe("toLiveJongroGroup", () => {
     const ended = { stationIndex: 0, madeAtMs: MADE_AT_MS, slots: [noBus("ended", "운행종료"), noBus("ended", "운행종료")] };
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows: [ended], positions: [] }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows: [ended], positions: [] }), NO_ALIASES);
 
     // Assert
     expect(group).toMatchObject({ operation: "ended", vehicles: [], stations: [{ stationIndex: 0, operation: "ended", arrivals: [] }] });
@@ -236,7 +244,7 @@ describe("toLiveJongroGroup", () => {
     const rows = [0, 2].map((stationIndex) => ({ stationIndex, madeAtMs: MADE_AT_MS, slots: [noBus("noInfo", "정보없음")] }));
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: [] }), new Map([["01617", "hssc-stadium"]]));
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: [] }), { ...NO_ALIASES, stopIdByArsId: new Map([["01617", "hssc-stadium"]]) });
 
     // Assert
     expect(group.stations.map(({ stopId, arsId, operation }) => [stopId, arsId, operation])).toEqual([
@@ -246,9 +254,24 @@ describe("toLiveJongroGroup", () => {
     expect(group.operation).toBe("noData");
   });
 
+  it("names a pole a local stop aliases by its TOPIS station, beside one aliased by its ARS number", () => {
+    // Arrange
+    const rows = [0, 1, 2].map((stationIndex) => ({ stationIndex, madeAtMs: MADE_AT_MS, slots: [noBus("noInfo", "정보없음")] }));
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: [] }), { stopIdByArsId: new Map([["01617", "hssc-stadium"]]), stopIdByTopisId: new Map([["100900221", "hssc-bus-lot"]]) });
+
+    // Assert
+    expect(group.stations.map(({ stopId, arsId }) => [stopId, arsId])).toEqual([
+      ["hssc-stadium", "01617"],
+      ["hssc-bus-lot", "01618"],
+      [null, null],
+    ]);
+  });
+
   it("serves no data and no write instant before the poller wrote", () => {
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows: [], positions: [], arrivalsCheckedAt: null, positionsCheckedAt: null }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows: [], positions: [], arrivalsCheckedAt: null, positionsCheckedAt: null }), NO_ALIASES);
 
     // Assert
     expect(group).toMatchObject({ operation: "noData", updatedAt: null, vehicles: [], stations: [] });
@@ -266,7 +289,7 @@ describe("toLiveJongroGroup low floor", () => {
     ["general", false],
   ] as const)("serves a tracked bus whose position reads %s as low-floor %s", (busType, expected) => {
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ positions: positionsOf(busType) }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ positions: positionsOf(busType) }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([["100000103", expected]]);
@@ -277,7 +300,7 @@ describe("toLiveJongroGroup low floor", () => {
     const rows = rowsOf(slotOf({ busType: "general" }));
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf("lowFloor") }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf("lowFloor") }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([["100000103", true]]);
@@ -288,7 +311,7 @@ describe("toLiveJongroGroup low floor", () => {
     const rows = rowsOf(slotOf({ busType: "lowFloor" }));
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf() }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf() }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([["100000103", null]]);
@@ -303,7 +326,7 @@ describe("toLiveJongroGroup low floor", () => {
     ];
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: [] }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: [] }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles.map(({ id, plateNumber, isLowFloor }) => [id, plateNumber, isLowFloor])).toEqual([["100000200", "서울75사2010", true]]);
@@ -314,12 +337,142 @@ describe("toLiveJongroGroup low floor", () => {
     const rows = rowsOf(slotOf({}), slotOf({ vehId: "100000200", plainNo: "서울75사2010" }));
 
     // Act
-    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf() }), new Map());
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf() }), NO_ALIASES);
 
     // Assert
     expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([
       ["100000103", null],
       ["100000200", null],
     ]);
+  });
+});
+
+// WHY: 7800 as TOPIS answered it on 2026-10-24 (topis-7800-arrivals.json), each row read slot by slot as the realtime
+// view reads it, on a route stated as the TOPIS list will state it (unlisted, GPS, no load): it runs through the Jongno
+// path unchanged except that stops away leave out its 19 `…(미정차)` stations and no vehicle serves an occupancy.
+describe("toLiveJongroGroup on 7800's captured rows", () => {
+  const rows7800 = arrivals7800.msgBody.itemList;
+  const MADE_AT_7800_MS = Date.parse("2026-10-24T17:51:03+09:00");
+  const CHECKED_AT_7800 = new Date("2026-10-24T08:51:10Z");
+  const CAPABILITIES_7800 = { positionSource: "gps", occupancy: false, plateNumber: true, lastBus: true, lowFloor: true } as const;
+  const arrivalService = new BusRealtimeArrivalService(storedRouteAttributesService());
+
+  // The test's own reading of a captured row's two slots, as BusRealtimeJongroClient reads them.
+  const capturedBuses = (row: (typeof rows7800)[number]): JongroArrivalBus[] =>
+    (["1", "2"] as const).map((slot) => {
+      const field = (name: string) => (row as Record<string, string>)[`${name}${slot}`]!;
+      return {
+        traTime: Number(field("traTime")),
+        sectOrd: Number(field("sectOrd")),
+        staOrd: Number(row.staOrd),
+        arrmsg: field("arrmsg"),
+        isLast: field("isLast") === "1",
+        plainNo: field("plainNo"),
+        vehId: field("vehId"),
+        rerideDiv: Number(field("rerdie_Div")),
+        rerideNum: Number(field("reride_Num")),
+      };
+    });
+
+  const passThroughOrds = new Set(rows7800.filter((row) => isTopisPassThrough(row.stNm)).map((row) => Number(row.staOrd)));
+  const reading7800 = (capabilities: JongroRouteCapabilities): JongroReading => ({
+    route: {
+      ...{ id: "gyeonggi7800", code: "7800", busRouteId: "200000150", capabilities, isListed: false, pollIntervalMs: 30_000 },
+      stationsVersion: "7800000000000000",
+      turnaroundTopisId: "121001315",
+      registryStations: rows7800.map((row) => ({ topisId: row.stId, arsId: row.arsId, stationName: row.stNm, sequence: Number(row.staOrd) })),
+      stations: [],
+      mapping: {},
+      topisIds: rows7800.map((row) => row.stId),
+      passThroughOrds,
+    },
+    rows: rows7800.map((row) => ({
+      stationIndex: Number(row.staOrd) - 1,
+      madeAtMs: MADE_AT_7800_MS,
+      slots: arrivalService.toTimedArrivals(capturedBuses(row), { seatCount: 45, capabilities, passThroughOrds }),
+    })),
+    positions: [],
+    arrivalsCheckedAt: CHECKED_AT_7800,
+    positionsCheckedAt: CHECKED_AT_7800,
+  });
+  const arrivalsAt = (group: ReturnType<typeof toLiveJongroGroup>, staOrd: number) => group.stations.find((station) => station.stationIndex === staOrd - 1)!.arrivals;
+
+  it("serves [0번째 전] en route at mkTm plus its travel time, 1 stop away", () => {
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), NO_ALIASES);
+
+    // Assert
+    expect(arrivalsAt(group, 26)[0]).toEqual({
+      status: "enRoute",
+      expectedArrivalAt: "2026-10-24T17:53:37+09:00",
+      ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
+      basis: "provider",
+      stopsAway: 1,
+      isLastBus: false,
+      vehicleId: "200010901",
+      providerText: "2분34초후[0번째 전]",
+    });
+  });
+
+  it("serves both slots at 호매실동차고지 waiting to depart, naming no vehicle, and the station running", () => {
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), NO_ALIASES);
+
+    // Assert
+    expect(group.stations[0]).toMatchObject({ stationIndex: 0, stopId: null, arsId: null, operation: "running" });
+    expect(group.stations[0]!.arrivals.map(({ status, vehicleId, stopsAway, providerText }) => [status, vehicleId, stopsAway, providerText])).toEqual([
+      ["waitingToDepart", null, null, "출발대기"],
+      ["waitingToDepart", null, null, "출발대기"],
+    ]);
+  });
+
+  it("counts only the stations a bus stops at, which TOPIS's [N번째 전] does not", () => {
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), NO_ALIASES);
+
+    // Assert
+    const counts = (staOrd: number) => arrivalsAt(group, staOrd).map(({ providerText, stopsAway }) => [providerText, stopsAway]);
+    expect(counts(31)).toEqual([
+      ["10분25초후[5번째 전]", 3],
+      ["17분57초후[8번째 전]", 6],
+    ]);
+    expect(counts(37)).toEqual([
+      ["2분51초후[1번째 전]", 1],
+      ["12분18초후[5번째 전]", 1],
+    ]);
+    expect(counts(25)).toEqual([
+      ["6분38초후[2번째 전]", 3],
+      ["19분57초후[9번째 전]", 10],
+    ]);
+  });
+
+  it("names a stop only at a pole a local stop aliases, by TOPIS station or ARS number, since /bus/config lists no 7800", () => {
+    // Arrange
+    const stopIdByArsId = new Map([["20253", "sadang-exit9"]]);
+    const stopIdByTopisId = new Map([["200000162", "nsc-skku-to-sadang"]]);
+
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), { stopIdByArsId, stopIdByTopisId });
+
+    // Assert
+    const stopsAt = (staOrd: number) => group.stations.find((station) => station.stationIndex === staOrd - 1)!;
+    expect([24, 41, 31, 39, 58].map((staOrd) => [staOrd, stopsAt(staOrd).stopId, stopsAt(staOrd).arsId])).toEqual([
+      [24, "nsc-skku-to-sadang", null],
+      [41, "sadang-exit9", "20253"],
+      [31, null, "27113"],
+      [39, null, "22028"],
+      [58, null, null],
+    ]);
+  });
+
+  it("serves no vehicle an occupancy on a route whose source reports no load, and the rows' reading on one that does", () => {
+    // Act
+    const unreported = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), NO_ALIASES);
+    const reported = toLiveJongroGroup("gyeonggi7800", reading7800({ ...CAPABILITIES_7800, occupancy: true }), NO_ALIASES);
+
+    // Assert
+    expect(unreported.vehicles).toHaveLength(15);
+    expect(unreported.vehicles.filter(({ occupancy }) => occupancy !== null)).toEqual([]);
+    expect(reported.vehicles.find(({ id }) => id === "200011532")?.occupancy).toEqual({ level: "relaxed", passengerCount: 0 });
   });
 });

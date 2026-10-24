@@ -1,5 +1,6 @@
 import crypto from "crypto";
-import type { IndexedStop } from "../stop-index/bus-stop-index.types";
+import { JONGRO_ROUTES } from "../bus.constants";
+import type { IndexedPole, IndexedStop } from "../stop-index/bus-stop-index.types";
 import { JONGRO_POLE_CAMPUS } from "./bus-stop-list.constants";
 import type { StopCampus } from "./bus-stop-list.types";
 import type { BusStopList } from "./bus-stop-list.wire";
@@ -7,6 +8,11 @@ import type { BusStopList } from "./bus-stop-list.wire";
 /** WHY: a catalog stop's own campus, else HSSC for a stop standing at a Jongno pole, else none until a push sets one. */
 export function toStopCampus({ localStop, poles }: Pick<IndexedStop, "localStop" | "poles">): StopCampus | null {
   return localStop?.campus ?? (poles.length > 0 ? JONGRO_POLE_CAMPUS : null);
+}
+
+// WHY: only the Jongno routes serve the HSSC campus; a regional route's pole (7800's Sadang ones) files its stop under none.
+export function toCampusPoles({ poles, routes }: Pick<IndexedStop, "poles" | "routes">): IndexedPole[] {
+  return routes.some((route) => route.kind === "jongro" && JONGRO_ROUTES.some(({ id }) => id === route.groupId)) ? poles : [];
 }
 
 // WHY: the body derives from the stops' revision, each stations version and each path version, so its hash moves with them.

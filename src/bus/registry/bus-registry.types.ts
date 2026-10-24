@@ -24,6 +24,8 @@ export interface RegistryRoute extends JongroRoute {
   readonly stations: ReadonlyArray<JongroStation>;
   readonly mapping: Readonly<JongroStationMapping>;
   readonly topisIds: ReadonlyArray<string>;
+  /** WHY: the ords of the stations a bus passes without stopping, which stops away leave out (ADR 0019, D4). */
+  readonly passThroughOrds: ReadonlySet<number>;
 }
 
 export type StationAt = Pick<RegistryStation, "topisId" | "stationName"> & { ord: number };

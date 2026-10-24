@@ -7,7 +7,11 @@
  * production served from the committed route file on 2026-10-20
  * (fixtures/jongro-attributes-production.capture.json, source commit d856f333);
  * `/bus/realtime/data/jongro02`, `jongro07` and `jongro08` answer the crowding
- * each route's seat count gives the passenger counts seeded below.
+ * each route's seat count gives the passenger counts seeded below, and
+ * `/bus/live/jongro02`, `jongro07` and `jongro08` and the stop pages of four
+ * Jongro poles the occupancy it gives them, in the bodies pinned on commit
+ * 64062a50 before the TOPIS route list held each route's code and
+ * capabilities (fixtures/jongro-live-pinned.json).
  *
  * The app boots every module `src/app.module.ts` imports under `src/scheduling/`, `src/bus/`,
  * `src/ui/transit-list/` and `src/ui/transit/`, as an api replica, through the
@@ -43,6 +47,7 @@ import request from "supertest";
 import type { BusCacheDocument } from "../../../src/bus/cache/bus-cache.document";
 import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";
 import { Clock } from "../../../src/infra/clock";
+import { toKstInstant } from "../../../src/shared/kst-date.util";
 import { jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, noArrivalBus } from "../../helpers/bus/bus-cache-docs";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
@@ -50,6 +55,7 @@ import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../help
 import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
 import { withLineDirections, withoutLineDirections } from "../../helpers/bus/line-directions";
 import captured from "./fixtures/jongro-attributes-production.capture.json";
+import pinnedLive from "./fixtures/jongro-live-pinned.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -632,4 +638,43 @@ describe("GET /bus/realtime/data/:groupId for the Jongro routes", () => {
       expect(res.headers.etag).toBe(weakEtagOf(res.text));
     },
   );
+});
+
+/** A body pinned in fixtures/jongro-live-pinned.json, its `<cacheWrittenAt>` read as the seeded rows' write time. */
+function pinnedBody(pinned: unknown): unknown {
+  return JSON.parse(JSON.stringify(pinned).replaceAll('"<cacheWrittenAt>"', JSON.stringify(toKstInstant(CACHE_UPDATED_AT.getTime()))));
+}
+
+describe("GET /bus/live/:groupId for the Jongro routes", () => {
+  it.each(LANGS.flatMap((lang) => ROUTE_IDS.map((routeId) => [lang, routeId] as const)))("answers in %s for %s the body pinned before the TOPIS route list, uncached", async (lang, routeId) => {
+    // Arrange
+    const expected = pinnedBody(pinnedLive.live[lang][routeId]);
+
+    // Act
+    const res = await get(`/bus/live/${routeId}`, lang);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expected);
+    expect(res.text).toBe(JSON.stringify(expected));
+    expect(res.headers["cache-control"]).toBe("no-store");
+  });
+});
+
+describe("GET /bus/stops/:stopId/arrivals at Jongro poles", () => {
+  const STOP_IDS = ["seoul-01619", "seoul-01525", "seoul-01618", "seoul-01520"] as const;
+
+  it.each(LANGS.flatMap((lang) => STOP_IDS.map((stopId) => [lang, stopId] as const)))("answers in %s for %s the body pinned before the TOPIS route list, uncached", async (lang, stopId) => {
+    // Arrange
+    const expected = pinnedBody(pinnedLive.stopArrivals[lang][stopId]);
+
+    // Act
+    const res = await get(`/bus/stops/${stopId}/arrivals`, lang);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(expected);
+    expect(res.text).toBe(JSON.stringify(expected));
+    expect(res.headers["cache-control"]).toBe("no-store");
+  });
 });

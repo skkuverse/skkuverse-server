@@ -1,0 +1,2194 @@
+{
+  "_about": "Hand-written pin, not captured from production: what GET /bus/live/jongro02, jongro07 and jongro08 and the stop pages of seoul-01619, seoul-01525, seoul-01618 and seoul-01520 answered in ko, en and zh at commit 64062a50 (2026-10-24), before the TOPIS route list gave each route an explicit code and capabilities, over the bus_cache rows jongro-attributes-characterization.routes.test.ts seeds. `<cacheWrittenAt>` stands for the seeded rows' write time, which that test sets from the wall clock.",
+  "live": {
+    "ko": {
+      "jongro02": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro02",
+          "stationsVersion": "76d8e6770cda23aa",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000201",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": 18
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 1,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:10:40+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 1.5
+                },
+                {
+                  "at": "2026-10-20T09:10:40+09:00",
+                  "s": 2
+                },
+                {
+                  "at": "2026-10-20T09:12:40+09:00",
+                  "s": 3
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 0,
+              "stopId": "seoul-01881",
+              "arsId": "01881",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 2,
+              "stopId": "seoul-01525",
+              "arsId": "01525",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "2분10초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 3,
+              "stopId": "seoul-01536",
+              "arsId": "01536",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:12:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "4분10초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "jongro07": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro07",
+          "stationsVersion": "0346768f2b776f45",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000207",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "normal",
+                "passengerCount": 27
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 0,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:10:05+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 0.5
+                },
+                {
+                  "at": "2026-10-20T09:10:05+09:00",
+                  "s": 1
+                },
+                {
+                  "at": "2026-10-20T09:11:50+09:00",
+                  "s": 2
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 1,
+              "stopId": "seoul-01618",
+              "arsId": "01618",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:05+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "1분35초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 2,
+              "stopId": "seoul-01619",
+              "arsId": "01619",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:11:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "3분20초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "jongro08": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro08",
+          "stationsVersion": "52e82cc449046288",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000208",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": 0
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 0,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:09:30+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 0.5
+                },
+                {
+                  "at": "2026-10-20T09:09:30+09:00",
+                  "s": 1
+                }
+              ]
+            },
+            {
+              "id": "100000209",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": null
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 2,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:13:30+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 2.5
+                },
+                {
+                  "at": "2026-10-20T09:13:30+09:00",
+                  "s": 3
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 1,
+              "stopId": "seoul-01511",
+              "arsId": "01511",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "arriving",
+                  "expectedArrivalAt": "2026-10-20T09:09:30+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000208",
+                  "providerText": "곧 도착"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 3,
+              "stopId": "seoul-01531",
+              "arsId": "01531",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:13:30+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000209",
+                  "providerText": "5분후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "en": {
+      "jongro02": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro02",
+          "stationsVersion": "76d8e6770cda23aa",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000201",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": 18
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 1,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:10:40+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 1.5
+                },
+                {
+                  "at": "2026-10-20T09:10:40+09:00",
+                  "s": 2
+                },
+                {
+                  "at": "2026-10-20T09:12:40+09:00",
+                  "s": 3
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 0,
+              "stopId": "seoul-01881",
+              "arsId": "01881",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 2,
+              "stopId": "seoul-01525",
+              "arsId": "01525",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "2분10초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 3,
+              "stopId": "seoul-01536",
+              "arsId": "01536",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:12:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "4분10초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "jongro07": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro07",
+          "stationsVersion": "0346768f2b776f45",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000207",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "normal",
+                "passengerCount": 27
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 0,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:10:05+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 0.5
+                },
+                {
+                  "at": "2026-10-20T09:10:05+09:00",
+                  "s": 1
+                },
+                {
+                  "at": "2026-10-20T09:11:50+09:00",
+                  "s": 2
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 1,
+              "stopId": "seoul-01618",
+              "arsId": "01618",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:05+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "1분35초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 2,
+              "stopId": "seoul-01619",
+              "arsId": "01619",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:11:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "3분20초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "jongro08": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro08",
+          "stationsVersion": "52e82cc449046288",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000208",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": 0
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 0,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:09:30+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 0.5
+                },
+                {
+                  "at": "2026-10-20T09:09:30+09:00",
+                  "s": 1
+                }
+              ]
+            },
+            {
+              "id": "100000209",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": null
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 2,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:13:30+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 2.5
+                },
+                {
+                  "at": "2026-10-20T09:13:30+09:00",
+                  "s": 3
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 1,
+              "stopId": "seoul-01511",
+              "arsId": "01511",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "arriving",
+                  "expectedArrivalAt": "2026-10-20T09:09:30+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000208",
+                  "providerText": "곧 도착"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 3,
+              "stopId": "seoul-01531",
+              "arsId": "01531",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:13:30+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000209",
+                  "providerText": "5분후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "zh": {
+      "jongro02": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro02",
+          "stationsVersion": "76d8e6770cda23aa",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000201",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": 18
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 1,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:10:40+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 1.5
+                },
+                {
+                  "at": "2026-10-20T09:10:40+09:00",
+                  "s": 2
+                },
+                {
+                  "at": "2026-10-20T09:12:40+09:00",
+                  "s": 3
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 0,
+              "stopId": "seoul-01881",
+              "arsId": "01881",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 2,
+              "stopId": "seoul-01525",
+              "arsId": "01525",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "2분10초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 3,
+              "stopId": "seoul-01536",
+              "arsId": "01536",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:12:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "4분10초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "jongro07": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro07",
+          "stationsVersion": "0346768f2b776f45",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000207",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "normal",
+                "passengerCount": 27
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 0,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:10:05+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 0.5
+                },
+                {
+                  "at": "2026-10-20T09:10:05+09:00",
+                  "s": 1
+                },
+                {
+                  "at": "2026-10-20T09:11:50+09:00",
+                  "s": 2
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 1,
+              "stopId": "seoul-01618",
+              "arsId": "01618",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:05+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "1분35초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 2,
+              "stopId": "seoul-01619",
+              "arsId": "01619",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:11:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "3분20초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "jongro08": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "groupId": "jongro08",
+          "stationsVersion": "52e82cc449046288",
+          "updatedAt": "<cacheWrittenAt>",
+          "operation": "running",
+          "vehicles": [
+            {
+              "id": "100000208",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": 0
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 0,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:09:30+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 0.5
+                },
+                {
+                  "at": "2026-10-20T09:09:30+09:00",
+                  "s": 1
+                }
+              ]
+            },
+            {
+              "id": "100000209",
+              "plateNumber": "서울74사5537",
+              "occupancy": {
+                "level": "relaxed",
+                "passengerCount": null
+              },
+              "isLastBus": false,
+              "isLowFloor": null,
+              "position": {
+                "stationIndex": 2,
+                "status": "inTransit",
+                "progress": 0.5,
+                "sectionMeters": 300,
+                "coords": {
+                  "lat": 37.587,
+                  "lng": 126.998
+                },
+                "nextStationAt": "2026-10-20T09:13:30+09:00",
+                "positionAt": "2026-10-20T09:08:30+09:00",
+                "checkedAt": "<cacheWrittenAt>"
+              },
+              "trajectory": [
+                {
+                  "at": "2026-10-20T09:08:30+09:00",
+                  "s": 2.5
+                },
+                {
+                  "at": "2026-10-20T09:13:30+09:00",
+                  "s": 3
+                }
+              ]
+            }
+          ],
+          "stations": [
+            {
+              "stationIndex": 1,
+              "stopId": "seoul-01511",
+              "arsId": "01511",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "arriving",
+                  "expectedArrivalAt": "2026-10-20T09:09:30+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000208",
+                  "providerText": "곧 도착"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            },
+            {
+              "stationIndex": 3,
+              "stopId": "seoul-01531",
+              "arsId": "01531",
+              "operation": "running",
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:13:30+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000209",
+                  "providerText": "5분후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "stopArrivals": {
+    "ko": {
+      "seoul-01619": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01619",
+            "name": "비천당",
+            "arsIds": [
+              "01619"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro07",
+              "label": "종로 07",
+              "stationIndex": 2,
+              "towards": "성균관대정문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "0346768f2b776f45",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000207",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "normal",
+                    "passengerCount": 27
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 0,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:05+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 0.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:05+09:00",
+                      "s": 1
+                    },
+                    {
+                      "at": "2026-10-20T09:11:50+09:00",
+                      "s": 2
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:11:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "3분20초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01525": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01525",
+            "name": "통일부",
+            "arsIds": [
+              "01525"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro02",
+              "label": "종로 02",
+              "stationIndex": 2,
+              "towards": "감사원",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "76d8e6770cda23aa",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000201",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "relaxed",
+                    "passengerCount": 18
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 1,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:40+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 1.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:40+09:00",
+                      "s": 2
+                    },
+                    {
+                      "at": "2026-10-20T09:12:40+09:00",
+                      "s": 3
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "2분10초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01618": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01618",
+            "name": "학생회관",
+            "arsIds": [
+              "01618"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro07",
+              "label": "종로 07",
+              "stationIndex": 1,
+              "towards": "비천당",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "0346768f2b776f45",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000207",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "normal",
+                    "passengerCount": 27
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 0,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:05+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 0.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:05+09:00",
+                      "s": 1
+                    },
+                    {
+                      "at": "2026-10-20T09:11:50+09:00",
+                      "s": 2
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:05+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "1분35초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01520": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01520",
+            "name": "양현관",
+            "arsIds": [
+              "01520"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro08",
+              "label": "종로 08",
+              "stationIndex": 2,
+              "towards": "명륜시장.성대후문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "52e82cc449046288",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "noData",
+              "vehicles": [],
+              "arrivals": []
+            }
+          ]
+        }
+      }
+    },
+    "en": {
+      "seoul-01619": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01619",
+            "name": "비천당",
+            "arsIds": [
+              "01619"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro07",
+              "label": "Jongro 07",
+              "stationIndex": 2,
+              "towards": "성균관대정문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "0346768f2b776f45",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000207",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "normal",
+                    "passengerCount": 27
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 0,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:05+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 0.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:05+09:00",
+                      "s": 1
+                    },
+                    {
+                      "at": "2026-10-20T09:11:50+09:00",
+                      "s": 2
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:11:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "3분20초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01525": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01525",
+            "name": "통일부",
+            "arsIds": [
+              "01525"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro02",
+              "label": "Jongro 02",
+              "stationIndex": 2,
+              "towards": "감사원",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "76d8e6770cda23aa",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000201",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "relaxed",
+                    "passengerCount": 18
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 1,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:40+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 1.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:40+09:00",
+                      "s": 2
+                    },
+                    {
+                      "at": "2026-10-20T09:12:40+09:00",
+                      "s": 3
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "2분10초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01618": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01618",
+            "name": "학생회관",
+            "arsIds": [
+              "01618"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro07",
+              "label": "Jongro 07",
+              "stationIndex": 1,
+              "towards": "비천당",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "0346768f2b776f45",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000207",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "normal",
+                    "passengerCount": 27
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 0,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:05+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 0.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:05+09:00",
+                      "s": 1
+                    },
+                    {
+                      "at": "2026-10-20T09:11:50+09:00",
+                      "s": 2
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:05+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "1분35초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01520": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01520",
+            "name": "양현관",
+            "arsIds": [
+              "01520"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro08",
+              "label": "Jongro 08",
+              "stationIndex": 2,
+              "towards": "명륜시장.성대후문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "52e82cc449046288",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "noData",
+              "vehicles": [],
+              "arrivals": []
+            }
+          ]
+        }
+      }
+    },
+    "zh": {
+      "seoul-01619": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01619",
+            "name": "비천당",
+            "arsIds": [
+              "01619"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro07",
+              "label": "钟路 07",
+              "stationIndex": 2,
+              "towards": "성균관대정문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "0346768f2b776f45",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000207",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "normal",
+                    "passengerCount": 27
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 0,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:05+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 0.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:05+09:00",
+                      "s": 1
+                    },
+                    {
+                      "at": "2026-10-20T09:11:50+09:00",
+                      "s": 2
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:11:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "3분20초후[2번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01525": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01525",
+            "name": "통일부",
+            "arsIds": [
+              "01525"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro02",
+              "label": "钟路 02",
+              "stationIndex": 2,
+              "towards": "감사원",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "76d8e6770cda23aa",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000201",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "relaxed",
+                    "passengerCount": 18
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 1,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:40+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 1.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:40+09:00",
+                      "s": 2
+                    },
+                    {
+                      "at": "2026-10-20T09:12:40+09:00",
+                      "s": 3
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:40+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000201",
+                  "providerText": "2분10초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01618": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01618",
+            "name": "학생회관",
+            "arsIds": [
+              "01618"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro07",
+              "label": "钟路 07",
+              "stationIndex": 1,
+              "towards": "비천당",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "0346768f2b776f45",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "running",
+              "vehicles": [
+                {
+                  "id": "100000207",
+                  "plateNumber": "서울74사5537",
+                  "occupancy": {
+                    "level": "normal",
+                    "passengerCount": 27
+                  },
+                  "isLastBus": false,
+                  "isLowFloor": null,
+                  "position": {
+                    "stationIndex": 0,
+                    "status": "inTransit",
+                    "progress": 0.5,
+                    "sectionMeters": 300,
+                    "coords": {
+                      "lat": 37.587,
+                      "lng": 126.998
+                    },
+                    "nextStationAt": "2026-10-20T09:10:05+09:00",
+                    "positionAt": "2026-10-20T09:08:30+09:00",
+                    "checkedAt": "<cacheWrittenAt>"
+                  },
+                  "trajectory": [
+                    {
+                      "at": "2026-10-20T09:08:30+09:00",
+                      "s": 0.5
+                    },
+                    {
+                      "at": "2026-10-20T09:10:05+09:00",
+                      "s": 1
+                    },
+                    {
+                      "at": "2026-10-20T09:11:50+09:00",
+                      "s": 2
+                    }
+                  ]
+                }
+              ],
+              "arrivals": [
+                {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T09:10:05+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "isLastBus": false,
+                  "vehicleId": "100000207",
+                  "providerText": "1분35초후[1번째 전]"
+                },
+                {
+                  "status": "waitingToDepart",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": null,
+                  "isLastBus": false,
+                  "vehicleId": null,
+                  "providerText": "출발대기"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "seoul-01520": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "seoul-01520",
+            "name": "양현관",
+            "arsIds": [
+              "01520"
+            ]
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro08",
+              "label": "钟路 08",
+              "stationIndex": 2,
+              "towards": "명륜시장.성대후문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "52e82cc449046288",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "noData",
+              "vehicles": [],
+              "arrivals": []
+            }
+          ]
+        }
+      }
+    }
+  }
+}

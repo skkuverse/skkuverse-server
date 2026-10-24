@@ -24,6 +24,7 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | `SHUTTLE_ETA` | `off` | `on` | No NAVER Directions or TMAP call: the 인자셔틀 arrival-estimate jobs, which use metered keys, do not run. Smart schedules still apply whatever estimates `bus_campus_dev.shuttle_eta` holds. Production may set it `off`. |
 | `SUBWAY` | `off` | `on` | No Seoul subway API call or train-map crawl: the subway pollers do not run. The API key and its daily quota are shared with production. Production may set it `off`. |
 | `SHUTTLE` | `off` | `on` | (A collector detail is left out of the public history.) |
+| `REGIONAL_BUS` | `off` | `on` | No TOPIS call for the regional routes (7800): neither its realtime poller (`jongro-7800`) nor its daily line sync (`jongro-path-7800`) runs. On a database where no 7800 poller ever stored its stations (a laptop's `_dev`), `/bus/live/gyeonggi7800` answers `503 JONGRO_REGISTRY_UNAVAILABLE` and logs `bus.jongro.registry_missing` at most every 30 s; where they are stored, it answers `noData`, as for a stopped poller. The key's daily quota per operation is production's too, with 272 arrival calls a day to spare. Production may set it `off`. |
 
 `CACHE=off` leaves two caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 

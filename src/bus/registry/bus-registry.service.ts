@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
+import { createLogThrottle } from "../../infra/log-throttle";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
+import { TOPIS_ROUTES } from "../bus.constants";
 import type { JongroRoute } from "../bus.types";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
 import { BusRegistryBootstrappingError, BusRegistryMissingError } from "./bus-registry.error";
@@ -32,22 +32,30 @@ export class BusRegistryService {
   private readonly loaders = new Map<string, CachedLoader<RegistryRoute>>();
   private readonly pendingByRouteId = new Map<string, PendingObservation>();
   private readonly heldVersions = new Set<string>();
+  // WHY: the loader caches no miss, so a route that stays missing is read, and would be logged, on every request; one
+  // line per route each REGISTRY_TTL_MS, as often as a stored route is read again.
+  private readonly missingThrottle = createLogThrottle(REGISTRY_TTL_MS);
 
   constructor(
     private readonly repository: BusRegistryRepository,
     private readonly clock: Clock,
   ) {}
 
+  // WHY: the routes /bus/config lists; an unlisted route is read by id only, so its missing document never fails the config.
   listRoutes(): Promise<RegistryRoute[]> {
-    return Promise.all(JONGRO_ROUTES.map((route) => this.routeOf(route.id)));
+    return Promise.all(TOPIS_ROUTES.filter((route) => route.isListed).map((route) => this.routeOf(route.id)));
   }
 
   async routeOf(routeId: string): Promise<RegistryRoute> {
     try {
       return await this.loaderOf(routeId).get();
     } catch (err) {
-      if (err instanceof BusRegistryMissingError) {
-        logger.error({ event: "bus.jongro.registry_missing", routeId }, "Jongro registry route missing — see docs/how-to/resync-the-jongro-registry.md");
+      const ticket = err instanceof BusRegistryMissingError ? this.missingThrottle.take(routeId) : null;
+      if (ticket) {
+        logger.error(
+          { event: "bus.jongro.registry_missing", routeId, suppressed: ticket.suppressed },
+          "Jongro registry route missing — see docs/how-to/resync-the-jongro-registry.md",
+        );
       }
       throw err;
     }
@@ -147,10 +155,10 @@ export class BusRegistryService {
   }
 
   private async loadRoute(routeId: string): Promise<RegistryRoute> {
-    const identity = JONGRO_ROUTES.find((entry) => entry.id === routeId);
+    const identity = TOPIS_ROUTES.find((entry) => entry.id === routeId);
     if (identity === undefined) throw new Error(`Unknown Jongro route ${routeId}`);
     const doc = await this.repository.findRoute(routeId);
     if (doc === null) throw new BusRegistryMissingError(routeId);
-    return toRegistryRoute(toJongroRoute(identity), doc);
+    return toRegistryRoute(identity, doc);
   }
 }

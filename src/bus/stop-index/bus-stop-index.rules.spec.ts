@@ -16,7 +16,7 @@ import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import { hasPoleAliases, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
 
-type FixtureStop = { id: string; arsIds?: string[] };
+type FixtureStop = { id: string; arsIds?: string[]; topisIds?: string[] };
 
 async function snapshotOf(edit: (data: { stops: FixtureStop[] }) => void = () => undefined): Promise<BusStopsSnapshot> {
   const data = busStopsFixture() as unknown as { stops: FixtureStop[] };
@@ -60,6 +60,19 @@ describe("hasPoleAliases", () => {
 
     // Act & Assert
     expect(hasPoleAliases(snapshot, stopId)).toBe(expected);
+  });
+
+  it.each([
+    [["200000162"], true],
+    [[], false],
+  ])("reads hssc-bus-lot with topisIds %j and no arsIds as %s", async (topisIds, expected) => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.topisIds = topisIds;
+    });
+
+    // Act & Assert
+    expect(hasPoleAliases(snapshot, "hssc-bus-lot")).toBe(expected);
   });
 });
 
@@ -243,6 +256,109 @@ describe("toStopIndex", () => {
     // Assert
     expect(routesAt(index, "seoul-01999")).toEqual([{ kind: "jongro", groupId: "jongro08", stationIndex: 30, towards: null, stationsVersion: versionOf(routes, "jongro08") }]);
     expect(index.stopById.has("seoul-01543")).toBe(false);
+  });
+
+  it("resolves a pole aliased by its TOPIS station to its local stop, whose ARS number then names that stop too", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.topisIds = ["100900221"];
+    });
+    const routes = await routesOf();
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.stopIdByArsId.get("01618")).toBe("hssc-bus-lot");
+    expect(index.stopById.has("seoul-01618")).toBe(false);
+    expect(index.stopById.get("hssc-bus-lot")).toMatchObject({ localStop: { id: "hssc-bus-lot" }, poles: [{ arsId: "01618", topisId: "100900221", stationName: "학생회관" }] });
+    expect(routesAt(index, "hssc-bus-lot")?.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
+    expect(index.unmatchedTopisIds).toEqual([]);
+  });
+
+  it("resolves a pole with no ARS number through its TOPIS alias, and gives it no ARS number", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-600th")!.topisIds = ["100000424"];
+    });
+    const routes = await routesOf((repository) => {
+      repository.routes.get("jongro07")!.stations[2]!.arsId = "0";
+    });
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(routesAt(index, "hssc-600th")?.at(-1)).toEqual({ kind: "jongro", groupId: "jongro07", stationIndex: 2, towards: "성균관대정문", stationsVersion: versionOf(routes, "jongro07") });
+    expect(index.stopById.get("hssc-600th")?.poles).toEqual([{ arsId: null, topisId: "100000424", stationName: "비천당" }]);
+  });
+
+  it("lets a TOPIS alias win over another stop's ARS alias of the same pole", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-600th")!.arsIds = ["01618"];
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.topisIds = ["100900221"];
+    });
+    const routes = await routesOf();
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.stopIdByArsId.get("01618")).toBe("hssc-bus-lot");
+    expect(routesAt(index, "hssc-600th")?.map((route) => route.groupId)).toEqual(["campus", "campus"]);
+  });
+
+  it("names another stop's ARS alias of a pole a TOPIS alias claims as serving nothing", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-600th")!.arsIds = ["01618"];
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.topisIds = ["100900221"];
+    });
+    const routes = await routesOf();
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.unmatchedArsIds).toEqual(["01618"]);
+    expect(index.unmatchedTopisIds).toEqual([]);
+  });
+
+  it("serves nothing for a TOPIS alias no stored station has, and names it", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-600th")!.topisIds = ["200000162"];
+    });
+    const routes = await routesOf();
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.unmatchedTopisIds).toEqual(["200000162"]);
+    expect(index.unmatchedArsIds).toEqual([]);
+    expect(index.stopById.get("hssc-600th")?.poles).toEqual([]);
+  });
+
+  it("indexes only the aliased poles of a route /bus/config does not list", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.arsIds = ["01618"];
+      data.stops.find((stop) => stop.id === "hssc-600th")!.topisIds = ["100000424"];
+    });
+    const routes = (await routesOf()).map((route) => (route.id === "jongro07" ? { ...route, isListed: false } : route));
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(routesAt(index, "hssc-bus-lot")?.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
+    expect(routesAt(index, "hssc-600th")?.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
+    expect(routesAt(index, "seoul-01592")?.map((route) => route.groupId)).toEqual(["jongro08"]);
+    expect(index.stopById.has("seoul-01616")).toBe(false);
+    expect(index.stopIdByArsId.has("01616")).toBe(false);
+    expect([...index.stopById.values()].flatMap((stop) => stop.routes).filter((route) => route.groupId === "jongro07")).toHaveLength(2);
   });
 
   it("lists only the routes it is given", async () => {

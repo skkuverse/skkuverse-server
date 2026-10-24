@@ -21,4 +21,7 @@ export const MAX_FIRST_KNOT_FRACTION = 0.999;
 // RFC 9745 date, @ and Unix seconds. Sunset is added once a removal date is set.
 export const REALTIME_ROUTE_DEPRECATION = "@1792594800";
 
+// WHY: the frozen route serves the Jongro routes it served when frozen (ADR 0019, D11), never a TOPIS route added later.
+export const FROZEN_JONGRO_ROUTE_IDS: readonly string[] = ["jongro02", "jongro07", "jongro08"];
+
 export const DEPRECATED_CALL_LOG_INTERVAL_MS = 60 * 60_000;

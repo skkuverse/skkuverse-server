@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
-import { JONGRO_ROUTES } from "../bus.constants";
+import { TOPIS_ROUTES } from "../bus.constants";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusRouteAttributesService } from "../route-attributes/bus-route-attributes.service";
@@ -15,7 +15,7 @@ import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import { HAS_STOP_MAPS_BY_GROUP } from "./bus-config.config";
 import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS, STOP_GROUP_IDS } from "./bus-config.constants";
 import { toBusGroupIds, toBusGroups } from "./bus-config.mapper";
-import { toJongroDirections, toStationDirection } from "./bus-config.rules";
+import { toJongroDirections, toLineStationDirection, toStationDirection } from "./bus-config.rules";
 import type { AttributedJongroRoute, PlacedStation, StationDirection } from "./bus-config.types";
 import type { BusGroup } from "./bus-config.wire";
 
@@ -33,7 +33,7 @@ type JongroSources = Omit<GroupSources, "stops">;
 const NO_JONGRO_SOURCES: JongroSources = { routes: [], attributes: null, pathStationsByRouteId: new Map() };
 
 // WHY: a group that reads no stops is built beside shuttle groups from none, which its lookup by id drops.
-const NO_STOPS: BusStopsSnapshot = { revision: 0, catalog: { stops: [], sequences: {} }, hssc: [], stopIdByArsId: new Map() };
+const NO_STOPS: BusStopsSnapshot = { revision: 0, catalog: { stops: [], sequences: {} }, hssc: [], stopIdByArsId: new Map(), stopIdByTopisId: new Map() };
 
 @Injectable()
 export class BusConfigService {
@@ -49,7 +49,7 @@ export class BusConfigService {
 
   // WHY: route ids never change at runtime, so the ids need no registry read and serve a boot-time check.
   listGroupIds(): string[] {
-    return toBusGroupIds(JONGRO_ROUTES);
+    return toBusGroupIds(TOPIS_ROUTES);
   }
 
   async getBusGroups(lang: SupportedLang = "ko"): Promise<BusGroup[]> {
@@ -73,8 +73,9 @@ export class BusConfigService {
   }
 
   // WHY: a direction adds to a stop page entry, so a group that cannot be built (another route's registry missing)
-  // names none; the registry and the attributes log their own failures.
+  // names none; the registry and the attributes log their own failures. An unlisted route has no group to build.
   async findStationDirection(id: string, { stationIndex, stationsVersion }: PlacedStation, lang: SupportedLang): Promise<StationDirection | null> {
+    if (TOPIS_ROUTES.some((route) => route.id === id && !route.isListed)) return this.findUnlistedStationDirection(id, { stationIndex, stationsVersion }, lang).catch(() => null);
     const group = await this.getGroupById(id, lang).catch(() => null);
     return toStationDirection(group, stationIndex, stationsVersion);
   }
@@ -91,6 +92,12 @@ export class BusConfigService {
     return etag;
   }
 
+  private async findUnlistedStationDirection(id: string, { stationIndex, stationsVersion }: PlacedStation, lang: SupportedLang): Promise<StationDirection | null> {
+    const [route, routePath] = await Promise.all([this.registry.routeOf(id), this.routePaths.findRoutePath(id)]);
+    if (route.stationsVersion !== stationsVersion) return null;
+    return toLineStationDirection(toJongroDirections(route.registryStations, routePath?.stations, lang), stationIndex);
+  }
+
   private async readSources(): Promise<GroupSources> {
     const stops = await this.stops.current();
     const attributes = await this.routeAttributes.findCurrent();
@@ -101,7 +108,7 @@ export class BusConfigService {
   // WHY: a Jongro group answers its realtime route's 503 when the attributes were never read or lack its route
   // (ADR 0013, D6), and a group that names stops, a Jongro one's by alias, the stops' 503 when they were never read.
   private async readGroupSources(id: string): Promise<GroupSources> {
-    const isJongroGroup = JONGRO_ROUTES.some((route) => route.id === id);
+    const isJongroGroup = TOPIS_ROUTES.some((route) => route.isListed && route.id === id);
     const stops = isJongroGroup || STOP_GROUP_IDS.includes(id) ? await this.stops.current() : NO_STOPS;
     if (!isJongroGroup) return { ...NO_JONGRO_SOURCES, stops };
     await this.routeAttributes.attributesOf(id);

@@ -3,7 +3,7 @@ title: Bus Live API — One Arrival Shape for Every Source
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-24
 audience: internal
 ---
 
@@ -36,7 +36,7 @@ Every key is always present, and what a source cannot supply is null, never a mi
 
 ### D4. Stops away counts stops, not positions
 
-`stopsAway` is the stations with a stop the bus reaches before this one, plus one: `1` means this is its next stop, `0` that it stands here. Positions where no one boards (the HSSC's two Hyehwa Rotary passes) are never counted, so a rider reads the number as stops. A bus that just left a station is a lap away on a loop, and on the HSSC, whose lap crosses the layover, it is `waitingToDepart`. On Jongno it is one more than TOPIS's own count, `staOrd − sectOrd`, the `N` of its `[N번째 전]`: an arrival row's `sectOrd` is the staOrd of the bus's next stop (TOPIS's same-moment rows and positions, 2026-10-17 and 2026-10-22), so 곧 도착 is `1`. The first draft served TOPIS's count as is, one short, until the app caught it on 2026-10-22. TOPIS drops a bus from its station's row once it stands there, so a Jongno bus whose position stands at a station is served there from its position, first, `arriving` and `0` (D14; the first version served it `atStop`, and only where a row still named it).
+`stopsAway` is the stations with a stop the bus reaches before this one, plus one: `1` means this is its next stop, `0` that it stands here. Positions where no one boards (the HSSC's two Hyehwa Rotary passes) are never counted, so a rider reads the number as stops. A bus that just left a station is a lap away on a loop, and on the HSSC, whose lap crosses the layover, it is `waitingToDepart`. On Jongno it is one more than TOPIS's own count, `staOrd − sectOrd`, the `N` of its `[N번째 전]`: an arrival row's `sectOrd` is the staOrd of the bus's next stop (TOPIS's same-moment rows and positions, 2026-10-17 and 2026-10-22), so 곧 도착 is `1`. TOPIS also counts the stations a route passes through without stopping, named `…(미정차)` (19 of 7800's 80, 2026-10-24; none on Jongno), so those between are taken out. The first draft served TOPIS's count as is, one short, until the app caught it on 2026-10-22. TOPIS drops a bus from its station's row once it stands there, so a Jongno bus whose position stands at a station is served there from its position, first, `arriving` and `0` (D14; the first version served it `atStop`, and only where a row still named it).
 
 ### D5. stationIndex is the key; stopId and arsId are not
 
@@ -44,8 +44,10 @@ Every key is always present, and what a source cannot supply is null, never a mi
 - `stopId` is opaque and nullable on every live station, so a client opens a stop page without `/bus/config`. It resolves aliases and can change with a `bus-stops` push, so it is never a key and never derived by a client.
 - `arsId` is display only: the number on a TOPIS pole's sign, which tells same-named poles apart. Null on the HSSC, whose stops show none.
 - The HSSC feed's `stop_no` is never used: it differs per line for one stop. Only `seq` is stable.
+- Added 2026-10-24, for 7800: a local stop may alias a pole by its TOPIS station id (`topisIds` in `bus-stops`) beside its ARS number (`arsIds`), since TOPIS gives some poles none (7800's 성균관대학교, `200000162` toward 사당 and `200000159` toward 수원, both `arsId` `0`). A station's `stopId` is the local stop aliasing its station id, else its ARS number, else `seoul-<arsId>`; a push refuses a station id claimed twice, as it refuses an ARS number.
+- A route `/bus/config` does not list (`isListed: false` in the TOPIS route list, 7800 for now) names only the poles a local stop aliases, on the live route and in the stop index: its other stations serve `stopId: null` and add no `seoul-` stop to `GET /bus/stops`, which installed apps list. A listed route keeps the rule above.
 
-Agreed with the session that owns the stop catalog, 2026-10-22.
+Agreed with the session that owns the stop catalog, 2026-10-22; the TOPIS alias and the unlisted rule by the owner, 2026-10-24 (Q3 of [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md)).
 
 ### D6. One vehicle object per bus; two clocks on its position
 
