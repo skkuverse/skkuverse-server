@@ -18,7 +18,7 @@ const listedStation = z.object({
   id: z.string(),
   /** WHY: the name with the suffix the request language writes (`혜화역`, `Hyehwa Station`), as the transit tab titles it. */
   title: z.string(),
-  /** WHY: the campus whose riders the station serves, the enum the bus stop list's `campus` takes; never null for a station. */
+  /** WHY: the campus whose riders the station serves, the enum the bus stop list's `campus` takes. */
   campus,
   /** WHY: one per platform, in the station's platform order. */
   lines: z.array(subwayLine),
