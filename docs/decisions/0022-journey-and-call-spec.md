@@ -189,4 +189,4 @@ A stored field a new release adds is optional on read, because api replicas depl
 ## Related
 
 - [ADR 0010](0010-server-architecture.md), [ADR 0012](0012-runtime-roles.md), [ADR 0013](0013-runtime-data-in-mongodb.md), [ADR 0017](0017-subway-arrivals.md), [ADR 0019](0019-bus-live-api.md)
-- [transit-route-planner.md](../plans/transit-route-planner.md): the planner, the dataset and the PR sequence, to be rewritten against this ADR
+- [transit-route-planner.md](../plans/transit-route-planner.md): the implementation plan: the planner, the dataset and the PR sequence
