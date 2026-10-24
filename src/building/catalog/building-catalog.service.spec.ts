@@ -9,8 +9,7 @@
 import { FakeBuildingCatalogRepository } from "../../../__tests__/helpers/fakes/building/building-catalog.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
-import type { BuildingDoc, SpaceDoc } from "../building.document";
-import type { CafeteriaDoc } from "../cafeteria/building-cafeteria.document";
+import type { BuildingDoc, CafeteriaDoc, SpaceDoc } from "../building.document";
 import type { BuildingRepository } from "../building.repository";
 import type { SkkuId } from "../building.types";
 import type { ConnectionEnds } from "./building-catalog.document";

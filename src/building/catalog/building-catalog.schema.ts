@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { campusFilter } from "../building.schema";
+import { cafeteriaDoc, campusFilter } from "../building.schema";
 import { isSkkuId } from "../building.rules";
-import type { ConnectionEnds } from "./building-catalog.document";
+import type { CafeteriaSummary, ConnectionEnds } from "./building-catalog.document";
 
 const INVALID_ID_MESSAGE = "skkuId must be a positive integer";
 
@@ -22,3 +22,5 @@ const connectionEnd = z.looseObject({
 
 /** CONTRACT(scripts): scripts/seed-connections.js writes connections, so they are parsed where they are read. */
 export const connectionEnds = z.object({ a: connectionEnd, b: connectionEnd }) satisfies z.ZodType<ConnectionEnds>;
+
+export const cafeteriaSummary = cafeteriaDoc.pick({ _id: true, name: true, floor: true, spaceCd: true }) satisfies z.ZodType<CafeteriaSummary>;

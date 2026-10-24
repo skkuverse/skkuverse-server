@@ -7,9 +7,8 @@
 import { FakeBuildingCafeteriaListRepository } from "../../../__tests__/helpers/fakes/building/building-cafeteria-list.repository.fake";
 import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { BuildingDoc } from "../../building/building.document";
+import type { BuildingDoc, CafeteriaDoc } from "../../building/building.document";
 import { BuildingCafeteriaListService } from "../../building/cafeteria-list/building-cafeteria-list.service";
-import type { CafeteriaDoc } from "../../building/cafeteria/building-cafeteria.document";
 import { BuildingService } from "../../building/building.service";
 import { MealsCatalogService } from "./meals-catalog.service";
 

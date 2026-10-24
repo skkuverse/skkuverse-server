@@ -10,7 +10,7 @@ import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/buildin
 import { FakeMealsMenusRepository } from "../../../__tests__/helpers/fakes/meals/meals-menus.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { BuildingService } from "../../building/building.service";
-import type { CafeteriaDoc } from "../../building/cafeteria/building-cafeteria.document";
+import type { CafeteriaDoc } from "../../building/building.document";
 import { BuildingCafeteriaListService } from "../../building/cafeteria-list/building-cafeteria-list.service";
 import type { Clock } from "../../infra/clock";
 import { MealsCatalogService } from "../catalog/meals-catalog.service";

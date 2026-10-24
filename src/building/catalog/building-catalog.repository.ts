@@ -5,20 +5,24 @@ import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
+import { isRecord } from "../../shared/object.util";
 import { parseEach } from "../../shared/zod-list.util";
-import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
-import type { CafeteriaDoc } from "../cafeteria/building-cafeteria.document";
+import type { BuildingDoc, CafeteriaDoc, ConnectionDoc, SpaceDoc } from "../building.document";
 import { SERVED_BUILDING_PROJECTION } from "../building.query";
 import type { BuildNo, SkkuId } from "../building.types";
 import type { BuildingLabel, CafeteriaSummary, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
-import { connectionEnds } from "./building-catalog.schema";
+import { cafeteriaSummary, connectionEnds } from "./building-catalog.schema";
 
-// WHY: read on every detail request, so a bad connection is reported hourly, not per request.
-const INVALID_CONNECTIONS_LOG_INTERVAL_MS = 60 * 60 * 1000;
+// WHY: read on every detail request, so a bad connection or cafeteria is reported hourly, not per request.
+const INVALID_DOCUMENTS_LOG_INTERVAL_MS = 60 * 60 * 1000;
+
+const CAFETERIA_SUMMARY_FIELDS = { _id: 1, name: 1, floor: 1, spaceCd: 1 } as const;
 
 @Injectable()
 export class BuildingCatalogRepository implements OnModuleInit {
-  private readonly invalidConnectionsThrottle = createLogThrottle(INVALID_CONNECTIONS_LOG_INTERVAL_MS);
+  private readonly invalidConnectionsThrottle = createLogThrottle(INVALID_DOCUMENTS_LOG_INTERVAL_MS);
+
+  private readonly invalidCafeteriasThrottle = createLogThrottle(INVALID_DOCUMENTS_LOG_INTERVAL_MS);
 
   onModuleInit(): Promise<void> {
     return ensureIndexesAtBoot("building.catalog", () => this.ensureIndexes());
@@ -67,13 +71,19 @@ export class BuildingCatalogRepository implements OnModuleInit {
     return connections;
   }
 
-  listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {
-    return this.facilities()
-      .find(
-        { buildNo, kind: "cafeteria" },
-        { projection: { _id: 1, name: 1, floor: 1, spaceCd: 1 }, sort: { _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
-      )
-      .toArray();
+  async listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {
+    const { valid: cafeterias, invalid } = parseEach(
+      await this.facilities()
+        .find(
+          { buildNo, kind: "cafeteria" },
+          { projection: CAFETERIA_SUMMARY_FIELDS, sort: { _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+        )
+        .toArray(),
+      cafeteriaSummary,
+      (doc, index) => (isRecord(doc) ? String(doc._id) : `#${index}`),
+    );
+    this.warnInvalidCafeterias(buildNo, invalid);
+    return cafeterias;
   }
 
   listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {
@@ -91,6 +101,15 @@ export class BuildingCatalogRepository implements OnModuleInit {
     logger.warn(
       { event: "building.connections.invalid", skkuId, count: invalid.length, invalid, suppressed: ticket.suppressed },
       "Connections left out: they do not match the document schema",
+    );
+  }
+
+  private warnInvalidCafeterias(buildNo: BuildNo, invalid: readonly string[]): void {
+    const ticket = invalid.length > 0 ? this.invalidCafeteriasThrottle.take(`${buildNo}:${invalid.join("|")}`) : null;
+    if (!ticket) return;
+    logger.warn(
+      { event: "building.cafeterias.invalid", buildNo, count: invalid.length, invalid, suppressed: ticket.suppressed },
+      "Cafeterias left out: they do not match the document schema",
     );
   }
 

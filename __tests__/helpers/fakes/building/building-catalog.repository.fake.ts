@@ -4,21 +4,21 @@
  * building-catalog.repository.spec.ts): a building by skkuId, a building's spaces by
  * buildNo, a connection from either end (parsed by connectionEnds, as the real
  * read does, so a malformed one is left out), buildings by skkuId list, and a
- * building's cafeterias by buildNo, sorted by conspaceCd. `reads`
+ * building's cafeterias by buildNo, sorted by conspaceCd and parsed by
+ * cafeteriaSummary, so one the crawler wrote malformed is left out. `reads`
  * names each read in order, for the tests where skipping a read is the
  * behavior. `failWith` makes every read reject.
  */
-import type { BuildingDoc, SpaceDoc } from "../../../../src/building/building.document";
+import type { BuildingDoc, CafeteriaDoc, SpaceDoc } from "../../../../src/building/building.document";
 import type { BuildNo, SkkuId } from "../../../../src/building/building.types";
 import type { BuildingCatalogRepository } from "../../../../src/building/catalog/building-catalog.repository";
-import type { CafeteriaDoc } from "../../../../src/building/cafeteria/building-cafeteria.document";
 import type {
   BuildingLabel,
   CafeteriaSummary,
   ConnectionEnds,
   FloorSpaceDoc,
 } from "../../../../src/building/catalog/building-catalog.document";
-import { connectionEnds } from "../../../../src/building/catalog/building-catalog.schema";
+import { cafeteriaSummary, connectionEnds } from "../../../../src/building/catalog/building-catalog.schema";
 import type { PublicOf } from "../public-of";
 
 export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRepository> {
@@ -71,7 +71,10 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     return this.cafeterias
       .filter((c) => c.buildNo === buildNo && c.kind === "cafeteria")
       .sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0))
-      .map(({ _id, name, floor, spaceCd }) => ({ _id, name, floor, spaceCd }));
+      .flatMap((c) => {
+        const parsed = cafeteriaSummary.safeParse(c);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   private read(name: string): void {

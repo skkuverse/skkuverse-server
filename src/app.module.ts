@@ -46,7 +46,6 @@ import { UiTransitTabModule } from "./ui/transit/tab/ui-transit-tab.module";
 import { UiScrollModule } from "./ui/scroll/ui-scroll.module";
 import { UiCampusModule } from "./ui/campus/ui-campus.module";
 import { BuildingModule } from "./building/building.module";
-import { BuildingCafeteriaModule } from "./building/cafeteria/building-cafeteria.module";
 import { BuildingCatalogModule } from "./building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "./building/search/building-search.module";
 import { BuildingSyncModule } from "./building/sync/building-sync.module";
@@ -150,7 +149,6 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BuildingSearchModule,
     BuildingCatalogModule,
     BuildingSyncModule,
-    BuildingCafeteriaModule,
     BuildingCafeteriaListModule,
     BuildingPlaceModule,
     BuildingPlaceResolveModule,

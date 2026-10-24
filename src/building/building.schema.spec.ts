@@ -6,10 +6,15 @@
  *    rejected (the repository then leaves it out and logs it), a geometry the
  *    overlay cannot draw is rejected, unknown fields are dropped, and a skkuId
  *    is either null or a building id (a positive safe integer).
- * That every real document passes is checked where the importer writes them:
- * __tests__/nest/map/campus-shapes-import.test.ts.
+ *  - `cafeteriaDoc`: every cafeteria skkuverse-crawler wrote to skkumap_dev
+ *    passes with the fields it reads, a missing spaceCd or location as null;
+ *    a row missing any field the readers use, of another kind, or with an
+ *    empty buildNo or spaceCd is rejected (the readers then leave it out).
+ * That every real campus shape passes is checked where the importer writes
+ * them: __tests__/nest/map/campus-shapes-import.test.ts.
  */
-import { campusFilter, campusShapeDoc } from "./building.schema";
+import { storedFacilities } from "../../__tests__/helpers/building/facilities";
+import { cafeteriaDoc, campusFilter, campusShapeDoc } from "./building.schema";
 
 const RING = [
   [126.9944, 37.5873],
@@ -120,5 +125,59 @@ describe("campusShapeDoc reads skkuId as a building id", () => {
     // Assert
     expect(result.success).toBe(true);
     expect(result.data?.skkuId).toBe(skkuId);
+  });
+});
+
+describe("cafeteriaDoc", () => {
+  it("accepts every cafeteria the crawler wrote, keeping only the fields the readers use", () => {
+    // Arrange
+    const { cafeterias } = storedFacilities();
+
+    // Act
+    const parsed = cafeterias.map((doc) => cafeteriaDoc.parse(doc));
+
+    // Assert
+    expect(parsed[0]).toEqual({
+      _id: "10201030",
+      kind: "cafeteria",
+      campus: "hssc",
+      name: { ko: "패컬티식당", en: "Faculty Dining Hall" },
+      buildNo: "101",
+      buildingName: { ko: "600주년기념관", en: "600th Anniversary Hall" },
+      floor: { ko: "6층", en: "6F" },
+      floorCode: "06",
+      spaceCd: "10607A",
+      location: { type: "Point", coordinates: [126.994501, 37.587584] },
+    });
+    expect(parsed[1]?.spaceCd).toBeNull();
+    expect(parsed[2]?.location).toBeNull();
+  });
+
+  it.each(Object.keys(cafeteriaDoc.shape))("rejects a cafeteria without %s", (field) => {
+    // Arrange
+    const [cafeteria] = storedFacilities().cafeterias;
+    delete cafeteria![field];
+
+    // Act & Assert
+    expect(cafeteriaDoc.safeParse(cafeteria).success).toBe(false);
+  });
+
+  it.each([
+    ["a facility of another kind", { kind: "facility" }],
+    ["an empty buildNo", { buildNo: "" }],
+    ["an empty spaceCd", { spaceCd: "" }],
+    ["a campus outside hssc/nsc", { campus: "mars" }],
+    ["a location without coordinates", { location: { type: "Point" } }],
+  ])("rejects %s", (_case, override) => {
+    // Arrange
+    const [cafeteria] = storedFacilities().cafeterias;
+
+    // Act & Assert
+    expect(cafeteriaDoc.safeParse({ ...cafeteria, ...override }).success).toBe(false);
+  });
+
+  it("rejects the registry's other facilities", () => {
+    // Act & Assert
+    expect(cafeteriaDoc.safeParse(storedFacilities().facility).success).toBe(false);
   });
 });

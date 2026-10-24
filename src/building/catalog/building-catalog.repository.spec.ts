@@ -3,7 +3,8 @@
  * (which FakeBuildingCatalogRepository follows; the building read is what keeps
  * `sync` out of /building/:skkuId), a building's connections found from either
  * end and read without their _id, parsed so a malformed one is left out and
- * logged (connections are hand-authored), and the boot indexes cover the
+ * logged (connections are hand-authored), a building's cafeterias parsed the
+ * same way (skkuverse-crawler writes them), and the boot indexes cover the
  * catalog's reads (a building's spaces by buildNo, a connection from either
  * end, a building's cafeterias by buildNo). These pin the query objects; what they match against real data is for
  * a mongod spec (ADR 0011, D6).
@@ -28,6 +29,7 @@ jest.mock("../../infra/db", () => ({
   }),
 }));
 
+import { storedFacilities } from "../../../__tests__/helpers/building/facilities";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import type { BuildNo, SkkuId } from "../building.types";
 import { BuildingCatalogRepository } from "./building-catalog.repository";
@@ -83,6 +85,34 @@ describe("BuildingCatalogRepository.listCafeteriasByBuildNo", () => {
       { buildNo: "101", kind: "cafeteria" },
       { projection: { _id: 1, name: 1, floor: 1, spaceCd: 1 }, sort: { _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     ]);
+  });
+});
+
+describe("BuildingCatalogRepository.listCafeteriasByBuildNo parses what the crawler wrote", () => {
+  it("returns the cafeterias that parse as their summary, and logs the rest once an hour", async () => {
+    // Arrange
+    const [faculty] = storedFacilities().cafeterias;
+    const noName = { ...faculty, _id: "10201031", name: undefined };
+    const emptySpace = { ...faculty, _id: "10201033", spaceCd: "" };
+    find.mockReturnValue({ toArray: jest.fn().mockResolvedValue([faculty, noName, emptySpace]) });
+    const repository = new BuildingCatalogRepository();
+
+    // Act
+    const cafeterias = await repository.listCafeteriasByBuildNo("101" as BuildNo);
+    await repository.listCafeteriasByBuildNo("101" as BuildNo);
+
+    // Assert
+    expect(cafeterias).toEqual([
+      { _id: "10201030", name: { ko: "패컬티식당", en: "Faculty Dining Hall" }, floor: { ko: "6층", en: "6F" }, spaceCd: "10607A" },
+    ]);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(mockLogger.warn.mock.calls[0]?.[0]).toEqual({
+      event: "building.cafeterias.invalid",
+      buildNo: "101",
+      count: 2,
+      invalid: ["10201031: name", "10201033: spaceCd"],
+      suppressed: 0,
+    });
   });
 });
 

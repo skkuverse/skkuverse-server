@@ -109,6 +109,25 @@ export interface SpaceDoc {
   syncedAt?: Date;
 }
 
+// CONTRACT(skkuverse-crawler): `FacilityDoc` of skkuverse-crawler/py/src/skkuverse_crawler/modules/campusmap/models.py,
+// one per sisulList row in `facilities` (skkuverse-crawler/docs/decisions/adr-014-campus-map-ownership.md); other rows are
+// `kind: "facility"`, never read here. The fields this server reads from a `kind: "cafeteria"` row.
+export interface CafeteriaDoc {
+  /** QUIRK(skku): the registry's `conspaceCd`, also the cafeteria id on SKKU's menu page. */
+  _id: string;
+  kind: "cafeteria";
+  campus: Campus;
+  name: BilingualText;
+  buildNo: BuildNo;
+  buildingName: BilingualText;
+  floor: BilingualText | null;
+  floorCode: string | null;
+  /** QUIRK(skku): absent on a few rows (20201040 and 20201104 on 2026-10-17). */
+  spaceCd: SpaceCd | null;
+  location: GeoPoint | null;
+  syncedAt: Date;
+}
+
 /** CONTRACT(scripts): hand-authored by scripts/seed-connections.js; `a` and `b` are unordered. */
 export interface ConnectionDoc {
   _id?: ObjectId;

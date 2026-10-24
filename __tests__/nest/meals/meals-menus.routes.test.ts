@@ -15,9 +15,8 @@ import catalogHssc from "../../../contracts/produced/fixtures/meals-catalog.cafe
 import catalogNsc from "../../../contracts/produced/fixtures/meals-catalog.cafeteriaList/nsc.json";
 import dailyHssc from "../../../contracts/produced/fixtures/meals-menus.dailyMeals/hssc.json";
 import dailyNsc from "../../../contracts/produced/fixtures/meals-menus.dailyMeals/nsc.json";
-import type { BuildingDoc } from "../../../src/building/building.document";
+import type { BuildingDoc, CafeteriaDoc } from "../../../src/building/building.document";
 import { BuildingRepository } from "../../../src/building/building.repository";
-import type { CafeteriaDoc } from "../../../src/building/cafeteria/building-cafeteria.document";
 import { BuildingCafeteriaListRepository } from "../../../src/building/cafeteria-list/building-cafeteria-list.repository";
 import { Clock } from "../../../src/infra/clock";
 import { MealsCatalogModule } from "../../../src/meals/catalog/meals-catalog.module";
