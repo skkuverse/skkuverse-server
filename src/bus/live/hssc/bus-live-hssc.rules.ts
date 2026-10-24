@@ -1,17 +1,18 @@
 import { toKstInstant } from "../../../shared/kst-date.util";
-import type { Arrival, Vehicle, VehiclePosition } from "../../bus.wire";
+import type { StopCall } from "../../bus.types";
+import type { Vehicle, VehiclePosition } from "../../bus.wire";
 import type { HsscEta } from "../../realtime/hssc-eta/bus-realtime-hssc-eta.types";
 import type { HsscLiveBus } from "./bus-live-hssc.types";
 
 type Knot = { atMs: number; s: number };
 
 // WHY: a bus standing at its stop is arriving with no departure instant (ADR 0019, D14): the dwell median is no departure time.
-function toExpectedArrivalAt(eta: HsscEta): string | null {
-  return eta.status === "enRoute" ? toKstInstant(eta.arrivesAt.getTime()) : null;
+function toExpectedArrivalAt(eta: HsscEta): Date | null {
+  return eta.status === "enRoute" ? eta.arrivesAt : null;
 }
 
 /** WHY: the engine's estimate from its measured medians, never a provider's (ADR 0019, D1). */
-export function toHsscArrival(eta: HsscEta): Arrival {
+export function toHsscCall(eta: HsscEta): StopCall {
   return {
     status: eta.status,
     expectedArrivalAt: toExpectedArrivalAt(eta),
@@ -21,6 +22,7 @@ export function toHsscArrival(eta: HsscEta): Arrival {
     isLastBus: null,
     vehicleId: eta.vehicleId,
     providerText: null,
+    ...{ runId: null, runDepartureAt: null },
   };
 }
 

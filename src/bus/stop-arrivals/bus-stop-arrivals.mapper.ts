@@ -1,7 +1,9 @@
+import { toKstInstant } from "../../shared/kst-date.util";
+import { toArrival } from "../bus.mapper";
 import type { ServedStop } from "../bus.wire";
 import type { LiveGroup } from "../live/bus-live.wire";
 import type { FoundStop, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
-import type { LiveEntry, StopBlock, TimetableEntry } from "./bus-stop-arrivals.types";
+import type { LiveEntry, RunCall, StopBlock, TimetableArrival, TimetableEntry } from "./bus-stop-arrivals.types";
 
 function toPoleBlock({ id, poles, coords }: FoundStop): StopBlock {
   const [pole] = poles;
@@ -37,4 +39,9 @@ export function toLiveEntry(
 
 export function toTimetableEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">): TimetableEntry {
   return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals };
+}
+
+/** WHY: a run keeps its departure from the origin on the wire, so a run with no time at this stop still sorts and labels. */
+export function toTimetableArrival(call: RunCall): TimetableArrival {
+  return { ...toArrival(call), runDepartureAt: toKstInstant(call.runDepartureAt.getTime()) };
 }

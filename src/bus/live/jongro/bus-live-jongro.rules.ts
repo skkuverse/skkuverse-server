@@ -1,19 +1,19 @@
-import { toKstInstant } from "../../../shared/kst-date.util";
-import type { Arrival, Operation, Vehicle } from "../../bus.wire";
+import type { StopCall } from "../../bus.types";
+import type { Operation, Vehicle } from "../../bus.wire";
 import type { JongroBusType } from "../../cache/bus-cache.document";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";
 import type { JongroReading } from "../../realtime/group/bus-realtime-group.types";
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
 import { MAX_STATION_ARRIVALS } from "../bus-live.constants";
-import { STANDING_ARRIVAL, STATUS_BY_STATE } from "./bus-live-jongro.constants";
+import { STANDING_CALL, STATUS_BY_STATE } from "./bus-live-jongro.constants";
 import type { JongroVehicleStates } from "./bus-live-jongro.types";
 
 const SECOND_MS = 1000;
 
 // WHY: TOPIS's own prediction counts from when it made the row (mkTm); an arriving-soon bus keeps an instant when TOPIS gives one.
-function toExpectedArrivalAt({ arrival, travelSeconds }: TimedArrival, madeAtMs: number | null): string | null {
+function toExpectedArrivalAt({ arrival, travelSeconds }: TimedArrival, madeAtMs: number | null): Date | null {
   const isTimed = arrival.state === "running" || arrival.state === "arriving";
-  return isTimed && madeAtMs !== null && travelSeconds !== null ? toKstInstant(madeAtMs + travelSeconds * SECOND_MS) : null;
+  return isTimed && madeAtMs !== null && travelSeconds !== null ? new Date(madeAtMs + travelSeconds * SECOND_MS) : null;
 }
 
 // QUIRK(topis): an arrival row's sectOrd is the staOrd of the bus's next stop (EVIDENCE: src/bus/realtime/group/bus-realtime-group.rules.ts),
@@ -23,7 +23,7 @@ function toLiveStopsAway(topisStopsAway: number | null): number | null {
 }
 
 /** WHY: null for TOPIS's end-of-service and no-information texts, which say what the station's operation is rather than where a bus is. */
-export function toJongroArrival(slot: TimedArrival, madeAtMs: number | null): Arrival | null {
+export function toJongroCall(slot: TimedArrival, madeAtMs: number | null): StopCall | null {
   const { bus, arrival } = slot;
   const stated = STATUS_BY_STATE[arrival.state];
   if (stated === null) return null;
@@ -37,7 +37,7 @@ export function toJongroArrival(slot: TimedArrival, madeAtMs: number | null): Ar
     isLastBus: arrival.isLastBus,
     // WHY: TOPIS names a vehicle exactly when the slot has stops away (toStopsAway).
     vehicleId: arrival.stopsAway === null ? null : bus.vehId,
-    providerText: bus.arrmsg,
+    ...{ providerText: bus.arrmsg, runId: null, runDepartureAt: null },
   };
 }
 
@@ -53,22 +53,22 @@ export function toVehicleStates({ rows, positions }: Pick<JongroReading, "rows" 
   };
 }
 
-// WHY: the last bus is the bus's, so every arrival naming it carries the vehicle's flag (ADR 0019, D6).
-export function withVehicleState(arrival: Arrival, { lastBusIds }: JongroVehicleStates): Arrival {
-  return arrival.vehicleId === null ? arrival : { ...arrival, isLastBus: lastBusIds.has(arrival.vehicleId) };
+// WHY: the last bus is the bus's, so every call naming it carries the vehicle's flag (ADR 0019, D6).
+export function withVehicleState(call: StopCall, { lastBusIds }: JongroVehicleStates): StopCall {
+  return call.vehicleId === null ? call : { ...call, isLastBus: lastBusIds.has(call.vehicleId) };
 }
 
-function toStandingArrival(vehicleId: string, named: Arrival | undefined, { lastBusIds, namedVehicleIds }: JongroVehicleStates): Arrival {
+function toStandingCall(vehicleId: string, named: StopCall | undefined, { lastBusIds, namedVehicleIds }: JongroVehicleStates): StopCall {
   const isLastBus = namedVehicleIds.has(vehicleId) ? lastBusIds.has(vehicleId) : null;
-  return { ...STANDING_ARRIVAL, vehicleId, isLastBus, providerText: named?.providerText ?? null };
+  return { ...STANDING_CALL, vehicleId, isLastBus, providerText: named?.providerText ?? null };
 }
 
 // WHY: a bus standing at the station is the one a rider boards, arriving until it leaves (ADR 0019, D14); TOPIS drops it
 // from that station's row, and a row still naming it there is one its newer position outran, so it comes first, listed once.
-export function toStationArrivals(rowArrivals: readonly Arrival[], stationIndex: number, states: JongroVehicleStates): Arrival[] {
+export function toStationCalls(rowCalls: readonly StopCall[], stationIndex: number, states: JongroVehicleStates): StopCall[] {
   const standingIds = [...states.standingStationIndexById].filter(([, standingIndex]) => standingIndex === stationIndex).map(([vehicleId]) => vehicleId);
-  const standing = standingIds.map((vehicleId) => toStandingArrival(vehicleId, rowArrivals.find((arrival) => arrival.vehicleId === vehicleId), states));
-  const rest = rowArrivals.filter(({ vehicleId }) => vehicleId === null || !standingIds.includes(vehicleId)).map((arrival) => withVehicleState(arrival, states));
+  const standing = standingIds.map((vehicleId) => toStandingCall(vehicleId, rowCalls.find((call) => call.vehicleId === vehicleId), states));
+  const rest = rowCalls.filter(({ vehicleId }) => vehicleId === null || !standingIds.includes(vehicleId)).map((call) => withVehicleState(call, states));
   return [...standing, ...rest].slice(0, MAX_STATION_ARRIVALS);
 }
 

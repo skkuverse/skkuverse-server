@@ -1,3 +1,5 @@
+import type { Arrival } from "./bus.wire";
+
 export interface TransferLine {
   line: string;
   color: string;
@@ -40,6 +42,11 @@ export interface ServiceConfigEntry {
 }
 
 export type ServiceConfigMap = Record<string, ServiceConfigEntry>;
+
+type ArrivalInstantKey = "expectedArrivalAt" | "expectedDepartureAt" | "scheduledArrivalAt" | "scheduledDepartureAt";
+
+/** WHY: the wire arrival field for field with Date instants, and the timetabled run it is (both null for a live bus). */
+export type StopCall = Omit<Arrival, ArrivalInstantKey> & Record<ArrivalInstantKey, Date | null> & { runId: string | null; runDepartureAt: Date | null };
 
 /** WHY: a local stop's claims to TOPIS poles, by ARS number and by TOPIS station id (ADR 0019, D5). */
 export interface StopAliases {

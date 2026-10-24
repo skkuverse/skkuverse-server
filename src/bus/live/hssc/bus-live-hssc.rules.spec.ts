@@ -1,11 +1,11 @@
 /**
- * An HSSC bus in the live shape (ADR 0019, D1, D6, D7, D14): an engine ETA is an estimated arrival (standing at the
+ * An HSSC bus in the live shape (ADR 0019, D1, D6, D7, D14): an engine ETA is an estimated stop call (standing at the
  * stop as arriving with no departure instant, en route with when it comes, or waiting behind the layover), a bus laying over waits to
  * depart, and a moving bus's trajectory runs through each stop's arrival and departure to the turnaround, s passing
  * the last index on the way back to station 0.
  */
 import type { HsscLiveBus } from "./bus-live-hssc.types";
-import { toHsscArrival, toHsscPositionStatus, toHsscTrajectory } from "./bus-live-hssc.rules";
+import { toHsscCall, toHsscPositionStatus, toHsscTrajectory } from "./bus-live-hssc.rules";
 
 const at = (iso: string) => new Date(iso);
 const anchor = (extra: Partial<HsscLiveBus["anchor"]> = {}) => ({ vehicleId: "32149", seq: 2, isDeparted: true, since: at("2026-10-20T00:59:00Z"), observedAt: at("2026-10-20T00:59:00Z"), ...extra });
@@ -14,16 +14,16 @@ function bus(extra: Partial<HsscLiveBus> = {}): HsscLiveBus {
   return { anchor: anchor(), stationIndex: 8, isAtStopPosition: true, isLayingOver: false, departsAt: null, lapTimes: [], ...extra };
 }
 
-describe("toHsscArrival", () => {
+describe("toHsscCall", () => {
   const common = { vehicleId: "32149", observedAt: at("2026-10-20T00:59:00Z") };
-  const empty = { expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null };
+  const empty = { expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, runId: null, runDepartureAt: null };
 
   it("serves an en-route bus with its expected arrival", () => {
     // Act & Assert
-    expect(toHsscArrival({ ...common, status: "enRoute", stopsAway: 2, arrivesAt: at("2026-10-20T01:03:00Z") })).toEqual({
+    expect(toHsscCall({ ...common, status: "enRoute", stopsAway: 2, arrivesAt: at("2026-10-20T01:03:00Z") })).toEqual({
       ...empty,
       status: "enRoute",
-      expectedArrivalAt: "2026-10-20T10:03:00+09:00",
+      expectedArrivalAt: at("2026-10-20T01:03:00Z"),
       basis: "estimate",
       stopsAway: 2,
       isLastBus: null,
@@ -35,7 +35,7 @@ describe("toHsscArrival", () => {
   it("serves a bus standing at the stop as arriving, 0 stops away, with no departure instant", () => {
     // Act & Assert
     // WHY: Seoul BIS signage shows a standing bus as arriving until it leaves (ADR 0019, D14); the dwell median is no departure time.
-    expect(toHsscArrival({ ...common, status: "arriving", stopsAway: 0, departsAt: at("2026-10-20T01:00:40Z") })).toEqual({
+    expect(toHsscCall({ ...common, status: "arriving", stopsAway: 0, departsAt: at("2026-10-20T01:00:40Z") })).toEqual({
       ...empty,
       status: "arriving",
       basis: "estimate",
@@ -48,7 +48,7 @@ describe("toHsscArrival", () => {
 
   it("serves a bus behind the layover with no instant", () => {
     // Act & Assert
-    expect(toHsscArrival({ ...common, status: "waitingToDepart", stopsAway: 5 })).toEqual({ ...empty, status: "waitingToDepart", basis: "estimate", stopsAway: 5, isLastBus: null, vehicleId: "32149", providerText: null });
+    expect(toHsscCall({ ...common, status: "waitingToDepart", stopsAway: 5 })).toEqual({ ...empty, status: "waitingToDepart", basis: "estimate", stopsAway: 5, isLastBus: null, vehicleId: "32149", providerText: null });
   });
 });
 
@@ -112,10 +112,10 @@ describe("toHsscTrajectory", () => {
   });
 });
 
-describe("toHsscArrival for an overdue bus", () => {
+describe("toHsscCall for an overdue bus", () => {
   it("serves a bus the engine cannot place as unknown, with no instant and no text, so clients skip it", () => {
     // Act & Assert
-    expect(toHsscArrival({ status: "unknown", vehicleId: "32149", stopsAway: 2, observedAt: at("2026-10-20T00:50:00Z") })).toEqual({
+    expect(toHsscCall({ status: "unknown", vehicleId: "32149", stopsAway: 2, observedAt: at("2026-10-20T00:50:00Z") })).toEqual({
       status: "unknown",
       expectedArrivalAt: null,
       expectedDepartureAt: null,
@@ -126,6 +126,8 @@ describe("toHsscArrival for an overdue bus", () => {
       isLastBus: null,
       vehicleId: "32149",
       providerText: null,
+      runId: null,
+      runDepartureAt: null,
     });
   });
 });
