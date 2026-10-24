@@ -1,7 +1,7 @@
 ---
 title: Journey and Call Spec
 type: adr
-status: proposed
+status: accepted
 owner: zoyoong124@gmail.com
 last-updated: 2026-10-25
 audience: internal
@@ -9,11 +9,11 @@ audience: internal
 
 # 0022. Journey and Call Spec
 
-> One shape for "a vehicle at a stop" across buses, shuttles and the subway, and one journey shape for 길찾기 built from it, so a new line, source or mode plugs in by conforming instead of by redesign. Read it before you change a departure board wire (`/bus/live`, the stop page, `/subway/...`), add a transit source, or touch 길찾기. Proposed 2026-10-25; the open questions at the end are the owner's to answer before it is accepted.
+> One shape for "a vehicle at a stop" across buses, shuttles and the subway, and one journey shape for 길찾기 built from it, so a new line, source or mode plugs in by conforming instead of by redesign. Read it before you change a departure board wire (`/bus/live`, the stop page, `/subway/...`), add a transit source, or touch 길찾기. Accepted 2026-10-25.
 
 ## Status
 
-Proposed 2026-10-25. It supersedes, where they disagree, [transit-route-planner.md](../plans/transit-route-planner.md) and [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md).
+Accepted 2026-10-25. It supersedes, where they disagree, [transit-route-planner.md](../plans/transit-route-planner.md) and [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md).
 
 ## Context
 
@@ -120,7 +120,7 @@ The rules:
   - 정문 is `skku_building:1` at 인사캠 and `skku_building:7` at 자과캠, already building-list facilities.
   - `point` is the user's location only. It has no string form and is never persisted.
 - **Coords are required** as `{ lat, lng }`. The journey dataset refuses a cited place that does not resolve to coords.
-- **Every subway station a journey boards or alights at is a served station:** polled, listed and tappable. That covers 사당, 금정 and 종로5가.
+- **Every subway station a journey boards or alights at is a served station:** polled, listed and tappable, with every line that stops there. That covers 사당 (lines 2 and 4), 금정 (lines 1 and 4) and 종로5가 (line 1). Boards keep three trains per direction.
 
 ### D5. Legs, options and routes
 
@@ -138,7 +138,7 @@ A ride leg adds:
 - `vehicles` keyed by the calls' `vehicleId`s;
 - `waitSec`, `observedAt` (the source document's write time).
 
-A ride leg's `startAt` and `endAt` are its calls' times. Its `basis` is the weaker of its two calls, in the order timetable, provider, estimate. Walk legs add an optional `path`; their evidence stays in the dataset. An option is `{ id, name, mode, status, reason, leaveAt, arriveAt, legs, warnings }`, with open warning codes. Certainty is shown per leg and through `later` and `warnings`, never as one journey score.
+A ride leg's `startAt` and `endAt` are its calls' times. Its `basis` is the weaker of its two calls, in the order timetable, provider, estimate. Walk legs add an optional `path`; their evidence stays in the dataset. An option is `{ id, name, mode, status, reason, nextServiceAt, leaveAt, arriveAt, legs, warnings }`, with open warning codes. Certainty is shown per leg and through `later` and `warnings`, never as one journey score.
 
 A new mode adds a kind only when it needs different required fields. Taxi will add `taxi`, its fare and its pickup wait, with times from a travel-time source fed by a poller over fixed pairs ([ADR 0012](0012-runtime-roles.md), D2). The wire carries no reserved, unserved kind.
 
@@ -155,7 +155,7 @@ A stored field a new release adds is optional on read, because api replicas depl
 
 ## Consequences
 
-- The three boards change shape once. 3.6.2 bundles that have not applied the OTA degrade silently until they do: subway directions show no trains, and 막차 labels vanish. The owner accepted this.
+- (An agent tooling note is left out of the public history.)
 - Adding something later takes this much work:
   - A line of a polled source, or a stop area: data only (`journey-routes` or `bus-stops`).
   - A subway station or line: a code entry plus the topology and timetable data, the tracker stretch and the poller ceiling.
@@ -164,14 +164,25 @@ A stored field a new release adds is optional on read, because api replicas depl
 - The subway poller grows by 사당, 금정 and 종로5가; the call-volume arithmetic in the subway API reference moves with it.
 - The bus and subway module docs sit at their 200-line caps, so this ADR holds the shared glossary: call, run, run id, stop area.
 
-## Open questions
+### D7. PoC behavior (owner, 2026-10-25)
 
-Owner, before acceptance (asked 2026-10-25):
-
-1. A 7800 boarding past TOPIS's two predicted buses: what does an option show?
-2. Which lines 사당 and 금정 serve, and the cost of polling them.
-3. The first and last mile between 정문 and 혜화역, 성균관대역 and 사당.
-4. (An agent tooling note is left out of the public history.)
+- **Options.** 인사캠 정문 (`skku_building:1`) ↔ 자과캠 정문 (`skku_building:7`), with four options each way:
+  - 인자셔틀;
+  - 4호선 → 금정 → 1호선;
+  - 종로08 → 종로5가 → 1호선;
+  - 4호선 → 사당 → 7800.
+  The ends between 정문 and 혜화역, 성균관대역 or the 7800 stops are walks. The HSSC shuttle as a first mile is a later option. Options are sorted by arrival, with no "fastest" flag; the app decides emphasis.
+- **인자셔틀.** Every run, regular and 학부대학 alike: anyone may board either.
+- **Realtime reach.** A bus leg uses the upstream's predicted vehicles (TOPIS: two per stop) and nothing past them.
+  - When no predicted vehicle is catchable, the leg names no vehicle.
+  - Its boarding is the arrival at the stop plus half the headway, from the TOPIS `term` the poller stores.
+  - It carries `basis: estimate`, and the app shows it as approximate ("약").
+- **Full buses.** A vehicle with `seatsLeft: 0` is skipped. Null seats count as boardable, because 7800 seats no standing riders.
+- **Departure time.** "Now" only; the departure query already takes a `from` for a later picker.
+- **No service.** An option with no run left reports `notRunning` with `reason: ended` and the next first departure (`nextServiceAt`). The timetable gives it for shuttles and the subway. The stored TOPIS `firstTm` gives it for buses.
+- **Walk minutes.** `journey-routes` values with evidence, measured at data-authoring time from TMAP pedestrian routes. That is a one-off call by a person, never one the api makes. Key walks can be replaced by on-site measurements later.
+- **Language and taxi.** Labels come in ko, en and zh, like the stop catalog. Taxi stays out of the PoC.
+- **Accuracy.** Not logged yet; the estimates stay rule-based.
 
 ## Related
 
