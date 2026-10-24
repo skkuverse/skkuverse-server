@@ -4,7 +4,7 @@ import type { z } from "zod";
 import logger from "../../infra/logger";
 import { issuePaths, parseEach } from "../../shared/zod-list.util";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
-import { CAMPUS_MAP_REQUEST_TIMEOUT_MS, CAMPUS_MAP_URL, SKKU_CAMPUS_CODE } from "../building.constants";
+import { SKKU_CAMPUS_CODE } from "../building.constants";
 import { shouldRejectPayload, toApiId } from "./building-sync.rules";
 import {
   skkuBuildInfoAttachment,
@@ -18,6 +18,10 @@ import {
 } from "./building-sync.schema";
 import type { BuildInfo, ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 import type { BilingualText, Campus } from "../building.types";
+
+const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
+
+const CAMPUS_MAP_REQUEST_TIMEOUT_MS = 30000;
 
 const MAX_LOGGED_INVALID_ITEMS = 10;
 

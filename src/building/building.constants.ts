@@ -1,9 +1,5 @@
 import type { Campus } from "./building.types";
 
-export const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
-
-export const CAMPUS_MAP_REQUEST_TIMEOUT_MS = 30000;
-
 export const CAMPUSES = ["hssc", "nsc"] as const;
 
 export const BUILDING_TYPES = ["building", "facility"] as const;

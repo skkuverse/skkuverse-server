@@ -9,7 +9,6 @@
  * the env at import.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { BuildingCafeteriaClient } from "../../../src/building/cafeteria/building-cafeteria.client";
 import { BuildingSyncClient } from "../../../src/building/sync/building-sync.client";
 import { BusEtaForecastClient } from "../../../src/bus/eta/forecast/bus-eta-forecast.client";
 import { BusEtaProbeClient } from "../../../src/bus/eta/probe/bus-eta-probe.client";
@@ -25,7 +24,6 @@ import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-
 import { NoticesDispatchClient } from "../../../src/notices/dispatch/notices-dispatch.client";
 import { SubwaySeoulApiClient } from "../../../src/subway/seoul-api/subway-seoul-api.client";
 import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
-import { FakeBuildingCafeteriaClient } from "../fakes/building/building-cafeteria.client.fake";
 import { FakeBuildingSyncClient } from "../fakes/building/building-sync.client.fake";
 import { FakeBusEtaForecastClient } from "../fakes/bus/bus-eta-forecast.client.fake";
 import { FakeBusEtaProbeClient } from "../fakes/bus/bus-eta-probe.client.fake";
@@ -49,7 +47,6 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/"),
     overrides: [
-      { provide: BuildingCafeteriaClient, useValue: new FakeBuildingCafeteriaClient() },
       { provide: BuildingSyncClient, useValue: new FakeBuildingSyncClient() },
       { provide: BusEtaForecastClient, useValue: new FakeBusEtaForecastClient() },
       { provide: BusEtaProbeClient, useValue: new FakeBusEtaProbeClient() },

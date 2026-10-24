@@ -9,8 +9,7 @@
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import type { BuildingDoc } from "../../../src/building/building.document";
-import type { CafeteriaDoc } from "../../../src/building/cafeteria/building-cafeteria.document";
+import type { BuildingDoc, CafeteriaDoc } from "../../../src/building/building.document";
 import { BuildingCafeteriaListRepository } from "../../../src/building/cafeteria-list/building-cafeteria-list.repository";
 import { BuildingRepository } from "../../../src/building/building.repository";
 import { MealsCatalogModule } from "../../../src/meals/catalog/meals-catalog.module";
