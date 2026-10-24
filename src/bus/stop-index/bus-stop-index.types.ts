@@ -25,7 +25,7 @@ export interface HsscStopRoute {
   stationIndex: number;
 }
 
-export type ShuttleStopRoute = Pick<SequenceStop, "action" | "timing"> & {
+export type ShuttleStopRoute = Pick<SequenceStop, "action"> & {
   kind: "shuttle";
   groupId: string;
   serviceId: string;

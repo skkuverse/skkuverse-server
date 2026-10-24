@@ -99,7 +99,7 @@ describe("toListedStop", () => {
       id: "hssc-bus-lot",
       localStop: { id: "hssc-bus-lot", name: { ko: "학생회관 버스 주차장" }, arsIds: ["01618"], campus: "hssc", coords: { lat: 37.587367, lng: 126.993643 } },
       poles: [],
-      routes: [{ kind: "shuttle", groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board", timing: "scheduled" }],
+      routes: [{ kind: "shuttle", groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board" }],
       coords: { lat: 37.587367, lng: 126.993643 },
     };
 
