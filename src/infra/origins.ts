@@ -39,6 +39,8 @@ export const GAME_ID_BY_FIRST_PARTY_ORIGIN: Readonly<Record<string, string>> = O
   "https://suika-game.game.skkuverse.com": "suika-game",
   "https://wave-run.game.skkuverse.com": "wave-run",
   "https://subway-typing.game.skkuverse.com": "subway-typing",
+  "https://building-stack.game.skkuverse.com": "building-stack",
+  "https://bigger-building.game.skkuverse.com": "bigger-building",
 });
 
 // WHY: each entry is a trust decision: it hands `Linking.openURL` and the map-select channel to every
