@@ -54,8 +54,8 @@ export interface BuildingAttachment {
   alt: string;
 }
 
-// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/decisions/adr-014-campus-map-ownership.md moves this write
-// to the crawler (SKKU buildList and buildInfo). `sync`, `enrichVersion` and `extensions` are its bookkeeping, never read.
+// CONTRACT(skkuverse-crawler): `EnrichedBuilding` of skkuverse-crawler/py/src/skkuverse_crawler/modules/campusmap/models.py
+// (SKKU buildList and buildInfo) plus its write's `sync`, `updatedAt` and `extensions`; `sync`, `enrichVersion` and `extensions` are never read.
 export interface BuildingDoc {
   _id: SkkuId;
   buildNo: BuildNo | null;
@@ -80,8 +80,8 @@ export interface BuildingDoc {
   extensions?: Record<string, unknown>;
 }
 
-// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/decisions/adr-014-campus-map-ownership.md moves this write
-// to the crawler (SKKU buildInfo and spaceList), keyed by the unique index on spaceCd, buildNo and campus it creates.
+// CONTRACT(skkuverse-crawler): `Space` of skkuverse-crawler/py/src/skkuverse_crawler/modules/campusmap/models.py (SKKU buildInfo
+// and spaceList), keyed by the unique index on spaceCd, buildNo and campus it creates.
 export interface SpaceDoc {
   _id?: ObjectId;
   // EVIDENCE: two skkumap_dev spaces carry spaceCd: null (synced 2026-09-24, blank names); prod had none on 2026-10-14.
@@ -97,8 +97,8 @@ export interface SpaceDoc {
 }
 
 // CONTRACT(skkuverse-crawler): `FacilityDoc` of skkuverse-crawler/py/src/skkuverse_crawler/modules/campusmap/models.py,
-// one per sisulList row in `facilities` (skkuverse-crawler/docs/decisions/adr-014-campus-map-ownership.md); other rows are
-// `kind: "facility"`, never read here. The fields this server reads from a `kind: "cafeteria"` row.
+// one per sisulList row in `facilities`; other rows are `kind: "facility"`, never read here. The fields this server
+// reads from a `kind: "cafeteria"` row.
 export interface CafeteriaDoc {
   /** QUIRK(skku): the registry's `conspaceCd`, also the cafeteria id on SKKU's menu page. */
   _id: string;
