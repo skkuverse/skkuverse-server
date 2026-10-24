@@ -87,7 +87,10 @@ function placeKindError(place: Raw, at: string): string | null {
   return isIntIn(place.number, 1, 99) ? null : `${at}: number must be an integer in 1..99`;
 }
 
-interface PlaceContext { places: Map<string, LatLng>; seen: Set<string> }
+interface PlaceContext {
+  places: Map<string, LatLng>;
+  seen: Set<string>;
+}
 
 // WHY: fills `places` with the coordinates a walk may end at.
 function placeErrors(place: unknown, at: string, { places, seen }: PlaceContext): string[] {
@@ -123,7 +126,10 @@ function walkPathError(walk: Raw, at: string, endCoords: (end: unknown) => LatLn
   return meters > MAX_WALK_M ? `${at}: path is ${Math.round(meters)} m, longer than ${MAX_WALK_M} m` : null;
 }
 
-interface WalkContext { stop: Raw; places: ReadonlyMap<string, LatLng> }
+interface WalkContext {
+  stop: Raw;
+  places: ReadonlyMap<string, LatLng>;
+}
 
 function walkShapeError(walk: Raw, at: string, places: ReadonlyMap<string, LatLng>): string | null {
   const ends = [walk.from, walk.to];
