@@ -205,7 +205,7 @@ const config = {
     },
   },
 
-  // WHY: the regional bus pollers spend production's TOPIS quota per operation, which has 272 calls a day to spare.
+  // WHY: the regional bus pollers spend production's TOPIS quota per operation, which has 6,752 calls a day to spare.
   regionalBus: {
     enabled: switches.regionalBusEnabled,
   },
