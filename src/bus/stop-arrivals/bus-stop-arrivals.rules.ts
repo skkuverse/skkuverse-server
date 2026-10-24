@@ -1,6 +1,6 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
-import { toKstInstant } from "../bus.mapper";
+import { toKstInstant } from "../../shared/kst-date.util";
 import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import type { ShuttleStopRoute } from "../stop-index/bus-stop-index.types";
 import { NEXT_RUN_COUNT } from "./bus-stop-arrivals.constants";

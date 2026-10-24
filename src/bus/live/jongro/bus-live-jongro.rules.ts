@@ -1,4 +1,4 @@
-import { toKstInstant } from "../../bus.mapper";
+import { toKstInstant } from "../../../shared/kst-date.util";
 import type { Arrival, Operation, Vehicle } from "../../bus.wire";
 import type { JongroBusType } from "../../cache/bus-cache.document";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";

@@ -1,4 +1,4 @@
-import { toKstInstant } from "../../bus.mapper";
+import { toKstInstant } from "../../../shared/kst-date.util";
 import type { JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import type { IncomingHttpHeaders } from "http";
