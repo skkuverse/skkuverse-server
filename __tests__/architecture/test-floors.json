@@ -8,8 +8,8 @@
     "expects": 539
   },
   "building": {
-    "tests": 261,
-    "expects": 547
+    "tests": 210,
+    "expects": 394
   },
   "bus": {
     "tests": 1081,

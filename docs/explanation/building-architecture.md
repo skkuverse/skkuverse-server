@@ -13,13 +13,11 @@ audience: internal
 
 ## Context
 
-Building copies SKKU's campus map into MongoDB on a schedule and serves list, detail and search. It owns no truth about the campus: it mirrors SKKU behind an anti-corruption layer, so SKKU's field names stop at the sync client and the code's names start there. It owns only the shapes it derives (`displayNo`, the parsed barrier-free text), and serves two hand-written collections and the facility registry, which it does not write.
+Building serves SKKU's campus map, which skkuverse-crawler copies into MongoDB, as list, detail and search. It owns no truth about the campus and writes none of it: skkuverse-crawler fetches SKKU's campusMap.do and writes `buildings`, `spaces` and `facilities` (its `docs/decisions/adr-014-campus-map-ownership.md`), so SKKU's field names stop in the crawler. Building parses each document where it reads it, and derives `displayNo` from `buildNo` on every read. It also serves two hand-written collections.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
-| SKKU campusMap.do, mode buildList (per campus) | `skku` | Buildings and facilities: names, coordinates, photo, barrier-free text | `BuildingSyncClient.fetchBuildList`, then `buildings_raw` and `buildings` |
-| SKKU campusMap.do, mode buildInfo (per building with a `buildNo`) | `skku` | Rooms per floor and photo attachments | `BuildingSyncClient.fetchBuildInfo`, then `spaces`, and `attachments` on the building |
-| SKKU campusMap.do, mode spaceList (per campus) | `skku` | Rooms, with `conspaceCd` | `BuildingSyncClient.fetchSpaceList`, then `spaces` |
+| skkuverse-crawler, `campusmap` (SKKU campusMap.do, modes buildList, buildInfo and spaceList) | `skku` | Buildings and facilities with names, coordinates, photo, attachments and the parsed barrier-free text; rooms per floor, with `conspaceCd` | `buildings` and `spaces`, parsed by `buildingDoc` and `storedSpace` (and their picks) in the building, catalog and place repositories |
 | skkuverse-crawler, `campusmap` module (SKKU campusMap.do, mode sisulList) | — | The facility registry: cafeterias, cafes, ATMs and more, each with a `conspaceCd` and the `buildNo` it sits in | `facilities`, every row (`FacilityDoc`, skkuverse-crawler `adr-014-campus-map-ownership.md`); the `kind` `cafeteria` rows parsed by `cafeteriaDoc` in `BuildingCatalogRepository` and `BuildingCafeteriaListRepository` |
 | MongoDB | `mongo` | Storage, the GeoJSON indexes, and the aggregation the search runs | The five repositories, through `mongoCollection` |
 | `scripts/seed-connections.js` | — | Hand-written walkways between two floors | `connections`, read by `BuildingCatalogRepository` |
@@ -27,7 +25,7 @@ Building copies SKKU's campus map into MongoDB on a schedule and serves list, de
 | `src/building/place/place-lexicon.json` | — | The place resolver's aliases, facility slugs, places skkumap lacks, room aliases, board tables and text patterns, reviewed as code | `placeLexicon`, parsed at import by `placeLexiconFile` |
 | skkuverse-crawler, a notice session's `where.places` (no caller yet) | — | One verbatim place string per entry, with the session's `campusHint` and the notice's `sourceId` | `BuildingPlaceResolveService.resolvePlaces` |
 
-buildInfo returns rooms that spaceList lacks, and the other way round, so `spaces` merges both and `sources` records which listed a room.
+buildInfo returns rooms that spaceList lacks, and the other way round, so the crawler merges both into `spaces`, and `sources` records which listed a room.
 
 ## Glossary
 
@@ -35,20 +33,19 @@ The brands live in `src/building/building.types.ts`; each is minted only by its 
 
 | Term | Means | Derived from | Not |
 | --- | --- | --- | --- |
-| `skkuId` (`SkkuId`) | SKKU's building id: `_id` of `buildings` and `buildings_raw`, the route's `:skkuId`, and `skkuId` in `connections` and `campus_shapes` | buildList `id`, minted by `isSkkuId` | a bare id, `buildingId` |
-| `apiId` (`ApiId`) | The building id handed back to SKKU on buildInfo. The same number as `skkuId`; not stored, derived during the sync | `toApiId` | — |
+| `skkuId` (`SkkuId`) | SKKU's building id: `_id` of `buildings`, the route's `:skkuId`, and `skkuId` in `connections` and `campus_shapes` | buildList `id`, minted by `isSkkuId` | a bare id, `buildingId` |
 | `buildNo` (`BuildNo`) | SKKU's building number (`"227"`); its first digit is the campus code. `null` for a facility | buildList `buildNo`, minted by `isBuildNo` | `buildingNo` |
-| `displayNo` (`DisplayNo`) | The number users see and type: `buildNo` without the campus digit (`"227"` gives `"27"`), or `buildNo` as is when it lacks that digit | `toDisplayNo` | — |
+| `displayNo` (`DisplayNo`) | The number users see and type: `buildNo` without the campus digit (`"227"` gives `"27"`), or `buildNo` as is when it lacks that digit. Derived on every read (`withDisplayNo`); the search matches the stored copy | `toDisplayNo` | — |
 | `spaceCd` (`SpaceCd`) | A room code. In the captures it starts with the building's `displayNo`, so a prefix search finds a building's rooms; it repeats across campuses | buildInfo `space_cd`, spaceList `spaceCd`, minted by `isSpaceCd` | `roomId` |
 | space | A room or area inside a building: one `spaces` document per `spaceCd`, `buildNo` and `campus` | buildInfo `floorItem`, spaceList `items` | room |
 | facility | A listed place with no `buildNo` (a gate, a field): `type` is `facility`, it has no spaces, and buildInfo is never called for it. Not the same as a `facilities` row of `kind` `facility` (a cafe, an ATM: any sisulList row that is not a cafeteria), which building does not read | `hasBuildNo` | — |
 | cafeteria (`CafeteriaDoc`) | A `facilities` document of `kind` `cafeteria`: one sisulList row of `bizKind` `0201`, keyed by its `conspaceCd`, with the `buildNo`, floor and `spaceCd` it sits in. Every other row is `kind` `facility` with its raw `bizKind`, which building does not read. The detail lists a building's cafeterias, so the app can link the cafeteria menu | sisulList rows, written by skkuverse-crawler | — |
 | `conspaceCd` | SKKU's code for a registered facility: `_id` of `facilities`, and the cafeteria id that SKKU's menu page and skkuverse-crawler's meals module use. spaceList stamps it on some rooms too | sisulList `conspaceCd`, spaceList `conspaceCd` | — |
 | campus (`Campus`) | `hssc` (Seoul) or `nsc` (Suwon); SKKU's own code for each is `SKKU_CAMPUS_CODE` | `CAMPUSES` | — |
-| buildList, buildInfo, spaceList | The three campusMap.do modes the building sync reads, and its phases named after them | `CAMPUS_MAP_URL` | — |
+| buildList, buildInfo, spaceList | The three campusMap.do modes skkuverse-crawler reads into `buildings` and `spaces` | skkuverse-crawler | — |
 | sisulList | The campusMap.do mode of the facility registry, which skkuverse-crawler mirrors into `facilities` | skkuverse-crawler | — |
-| raw, enriched | `buildings_raw` holds SKKU's data as sent; `buildings` holds it parsed and served, stamped with `enrichVersion` | `enrichBuilding` | — |
-| `EnrichedBuilding` | What `enrichBuilding` derives from a raw building; the sync repository writes it field by field | `toEnrichedSet` | enrichment fields |
+| stored building (`storedBuilding`) | The fields of a `buildings` document the reads use, as a zod schema; `buildingDoc` adds the derived `displayNo`. The writer's bookkeeping (`sync`, `enrichVersion`, `extensions`) is never read | `building.schema.ts` | — |
+| stored space (`storedSpace`) | The fields of a `spaces` document the reads use, as a zod schema; `sources` and `syncedAt` are the writer's and never read | `building.schema.ts` | — |
 | connection | A walkway between a floor of one building and a floor of another. `a` and `b` are unordered; the response reads it from the requested building, `fromFloor` to `toFloor` | `toBuildingConnections` | — |
 | tier, band | A ranking tier scores one kind of match; the strong and weak bands split results at `BUILDING_STRONG_MIN_SCORE` and `SPACE_STRONG_MIN_SCORE` | `BUILDING_TIERS`, `SPACE_TIERS` | `level`, `bucket` |
 | ranked result | Rows plus the campus counts the same predicate produced (`RankedSearchResult`) | `toRankedResult` | `searchData` |
@@ -68,11 +65,9 @@ The brands live in `src/building/building.types.ts`; each is minted only by its 
 
 ```mermaid
 flowchart LR
-  skku["SKKU campusMap.do<br/>buildList · buildInfo · spaceList"] -->|BuildingSyncPoller, every syncIntervalMs| sync["BuildingSyncService"]
+  skku["skkuverse-crawler campusmap<br/>(SKKU buildList · buildInfo · spaceList)"] --> bld[("buildings")]
+  skku --> spc[("spaces")]
   crawler["skkuverse-crawler campusmap<br/>(SKKU sisulList)"] -->|every row| fac[("facilities")]
-  sync -->|upsertRaw| raw[("buildings_raw")]
-  raw -->|enrichBuilding, upsertEnriched| bld[("buildings")]
-  sync -->|upsertSpaces| spc[("spaces")]
   seed["scripts/seed-connections.js"] -->|hand-written| con[("connections")]
   shapes["scripts/import-campus-shapes.js"] -->|authored| cs[("campus_shapes")]
   bld -->|BuildingRepository, cached| list["GET /building/list"]
@@ -111,14 +106,10 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 
 ## Invariants
 
-- Writes are keyed by SKKU's ids, so a rerun converges: buildings by `skkuId`, spaces by the unique index on `spaceCd`, `buildNo` and `campus`, never `spaceCd` alone.
-- Buildings are never deleted. A space no listing saw in a run is deleted (`deleteSpacesSyncedBefore`) only when spaceList returned at least `MIN_SPACES_FOR_STALE_DELETE` spaces.
+- Building writes none of `buildings`, `spaces` or `facilities`. skkuverse-crawler owns their writes and the indexes that guard them: the unique index on `spaces` `spaceCd`, `buildNo` and `campus` that its upserts key on, and the `buildings` `location` `2dsphere` index that rejects a malformed point. Building creates only the indexes its reads use (`spaces` and `facilities` by `buildNo`, `connections` by either end, `campus_shapes`).
+- Every read of `buildings` and `spaces` projects the fields it uses and parses them; a document that fails is left out and logged (`building.buildings.invalid`, `building.spaces.invalid`), and a building the detail cannot parse answers `404`. The search is the exception: its ranked `$facet` is typed, not parsed, so its rows and counts stay one predicate.
 - Building never writes `facilities`: skkuverse-crawler does, and owns its write-side indexes. Both cafeteria reads filter `kind: "cafeteria"`, project the fields they use and parse them (`cafeteriaDoc`); a cafeteria that fails is left out and logged (`building.cafeterias.invalid`, at most hourly per building on the detail).
-- A buildList run that lists fewer than `MIN_BUILDINGS_TO_TRUST` buildings writes nothing and fails the sync. After that phase, a failed phase does not stop the next one (`toSyncError` reports them together).
-- A payload item that fails its schema is dropped and logged (`building.sync.payload_items_dropped`); a list where more than `MAX_INVALID_PAYLOAD_ITEM_RATIO` fail is rejected whole. The buildInfo phase fails when more than `MAX_BUILD_INFO_FAILURE_RATIO` of its calls fail.
-- A building is re-enriched only when it is new, SKKU's `updateDt` changed, or its `enrichVersion` is not `ENRICH_VERSION` (`needsEnrichment`).
-- Data is at most one sync interval (`config.building.syncIntervalMs`) plus `BUILDING_CACHE_TTL_MS` old, and every route sends `BUILDING_CACHE_CONTROL`. The sync also runs once when the poller boots. Development does not run it (`BUILDING_SYNC=off`).
-- An api replica serves a synced list at most `BUILDING_CACHE_TTL_MS` late: the sync's `clearCache` clears only the poller process's cache, so the TTL, not an invalidation, is the stated freshness bound ([ADR 0012, D6](../decisions/0012-runtime-roles.md)).
+- Data is at most one crawler run plus `BUILDING_CACHE_TTL_MS` old, and every route sends `BUILDING_CACHE_CONTROL`. Nothing invalidates a cache: the TTL is the stated freshness bound ([ADR 0012, D6](../decisions/0012-runtime-roles.md)).
 - The detail lists the cafeterias whose `buildNo` is the building's, in `conspaceCd` order; a building without a `buildNo` reads none and serves `[]`.
 - The cafeteria list reads every cafeteria in one cached read (`BUILDING_CACHE_TTL_MS`, no stale window) and filters it by campus, so a failed read reaches `meals`. Nothing clears it: the TTL is its freshness bound, after the crawler's run.
 - `GET /building/:skkuId` answers `400` `INVALID_ID` for an id `isSkkuId` rejects, before any read, and `404` `NOT_FOUND` for a valid id with no building.
@@ -132,17 +123,15 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 ## Open questions
 
 - Place resolution has no caller yet: the notice flow that stores each session's resolved places waits on skkuverse-crawler's `where.places` field. The places skkumap lacks (`extraFacilities`) have no coordinates, so a map pin for one needs them first.
-- `ApiId` equals `SkkuId`, and no reason for keeping them apart is recorded. Merging them, which would retire `toApiId`, is open.
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
-- A version stamp that api replicas check, so a sync reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
+- A version stamp that api replicas check, so a crawler run reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
 - Why spaceList stamps a `conspaceCd` on some rooms and not on others. The detail serves it on each space, and nothing joins on it there.
-- What `extensions` is for: the sync creates it empty on insert, and no route serves it.
-- buildInfo also sends a floor code (`floor`), which the schema ignores; `floorSortKey` orders floors by the Korean floor name instead.
+- buildInfo also sends a floor code (`floor`), which `spaces` does not carry; `floorSortKey` orders floors by the Korean floor name instead.
 
 ## Related
 
 - [ADR 0010](../decisions/0010-server-architecture.md): why building is shaped as it is
 - [ADR 0006](../decisions/0006-building-search-relevance-ranking.md): why a `spaceCd` prefix ranks first
 - [Map architecture](map-architecture.md), "Campus shapes": why shapes are a collection of their own
-- SKKU payload fields as sent: `src/building/sync/building-sync.schema.ts` and the fixtures in `__tests__/nest/building/fixtures/`
+- SKKU payload fields as sent: skkuverse-crawler's `campusmap` module; the documents it stores, as this server reads them: the `skkumap-*` fixtures in `__tests__/nest/building/fixtures/`
 - [Building data survey](../archive/building-data-2026-03.md): the cross-checks behind the schema, kept as evidence

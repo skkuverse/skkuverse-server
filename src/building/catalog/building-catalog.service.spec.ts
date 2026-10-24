@@ -6,20 +6,21 @@
  * list's English fallback leaves the repository's objects as they were, and
  * that the detail lists the cafeterias in its own building only.
  */
+import { storedBuilding } from "../../../__tests__/helpers/building/buildings";
 import { FakeBuildingCatalogRepository } from "../../../__tests__/helpers/fakes/building/building-catalog.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
-import type { BuildingDoc, CafeteriaDoc, SpaceDoc } from "../building.document";
+import type { CafeteriaDoc, SpaceDoc } from "../building.document";
 import type { BuildingRepository } from "../building.repository";
 import type { SkkuId } from "../building.types";
 import type { ConnectionEnds } from "./building-catalog.document";
 import type { BuildingCatalogRepository } from "./building-catalog.repository";
 import { BuildingCatalogService } from "./building-catalog.service";
 
-const LAW = { _id: 1, buildNo: "100", displayNo: "0", campus: "hssc", name: { ko: "법학관", en: "Law" } } as BuildingDoc;
-const BUSINESS = { _id: 2, buildNo: "101", displayNo: "1", campus: "hssc", name: { ko: "경영관", en: "Business" } } as BuildingDoc;
-const ENGINEERING = { _id: 3, buildNo: "200", displayNo: "0", campus: "nsc", name: { ko: "공학관", en: "Eng" } } as BuildingDoc;
-const GATE = { _id: 4, buildNo: null, displayNo: null, campus: "nsc", name: { ko: "정문", en: "Main Gate" } } as BuildingDoc;
+const LAW = storedBuilding({ _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } });
+const BUSINESS = storedBuilding({ _id: 2, buildNo: "101", campus: "hssc", name: { ko: "경영관", en: "Business" } });
+const ENGINEERING = storedBuilding({ _id: 3, buildNo: "200", campus: "nsc", name: { ko: "공학관", en: "Eng" } });
+const GATE = storedBuilding({ _id: 4, buildNo: null, campus: "nsc", name: { ko: "정문", en: "Main Gate" } });
 
 let catalog: FakeBuildingCatalogRepository;
 let buildings: FakeBuildingRepository;

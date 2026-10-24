@@ -4,10 +4,11 @@
  * requested campus's cafeterias are listed, in conspaceCd order, each joined
  * to its building, and a failed read rejects.
  */
+import { storedBuilding } from "../../../__tests__/helpers/building/buildings";
 import { FakeBuildingCafeteriaListRepository } from "../../../__tests__/helpers/fakes/building/building-cafeteria-list.repository.fake";
 import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { BuildingDoc, CafeteriaDoc } from "../../building/building.document";
+import type { CafeteriaDoc } from "../../building/building.document";
 import { BuildingCafeteriaListService } from "../../building/cafeteria-list/building-cafeteria-list.service";
 import { BuildingService } from "../../building/building.service";
 import { MealsCatalogService } from "./meals-catalog.service";
@@ -28,8 +29,8 @@ function cafeteria(id: string, campus: "hssc" | "nsc", buildNo: string): Cafeter
   } as CafeteriaDoc;
 }
 
-const BUSINESS = { _id: 12, buildNo: "133", displayNo: "33", campus: "hssc", name: { ko: "경영관", en: "Business School" } } as BuildingDoc;
-const STUDENT_CENTER = { _id: 15, buildNo: "203", displayNo: "3", campus: "nsc", name: { ko: "학생회관", en: "Student Center" } } as BuildingDoc;
+const BUSINESS = storedBuilding({ _id: 12, buildNo: "133", campus: "hssc", name: { ko: "경영관", en: "Business School" } });
+const STUDENT_CENTER = storedBuilding({ _id: 15, buildNo: "203", campus: "nsc", name: { ko: "학생회관", en: "Student Center" } });
 
 let repository: FakeBuildingRepository;
 let cafeteriaList: FakeBuildingCafeteriaListRepository;

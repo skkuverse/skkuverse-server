@@ -48,7 +48,6 @@ import { UiCampusModule } from "./ui/campus/ui-campus.module";
 import { BuildingModule } from "./building/building.module";
 import { BuildingCatalogModule } from "./building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "./building/search/building-search.module";
-import { BuildingSyncModule } from "./building/sync/building-sync.module";
 import { BuildingCafeteriaListModule } from "./building/cafeteria-list/building-cafeteria-list.module";
 import { BuildingPlaceModule } from "./building/place/building-place.module";
 import { BuildingPlaceResolveModule } from "./building/place/resolve/building-place-resolve.module";
@@ -148,7 +147,6 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     // /building/search (route-order.test.ts).
     BuildingSearchModule,
     BuildingCatalogModule,
-    BuildingSyncModule,
     BuildingCafeteriaListModule,
     BuildingPlaceModule,
     BuildingPlaceResolveModule,

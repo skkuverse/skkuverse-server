@@ -19,7 +19,6 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | --- | --- | --- | --- |
 | `PUSH_DELIVERY` | `suppressed` | `live` | `postToFcmFunction` logs `push.delivery.suppressed` and returns `{ sent: 0 }` without calling the Cloud Function. Callers record it as a completed send, so `_dev` notices get `pushedAt`. |
 | `RATE_LIMIT` | `off` | `on` | Every limiter skips. Locally every simulator request comes from one loopback address. |
-| `BUILDING_SYNC` | `off` | `on` | The `building-sync` poller is not registered. Its warm-up crawls all of `campusMap.do` and rewrites `skkumap_dev` on every boot, and nodemon reboots on every save. |
 | `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed) and the bus timetable cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
 | `SHUTTLE_ETA` | `off` | `on` | No NAVER Directions or TMAP call: the 인자셔틀 arrival-estimate jobs, which use metered keys, do not run. Smart schedules still apply whatever estimates `bus_campus_dev.shuttle_eta` holds. Production may set it `off`. |
 | `SUBWAY` | `off` | `on` | No Seoul subway API call or train-map crawl: the subway pollers do not run. The API key and its daily quota are shared with production. Production may set it `off`. |
@@ -47,7 +46,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
    npm run dev
    ```
 
-   The `Server started (NestJS)` line shows the switches as resolved: `push: "suppressed"`, `rateLimit: "off"`, `buildingSync: "off"`, `cache: "off"`.
+   The `Server started (NestJS)` line shows the switches as resolved: `push: "suppressed"`, `rateLimit: "off"`, `cache: "off"`.
 
 2. In `skkuverse-app/apps/mobile/.env`, set `EXPO_PUBLIC_BASE_URL` for the device:
 
@@ -73,15 +72,12 @@ Set it on the command, like `USE_PROD_API`. These are per-run values: they are n
 
 ```bash
 RATE_LIMIT=on npm run dev        # reproduce a 429, or while a tunnel is up
-BUILDING_SYNC=on npm run dev     # crawl campusMap.do into skkumap_dev
 CACHE=on npm run dev             # check a TTL, a stale fallback or a Cache-Control value
 ```
 
-`BUILDING_SYNC=on` crawls on every boot, and `npm run dev` reboots on every save, so turn it on for a single run.
-
 Three combinations refuse to boot (`config.invalid_runtime_switch`): `PUSH_DELIVERY=live` in development, and `RATE_LIMIT=off` or `CACHE=off` in production. A real push is checked after deploying, in production.
 
-A production override may only reduce outbound effects (`PUSH_DELIVERY=suppressed`, `BUILDING_SYNC=off`, as `docker-compose.local-verify.yml` sets them). `PUSH_DELIVERY=suppressed` in production drops pushes rather than pausing them: the dispatcher still claims each notice and stamps `pushedAt`, so nothing is sent later. Tests keep production's defaults: every test mocks `fetch`, and the limiter tests expect 429s.
+A production override may only reduce outbound effects (`PUSH_DELIVERY=suppressed`, `SHUTTLE_ETA=off`, as `docker-compose.local-verify.yml` sets them). `PUSH_DELIVERY=suppressed` in production drops pushes rather than pausing them: the dispatcher still claims each notice and stamps `pushedAt`, so nothing is sent later. Tests keep production's defaults: every test mocks `fetch`, and the limiter tests expect 429s.
 
 ## What still reaches production
 

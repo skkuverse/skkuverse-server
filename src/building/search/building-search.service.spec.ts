@@ -4,10 +4,11 @@
  * room group is joined to its building's skkuId, and the meta carries row
  * counts in the documented key order.
  */
+import { storedBuilding } from "../../../__tests__/helpers/building/buildings";
 import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
 import { FakeBuildingSearchRepository } from "../../../__tests__/helpers/fakes/building/building-search.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { BuildingDoc, SpaceDoc } from "../building.document";
+import type { SpaceDoc } from "../building.document";
 import type { BuildingRepository } from "../building.repository";
 import type { BuildingSearchRepository } from "./building-search.repository";
 import { BuildingSearchService } from "./building-search.service";
@@ -51,9 +52,9 @@ describe("BuildingSearchService.search", () => {
       ] as SpaceDoc[],
     };
     buildings.buildings = [
-      { _id: 22, buildNo: "227", campus: "nsc" },
-      { _id: 1, buildNo: null, campus: "nsc" },
-    ] as BuildingDoc[];
+      storedBuilding({ _id: 22, buildNo: "227", campus: "nsc", name: { ko: "제2공학관27동", en: "" } }),
+      storedBuilding({ _id: 1, buildNo: null, campus: "nsc", name: { ko: "정문", en: "" } }),
+    ];
 
     // Act
     const { data, meta } = await service.search("27", "nsc", "ko");

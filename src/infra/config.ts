@@ -54,16 +54,11 @@ const config = {
     dbName: dbNameFor(process.env.MONGO_BUILDING_DB_NAME),
     collections: {
       buildings: "buildings",
-      buildingsRaw: "buildings_raw",
       spaces: "spaces",
       connections: "connections",
       facilities: "facilities",
       campusShapes: "campus_shapes",
     },
-    syncIntervalMs:
-      parseInt(process.env.BUILDING_SYNC_INTERVAL_MS || "", 10) ||
-      7 * 24 * 60 * 60 * 1000,
-    syncEnabled: switches.buildingSyncEnabled,
   },
 
   notices: {
@@ -289,7 +284,6 @@ const config = {
   getSideEffectsSummary(): {
     push: string;
     rateLimit: string;
-    buildingSync: string;
     cache: string;
     shuttleEta: string;
     subway: string;
@@ -299,7 +293,6 @@ const config = {
     return {
       push: switches.pushDelivery,
       rateLimit: switches.rateLimitEnabled ? "on" : "off",
-      buildingSync: switches.buildingSyncEnabled ? "on" : "off",
       cache: switches.cacheEnabled ? "on" : "off",
       shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
       subway: switches.subwayEnabled ? "on" : "off",

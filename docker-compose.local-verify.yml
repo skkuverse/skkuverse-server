@@ -21,7 +21,6 @@ x-api-dev-env: &api-dev-env
   - MONGO_CONTENT_DB_NAME=skku_content_dev
   - SENTRY_DSN=disabled
   - PUSH_DELIVERY=suppressed
-  - BUILDING_SYNC=off
   - SHUTTLE_ETA=off
   - SUBWAY=off
   - SHUTTLE=off
@@ -42,7 +41,6 @@ services:
       - MONGO_CONTENT_DB_NAME=skku_content_dev
       - SENTRY_DSN=disabled
       - PUSH_DELIVERY=suppressed
-      - BUILDING_SYNC=off
       - SHUTTLE_ETA=off
       - SUBWAY=off
       - SHUTTLE=off

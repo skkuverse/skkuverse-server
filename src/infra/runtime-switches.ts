@@ -10,7 +10,6 @@ export type PushDelivery = "live" | "suppressed";
 export interface RuntimeSwitches {
   pushDelivery: PushDelivery;
   rateLimitEnabled: boolean;
-  buildingSyncEnabled: boolean;
   cacheEnabled: boolean;
   shuttleEtaEnabled: boolean;
   subwayEnabled: boolean;
@@ -21,7 +20,6 @@ export interface RuntimeSwitches {
 export const RUNTIME_SWITCH_NAMES = [
   "PUSH_DELIVERY",
   "RATE_LIMIT",
-  "BUILDING_SYNC",
   "CACHE",
   "SHUTTLE_ETA",
   "SUBWAY",
@@ -71,7 +69,7 @@ function pushDelivery(resolution: Resolution): PushDelivery {
 
 function isOn(
   resolution: Resolution,
-  name: "RATE_LIMIT" | "BUILDING_SYNC" | "CACHE" | "SHUTTLE_ETA" | "SUBWAY" | "SHUTTLE" | "REGIONAL_BUS",
+  name: "RATE_LIMIT" | "CACHE" | "SHUTTLE_ETA" | "SUBWAY" | "SHUTTLE" | "REGIONAL_BUS",
 ): boolean {
   return (resolution.read(name, ON_OFF) ?? (resolution.mode === "development" ? "off" : "on")) === "on";
 }
@@ -96,7 +94,6 @@ export function resolveRuntimeSwitches(
     switches: {
       pushDelivery: pushDelivery(resolution),
       rateLimitEnabled: isGuardOn(resolution, "RATE_LIMIT"),
-      buildingSyncEnabled: isOn(resolution, "BUILDING_SYNC"),
       cacheEnabled: isGuardOn(resolution, "CACHE"),
       shuttleEtaEnabled: isOn(resolution, "SHUTTLE_ETA"),
       subwayEnabled: isOn(resolution, "SUBWAY"),
