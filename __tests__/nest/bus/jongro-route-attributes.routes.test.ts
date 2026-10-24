@@ -454,7 +454,7 @@ describe("the Jongro realtime poller with no attributes stored", () => {
     await pollers.get("jongro-07")!();
 
     // Assert
-    expect([...pollers.keys()].filter((name) => /^jongro-\d+$/.test(name))).toEqual(["jongro-02", "jongro-07", "jongro-08"]);
+    expect([...pollers.keys()].filter((name) => /^jongro-\d+$/.test(name))).toEqual(["jongro-02", "jongro-07", "jongro-08", "jongro-7800"]);
     expect(stores.busCache.values.get("jongro_stations_07")).toEqual([]);
     expect(stores.busCache.values.get("jongro_locations_07")).toEqual([]);
     expect(stores.jongroClient.positionsRouteIds).toEqual(["100900004"]);

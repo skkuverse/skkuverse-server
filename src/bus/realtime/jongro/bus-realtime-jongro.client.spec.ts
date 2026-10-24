@@ -12,14 +12,21 @@
  * TOPIS id and SEOUL_BUS_SERVICE_KEY at the call, so importing the route config
  * needs no key, and a role that does not poll refuses to build one (ADR 0012, D4).
  * 7800, which TOPIS answers by its GBIS route id, reads the same way.
+ * An answer saying the key's daily quota is spent, in TOPIS's envelope or the
+ * data.go.kr gateway's (code 22), rejects like any refusal and also logs
+ * `bus.topis.quota_exceeded` with the data.go.kr operation, which an alert
+ * reads: every TOPIS route of that operation stops until the quota resets.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
+jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
 import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-positions.json";
 import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import positions7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-positions.json";
 import busTypesFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-bus-types.json";
+import { ROUTE_7800, arrivalDocs7800, sightings7800 } from "../../../../__tests__/helpers/bus/topis-7800";
+import logger from "../../../infra/logger";
 import { JONGRO_ROUTES } from "../../bus.constants";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 
@@ -558,6 +565,20 @@ describe("BusRealtimeJongroClient over 7800's capture", () => {
     ]);
   });
 
+  it("reads the capture as the docs the 7800 route tests seed bus_cache with", async () => {
+    // Arrange
+    respond(arrivals7800);
+    const arrivals = await new BusRealtimeJongroClient().fetchArrivals(ROUTE_7800);
+    respond(positions7800);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(ROUTE_7800);
+
+    // Assert
+    expect(arrivals).toEqual(arrivalDocs7800());
+    expect(sightings).toEqual(sightings7800());
+  });
+
   it("reads all 80 arrival rows, both directions, the virtual stations included", async () => {
     // Arrange
     respond(arrivals7800);
@@ -621,3 +642,56 @@ describe("BusRealtimeJongroClient bus type", () => {
     expect(arrival!.buses[1]).not.toHaveProperty("busType");
   });
 });
+
+// WHY: arrivals have 272 calls a day of margin beside the crawler's reserve (docs/project-docs.md, "Daily Usage and
+// Quota Check"), so a spent quota is told apart from any other refusal for its alert.
+describe("BusRealtimeJongroClient over a spent daily quota", () => {
+  const GATEWAY_REFUSAL =
+    "<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>22</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>";
+  const quotaLines = () => jest.mocked(logger.error).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "bus.topis.quota_exceeded").map(([fields]) => fields);
+
+  it("Envelope says the limit is exceeded: rejects with its code and logs the arrivals operation", async () => {
+    // Arrange
+    respond({ msgHeader: { headerCd: "22", headerMsg: "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR." }, msgBody: { itemList: null } });
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({ name: "UpstreamError", upstream: "topis", headerCd: "22" });
+    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07" }]);
+  });
+
+  it("Gateway answers its XML refusal in a 200: rejects and logs the positions operation", async () => {
+    // Arrange
+    respond(GATEWAY_REFUSAL);
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchSightings(ROUTE_7800)).rejects.toMatchObject({ name: "UpstreamError", headerCd: "22" });
+    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getBusPosByRtidList", code: "7800" }]);
+  });
+
+  it("Gateway refuses with an HTTP error: rejects with that error and logs the operation", async () => {
+    // Arrange
+    const refused = Object.assign(new Error("Request failed with status code 429"), { response: { status: 429, data: GATEWAY_REFUSAL } });
+    axios.get.mockRejectedValue(refused);
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toBe(refused);
+    expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07" }]);
+  });
+
+  it("logs nothing for another refusal, a per-second limit or a failed request", async () => {
+    // Arrange
+    const perSecond = "<returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_PER_SECOND_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>23</returnReasonCode>";
+
+    // Act
+    respond({ msgHeader: { headerCd: "7", headerMsg: "인증 실패" }, msgBody: { itemList: null } });
+    await new BusRealtimeJongroClient().fetchArrivals(route07).catch(() => undefined);
+    respond(perSecond);
+    await new BusRealtimeJongroClient().fetchArrivals(route07).catch(() => undefined);
+    axios.get.mockRejectedValue(new Error("timeout of 10000ms exceeded"));
+    await new BusRealtimeJongroClient().fetchSightings(route07).catch(() => undefined);
+
+    // Assert
+    expect(quotaLines()).toEqual([]);
+  });
+});
+

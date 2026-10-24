@@ -1,0 +1,35 @@
+{
+  "_about": "Proposed bus-stops entries for 7800 (plan docs/plans/7800-unified-arrivals.md §6), not pushed. Append to data.stops of a pulled bus-stops working file. Coordinates are TOPIS getStaionByRoute gpsY/gpsX for route 200000150 (__tests__/nest/bus/fixtures/topis-route-stations-7800.json, captured 2026-10-24), rounded to 7 decimals; confirm each pole on site before pushing. No subwayStationId on the two 사당 stops: the subway module serves no 사당 station (src/subway/subway.constants.ts). The 성균관대학교 poles carry no ARS number, so they alias their TOPIS station ids (topisIds); the 사당 poles alias their ARS numbers. Needs a server with the topisIds field deployed first (an older one refuses the key).",
+  "stops": [
+    {
+      "id": "nsc-skku-to-sadang",
+      "name": { "ko": "성균관대학교", "en": "Sungkyunkwan Univ.", "zh": "成均馆大学" },
+      "detail": { "ko": "사당 방면", "en": "Toward Sadang", "zh": "往舍堂方向" },
+      "coords": { "lat": 37.297198, "lng": 126.9710096 },
+      "topisIds": ["200000162"],
+      "campus": "nsc"
+    },
+    {
+      "id": "nsc-skku-to-suwon",
+      "name": { "ko": "성균관대학교", "en": "Sungkyunkwan Univ.", "zh": "成均馆大学" },
+      "detail": { "ko": "수원 방면", "en": "Toward Suwon", "zh": "往水原方向" },
+      "coords": { "lat": 37.2970079, "lng": 126.9704823 },
+      "topisIds": ["200000159"],
+      "campus": "nsc"
+    },
+    {
+      "id": "sadang-exit9",
+      "name": { "ko": "사당역 9번 출구 앞", "en": "Sadang Stn. Exit 9", "zh": "舍堂站 9号出口" },
+      "detail": { "ko": "수원 방면 승차", "en": "Board here toward Suwon", "zh": "往水原方向上车" },
+      "coords": { "lat": 37.4773926, "lng": 126.9813959 },
+      "arsIds": ["20253"]
+    },
+    {
+      "id": "sadang-median",
+      "name": { "ko": "사당역 중앙버스정류장", "en": "Sadang Stn. median bus stop", "zh": "舍堂站中央公交车站" },
+      "detail": { "ko": "사당 도착 하차", "en": "Get off here arriving at Sadang", "zh": "到达舍堂下车" },
+      "coords": { "lat": 37.474219, "lng": 126.9820504 },
+      "arsIds": ["22028"]
+    }
+  ]
+}

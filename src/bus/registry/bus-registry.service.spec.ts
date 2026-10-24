@@ -23,6 +23,7 @@ import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { JONGRO_ROUTES } from "../bus.constants";
 import { capturedStationsOf, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
+import { ROUTE_7800, TURNAROUND_7800, arrivalDocs7800, registryDoc7800, sightings7800 } from "../../../__tests__/helpers/bus/topis-7800";
 import type { BusRegistryRepository } from "./bus-registry.repository";
 import { toStationsVersion } from "./bus-registry.rules";
 import { BusRegistryBootstrappingError } from "./bus-registry.error";
@@ -420,5 +421,66 @@ describe("BusRegistryService.bootstrap", () => {
     expect(repository.routes.get("jongro07")).toEqual(operatorDoc);
     expect(callsOf("warn", "bus.jongro.registry_bootstrapped")).toEqual([]);
     expect((await service.routeOf("jongro07")).stationsVersion).toBe("operator-edit");
+  });
+});
+
+// WHY: 7800 joins the TOPIS route list unlisted (docs/plans/7800-unified-arrivals.md, Q2), so the config's read of
+// every route never reads it, while the live route and the stop index read it by id.
+describe("BusRegistryService over 7800's capture", () => {
+  const sightingTurnarounds = () => sightings7800().map((sighting) => sighting.turnaroundStationId);
+
+  it("lists only the routes /bus/config lists, even with 7800 stored", async () => {
+    // Arrange
+    storeRoutes();
+    repository.routes.set("gyeonggi7800", registryDoc7800(NOW));
+
+    // Act
+    const routes = await service.listRoutes();
+
+    // Assert
+    expect(routes.map((route) => route.id)).toEqual(["jongro02", "jongro07", "jongro08"]);
+  });
+
+  it("lists the Jongno routes with 7800 missing, and logs no missing route", async () => {
+    // Arrange
+    storeRoutes();
+
+    // Act
+    const routes = await service.listRoutes();
+
+    // Assert
+    expect(routes).toHaveLength(3);
+    expect(callsOf("error", "bus.jongro.registry_missing")).toEqual([]);
+  });
+
+  it("inserts 7800 at the third tick of its capture: 80 stations, both directions, turning back at 사당역 (seq 39)", async () => {
+    // Arrange
+    const tick = () => service.bootstrap(ROUTE_7800, arrivalDocs7800(), sightingTurnarounds()).catch(ignoreBootstrapping);
+    await tick();
+    await tick();
+
+    // Act
+    await tick();
+
+    // Assert
+    const route = await service.routeOf("gyeonggi7800");
+    expect([route.code, route.busRouteId, route.isListed, route.registryStations.length, route.turnaroundTopisId]).toEqual(["7800", "200000150", false, 80, TURNAROUND_7800]);
+    expect(route.stations.findIndex((station) => station.isRotationStation)).toBe(38);
+    expect(route.passThroughOrds.size).toBe(19);
+    expect(callsOf("warn", "bus.jongro.registry_bootstrapped")).toHaveLength(1);
+  });
+
+  it("finds the captured list unchanged on every later tick: nothing pending, held or synced", async () => {
+    // Arrange
+    repository.routes.set("gyeonggi7800", registryDoc7800(NOW));
+    const route = await service.routeOf("gyeonggi7800");
+
+    // Act
+    for (let i = 0; i < 4; i++) await service.observe(route, arrivalDocs7800(), sightingTurnarounds());
+
+    // Assert
+    const events = mockedLogger.warn.mock.calls.concat(mockedLogger.error.mock.calls).map(([fields]) => fields?.event);
+    expect(events.filter((event) => String(event).startsWith("bus.jongro.registry_"))).toEqual([]);
+    expect(repository.routes.get("gyeonggi7800")).toEqual(registryDoc7800(NOW));
   });
 });

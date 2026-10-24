@@ -74,6 +74,12 @@ export function toHsscDirections(lang: SupportedLang): LineDirections {
   return { directions, directionIds: Array.from({ length: HSSC_POSITION_COUNT }, (_, index) => directionIdAt(index)) };
 }
 
+// WHY: a line placed by another stations version than the caller's (a sync between the two reads) names none.
+export function toLineStationDirection({ directions, directionIds }: LineDirections, stationIndex: number): StationDirection | null {
+  const direction = directions.find((candidate) => candidate.id === directionIds[stationIndex]);
+  return direction ? { id: direction.id, label: direction.label } : null;
+}
+
 // WHY: a config placed by another stations version than the caller's (a sync between the two reads) would name another
 // station's direction at this index, so it names none.
 export function toStationDirection(group: BusGroup | null, stationIndex: number, stationsVersion: string | null): StationDirection | null {

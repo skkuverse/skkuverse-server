@@ -11,6 +11,14 @@ const jongroRoute = (code: string, busRouteId: string): JongroRoute =>
 // WHY: the TOPIS routes in the app's order; each route's card, seat count and transfer lines are stored attributes.
 export const JONGRO_ROUTES: ReadonlyArray<JongroRoute> = Object.freeze([jongroRoute("02", "100900008"), jongroRoute("07", "100900004"), jongroRoute("08", "100900005")]);
 
+// QUIRK(topis): a Gyeonggi route answers by its GBIS route id and sends no load (rerdie_Div 2, 0 aboard; 2026-10-24).
+// Polled only with REGIONAL_BUS on, on no card. SEE: docs/project-docs.md ("Daily Usage and Quota Check")
+const REGIONAL_CAPABILITIES: JongroRouteCapabilities = Object.freeze({ positionSource: "gps", occupancy: false, plateNumber: true, lastBus: true, lowFloor: true });
+export const REGIONAL_ROUTES: ReadonlyArray<JongroRoute> = Object.freeze([Object.freeze({ id: "gyeonggi7800", code: "7800", busRouteId: "200000150", capabilities: REGIONAL_CAPABILITIES, isListed: false, pollIntervalMs: 30_000 })]);
+
+// WHY: every route the TOPIS pollers keep and /bus/live serves, the Jongno routes first.
+export const TOPIS_ROUTES: ReadonlyArray<JongroRoute> = Object.freeze([...JONGRO_ROUTES, ...REGIONAL_ROUTES]);
+
 // SEE: docs/explanation/bus-architecture.md ("Glossary"): a stop id names one pole, a TOPIS pole's derived from its ARS number.
 export const STOP_ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 export const TOPIS_STOP_ID_PREFIX = "seoul-";

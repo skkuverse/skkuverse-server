@@ -46,6 +46,7 @@ import { withLineDirections, withoutLineDirections } from "../../../__tests__/he
 import type { FakeBusRoutePathRepository } from "../../../__tests__/helpers/fakes/bus/bus-route-path.repository.fake";
 import { FakeBusRoutePathService } from "../../../__tests__/helpers/fakes/bus/bus-route-path.service.fake";
 import type { BusRoutePathService } from "../route-path/bus-route-path.service";
+import { registryDoc7800, routePathDoc7800 } from "../../../__tests__/helpers/bus/topis-7800";
 import { BusConfigService } from "./bus-config.service";
 
 const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
@@ -761,3 +762,68 @@ describe("BusConfigService.findStationDirection", () => {
     expect(await service.findStationDirection("jongro08", { stationIndex: 22, stationsVersion: version08 }, "ko")).toBeNull();
   });
 });
+
+// WHY: 7800 is polled and served on /bus/live but listed on no card (docs/plans/7800-unified-arrivals.md, Q2), and
+// has no stored attributes; the config reads neither its registry nor its line, while a stop page still names the
+// direction its station lies on (review finding: the direction lookup was gated on listing).
+describe("BusConfigService with 7800 unlisted", () => {
+  const version7800 = registryDoc7800().stationsVersion;
+  const store7800 = () => {
+    registryRepository.routes.set("gyeonggi7800", registryDoc7800());
+    routePathRepository.routePaths.set("gyeonggi7800", routePathDoc7800());
+  };
+
+  it("names the direction of 7800's stations by TOPIS's terminal, in the request language, with no attributes for it", async () => {
+    // Arrange
+    store7800();
+    service = await freshService();
+
+    // Act
+    const directions = [
+      await service.findStationDirection("gyeonggi7800", { stationIndex: 23, stationsVersion: version7800 }, "ko"),
+      await service.findStationDirection("gyeonggi7800", { stationIndex: 57, stationsVersion: version7800 }, "ko"),
+      await service.findStationDirection("gyeonggi7800", { stationIndex: 23, stationsVersion: version7800 }, "en"),
+    ];
+
+    // Assert
+    expect(directions).toEqual([
+      { id: "277101688", label: "사당역 방면" },
+      { id: "201000404", label: "호매실동차고지 방면" },
+      { id: "277101688", label: "To 사당역" },
+    ]);
+  });
+
+  it("names none for 7800 under another stations version, with no stored line, or with no stored registry", async () => {
+    // Arrange
+    store7800();
+    service = await freshService();
+    const placedElsewhere = await service.findStationDirection("gyeonggi7800", { stationIndex: 23, stationsVersion: "synced-since" }, "ko");
+    routePathRepository.routePaths.delete("gyeonggi7800");
+    service = await freshService();
+    const noLine = await service.findStationDirection("gyeonggi7800", { stationIndex: 23, stationsVersion: version7800 }, "ko");
+    registryRepository.routes.delete("gyeonggi7800");
+    service = await freshService();
+
+    // Act
+    const noRegistry = await service.findStationDirection("gyeonggi7800", { stationIndex: 23, stationsVersion: version7800 }, "ko");
+
+    // Assert
+    expect([placedElsewhere, noLine, noRegistry]).toEqual([null, null, null]);
+  });
+
+  it("lists no group for 7800 and reads neither its registry nor its line, so neither missing changes the groups", async () => {
+    // Arrange
+    const withoutRoute = JSON.stringify(await service.getBusGroups("ko"));
+    store7800();
+    service = await freshService();
+
+    // Act
+    const withRoute = JSON.stringify(await service.getBusGroups("ko"));
+
+    // Assert
+    expect(withRoute).toBe(withoutRoute);
+    expect(service.listGroupIds()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
+    expect(await service.getGroupById("gyeonggi7800", "ko")).toBeNull();
+  });
+});
+

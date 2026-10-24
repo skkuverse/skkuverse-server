@@ -24,6 +24,7 @@ import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/b
 import { FakeBusRealtimeHsscRepository } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { storedBusRegistryRepository } from "../../../../__tests__/helpers/bus/bus-registry";
+import { arrivalDocs7800, registryDoc7800 } from "../../../../__tests__/helpers/bus/topis-7800";
 import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
 import type { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
@@ -725,3 +726,34 @@ describe("BusRealtimeGroupService.recordDeprecatedCall", () => {
     ]);
   });
 });
+
+// WHY: 7800 is on no card, so the attributes dataset holds no entry for it (docs/plans/7800-unified-arrivals.md,
+// section 4); its source reports no load, so no seat count is needed to read it.
+describe("BusRealtimeGroupService.findJongroReading for 7800", () => {
+  it("reads 7800's cached rows and buses on its stored stations with no attributes stored for it", async () => {
+    // Arrange
+    registryRepository.routes.set("gyeonggi7800", registryDoc7800());
+    busCache.values.set("jongro_stations_7800", arrivalDocs7800());
+
+    // Act
+    const reading = await service.findJongroReading("gyeonggi7800");
+
+    // Assert
+    expect([reading?.route.id, reading?.route.isListed, reading?.rows.length, reading?.positions.length]).toEqual(["gyeonggi7800", false, 80, 0]);
+    expect(reading?.rows.flatMap((row) => row.slots).filter((slot) => slot.arrival.crowding !== null || slot.arrival.passengerCount !== null)).toEqual([]);
+  });
+
+  it("answers the registry's 503 for 7800 before its poller stored it", async () => {
+    // Act & Assert
+    await expect(service.findJongroReading("gyeonggi7800")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE" });
+  });
+
+  it("serves no 7800 on the frozen realtime route", async () => {
+    // Arrange
+    registryRepository.routes.set("gyeonggi7800", registryDoc7800());
+
+    // Act & Assert
+    await expect(service.getGroup("gyeonggi7800")).rejects.toMatchObject({ code: "GROUP_NOT_FOUND", httpStatus: 404 });
+  });
+});
+

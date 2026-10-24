@@ -62,10 +62,10 @@ export function toArrivalCarNumber(bus: JongroArrivalBus): string | null {
   return hasVehicle(bus) ? toCarNumber(bus.plainNo) : null;
 }
 
-export function toCrowding(rerideDiv: number | null, rerideNum: number | null, seatCount: number): Crowding | null {
+export function toCrowding(rerideDiv: number | null, rerideNum: number | null, seatCount: number | null): Crowding | null {
   if (rerideNum === null) return null;
   if (rerideDiv === CONGESTION_CODE_TYPE) return CROWDING_BY_CONGESTION_CODE[rerideNum] ?? null;
-  if (rerideDiv !== PASSENGER_COUNT_TYPE) return null;
+  if (rerideDiv !== PASSENGER_COUNT_TYPE || seatCount === null) return null;
   if (rerideNum <= seatCount) return "relaxed";
   return rerideNum <= seatCount * NORMAL_CROWDING_SEAT_RATIO ? "normal" : "crowded";
 }
@@ -74,7 +74,7 @@ export function toPassengerCount(bus: JongroArrivalBus): number | null {
   return bus.rerideDiv === PASSENGER_COUNT_TYPE ? bus.rerideNum : null;
 }
 
-export function toArrival(bus: JongroArrivalBus, seatCount: number): RealtimeArrival {
+export function toArrival(bus: JongroArrivalBus, seatCount: number | null): RealtimeArrival {
   return {
     minutes: toMinutes(bus),
     stopsAway: toStopsAway(bus),

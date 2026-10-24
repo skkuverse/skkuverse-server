@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { JONGRO_ROUTES } from "../bus.constants";
+import { TOPIS_ROUTES } from "../bus.constants";
 import type { JongroRoute } from "../bus.types";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
 import { BusRegistryBootstrappingError, BusRegistryMissingError } from "./bus-registry.error";
@@ -37,8 +37,9 @@ export class BusRegistryService {
     private readonly clock: Clock,
   ) {}
 
+  // WHY: the routes /bus/config lists; an unlisted route is read by id only, so its missing document never fails the config.
   listRoutes(): Promise<RegistryRoute[]> {
-    return Promise.all(JONGRO_ROUTES.map((route) => this.routeOf(route.id)));
+    return Promise.all(TOPIS_ROUTES.filter((route) => route.isListed).map((route) => this.routeOf(route.id)));
   }
 
   async routeOf(routeId: string): Promise<RegistryRoute> {
@@ -146,7 +147,7 @@ export class BusRegistryService {
   }
 
   private async loadRoute(routeId: string): Promise<RegistryRoute> {
-    const identity = JONGRO_ROUTES.find((entry) => entry.id === routeId);
+    const identity = TOPIS_ROUTES.find((entry) => entry.id === routeId);
     if (identity === undefined) throw new Error(`Unknown Jongro route ${routeId}`);
     const doc = await this.repository.findRoute(routeId);
     if (doc === null) throw new BusRegistryMissingError(routeId);

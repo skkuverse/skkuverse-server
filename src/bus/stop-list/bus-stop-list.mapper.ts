@@ -5,7 +5,7 @@ import { toStationAction, toTowards } from "../bus.rules";
 import type { HsscLineStation } from "../stops/bus-stops.document";
 import type { ScheduleStop } from "../stops/bus-stops.types";
 import type { LocatedStop, StopRoute } from "../stop-index/bus-stop-index.types";
-import { toStopCampus } from "./bus-stop-list.rules";
+import { toCampusPoles, toStopCampus } from "./bus-stop-list.rules";
 import type { ListedRoute, ListedStop, LocalizedText } from "./bus-stop-list.types";
 
 interface StopLines {
@@ -51,7 +51,7 @@ export function toListedStop(stop: LocatedStop, names: LocalizedText | null, lin
     name: names ?? toPoleNames(stop),
     coords: stop.coords,
     arsIds: arsIds ? [...arsIds] : null,
-    campus: toStopCampus(stop),
+    campus: toStopCampus({ localStop: stop.localStop, poles: toCampusPoles(stop) }),
     routes: stop.routes.map((route) => toListedRoute(route, lines)),
   };
 }

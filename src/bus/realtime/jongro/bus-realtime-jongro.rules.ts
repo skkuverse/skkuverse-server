@@ -3,6 +3,7 @@ import { BUS_TYPE_BY_CODE, DWELL_RESET_MINUTES, MAX_STATIONARY_MOVE_METERS } fro
 import type { JongroBusDwell, JongroBusSighting, JongroVehicleObservation } from "./bus-realtime-jongro.types";
 
 const ORIGIN_SECT_ORD = 1;
+const QUOTA_EXCEEDED_PATTERN = /LIMITED[ _]NUMBER[ _]OF[ _]SERVICE[ _]REQUESTS[ _]EXCEEDS|"headerCd":"22"|<returnReasonCode>22</;
 
 export function toArrivalsKey(code: string): BusCacheKey & `jongro_stations_${string}` {
   return `jongro_stations_${code}`;
@@ -19,6 +20,14 @@ export function isUsableHeaderCd(headerCd: string | undefined): boolean {
 
 export function isNoResultHeaderCd(headerCd: string | undefined): boolean {
   return headerCd === "4";
+}
+
+// QUIRK(topis): data.go.kr refuses a key's spent daily quota as code 22 LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR,
+// in its own XML or JSON envelope (data.go.kr 15000314's error table, 2026-10-24); which one ws.bus.go.kr relays is
+// unseen, so any text of the answer is read. Code 23, the per-second limit, is not the daily quota.
+export function isQuotaExceeded(body: unknown): boolean {
+  const text = typeof body === "string" ? body : (JSON.stringify(body) ?? "");
+  return QUOTA_EXCEEDED_PATTERN.test(text);
 }
 
 // QUIRK(topis): numbers arrive as strings; anything else is not a number.

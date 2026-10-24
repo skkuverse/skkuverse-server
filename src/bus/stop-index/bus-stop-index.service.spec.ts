@@ -13,6 +13,7 @@ import { capturedRoutePathOf } from "../../../__tests__/helpers/bus/bus-route-pa
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
 import { FakeBusRoutePathService } from "../../../__tests__/helpers/fakes/bus/bus-route-path.service.fake";
+import { registryDoc7800 } from "../../../__tests__/helpers/bus/topis-7800";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { logText } from "../../../__tests__/helpers/log-text";
 import logger from "../../infra/logger";
@@ -459,3 +460,56 @@ describe("BusStopIndexService.listStops", () => {
     await expect(service.listStops()).rejects.toMatchObject({ code: "BUS_STOPS_UNAVAILABLE", httpStatus: 503 });
   });
 });
+
+// WHY: 7800 is unlisted (docs/plans/7800-unified-arrivals.md, section 6): until its poller stores its stations it is
+// not a failing route, and once stored it adds only the poles a local stop aliases.
+describe("BusStopIndexService with 7800 unlisted", () => {
+  const SKKU_TO_SADANG = { id: "nsc-skku-to-sadang", name: { ko: "성균관대학교" }, coords: { lat: 37.297198, lng: 126.9710096 }, topisIds: ["200000162"], campus: "nsc" };
+
+  function setup7800({ isStored }: { isStored: boolean }) {
+    const data = busStopsFixture() as unknown as { stops: unknown[] };
+    data.stops.push(SKKU_TO_SADANG);
+    const registryRepository = storedBusRegistryRepository();
+    if (isStored) registryRepository.routes.set("gyeonggi7800", registryDoc7800());
+    const routePaths = new FakeBusRoutePathService();
+    routePaths.routePaths = { routePaths: [{ routeId: "jongro07", code: "07", ...capturedRoutePathOf("jongro07") }], hasMissingRoutes: false };
+    const service = new BusStopIndexService(
+      storedBusStopsService(storedBusStopsRepository(data), { now: () => new Date() }),
+      storedBusRegistryService(registryRepository),
+      asReal<BusRoutePathService>(routePaths),
+      { now: () => new Date() },
+    );
+    return { service };
+  }
+
+  it("serves the whole index before 7800's poller stored its stations, logging no unread registry and listing no stop for its alias", async () => {
+    // Arrange
+    const { service } = setup7800({ isStored: false });
+
+    // Act
+    const list = await service.listStops();
+
+    // Assert
+    expect(list.isPartial).toBe(false);
+    expect(await service.findStop("seoul-27113")).toBeNull();
+    expect(jest.mocked(logger.error)).not.toHaveBeenCalled();
+    expect(list.stops.find((stop) => stop.id === "nsc-skku-to-sadang")).toBeUndefined();
+  });
+
+  it("lists 7800 at the local stop aliasing its 성균관대학교 pole, and adds none of its other poles", async () => {
+    // Arrange
+    const { service } = setup7800({ isStored: true });
+
+    // Act
+    const stop = await service.findStop("nsc-skku-to-sadang");
+
+    // Assert
+    expect(stop?.routes).toEqual([
+      { kind: "jongro", groupId: "gyeonggi7800", stationIndex: 23, towards: "성균관대역.고용노동부경기지청.율전성당", stationsVersion: registryDoc7800().stationsVersion },
+    ]);
+    expect(stop?.poles).toEqual([{ arsId: null, topisId: "200000162", stationName: "성균관대학교" }]);
+    expect(await service.findStop("seoul-27113")).toBeNull();
+    expect((await service.listStops()).stops.filter((each) => each.routes.some((route) => route.groupId === "gyeonggi7800")).map((each) => each.id)).toEqual(["nsc-skku-to-sadang"]);
+  });
+});
+
