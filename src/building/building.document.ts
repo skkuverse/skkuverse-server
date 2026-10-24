@@ -22,23 +22,6 @@ export interface BuildingSyncStamps {
 
 export type SpaceSource = "buildInfo" | "spaceList";
 
-export interface BuildingRawDoc {
-  _id: SkkuId;
-  /** QUIRK(skku): a facility (a gate, an outbuilding) has no number. */
-  buildNo: BuildNo | null;
-  campus: Campus;
-  name: BilingualText;
-  description: BilingualText;
-  location: GeoPoint;
-  image: BuildingImage;
-  accessibility: { elevator: boolean; toilet: boolean };
-  /** WHY: absent on a facility, whose buildInfo is never fetched; [] when SKKU lists no photos. */
-  attachments?: BuildingAttachment[];
-  skkuCreatedAt: string | null;
-  skkuUpdatedAt: string | null;
-  sync?: BuildingSyncStamps;
-}
-
 /**
  * WHY: `string & {}` keeps the known names in the type, where a plain `| string` absorbs them;
  * any other value is SKKU's raw text.
@@ -71,6 +54,8 @@ export interface BuildingAttachment {
   alt: string;
 }
 
+// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/decisions/adr-014-campus-map-ownership.md moves this write
+// to the crawler (SKKU buildList and buildInfo). `sync`, `enrichVersion` and `extensions` are its bookkeeping, never read.
 export interface BuildingDoc {
   _id: SkkuId;
   buildNo: BuildNo | null;
@@ -95,6 +80,8 @@ export interface BuildingDoc {
   extensions?: Record<string, unknown>;
 }
 
+// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/decisions/adr-014-campus-map-ownership.md moves this write
+// to the crawler (SKKU buildInfo and spaceList), keyed by the unique index on spaceCd, buildNo and campus it creates.
 export interface SpaceDoc {
   _id?: ObjectId;
   // EVIDENCE: two skkumap_dev spaces carry spaceCd: null (synced 2026-09-24, blank names); prod had none on 2026-10-14.

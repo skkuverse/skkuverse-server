@@ -1,12 +1,15 @@
 /**
  * The building list and the campus shapes are read on every map open and every
  * /building/* request, so both sit behind a single-flight cache. What matters:
- * concurrent requests cost one scan, a sync's clearCache() forces the next read
- * back to the database, a buildings failure still reaches the caller (that is
- * what marks the campus overlay degraded), and a shapes failure serves the last
- * good shapes rather than an outline-less map cached for a day. Also the indexes
- * the repository creates at boot, on the right collection, and each read's
- * projection and sort, which FakeBuildingRepository follows.
+ * concurrent requests cost one scan, the TTL forces the next read back to the
+ * database, a buildings failure still reaches the caller (that is what marks
+ * the campus overlay degraded), and a shapes failure serves the last good
+ * shapes rather than an outline-less map cached for a day. Both collections
+ * are written outside src/ (buildings by skkuverse-crawler), so each read is
+ * parsed: a document that fails is left out and logged, and a building's
+ * displayNo is derived from its buildNo. Also the indexes the repository
+ * creates at boot, on the right collection, and each read's projection, sort
+ * and parse, which FakeBuildingRepository follows.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../infra/logger", () => mockLogger);
@@ -38,11 +41,12 @@ jest.mock("../infra/db", () => ({
   })),
 }));
 
+import { storedBuilding } from "../../__tests__/helpers/building/buildings";
 import { BuildingRepository } from "./building.repository";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 
-const HSSC = { _id: 1, campus: "hssc" };
-const NSC = { _id: 2, campus: "nsc" };
+const HSSC = storedBuilding({ _id: 1, buildNo: "101", campus: "hssc", name: { ko: "600주년기념관", en: "600th Anniversary Hall" } });
+const NSC = storedBuilding({ _id: 2, buildNo: null, campus: "nsc", name: { ko: "정문", en: "Main Gate" } });
 const RING = [
   [126.9944, 37.5873],
   [126.9954, 37.5873],
@@ -62,9 +66,8 @@ const SHAPE = {
 };
 const FIVE_MIN = 5 * 60 * 1000;
 
-const repository = new BuildingRepository();
-const { clearCache, listBuildings, listCampusShapes } = {
-  clearCache: () => repository.clearCache(),
+let repository = new BuildingRepository();
+const { listBuildings, listCampusShapes } = {
   listBuildings: (...args: Parameters<BuildingRepository["listBuildings"]>) =>
     repository.listBuildings(...args),
   listCampusShapes: () => repository.listCampusShapes(),
@@ -73,7 +76,7 @@ const { clearCache, listBuildings, listCampusShapes } = {
 let clock = 1_000_000;
 beforeEach(() => {
   jest.clearAllMocks();
-  clearCache();
+  repository = new BuildingRepository();
   clock = 1_000_000;
   jest.spyOn(Date, "now").mockImplementation(() => clock);
   toArrayFor.buildings!.mockResolvedValue([HSSC, NSC]);
@@ -102,18 +105,6 @@ describe("BuildingRepository.listBuildings", () => {
     });
   });
 
-  it("re-reads after clearCache(), which the building sync calls after writing", async () => {
-    // Arrange
-    await listBuildings();
-
-    // Act
-    clearCache();
-    await listBuildings();
-
-    // Assert
-    expect(findFor.buildings).toHaveBeenCalledTimes(2);
-  });
-
   it("re-reads once the TTL has passed", async () => {
     // Arrange
     await listBuildings();
@@ -135,17 +126,62 @@ describe("BuildingRepository.listBuildings", () => {
     // Act & Assert
     await expect(listBuildings()).rejects.toThrow("mongo down");
   });
+
+  it("leaves out a building that does not parse, logs it, and keeps the rest", async () => {
+    // Arrange
+    toArrayFor.buildings!.mockResolvedValue([HSSC, { ...NSC, _id: 3, location: null }, { ...NSC, _id: 0 }, NSC]);
+
+    // Act
+    const buildings = await listBuildings();
+
+    // Assert
+    expect(buildings).toEqual([HSSC, NSC]);
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      { event: "building.buildings.invalid", count: 2, invalid: ["3: location", "0: _id"], suppressed: 0 },
+      expect.any(String),
+    );
+  });
+
+  it("derives displayNo from buildNo and drops the writer's bookkeeping", async () => {
+    // Arrange
+    const stored = { ...HSSC, displayNo: "stale", sync: { listAt: new Date(0) }, enrichVersion: 1, extensions: {} };
+    toArrayFor.buildings!.mockResolvedValue([stored]);
+
+    // Act
+    const [building] = await listBuildings();
+
+    // Assert
+    expect(building).toEqual(HSSC);
+    expect(building?.displayNo).toBe("1");
+  });
 });
 
 describe("the reads' query objects", () => {
-  it("reads every building without its sync bookkeeping or extensions, in _id order", async () => {
+  it("reads every building with only the fields it serves, in _id order", async () => {
     // Act
     await listBuildings();
 
     // Assert
     expect(findFor.buildings!.mock.calls[0]).toEqual([
       {},
-      { projection: { extensions: 0, sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      {
+        projection: {
+          _id: 1,
+          buildNo: 1,
+          type: 1,
+          campus: 1,
+          name: 1,
+          description: 1,
+          location: 1,
+          image: 1,
+          attachments: 1,
+          accessibility: 1,
+          skkuCreatedAt: 1,
+          skkuUpdatedAt: 1,
+          updatedAt: 1,
+        },
+        maxTimeMS: HOT_READ_MAX_TIME_MS,
+      },
     ]);
     expect(sortFor.buildings!.mock.calls[0]).toEqual([{ _id: 1 }]);
   });
@@ -218,18 +254,6 @@ describe("BuildingRepository.listCampusShapes", () => {
     await new Promise((resolve) => setImmediate(resolve));
     expect(mockLogger.warn).toHaveBeenCalledTimes(1);
   });
-
-  it("re-reads after clearCache()", async () => {
-    // Arrange
-    await listCampusShapes();
-
-    // Act
-    clearCache();
-    await listCampusShapes();
-
-    // Assert
-    expect(findFor.campus_shapes).toHaveBeenCalledTimes(2);
-  });
 });
 
 /**
@@ -275,8 +299,8 @@ describe("BuildingRepository.onModuleInit", () => {
 
     // Assert
     // Regression guard for the one-line mistake this file is shaped to catch:
-    // hanging an index off the wrong handle. The buildings 2dsphere is the
-    // sync's (BuildingSyncRepository); nothing reads buildings or spaces by campus.
+    // hanging an index off the wrong handle. The buildings 2dsphere guards the
+    // crawler's writes, so it is the crawler's; nothing reads buildings or spaces by campus.
     expect(createIndex.mock.calls.map(([collection]) => collection)).toEqual(["campus_shapes", "campus_shapes"]);
   });
 

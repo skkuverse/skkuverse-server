@@ -1,13 +1,15 @@
 /**
  * In-memory BuildingPlaceRepository over `spaces`, with the real read's filter
- * (a spaceCd is set), projection and spaceCd, buildNo, campus sort, pinned in
- * building-place.repository.spec.ts. The read returns the same array until
+ * (a spaceCd is set), projection, spaceCd, buildNo, campus sort and parse,
+ * pinned in building-place.repository.spec.ts: a space `placeSpace` rejects is
+ * left out. The read returns the same array until
  * `spaces` is replaced, as the cached read does within its TTL. `failWith`
  * makes the read reject, as a database error would.
  */
 import type { SpaceDoc } from "../../../../src/building/building.document";
 import type { PlaceSpace } from "../../../../src/building/place/building-place.document";
 import type { BuildingPlaceRepository } from "../../../../src/building/place/building-place.repository";
+import { placeSpace } from "../../../../src/building/place/building-place.schema";
 import type { PublicOf } from "../public-of";
 
 export class FakeBuildingPlaceRepository implements PublicOf<BuildingPlaceRepository> {
@@ -26,6 +28,9 @@ export class FakeBuildingPlaceRepository implements PublicOf<BuildingPlaceReposi
     return [...this.spaces]
       .filter((s) => s.spaceCd !== null)
       .sort((a, b) => (order(a) < order(b) ? -1 : 1))
-      .map(({ spaceCd, buildNo, campus, floor, name, buildingName }) => ({ spaceCd, buildNo, campus, floor, name, buildingName }));
+      .flatMap((space) => {
+        const parsed = placeSpace.safeParse(space);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 }

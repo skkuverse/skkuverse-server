@@ -3,12 +3,16 @@
  * read whole behind a single-flight cache. What it guards: one read of the
  * spaces with a spaceCd, only the fields the index reads, in the order of the
  * spaces' unique index and within the hot-read bound, which
- * FakeBuildingPlaceRepository follows; the TTL forces a re-read; and a failed
- * read reaches the caller instead of an empty index.
+ * FakeBuildingPlaceRepository follows; a space skkuverse-crawler wrote that
+ * does not parse is left out and logged by its spaceCd; the TTL forces a
+ * re-read; and a failed read reaches the caller instead of an empty index.
  */
 const toArray = jest.fn();
 const sort = jest.fn(() => ({ toArray }));
 const find = jest.fn(() => ({ sort }));
+
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+jest.mock("../../infra/logger", () => mockLogger);
 
 jest.mock("../../infra/db", () => ({
   HOT_READ_MAX_TIME_MS: jest.requireActual("../../infra/db").HOT_READ_MAX_TIME_MS,
@@ -57,6 +61,21 @@ describe("BuildingPlaceRepository.listSpaces", () => {
       },
     ]);
     expect(sort.mock.calls[0]).toEqual([{ spaceCd: 1, buildNo: 1, campus: 1 }]);
+  });
+
+  it("leaves out and logs a space that does not parse, and keeps the rest", async () => {
+    // Arrange
+    toArray.mockResolvedValue([SPACE, { ...SPACE, spaceCd: "33B102", campus: "seoul" }, { ...SPACE, spaceCd: "33B103", name: undefined }]);
+
+    // Act
+    const spaces = await repository.listSpaces();
+
+    // Assert
+    expect(spaces).toEqual([SPACE]);
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      { event: "building.spaces.invalid", count: 2, invalid: ["33B102: campus", "33B103: name"] },
+      expect.any(String),
+    );
   });
 
   it("serves the cached read within the TTL and re-reads once it has passed", async () => {

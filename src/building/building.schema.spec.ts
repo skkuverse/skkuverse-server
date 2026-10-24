@@ -10,11 +10,16 @@
  *    passes with the fields it reads, a missing spaceCd or location as null;
  *    a row missing any field the readers use, of another kind, or with an
  *    empty buildNo or spaceCd is rejected (the readers then leave it out).
+ *  - `buildingDoc` and `storedSpace`: the buildings and spaces captured from
+ *    skkumap_dev pass with the fields the readers use, the writer's
+ *    bookkeeping dropped and `displayNo` derived from `buildNo`; a document
+ *    missing a required field, or with an id or code the brands reject, fails.
  * That every real campus shape passes is checked where the importer writes
  * them: __tests__/nest/map/campus-shapes-import.test.ts.
  */
+import { capturedSkkumap } from "../../__tests__/helpers/building/buildings";
 import { storedFacilities } from "../../__tests__/helpers/building/facilities";
-import { cafeteriaDoc, campusFilter, campusShapeDoc } from "./building.schema";
+import { buildingDoc, cafeteriaDoc, campusFilter, campusShapeDoc, storedBuilding, storedSpace } from "./building.schema";
 
 const RING = [
   [126.9944, 37.5873],
@@ -179,5 +184,85 @@ describe("cafeteriaDoc", () => {
   it("rejects the registry's other facilities", () => {
     // Act & Assert
     expect(cafeteriaDoc.safeParse(storedFacilities().facility).success).toBe(false);
+  });
+});
+
+describe("buildingDoc", () => {
+  it("accepts every captured building, dropping the writer's bookkeeping and deriving displayNo", () => {
+    // Arrange
+    const [anniversaryHall, pavilion] = capturedSkkumap().buildings;
+
+    // Act
+    const hall = buildingDoc.parse(anniversaryHall);
+    const facility = buildingDoc.parse(pavilion);
+
+    // Assert
+    expect(hall).toMatchObject({ _id: 2, buildNo: "101", displayNo: "1", type: "building", updatedAt: new Date("2026-03-16T10:14:08.185Z") });
+    expect(hall.accessibility.detail?.sections[0]?.elevatorStatus).toBe("arrival");
+    expect(hall).not.toHaveProperty("sync");
+    expect(hall).not.toHaveProperty("enrichVersion");
+    expect(hall).not.toHaveProperty("extensions");
+    expect(facility).toMatchObject({ _id: 69, buildNo: null, displayNo: null, type: "facility", attachments: [] });
+  });
+
+  const optionalFields = new Set(["attachments", "updatedAt"]);
+  it.each(Object.keys(storedBuilding.shape).filter((field) => !optionalFields.has(field)))("rejects a building without %s", (field) => {
+    // Arrange
+    const [building] = capturedSkkumap().buildings;
+    delete building![field];
+
+    // Act & Assert
+    expect(buildingDoc.safeParse(building).success).toBe(false);
+  });
+
+  it.each([
+    ["an id that is no building id", { _id: 0 }],
+    ["an empty buildNo", { buildNo: "" }],
+    ["a type outside building/facility", { type: "gate" }],
+    ["a location without coordinates", { location: { type: "Point" } }],
+  ])("rejects %s", (_case, override) => {
+    // Arrange
+    const [building] = capturedSkkumap().buildings;
+
+    // Act & Assert
+    expect(buildingDoc.safeParse({ ...building, ...override }).success).toBe(false);
+  });
+});
+
+describe("storedSpace", () => {
+  it("accepts every captured space with the fields the readers use", () => {
+    // Arrange
+    const { spaces } = capturedSkkumap();
+
+    // Act
+    const parsed = spaces.map((space) => storedSpace.parse(space));
+
+    // Assert
+    expect(parsed[0]).toEqual({
+      spaceCd: "10115",
+      buildNo: "101",
+      campus: "hssc",
+      floor: { ko: "1층", en: "1F" },
+      name: { ko: "예비군연대", en: "Reserved Forces Regiment" },
+      buildingName: { ko: "600주년기념관", en: "600th Anniversary Hall" },
+      conspaceCd: "10101015",
+    });
+  });
+
+  it.each(Object.keys(storedSpace.shape).filter((field) => field !== "buildingName"))("rejects a space without %s", (field) => {
+    // Arrange
+    const [space] = capturedSkkumap().spaces;
+    delete space![field];
+
+    // Act & Assert
+    expect(storedSpace.safeParse(space).success).toBe(false);
+  });
+
+  it("accepts a space with a null spaceCd, which two skkumap_dev spaces carry", () => {
+    // Arrange
+    const [space] = capturedSkkumap().spaces;
+
+    // Act & Assert
+    expect(storedSpace.safeParse({ ...space, spaceCd: null }).success).toBe(true);
   });
 });

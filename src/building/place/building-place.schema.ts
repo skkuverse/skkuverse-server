@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { CAMPUSES } from "../building.constants";
+import { storedSpace } from "../building.schema";
+import type { PlaceSpace } from "./building-place.document";
 
 const campus = z.enum(CAMPUSES);
 
@@ -44,3 +46,12 @@ export const placeLexiconFile = z.strictObject({
 });
 
 export type PlaceLexicon = z.output<typeof placeLexiconFile>;
+
+export const placeSpace = storedSpace.pick({
+  spaceCd: true,
+  buildNo: true,
+  campus: true,
+  floor: true,
+  name: true,
+  buildingName: true,
+}) satisfies z.ZodType<PlaceSpace>;

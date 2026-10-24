@@ -1,11 +1,12 @@
 /**
  * In-memory BuildingCatalogRepository over buildings, spaces and connections,
- * with the real queries' filters and projections (pinned in
- * building-catalog.repository.spec.ts): a building by skkuId, a building's spaces by
- * buildNo, a connection from either end (parsed by connectionEnds, as the real
- * read does, so a malformed one is left out), buildings by skkuId list, and a
- * building's cafeterias by buildNo, sorted by conspaceCd and parsed by
- * cafeteriaSummary, so one the crawler wrote malformed is left out. `reads`
+ * with the real queries' filters, projections and parses (pinned in
+ * building-catalog.repository.spec.ts): a building by skkuId (buildingDoc), a
+ * building's spaces by buildNo (floorSpace), a connection from either end
+ * (connectionEnds), buildings by skkuId list (buildingLabel), and a building's
+ * cafeterias by buildNo, sorted by conspaceCd (cafeteriaSummary). Each parse
+ * leaves a malformed document out, and `displayNo` is derived from `buildNo`,
+ * as the real reads do. `reads`
  * names each read in order, for the tests where skipping a read is the
  * behavior. `failWith` makes every read reject.
  */
@@ -18,7 +19,13 @@ import type {
   ConnectionEnds,
   FloorSpaceDoc,
 } from "../../../../src/building/catalog/building-catalog.document";
-import { cafeteriaSummary, connectionEnds } from "../../../../src/building/catalog/building-catalog.schema";
+import { buildingDoc } from "../../../../src/building/building.schema";
+import {
+  buildingLabel,
+  cafeteriaSummary,
+  connectionEnds,
+  floorSpace,
+} from "../../../../src/building/catalog/building-catalog.schema";
 import type { PublicOf } from "../public-of";
 
 export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRepository> {
@@ -35,18 +42,18 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     this.read("findBuildingBySkkuId");
     const building = this.buildings.find((b) => b._id === skkuId);
     if (!building) return null;
-    const projected: Partial<BuildingDoc> = { ...building };
-    delete projected.sync;
-    delete projected.enrichVersion;
-    delete projected.extensions;
-    return projected as BuildingDoc;
+    const parsed = buildingDoc.safeParse(building);
+    return parsed.success ? parsed.data : null;
   }
 
   async listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {
     this.read("listSpacesByBuildNo");
     return this.spaces
       .filter((s) => s.buildNo === buildNo)
-      .map(({ spaceCd, name, floor, conspaceCd }) => ({ spaceCd, name, floor, conspaceCd }));
+      .flatMap((s) => {
+        const parsed = floorSpace.safeParse(s);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   async listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
@@ -63,7 +70,10 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     this.read("listBuildingsBySkkuIds");
     return this.buildings
       .filter((b) => skkuIds.includes(b._id))
-      .map(({ _id, buildNo, displayNo, name }) => ({ _id, buildNo, displayNo, name }));
+      .flatMap((b) => {
+        const parsed = buildingLabel.safeParse(b);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   async listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {

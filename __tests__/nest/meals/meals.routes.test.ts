@@ -9,13 +9,14 @@
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import type { BuildingDoc, CafeteriaDoc } from "../../../src/building/building.document";
+import type { CafeteriaDoc } from "../../../src/building/building.document";
 import { BuildingCafeteriaListRepository } from "../../../src/building/cafeteria-list/building-cafeteria-list.repository";
 import { BuildingRepository } from "../../../src/building/building.repository";
 import { MealsCatalogModule } from "../../../src/meals/catalog/meals-catalog.module";
 import { cafeteriaList } from "../../../src/meals/catalog/meals-catalog.wire";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBuildingCafeteriaListRepository } from "../../helpers/fakes/building/building-cafeteria-list.repository.fake";
+import { storedBuilding } from "../../helpers/building/buildings";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
@@ -24,13 +25,12 @@ let httpServer: import("http").Server;
 let buildings: FakeBuildingRepository;
 let listedCafeterias: FakeBuildingCafeteriaListRepository;
 
-const ANNIVERSARY_HALL = {
+const ANNIVERSARY_HALL = storedBuilding({
   _id: 2,
   buildNo: "101",
-  displayNo: "1",
   campus: "hssc",
   name: { ko: "600주년기념관", en: "600th Anniversary Hall" },
-} as BuildingDoc;
+});
 
 function cafeteria(over: Partial<CafeteriaDoc>): CafeteriaDoc {
   return {
