@@ -3,7 +3,7 @@ title: Subway Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-24
 audience: internal
 ---
 
@@ -82,7 +82,7 @@ Subway owns the real-time arrivals of the served stations: physical stations, ea
 | delay (`toDelaySec`) | A train's seconds behind its own timetable row at its latest event, at least its standing time past a scheduled departure; used to estimate the train, or lent, only from `MIN_DELAY_SEC` to `MAX_DELAY_SEC`, and a train seen outside that range is served at its scheduled time, borrowing no other train's delay | `toDelaySec` | — |
 | passing stop (`toPassingStop`) | When a train is scheduled at a station its row passes: its next row stop's arrival less the running time there of the train nearest in time that calls at both, its stands left out | `toPassingStop` | — |
 | awaited train (`isAwaitedTrain`) | On the tracker's path, a train overdue at the served station with a row stop before it there and nothing seen of it at or past the station: late, not gone, so it is served its scheduled run from its first row stop away from now | `isAwaitedTrain` | — |
-| train arrival (`TrainArrival`) | One train's arrival at a station: its instant, its source and its position | `toStationArrivals` | — |
+| train arrival (`TrainArrival`) | One train's arrival at a station: its instant, its source, its position and whether it is the first train (`isFirstTrain`): of its direction's trains with a time at the platform in its service day's table, the one scheduled there earliest, whether it is live, late or passed | `toStationArrivals` | — |
 | arrival source (`ArrivalSource`) | How an arrival was obtained: `live` from a published countdown, `estimated` from the timetable and a delay, `scheduled` from the timetable alone | `toStationArrivals` | — |
 | countdown divergence (`CountdownDivergence`) | A live arrival over `MAX_COUNTDOWN_DIVERGENCE_SEC` from the train's estimate; logged, the live one still served while it counts | `toStationArrivals` | — |
 | countdown rejection (`CountdownRejection`) | A published countdown a served train does not count, with its reason: `spent`, `out_of_range` or `at_station`; logged | `toStationArrivals` | — |
@@ -107,8 +107,7 @@ flowchart LR
   sbl["Shinbundang station timetables"] -->|"convert.py, npm run data"| tt
   tt -->|"timetable/: a part per line and day, when needed"| timetable["timetable/"]
   network -->|platforms| timetable
-  topologyds[("datasets: subway-topology")] -->|"topology/: registry per revision"| seoul
-  topologyds -->|"topology/: registry per revision"| route
+  topologyds[("datasets: subway-topology")] -->|"topology/: registry per revision"| seoul & route
   holidays["CalendarService"] -->|public holidays| timetable
   seoulapi["Seoul real-time API"] -->|seoul-api| seoul["seoul/"]
   trainmap["Seoul Metro train map"] -->|seoul-trainmap| seoul
@@ -117,6 +116,7 @@ flowchart LR
   matching["matching/"] -->|"run matcher: trainsets as runs"| tracking
   tracking -->|"estimate/, countdown/, state/"| coll[("subway_arrivals")]
   coll -->|SubwayRepository| route["GET /subway/stations/:stationId/arrivals"]
+  network -->|"stations/, station-coords/"| stationlist["GET /subway/stations"]
   tracking -->|timetable alone when stale| route
   route -->|not rendered yet| screen["app: subway arrivals"]
   tracking -->|tick listener| history["history/"]
@@ -130,11 +130,11 @@ flowchart LR
 | `station` | The station's slug, its name in the request language and its `coords`, the camera point the app opens the station's sheet on over the shared map, null with none; served and not rendered yet |
 | `lines` | One entry per platform in the station's order: the line display data, the `platformId`, and the platform's own `generatedAt` (when its arrivals were computed, for a staleness label; the request time when the timetable alone is served) and directions; served and not rendered yet |
 | `directions` | Up then down, each with its name, `previousStation` and `nextStation` in the request language and at most `MAX_TRAINS_PER_DIRECTION` trains; served and not rendered yet |
-| `arrivalAt`, `source`, `stopsAway` | The instant the app counts down to with the device clock, how the arrival was obtained and how many stops away its train is; served and not rendered yet |
+| `arrivalAt`, `source`, `stopsAway`, `isFirstTrain` | The instant the app counts down to against the server's clock (`meta.serverNow`), how the arrival was obtained, how many stops away its train is and whether it is the day's first train, which the app labels; served and not rendered yet |
 
 The root holds the module file, which binds the rate limiter for `subway`, the network (`SUBWAY_LINES`, `SUBWAY_STATIONS` and `SUBWAY_NETWORK` in `.constants`, `subwayNetwork`, `toNetworkIssues`, `toSubwayLine`; `subwayRegistryFile`, the shape of the registry the network and the topology join into), the provider seam (`SubwayProvider` and the shapes it hands over in `src/subway/subway.types.ts`) and `SubwayRepository`, which the tracker writes and the route reads. Everything after the seam does not depend on the provider: merging, delay, estimates, the stored state and the response.
 
-- `stations/` holds `SubwayStationsService`, the door other modules list the served stations through: each one's slug, its title and its lines' display data, from the network, so the transit tab, `/bus/config` and the stop catalog's boot check read no dataset.
+- `stations/` holds `SubwayStationsService`, the door other modules list the served stations through: each one's slug, its title and its lines' display data, from the network, so the transit tab, `/bus/config` and the stop catalog's boot check read no dataset. `station-list/` serves them all as `GET /subway/stations`, the title and line display data in the request language, each with its coords from `station-coords/`, `null` without them and never a `503`: the points the app's shared map starts its camera at the user near.
 - `topology/` holds `SubwayTopologyService`, the door to the stored `subway-topology`: `current()` answers `{ revision, registry }` on a dataset loader (a minute, and the last good value a day through failed reads); a served platform with no entry, an entry for no served platform and a previous or next stop with no name, which the route serves as `null`, are each logged at error once per revision (`subway.topology.platform_missing`, `.platform_unknown`, `.stop_unnamed`); never read, it throws `SUBWAY_TOPOLOGY_UNAVAILABLE`, an HTTP `503`.
 - `station-coords/` holds `SubwayStationCoordsService`, the door to the stored `subway-station-coords`: `findCoords(stationId)` answers a served station's coords on a dataset loader (a minute, and the last good value a day through failed reads), or null: never read, its cause logged at error (`subway.station_coords.missing`, `.invalid`, `.read_failed`), or a station the revision lacks, logged at warn once per revision (`subway.station_coords.station_missing`); a stored station the code does not serve is ignored (`.station_unknown`). It never answers a `503`: the coords are a documented degraded answer of [ADR 0013 D6](../decisions/0013-runtime-data-in-mongodb.md), and only a push is strict, refusing a served station without coords, a station the code does not serve and a point outside South Korea.
 - `timetable/` holds the service-day rules and `findSubwayPlatform`, and reads `subway-timetables`: `SubwayTimetableService` is its door, each platform's schedule for the service day of an instant, and whether the instant is in the service window, which reads no dataset. Its manifest is a dataset loader's (a minute, the last good value a day through failed reads). A table is read only when a platform of its line is scheduled, once per part id, then held by key; a held table goes once a later service day needs another of its line, so a process holds at most one day type per line, one table per line, where every role parsed every table at import before, and an api replica whose arrival state is fresh holds none. A part that cannot be read leaves the held copy serving until a day after the manifest first named it, and is retried once a minute (`subway.timetables.part_missing`, `.part_invalid`, `.part_read_failed`); a served platform whose table the revision lacks is logged at error once per revision (`subway.timetables.table_missing`). Without a table one schedule throws `SUBWAY_TIMETABLES_UNAVAILABLE`, an HTTP `503`, naming the key, and the list leaves the platform out and carries that error.
@@ -172,7 +172,7 @@ Adding a provider touches a sibling sub-module named after its jurisdiction, hol
 - `SUBWAY=off` stops the subway pollers of the process that sets it, so nothing there calls the provider, and changes nothing the route reads: an api replica with it off serves what the poller stored, and with no poller writing the state goes stale and the timetable serves alone ([ADR 0012](../decisions/0012-runtime-roles.md)). The provider itself has no switch.
 - A platform's arrivals document is rewritten only by an arrivals write: `MAX_UNCHANGED_WRITE_AGE_MS` is half of `MAX_STATE_AGE_MS`, so a platform the tracker ticks is never served stale, and a restart, which forgets the last writes, writes every platform on its first tick.
 - The train histories live in the poller process's memory and a restart rebuilds them from the next ticks; `subway_arrivals` holds absolute instants and positions, and stops away are computed per response.
-- A response carries arrival instants, never seconds left: the app counts down against the device clock.
+- A response carries arrival instants, never seconds left, and `meta.serverNow`: the app counts down against the server's clock, as on the bus routes.
 - A source's countdown rows count until its next tick replaces them, and none after `MAX_COUNTDOWN_SOURCE_AGE_MS` without one.
 - A countdown counts from its first publication until its instant passes, and not when it implies a delay outside `MIN_DELAY_SEC` to `MAX_DELAY_SEC` against the train's scheduled arrival, as for a train not running yet; a countdown a served train does not count is logged with its reason.
 - A train last seen approaching or arrived at the served station is served at its observed arrival, whatever its delay, ignores its countdown, and is gone `MAX_STANDING_PAST_DEPARTURE_SEC` past its estimated departure, its scheduled departure plus its delay at arrival: on line `K1`, which no source reports departing, that is the only way out.
@@ -191,7 +191,7 @@ Adding a provider touches a sibling sub-module named after its jurisdiction, hol
 
 ## Related
 
-- [Subway API reference](../reference/subway-api.md): the route's contract
+- [Subway API reference](../reference/subway-api.md): the routes' contracts
 - [ADR 0017](../decisions/0017-subway-arrivals.md): the sources, budget and accuracy policy
 - [Holidays architecture](calendar-architecture.md): the public holidays that choose a timetable's day type
 - [Logging reference](../reference/logging.md): the subway pollers' own lines

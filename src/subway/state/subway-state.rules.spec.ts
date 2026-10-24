@@ -17,6 +17,7 @@ const train: StoredTrainArrival = {
   express: false,
   arrivalAt: at("21:04:10"),
   source: "estimated",
+  isFirstTrain: false,
   position: { stationId: "DX-D1-4311", state: "arrived" },
 };
 

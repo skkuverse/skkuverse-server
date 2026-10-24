@@ -518,7 +518,7 @@ describe("MapConfigService", () => {
     ["ko", "셔틀 노선"],
     ["en", "Shuttle Routes"],
     ["zh", "班车路线"],
-  ] as const)("serves the shuttle routes chip to the transit tab in %s, turning the four route lines on without a camera move", async (lang, label) => {
+  ] as const)("serves the shuttle routes chip to both tabs in %s, opening in the map tab and turning the four route lines on without a camera move", async (lang, label) => {
     // Act
     const served = await svc.getMapConfig(lang);
 
@@ -530,7 +530,29 @@ describe("MapConfigService", () => {
       action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
       isReset: false,
       list: null,
-      tabs: ["transit"],
+      tabs: ["map", "transit"],
+      opensIn: "map",
+    });
+  });
+
+  it.each([
+    ["ko", "건물코드"],
+    ["en", "Building Code"],
+    ["zh", "建筑编号"],
+  ] as const)("serves the building code chip in %s with an empty tabs, so the shared-map shell lists it in no tab", async (lang, label) => {
+    // Act
+    const served = await svc.getMapConfig(lang);
+
+    // Assert
+    // The shared-map shell's search field replaces it; builds that ignore `tabs` keep it in the map tab.
+    expect(served.chips.find((c) => c.id === "building_code")).toEqual({
+      id: "building_code",
+      label,
+      icon: { kind: "emoji", emoji: "🔢" },
+      action: { kind: "link", actionType: "route", actionValue: "/search" },
+      isReset: false,
+      list: null,
+      tabs: [],
     });
   });
 
@@ -544,8 +566,8 @@ describe("MapConfigService", () => {
     const ko = await svc.getMapConfig("ko");
 
     // Assert
-    const others = ko.chips.filter((c) => c.id !== "shuttle_routes");
-    expect(others).toHaveLength(ko.chips.length - 1);
+    const others = ko.chips.filter((c) => c.id !== "shuttle_routes" && c.id !== "building_code");
+    expect(others).toHaveLength(ko.chips.length - 2);
     for (const chip of others) {
       expect(chip).not.toHaveProperty("tabs");
       expect(chip).not.toHaveProperty("opensIn");

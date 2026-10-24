@@ -77,6 +77,7 @@ import { SubwayModule } from "./subway/subway.module";
 import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
 import { SubwayTopologyModule } from "./subway/topology/subway-topology.module";
 import { SubwayStationCoordsModule } from "./subway/station-coords/subway-station-coords.module";
+import { SubwayStationListModule } from "./subway/station-list/subway-station-list.module";
 import { SubwayTimetableModule } from "./subway/timetable/subway-timetable.module";
 import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.module";
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
@@ -175,6 +176,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayStationsModule,
     SubwayTopologyModule,
     SubwayStationCoordsModule,
+    SubwayStationListModule,
     SubwayTimetableModule,
     SubwayCountdownModule,
     SubwayEstimateModule,

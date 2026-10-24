@@ -13,9 +13,9 @@ type WireDirection = WireLine["directions"][number];
 type WireTrain = WireDirection["trains"][number];
 
 function toWireTrain(train: StoredTrainArrival, direction: PlatformDirection, platformId: string): WireTrain {
-  const { trainNo, destination, express, arrivalAt, position, source } = train;
+  const { trainNo, destination, express, arrivalAt, position, source, isFirstTrain } = train;
   const stopsAway = toStopsAway(direction, platformId, position);
-  return { trainNo, destination, express, arrivalAt: arrivalAt.toISOString(), stopsAway, source };
+  return { trainNo, destination, express, arrivalAt: arrivalAt.toISOString(), stopsAway, source, isFirstTrain };
 }
 
 // WHY: a stop with no name is served as null, as a terminus is, not as a 500: a topology pushed ahead of a deploy may

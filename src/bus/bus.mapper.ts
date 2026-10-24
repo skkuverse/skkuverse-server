@@ -1,7 +1,5 @@
-import moment from "moment-timezone";
 import { pick } from "../infra/i18n";
 import type { I18n, SupportedLang } from "../infra/types";
-import { KST_TIME_ZONE } from "../shared/time-zone.constants";
 import { JONGRO_ROUTE_ID_PREFIX } from "./bus.constants";
 import type { JongroRoute, JongroRouteIdentity } from "./bus.types";
 
@@ -11,10 +9,6 @@ export function toJongroRoute(identity: JongroRouteIdentity): JongroRoute {
     code: identity.id.slice(JONGRO_ROUTE_ID_PREFIX.length),
     busRouteId: identity.busRouteId,
   };
-}
-
-export function toKstInstant(ms: number): string {
-  return moment(ms).tz(KST_TIME_ZONE).format("YYYY-MM-DDTHH:mm:ssZ");
 }
 
 type LineStation = { name: string; stopId: string | null };

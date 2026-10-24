@@ -17,6 +17,7 @@ export interface TrainArrival {
   arrivalAt: Date;
   source: ArrivalSource;
   position: TrainPosition | null;
+  isFirstTrain: boolean;
 }
 
 export interface CountdownDivergence {

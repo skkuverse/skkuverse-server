@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body.",
+  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip of each /map/config body gained the map tab and opensIn map on purpose (a chip runs where its result shows; app ADR 0022 D1), and its ETag was recomputed from the new body. On 2026-10-24 the building_code chip of each /map/config body gained an empty tabs on purpose (the shared-map shell's search field replaces it, so that shell lists it in no tab), and its ETag was recomputed from the new body.",
   "config": {
     "ko": {
       "status": 200,
@@ -202,7 +202,8 @@
                 "actionValue": "/search"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": []
             },
             {
               "id": "lost_found",
@@ -254,8 +255,10 @@
               "isReset": false,
               "list": null,
               "tabs": [
+                "map",
                 "transit"
-              ]
+              ],
+              "opensIn": "map"
             }
           ],
           "cameraDefaults": {
@@ -271,7 +274,7 @@
           }
         }
       },
-      "etag": "W/\"d9c-xEG74BdMBxU/cUFH8mdADKEPUuE\""
+      "etag": "W/\"dbc-ySUOVyjhCXjT+L7bdqvbkCw8BKg\""
     },
     "en": {
       "status": 200,
@@ -474,7 +477,8 @@
                 "actionValue": "/search"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": []
             },
             {
               "id": "lost_found",
@@ -526,8 +530,10 @@
               "isReset": false,
               "list": null,
               "tabs": [
+                "map",
                 "transit"
-              ]
+              ],
+              "opensIn": "map"
             }
           ],
           "cameraDefaults": {
@@ -543,7 +549,7 @@
           }
         }
       },
-      "etag": "W/\"d94-u21OtPL6Ppxae0PIKd5fm0wB7mk\""
+      "etag": "W/\"db4-60Z9P8ciypA+M7D3NWGT7OrUtd8\""
     },
     "zh": {
       "status": 200,
@@ -746,7 +752,8 @@
                 "actionValue": "/search"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": []
             },
             {
               "id": "lost_found",
@@ -798,8 +805,10 @@
               "isReset": false,
               "list": null,
               "tabs": [
+                "map",
                 "transit"
-              ]
+              ],
+              "opensIn": "map"
             }
           ],
           "cameraDefaults": {
@@ -815,7 +824,7 @@
           }
         }
       },
-      "etag": "W/\"d95-WdK7UQluo1RmIawVUz+hhrYBzTU\""
+      "etag": "W/\"db5-0RPyvKt8sd31TuyD+CnViPnCle4\""
     }
   },
   "event": {

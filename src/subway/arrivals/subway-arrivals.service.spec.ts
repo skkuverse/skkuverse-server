@@ -10,7 +10,8 @@
  * each is judged on its own ("One line stale"), on Gangnam's line 2 and Shinbundang
  * platforms. A served station carries its stored coords; with none stored for
  * it, or none read at all, it serves the station with null coords, never a
- * 503, while an unserved slug still finds nothing.
+ * 503, while an unserved slug still finds nothing. Every answer carries
+ * `meta.serverNow`, the clock at +09:00 to the second.
  */
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
@@ -38,18 +39,18 @@ function setup(stationCoords = storedStationCoordsRepository()) {
   const timetable = storedSubwayTimetableService({ clock });
   const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   const platformArrivals = new SubwayPlatformArrivalsService(asReal<SubwayRepository>(repository), tracking, clock);
-  return { repository, service: new SubwayArrivalsService(storedSubwayTopologyService(), storedStationCoordsService(stationCoords, clock), platformArrivals) };
+  return { repository, service: new SubwayArrivalsService(storedSubwayTopologyService(), storedStationCoordsService(stationCoords, clock), platformArrivals, clock) };
 }
 
 function storedAgo(ageMs: number, platformId = "S1-4-420"): SubwayArrivalsDoc {
   const generatedAt = new Date(NOW.getTime() - ageMs);
-  const live = { trainNo: "4674", destination: "불암산", express: false, arrivalAt: new Date("2026-10-16T11:42:50Z"), source: "live" as const, position: null };
+  const live = { trainNo: "4674", destination: "불암산", express: false, arrivalAt: new Date("2026-10-16T11:42:50Z"), source: "live" as const, isFirstTrain: false, position: null };
   return { _id: platformId, generatedAt, serviceDate: "2026-10-16", directions: { up: [live], down: [] } };
 }
 
 type Arrivals = Awaited<ReturnType<SubwayArrivalsService["findStationArrivals"]>>;
 
-const sourcesOf = (arrivals: Arrivals, index = 0) => arrivals?.lines[index]?.directions.flatMap((d) => d.trains.map((t) => t.source));
+const sourcesOf = (arrivals: Arrivals, index = 0) => arrivals?.data.lines[index]?.directions.flatMap((d) => d.trains.map((t) => t.source));
 
 const enabled = subway.enabled;
 afterEach(() => {
@@ -77,7 +78,7 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.lines[0]?.generatedAt).toBe("2026-10-16T11:39:00.000Z");
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T11:39:00.000Z");
     expect(sourcesOf(arrivals)).toEqual(["live"]);
   });
 
@@ -93,7 +94,7 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.lines[0]?.generatedAt).toBe(NOW.toISOString());
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe(NOW.toISOString());
     expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
   });
 
@@ -107,7 +108,7 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.lines[0]?.generatedAt).toBe("2026-10-16T11:40:55.000Z");
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T11:40:55.000Z");
     expect(sourcesOf(arrivals)).toEqual(["live"]);
   });
 
@@ -121,7 +122,7 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.lines[0]?.generatedAt).toBe(NOW.toISOString());
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe(NOW.toISOString());
     expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
   });
 
@@ -135,12 +136,26 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("gangnam", "ko");
 
     // Assert
-    expect(arrivals?.lines.map((l) => [l.platformId, l.generatedAt])).toEqual([
+    expect(arrivals?.data.lines.map((l) => [l.platformId, l.generatedAt])).toEqual([
       ["S1-2-222", "2026-10-16T11:40:55.000Z"],
       ["DX-D1-4307", NOW.toISOString()],
     ]);
     expect(sourcesOf(arrivals, 0)).toEqual(["live"]);
     expect(sourcesOf(arrivals, 1)).toEqual(Array(6).fill("scheduled"));
+  });
+
+  it("serves meta.serverNow, the clock at +09:00, beside a fresh state and beside the timetable alone", async () => {
+    // Arrange
+    const { service, repository } = setup();
+    repository.docs.set("S1-2-222", storedAgo(5_000, "S1-2-222"));
+
+    // Act
+    const fresh = await service.findStationArrivals("gangnam", "ko");
+    const scheduled = await service.findStationArrivals("hyehwa", "ko");
+
+    // Assert
+    expect(fresh?.meta).toEqual({ serverNow: "2026-10-16T20:41:00+09:00" });
+    expect(scheduled?.meta).toEqual({ serverNow: "2026-10-16T20:41:00+09:00" });
   });
 
   it("serves the station's stored coords beside its name", async () => {
@@ -151,7 +166,7 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("jamsil", "en");
 
     // Assert
-    expect(arrivals?.station).toEqual({ id: "jamsil", name: "Jamsil", coords: { lat: 37.513977, lng: 127.102249 } });
+    expect(arrivals?.data.station).toEqual({ id: "jamsil", name: "Jamsil", coords: { lat: 37.513977, lng: 127.102249 } });
   });
 
   it("Coords never read: serves a served station with null coords and its lines", async () => {
@@ -162,8 +177,8 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.station).toEqual({ id: "hyehwa", name: "혜화", coords: null });
-    expect(arrivals?.lines.map((line) => line.platformId)).toEqual(["S1-4-420"]);
+    expect(arrivals?.data.station).toEqual({ id: "hyehwa", name: "혜화", coords: null });
+    expect(arrivals?.data.lines.map((line) => line.platformId)).toEqual(["S1-4-420"]);
   });
 
   it("Deploy adds a station before its coords: serves null coords for the station the revision lacks only", async () => {
@@ -177,9 +192,9 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const yangjae = await service.findStationArrivals("yangjae", "ko");
 
     // Assert
-    expect(dogok?.station.coords).toBeNull();
-    expect(dogok?.lines.map((line) => line.platformId)).toEqual(["S1-3-334", "KR-K1-K217"]);
-    expect(yangjae?.station.coords).toEqual({ lat: 37.484143, lng: 127.034278 });
+    expect(dogok?.data.station.coords).toBeNull();
+    expect(dogok?.data.lines.map((line) => line.platformId)).toEqual(["S1-3-334", "KR-K1-K217"]);
+    expect(yangjae?.data.station.coords).toEqual({ lat: 37.484143, lng: 127.034278 });
   });
 
   it("finds nothing for an unserved slug even with no coords read", async () => {

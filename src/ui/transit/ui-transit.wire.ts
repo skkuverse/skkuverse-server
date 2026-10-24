@@ -41,7 +41,7 @@ const transitItem = z.discriminatedUnion("kind", [busTransitItem, subwayTransitI
 
 /**
  * WHY: a null title draws no header above the section. With no `campus` the section belongs to both campuses;
- * the app reads it for ordering only.
+ * the app shows a tagged section only while its campus is selected.
  */
 const transitSection = z.object({
   type: z.literal("item_list"),
