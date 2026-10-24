@@ -61,6 +61,9 @@ export interface ScheduleStopCatalog {
 
 export type EtaOptIns = ReadonlyMap<string, readonly string[]>;
 
-export interface ResolvedStops { sequences: Record<string, Record<string, ServedSequenceStop[]>>; stops: ServedStop[] }
+export interface ResolvedStops {
+  sequences: Record<string, Record<string, ServedSequenceStop[]>>;
+  stops: ServedStop[];
+}
 
 export type BusStopsSnapshot = Readonly<{ revision: number; catalog: Readonly<ScheduleStopCatalog>; hssc: readonly HsscLineStation[]; stopIdByArsId: ReadonlyMap<string, string>; stopIdByTopisId: ReadonlyMap<string, string> }>;

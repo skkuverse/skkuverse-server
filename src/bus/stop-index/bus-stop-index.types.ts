@@ -19,7 +19,11 @@ export interface JongroStopRoute {
   stationsVersion: string;
 }
 
-export interface HsscStopRoute { kind: "hssc"; groupId: string; stationIndex: number }
+export interface HsscStopRoute {
+  kind: "hssc";
+  groupId: string;
+  stationIndex: number;
+}
 
 export type ShuttleStopRoute = Pick<SequenceStop, "action" | "timing"> & {
   kind: "shuttle";
