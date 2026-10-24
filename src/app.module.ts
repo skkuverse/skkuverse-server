@@ -51,6 +51,9 @@ import { BuildingCatalogModule } from "./building/catalog/building-catalog.modul
 import { BuildingSearchModule } from "./building/search/building-search.module";
 import { BuildingSyncModule } from "./building/sync/building-sync.module";
 import { BuildingCafeteriaListModule } from "./building/cafeteria-list/building-cafeteria-list.module";
+import { BuildingPlaceModule } from "./building/place/building-place.module";
+import { BuildingPlaceResolveModule } from "./building/place/resolve/building-place-resolve.module";
+import { BuildingPlaceDisplayModule } from "./building/place/display/building-place-display.module";
 import { MealsModule } from "./meals/meals.module";
 import { MealsCatalogModule } from "./meals/catalog/meals-catalog.module";
 import { MealsMenusModule } from "./meals/menus/meals-menus.module";
@@ -149,6 +152,9 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BuildingSyncModule,
     BuildingCafeteriaModule,
     BuildingCafeteriaListModule,
+    BuildingPlaceModule,
+    BuildingPlaceResolveModule,
+    BuildingPlaceDisplayModule,
     MealsModule,
     MealsCatalogModule,
     MealsMenusModule,

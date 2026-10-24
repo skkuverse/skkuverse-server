@@ -9,6 +9,8 @@ const assets = [
   ["src/notices/categories.json", "dist/src/notices/categories.json"],
   ["src/notices/sources.json", "dist/src/notices/sources.json"],
   ["src/notices/exclude-reasons.json", "dist/src/notices/exclude-reasons.json"],
+  // src/building/place/building-place.config.ts reads this with fs.readFileSync(__dirname/<name>)
+  ["src/building/place/place-lexicon.json", "dist/src/building/place/place-lexicon.json"],
 ];
 
 for (const [src, dest] of assets) {

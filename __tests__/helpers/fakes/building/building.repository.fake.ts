@@ -1,8 +1,9 @@
 /**
  * In-memory BuildingRepository: the building list and the campus shapes, with
  * the real reads' campus filter, projection and sort (pinned in
- * building.repository.spec.ts). `failWith` makes the next
- * reads reject, as a database error would.
+ * building.repository.spec.ts). The unfiltered list is the same array until
+ * `buildings` is replaced, as the cached read returns within its TTL.
+ * `failWith` makes the next reads reject, as a database error would.
  */
 import type { BuildingRepository } from "../../../../src/building/building.repository";
 import type { BuildingDoc, CampusShapeDoc } from "../../../../src/building/building.document";
@@ -14,15 +15,19 @@ export class FakeBuildingRepository implements PublicOf<BuildingRepository> {
   campusShapes: CampusShapeDoc[] = [];
   cacheClears = 0;
   failWith: Error | null = null;
+  private listed: { from: BuildingDoc[]; buildings: BuildingDoc[] } | null = null;
 
   async onModuleInit(): Promise<void> {}
 
   async listBuildings(campus?: Campus): Promise<readonly BuildingDoc[]> {
     if (this.failWith) throw this.failWith;
-    return [...this.buildings]
-      .filter((b) => !campus || b.campus === campus)
-      .sort((a, b) => a._id - b._id)
-      .map(({ extensions: _extensions, sync: _sync, enrichVersion: _enrichVersion, ...projected }) => projected);
+    if (this.listed?.from !== this.buildings) {
+      const buildings = [...this.buildings]
+        .sort((a, b) => a._id - b._id)
+        .map(({ extensions: _extensions, sync: _sync, enrichVersion: _enrichVersion, ...projected }) => projected);
+      this.listed = { from: this.buildings, buildings };
+    }
+    return campus ? this.listed.buildings.filter((b) => b.campus === campus) : this.listed.buildings;
   }
 
   /** Seed valid shapes: leaving out and logging an invalid one is the real repository's. */
