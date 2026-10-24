@@ -3,13 +3,15 @@ title: 7800 and One Arrival Shape for Every Bus
 type: plan
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-24
+last-updated: 2026-10-25
 audience: internal
 ---
 
 # 7800 and One Arrival Shape for Every Bus
 
 > How the 7800 광역버스 joins the Jongno lines on `/bus/live` and the stop page in the ADR 0019 `arrival` shape, which upstream feeds it within which quota, and how the timetabled shuttles then produce the same shape from instants instead of the smart view's `"HH:mm"` strings, so the 길찾기 planner reads realtime and timetable buses through one model. Nothing here is built. It revises the 7800 and F1 sections of [transit-route-planner.md](transit-route-planner.md); the planner itself is out of scope.
+
+> **Status 2026-10-25.** PRs 1–7 shipped (#330, #331, #332). PR 8 is cancelled: 7800 is never listed on `/bus/config` and serves 길찾기 and the stop pages only (owner, 2026-10-25). What comes next, the call shape on every board and the journey built on it, is [ADR 0022](../decisions/0022-journey-and-call-spec.md) and its plan, [transit-route-planner.md](transit-route-planner.md). The body below is kept as written.
 
 ## 1. Goal and scope
 
