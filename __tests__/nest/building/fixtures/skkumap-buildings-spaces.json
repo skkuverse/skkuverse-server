@@ -1,0 +1,88 @@
+{
+  "_about": "skkumap_dev.buildings and skkumap_dev.spaces as the writer stores them, read with the MongoDB driver on 2026-10-24: buildings 2 (a building with a barrier-free detail and attachments) and 69 (a facility without a buildNo), whole; spaces 10115 and 10209A of buildNo 101, whole but their ObjectId _id. The server's building sync wrote them; skkuverse-crawler takes the same shape over (its docs/decisions/adr-014-campus-map-ownership.md). Extended-JSON dates are ISO strings: `updatedAt` is revived to a Date where the helper reads it, as the driver returns it. Description texts trimmed. No user data.",
+  "buildings": [
+    {
+      "_id": 2,
+      "accessibility": {
+        "elevator": true,
+        "toilet": true,
+        "detail": {
+          "sections": [
+            {
+              "label": null,
+              "ramp": { "available": false, "note": null },
+              "toilet": { "raw": "B2~1,5,6, 총 5개 (B2 남, B1~1,5,6 여 )", "count": 5 },
+              "elevator": { "raw": "3대 중 1대", "total": 3, "accessible": 1 },
+              "elevatorStatus": "arrival",
+              "parking": 4
+            }
+          ]
+        }
+      },
+      "buildNo": "101",
+      "campus": "hssc",
+      "description": {
+        "ko": "건학 600주년을 기념하기 위해서 1999년 11월에 완공되었다.",
+        "en": "To commemorate the founding philosophy of the university, 600th Anniversary Hall was constructed on November 1999."
+      },
+      "extensions": {},
+      "image": { "url": "https://www.skku.edu/_attach/image/2018/07/WdvZbhwLWznIHxqgvdLQ.jpg", "filename": "WdvZbhwLWznIHxqgvdLQ.jpg" },
+      "location": { "type": "Point", "coordinates": [126.994479, 37.587361] },
+      "name": { "ko": "600주년기념관", "en": "600th Anniversary Hall" },
+      "skkuCreatedAt": "2018-04-23T00:34:12.000+00:00",
+      "skkuUpdatedAt": "2021-03-25T02:38:41.000+00:00",
+      "sync": { "listAt": "2026-03-16T10:14:08.185Z", "detailAt": "2026-09-24T10:42:11.515Z", "detailError": null },
+      "type": "building",
+      "updatedAt": "2026-03-16T10:14:08.185Z",
+      "attachments": [{ "id": 12, "url": "https://www.skku.edu/_attach/image/2018/07/WdvZbhwLWznIHxqgvdLQ.jpg", "filename": "P2.jpg", "alt": "" }],
+      "displayNo": "1",
+      "enrichVersion": 1
+    },
+    {
+      "_id": 69,
+      "accessibility": { "elevator": false, "toilet": false, "detail": null },
+      "buildNo": null,
+      "campus": "hssc",
+      "description": {
+        "ko": "성균관대학교 후문 근처에 위치하고 있는 정자이다.",
+        "en": "This is  a pavilion near the rear gate."
+      },
+      "extensions": {},
+      "image": { "url": "https://www.skku.edu/_attach/image/2018/07/RjbivvsTPGHLWCBeCcVZ.jpg", "filename": "RjbivvsTPGHLWCBeCcVZ.jpg" },
+      "location": { "type": "Point", "coordinates": [126.989914, 37.588333] },
+      "name": { "ko": "옥류정", "en": "Oacknyujeong" },
+      "skkuCreatedAt": "2018-07-09T04:58:56.000+00:00",
+      "skkuUpdatedAt": "2018-07-09T09:59:44.000+00:00",
+      "sync": { "listAt": "2026-03-16T10:14:08.185Z" },
+      "type": "facility",
+      "updatedAt": "2026-03-16T10:14:08.185Z",
+      "displayNo": null,
+      "attachments": [],
+      "enrichVersion": 1
+    }
+  ],
+  "spaces": [
+    {
+      "buildNo": "101",
+      "spaceCd": "10115",
+      "campus": "hssc",
+      "buildingName": { "ko": "600주년기념관", "en": "600th Anniversary Hall" },
+      "conspaceCd": "10101015",
+      "floor": { "ko": "1층", "en": "1F" },
+      "name": { "ko": "예비군연대", "en": "Reserved Forces Regiment" },
+      "sources": ["buildInfo", "spaceList"],
+      "syncedAt": "2026-09-24T10:42:11.515Z"
+    },
+    {
+      "buildNo": "101",
+      "campus": "hssc",
+      "spaceCd": "10209A",
+      "buildingName": { "ko": "600주년기념관", "en": "600th Anniversary Hall" },
+      "conspaceCd": "10102006",
+      "floor": { "ko": "2층", "en": "2F" },
+      "name": { "ko": "총무처장실", "en": "Vice President, General Affairs" },
+      "sources": ["buildInfo", "spaceList"],
+      "syncedAt": "2026-09-24T10:42:11.515Z"
+    }
+  ]
+}

@@ -8,9 +8,9 @@ import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import { isRecord } from "../shared/object.util";
 import { parseEach } from "../shared/zod-list.util";
-import { SERVED_BUILDING_PROJECTION } from "./building.query";
+import { SERVED_BUILDING_FIELDS } from "./building.query";
 import { BUILDING_CACHE_TTL_MS } from "./building.constants";
-import { campusShapeDoc } from "./building.schema";
+import { buildingDoc, campusShapeDoc } from "./building.schema";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
 import type { Campus } from "./building.types";
 
@@ -19,7 +19,7 @@ const CAMPUS_SHAPES_TTL_MS = 5 * 60 * 1000;
 const CAMPUS_SHAPES_STALE_WINDOW_MS = 60 * 60 * 1000;
 
 // WHY: every reload re-parses the same documents, so a bad set is reported hourly, not every TTL.
-const INVALID_SHAPES_LOG_INTERVAL_MS = 60 * 60 * 1000;
+const INVALID_DOCUMENTS_LOG_INTERVAL_MS = 60 * 60 * 1000;
 
 const CAMPUS_SHAPE_FIELDS = {
   _id: 1,
@@ -34,24 +34,24 @@ const CAMPUS_SHAPE_FIELDS = {
 
 @Injectable()
 export class BuildingRepository implements OnModuleInit {
-  private readonly invalidShapesThrottle = createLogThrottle(INVALID_SHAPES_LOG_INTERVAL_MS);
+  private readonly invalidShapesThrottle = createLogThrottle(INVALID_DOCUMENTS_LOG_INTERVAL_MS);
+
+  private readonly invalidBuildingsThrottle = createLogThrottle(INVALID_DOCUMENTS_LOG_INTERVAL_MS);
 
   // WHY: no stale window: a failed read must reach the map's campus overlay, which then
   // marks itself degraded and is not cached.
   private readonly buildingsCache = createCachedLoader({
     name: "all buildings",
     ttlMs: BUILDING_CACHE_TTL_MS,
-    load: () =>
-      this.buildings()
-        .find(
-          {},
-          {
-            projection: SERVED_BUILDING_PROJECTION,
-            maxTimeMS: HOT_READ_MAX_TIME_MS,
-          },
-        )
-        .sort({ _id: 1 })
-        .toArray(),
+    load: async () => {
+      const { valid: buildings, invalid } = parseEach(
+        await this.buildings().find({}, { projection: SERVED_BUILDING_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS }).sort({ _id: 1 }).toArray(),
+        buildingDoc,
+        (doc) => String(isRecord(doc) ? doc._id : undefined),
+      );
+      this.warnInvalidBuildings(invalid);
+      return buildings;
+    },
   });
 
   // WHY: a failed reload serves the last good shapes: a shapes failure does not mark the
@@ -98,9 +98,13 @@ export class BuildingRepository implements OnModuleInit {
     return this.campusShapesCache.get();
   }
 
-  clearCache(): void {
-    this.buildingsCache.clear();
-    this.campusShapesCache.clear();
+  private warnInvalidBuildings(invalid: readonly string[]): void {
+    const ticket = invalid.length > 0 ? this.invalidBuildingsThrottle.take(invalid.join("|")) : null;
+    if (!ticket) return;
+    logger.warn(
+      { event: "building.buildings.invalid", count: invalid.length, invalid, suppressed: ticket.suppressed },
+      "Buildings left out: they do not match the document schema",
+    );
   }
 
   private warnInvalidShapes(invalid: readonly string[]): void {

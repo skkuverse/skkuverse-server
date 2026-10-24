@@ -15,9 +15,8 @@ import catalogHssc from "../../../contracts/produced/fixtures/meals-catalog.cafe
 import catalogNsc from "../../../contracts/produced/fixtures/meals-catalog.cafeteriaList/nsc.json";
 import dailyHssc from "../../../contracts/produced/fixtures/meals-menus.dailyMeals/hssc.json";
 import dailyNsc from "../../../contracts/produced/fixtures/meals-menus.dailyMeals/nsc.json";
-import type { BuildingDoc } from "../../../src/building/building.document";
+import type { BuildingDoc, CafeteriaDoc } from "../../../src/building/building.document";
 import { BuildingRepository } from "../../../src/building/building.repository";
-import type { CafeteriaDoc } from "../../../src/building/cafeteria/building-cafeteria.document";
 import { BuildingCafeteriaListRepository } from "../../../src/building/cafeteria-list/building-cafeteria-list.repository";
 import { Clock } from "../../../src/infra/clock";
 import { MealsCatalogModule } from "../../../src/meals/catalog/meals-catalog.module";
@@ -26,6 +25,8 @@ import { MealsMenusRepository } from "../../../src/meals/menus/meals-menus.repos
 import { dailyMeals } from "../../../src/meals/menus/meals-menus.wire";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBuildingCafeteriaListRepository } from "../../helpers/fakes/building/building-cafeteria-list.repository.fake";
+import type { Campus } from "../../../src/building/building.types";
+import { storedBuilding } from "../../helpers/building/buildings";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMealsMenusRepository } from "../../helpers/fakes/meals/meals-menus.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -55,8 +56,8 @@ function toCafeteriaDoc(listed: ListedCafeteria): CafeteriaDoc {
 }
 
 function toBuildingDoc(listed: ListedCafeteria): BuildingDoc {
-  const { skkuId, buildNo, displayNo, name } = listed.building!;
-  return { _id: skkuId, buildNo, displayNo, campus: listed.campus, name } as BuildingDoc;
+  const { skkuId, buildNo, name } = listed.building!;
+  return storedBuilding({ _id: skkuId, buildNo, campus: listed.campus as Campus, name });
 }
 
 let app: NestExpressApplication;

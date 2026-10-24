@@ -194,7 +194,7 @@ export class PollerRegistryService
   }
 
   // WHY: a poller a minute or more between ticks already opened its own Issue when declared, and its
-  // "error" would last an interval (a week for building-sync), hiding the fast pollers.
+  // "error" would last its whole interval, hiding the fast pollers.
   private heartbeat(): void {
     const down = [...this.health.values()].some((h) => h.isFast && h.isDeclaredFailing);
     Sentry.captureCheckIn(

@@ -21,7 +21,7 @@
  *  - revisionKey: changes with the rest days' revision and with any crawled
  *    year's content hash.
  * How often the stored years are read is calendar.repository.spec.ts's, and
- * how they are written is the sync's (src/calendar/holiday-sync/). The
+ * skkuverse-crawler writes them. The
  * crawled documents are the crawler's own output (fixtures/academic-calendars.json
  * of calendar).
  *

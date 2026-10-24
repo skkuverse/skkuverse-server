@@ -1,6 +1,8 @@
+import moment from "moment-timezone";
+import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { RunKey } from "../bus-eta.types";
-import type { EtaSource, ServedEstimate } from "./bus-eta-smart.types";
+import type { EtaSource, ServedEstimate, ShuttleRun } from "./bus-eta-smart.types";
 
 // WHY: a real-time value describes traffic now; past this it no longer does.
 const LIVE_MAX_AGE_MS = 15 * 60_000;
@@ -67,4 +69,24 @@ export function pickLatestEstimates(docs: readonly ShuttleEtaDoc[], now: Date): 
     }
   }
   return latest;
+}
+
+const MINUTE_MS = 60_000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
+
+/** WHY: a timetable time is KST wall-clock time on its date, whatever the server's zone. */
+export function toTimetableAt(date: string, time: string): Date {
+  return moment.tz(`${date} ${time}`, "YYYY-MM-DD HH:mm", KST_TIME_ZONE).toDate();
+}
+
+/** WHY: the timetable stores a run's stop times as "HH:mm" on its departure's date, so one before the departure is the next day's. */
+export function toStopAt(departureAt: Date, date: string, time: string): Date {
+  const at = toTimetableAt(date, time);
+  return at < departureAt ? new Date(at.getTime() + DAY_MS) : at;
+}
+
+/** WHY: a run still counts in its own minute, as the timetable gives minutes, until the last instant it has passes (ADR 0019, D12). */
+export function isUnderWayAt({ departureAt, stopTimes }: Pick<ShuttleRun, "departureAt" | "stopTimes">, from: Date): boolean {
+  const instants = [departureAt, ...stopTimes.flatMap(({ shownAt, latestEstimateAt }) => [shownAt, latestEstimateAt])].flatMap((at) => (at ? [at.getTime()] : []));
+  return Math.max(...instants) >= Math.floor(from.getTime() / MINUTE_MS) * MINUTE_MS;
 }

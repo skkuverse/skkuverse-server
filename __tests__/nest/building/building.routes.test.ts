@@ -11,12 +11,13 @@ import type { BuildingDoc, SpaceDoc } from "../../../src/building/building.docum
 import { BuildingRepository } from "../../../src/building/building.repository";
 import { BuildingCatalogRepository } from "../../../src/building/catalog/building-catalog.repository";
 import { BuildingSearchRepository } from "../../../src/building/search/building-search.repository";
+import { storedBuilding } from "../../helpers/building/buildings";
 import { FakeBuildingCatalogRepository } from "../../helpers/fakes/building/building-catalog.repository.fake";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeBuildingSearchRepository } from "../../helpers/fakes/building/building-search.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
-import { SERVED_BUILDING_PROJECTION } from "../../../src/building/building.query";
+import { BUILDING_SEARCH } from "../../../src/building/search/building-search.query";
 import { buildingDetail, buildingList } from "../../../src/building/catalog/building-catalog.wire";
 import { buildingSearchData, buildingSearchMeta } from "../../../src/building/search/building-search.wire";
 import { BuildingCatalogModule } from "../../../src/building/catalog/building-catalog.module";
@@ -29,7 +30,7 @@ let catalog: FakeBuildingCatalogRepository;
 let search: FakeBuildingSearchRepository;
 
 function building(_id: number, buildNo: string | null, campus: "hssc" | "nsc", ko: string, en: string): BuildingDoc {
-  return { _id, buildNo, campus, name: { ko, en } } as BuildingDoc;
+  return storedBuilding({ _id, buildNo, campus, name: { ko, en } });
 }
 
 function room(spaceCd: string, buildNo: string, campus: "hssc" | "nsc", over: Partial<SpaceDoc> = {}): SpaceDoc {
@@ -293,7 +294,7 @@ describe("GET /building/:skkuId", () => {
       {
         targetSkkuId: 2,
         targetBuildNo: "101",
-        targetDisplayNo: null,
+        targetDisplayNo: "1",
         targetName: { ko: "경영관", en: "Business" },
         fromFloor: { ko: "1층", en: "1F" },
         toFloor: { ko: "2층", en: "2F" },
@@ -326,17 +327,20 @@ describe("GET /building/:skkuId", () => {
     expect(list.body.data.buildings[0]).not.toHaveProperty("extensions");
   });
 
-  it("answers 500 INTERNAL_ERROR when a space has no floor", async () => {
+  it("leaves out a space with no floor, which the crawler wrote malformed, and serves the rest", async () => {
     // Arrange
     catalog.buildings = [LAW];
-    catalog.spaces = [{ spaceCd: "100-A101", buildNo: "100", campus: "hssc", name: { ko: "강의실", en: "" } } as SpaceDoc];
+    catalog.spaces = [
+      { spaceCd: "100-A100", buildNo: "100", campus: "hssc", name: { ko: "강의실", en: "" } } as SpaceDoc,
+      room("100-A101", "100", "hssc"),
+    ];
 
     // Act
     const res = await request(httpServer).get("/building/1");
 
     // Assert
-    expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: "INTERNAL_ERROR", message: "Internal server error" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.floors.flatMap((floor: { spaces: Array<{ spaceCd: string }> }) => floor.spaces.map((space) => space.spaceCd))).toEqual(["100-A101"]);
   });
 });
 
@@ -492,7 +496,7 @@ describe("/building bodies against their wire schemas", () => {
   it("serves /building/search as buildingSearchData and buildingSearchMeta declare", async () => {
     // Arrange
     // The fake returns its rows as seeded, so they are seeded as the search pipeline's $project leaves them.
-    const ranked = Object.fromEntries(Object.entries(STORED).filter(([field]) => !(field in SERVED_BUILDING_PROJECTION)));
+    const ranked = Object.fromEntries(Object.entries(STORED).filter(([field]) => !(field in BUILDING_SEARCH.projection)));
     search.buildings = { items: [ranked as unknown as BuildingDoc] };
     search.spaces = { items: [room("100-A101", "100", "hssc")] };
     buildings.buildings = [STORED];

@@ -54,16 +54,11 @@ const config = {
     dbName: dbNameFor(process.env.MONGO_BUILDING_DB_NAME),
     collections: {
       buildings: "buildings",
-      buildingsRaw: "buildings_raw",
       spaces: "spaces",
       connections: "connections",
       facilities: "facilities",
       campusShapes: "campus_shapes",
     },
-    syncIntervalMs:
-      parseInt(process.env.BUILDING_SYNC_INTERVAL_MS || "", 10) ||
-      7 * 24 * 60 * 60 * 1000,
-    syncEnabled: switches.buildingSyncEnabled,
   },
 
   notices: {
@@ -205,19 +200,17 @@ const config = {
     },
   },
 
-  // WHY: the regional bus pollers spend production's TOPIS quota per operation, which has 272 calls a day to spare.
+  // WHY: the regional bus pollers spend production's TOPIS quota per operation, which has 6,752 calls a day to spare.
   regionalBus: {
     enabled: switches.regionalBusEnabled,
   },
 
+  // CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/plugins/mongo/public_holidays.py writes it in
+  // MONGO_DB_NAME_BUS_CAMPUS, which this server reads as mongo.dbName.
   holidays: {
-    get serviceKey(): string {
-      return roleScoped("DATA_GO_KR_SERVICE_KEY");
-    },
     collections: {
       publicHolidays: "public_holidays",
     },
-    syncIntervalMs: 60 * 60 * 1000,
   },
 
   // CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/module.py writes it in its
@@ -289,7 +282,6 @@ const config = {
   getSideEffectsSummary(): {
     push: string;
     rateLimit: string;
-    buildingSync: string;
     cache: string;
     shuttleEta: string;
     subway: string;
@@ -299,7 +291,6 @@ const config = {
     return {
       push: switches.pushDelivery,
       rateLimit: switches.rateLimitEnabled ? "on" : "off",
-      buildingSync: switches.buildingSyncEnabled ? "on" : "off",
       cache: switches.cacheEnabled ? "on" : "off",
       shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
       subway: switches.subwayEnabled ? "on" : "off",

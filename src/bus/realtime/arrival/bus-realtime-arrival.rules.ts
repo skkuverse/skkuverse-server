@@ -74,7 +74,7 @@ export function toPassengerCount(bus: JongroArrivalBus): number | null {
   return bus.rerideDiv === PASSENGER_COUNT_TYPE ? bus.rerideNum : null;
 }
 
-export function toArrival(bus: JongroArrivalBus, seatCount: number | null): RealtimeArrival {
+export function toRealtimeArrival(bus: JongroArrivalBus, seatCount: number | null): RealtimeArrival {
   return {
     minutes: toMinutes(bus),
     stopsAway: toStopsAway(bus),
@@ -97,6 +97,6 @@ export function toStoppingStopsAway(bus: JongroArrivalBus, passThroughOrds: Read
 
 // WHY: a route whose source never reports load serves none (ADR 0019, D2): TOPIS sends 7800's buses as type 2 with 0 aboard.
 export function toRouteArrival(bus: JongroArrivalBus, { seatCount, capabilities, passThroughOrds }: RouteArrivalFacts): RealtimeArrival {
-  const arrival = { ...toArrival(bus, seatCount), stopsAway: toStoppingStopsAway(bus, passThroughOrds) };
+  const arrival = { ...toRealtimeArrival(bus, seatCount), stopsAway: toStoppingStopsAway(bus, passThroughOrds) };
   return capabilities.occupancy ? arrival : { ...arrival, crowding: null, passengerCount: null };
 }

@@ -1,5 +1,8 @@
 import type { PublicHoliday, RestDays, Semester } from "./calendar.types";
 
+// CONTRACT(skkuverse-crawler): `PublicHolidayYearDoc` of skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/models.py,
+// one document per year in `public_holidays`, `_id` the year as an int, from data.go.kr getRestDeInfo (the amendment
+// of 2026-10-24 to skkuverse-crawler/docs/decisions/adr-013-academic-calendar.md).
 export interface PublicHolidaysDoc {
   _id: number;
   holidays: PublicHoliday[];

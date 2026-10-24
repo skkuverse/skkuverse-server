@@ -3,10 +3,12 @@
  * Which one is its latest, for the stop page's listing cutoff only: the newest fetch among its unexpired documents of
  * any kind, a live value too old to serve included (ADR 0019, D12).
  * And how a run's offsets respect a scheduled stop after the first: the bus
- * never leaves it before its timetable time.
+ * never leaves it before its timetable time. A timetable time is KST on its
+ * date, and a run's stop time before its departure is past midnight, the next
+ * day's; a run is under way until the minute after its last instant passes.
  */
 import type { ShuttleEtaDoc } from "../bus-eta.document";
-import { floorAtScheduledStops, pickEstimates, pickLatestEstimates, runKey } from "./bus-eta-smart.rules";
+import { floorAtScheduledStops, isUnderWayAt, pickEstimates, pickLatestEstimates, runKey, toStopAt, toTimetableAt } from "./bus-eta-smart.rules";
 
 const NOW = new Date("2026-10-12T00:40:00.000Z"); // 09:40 KST, 20 minutes before the 10:00 run
 const KEY = runKey({ serviceId: "campus-inja", routeType: "regular", date: "2026-10-12", time: "10:00" });
@@ -163,5 +165,53 @@ describe("floorAtScheduledStops", () => {
     // Assert
     expect(floored).not.toBe(offsetsSec);
     expect(offsetsSec).toEqual([0, 120, 3000]);
+  });
+});
+
+// WHY: the timetable stores each stop of a run as "HH:mm" on its departure's date; the run read parses it once.
+describe("toStopAt", () => {
+  const DEPARTURE_AT = new Date("2026-10-22T14:30:00.000Z"); // 23:30 KST on Thursday the 22nd
+
+  it.each([
+    ["one minute before the departure, the next day's", "23:29", "2026-10-23T14:29:00.000Z"],
+    ["past midnight, the next day's", "00:50", "2026-10-22T15:50:00.000Z"],
+    ["at the departure, the same day's", "23:30", "2026-10-22T14:30:00.000Z"],
+    ["one minute after the departure, the same day's", "23:31", "2026-10-22T14:31:00.000Z"],
+  ])("reads a time %s", (_case, time, expected) => {
+    // Act & Assert
+    expect(toStopAt(DEPARTURE_AT, "2026-10-22", time).toISOString()).toBe(expected);
+  });
+
+  it("reads the date as KST's, not UTC's, which is the day before until 09:00", () => {
+    // Act
+    const at = toStopAt(new Date("2026-10-22T23:30:00.000Z"), "2026-10-23", "08:45");
+
+    // Assert
+    expect(at.toISOString()).toBe("2026-10-22T23:45:00.000Z");
+    expect(at.toISOString()).not.toBe("2026-10-23T23:45:00.000Z");
+  });
+});
+
+describe("toTimetableAt", () => {
+  it("reads a timetable time as KST wall-clock time on its date, not the server zone's", () => {
+    // Act
+    const at = toTimetableAt("2026-10-23", "08:45");
+
+    // Assert
+    expect(at.toISOString()).toBe("2026-10-22T23:45:00.000Z");
+    expect(at.toISOString()).not.toBe("2026-10-23T08:45:00.000Z");
+  });
+});
+
+describe("isUnderWayAt", () => {
+  const run = { departureAt: new Date("2026-10-22T14:30:00.000Z"), stopTimes: [{ shownAt: null, isEstimated: false, latestEstimateAt: new Date("2026-10-22T15:52:00.000Z") }] };
+
+  it.each([
+    ["in its last instant's minute", "2026-10-22T15:52:59.000Z", true],
+    ["a minute before its last instant", "2026-10-22T15:51:00.000Z", true],
+    ["the minute after its last instant", "2026-10-22T15:53:00.000Z", false],
+  ])("counts a run %s as under way: %s", (_case, from, expected) => {
+    // Act & Assert
+    expect(isUnderWayAt(run, new Date(from))).toBe(expected);
   });
 });

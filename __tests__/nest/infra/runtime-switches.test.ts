@@ -1,6 +1,6 @@
 /**
- * PUSH_DELIVERY / RATE_LIMIT / BUILDING_SYNC / CACHE / SHUTTLE_ETA / SUBWAY /
- * SHUTTLE / REGIONAL_BUS
+ * PUSH_DELIVERY / RATE_LIMIT / CACHE / SHUTTLE_ETA / SUBWAY / SHUTTLE /
+ * REGIONAL_BUS
  * (src/infra/runtime-switches.ts).
  *
  * Two halves. The resolver table pins what each mode defaults to and which
@@ -8,7 +8,7 @@
  * may not be set: production's compose file and Doppler key lists never carry
  * one (production must run on the defaults), and local verify — which runs the
  * production image on a laptop holding the real Cloud Function URL — always
- * suppresses push, the building crawl, the directions calls, the subway
+ * suppresses push, the directions calls, the subway
  * pollers, the Shuttle pollers and the regional bus pollers.
  */
 import fs from "fs";
@@ -39,7 +39,6 @@ describe("resolveRuntimeSwitches defaults", () => {
       switches: {
         pushDelivery: "live",
         rateLimitEnabled: true,
-        buildingSyncEnabled: true,
         cacheEnabled: true,
         shuttleEtaEnabled: true,
         subwayEnabled: true,
@@ -56,7 +55,6 @@ describe("resolveRuntimeSwitches defaults", () => {
       switches: {
         pushDelivery: "suppressed",
         rateLimitEnabled: false,
-        buildingSyncEnabled: false,
         cacheEnabled: false,
         shuttleEtaEnabled: false,
         subwayEnabled: false,
@@ -77,7 +75,7 @@ describe("resolveRuntimeSwitches defaults", () => {
   it("treats an empty value as unset", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches(
-      { PUSH_DELIVERY: "", RATE_LIMIT: "", BUILDING_SYNC: "" },
+      { PUSH_DELIVERY: "", RATE_LIMIT: "", CACHE: "" },
       "development",
     );
 
@@ -88,17 +86,13 @@ describe("resolveRuntimeSwitches defaults", () => {
 });
 
 describe("resolveRuntimeSwitches overrides", () => {
-  it("development may turn the limiter, the building sync and the caches on", () => {
+  it("development may turn the limiter and the caches on", () => {
     // Act
-    const { switches, errors } = resolveRuntimeSwitches(
-      { RATE_LIMIT: "on", BUILDING_SYNC: "on", CACHE: "on" },
-      "development",
-    );
+    const { switches, errors } = resolveRuntimeSwitches({ RATE_LIMIT: "on", CACHE: "on" }, "development");
 
     // Assert
     expect(errors).toEqual([]);
     expect(switches.rateLimitEnabled).toBe(true);
-    expect(switches.buildingSyncEnabled).toBe(true);
     expect(switches.cacheEnabled).toBe(true);
   });
 
@@ -152,17 +146,13 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(switches.pushDelivery).toBe("suppressed");
   });
 
-  it("production may suppress push and stop the building sync (what local verify sets)", () => {
+  it("production may suppress push (what local verify sets)", () => {
     // Act
-    const { switches, errors } = resolveRuntimeSwitches(
-      { PUSH_DELIVERY: "suppressed", BUILDING_SYNC: "off" },
-      "production",
-    );
+    const { switches, errors } = resolveRuntimeSwitches({ PUSH_DELIVERY: "suppressed" }, "production");
 
     // Assert
     expect(errors).toEqual([]);
     expect(switches.pushDelivery).toBe("suppressed");
-    expect(switches.buildingSyncEnabled).toBe(false);
   });
 
   it("refuses RATE_LIMIT=off in production, and keeps the limiter on", () => {
@@ -186,7 +176,6 @@ describe("resolveRuntimeSwitches overrides", () => {
   it.each([
     ["PUSH_DELIVERY", "dry-run"],
     ["RATE_LIMIT", "true"],
-    ["BUILDING_SYNC", "OFF"],
     ["CACHE", "no-store"],
     ["SHUTTLE_ETA", "true"],
     ["SUBWAY", "yes"],
@@ -275,11 +264,10 @@ describe("where the switches may be set", () => {
     it.each([
       ["the api replicas", apiEnv],
       ["the poller", pollerEnv],
-    ])("%s suppress push and stop the building sync and the directions calls", (_label, env) => {
+    ])("%s suppress push and the directions calls", (_label, env) => {
       // Assert
       expect(env).toBeDefined();
       expect(env).toMatch(/- PUSH_DELIVERY=suppressed\n/);
-      expect(env).toMatch(/- BUILDING_SYNC=off\n/);
       expect(env).toMatch(/- SHUTTLE_ETA=off\n/);
     });
 

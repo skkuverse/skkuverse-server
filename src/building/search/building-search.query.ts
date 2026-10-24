@@ -1,7 +1,6 @@
 import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
-import { SERVED_BUILDING_PROJECTION } from "../building.query";
 import { CAMPUSES } from "../building.constants";
 import { isCampus } from "../building.rules";
 import type { Campus } from "../building.types";
@@ -115,7 +114,7 @@ interface RankedSearchSpec<TDoc> {
   tiebreak: Readonly<Record<string, 1>>;
 }
 
-/** WHY: the unique key breaks ties: weekly sync upserts and deletes reorder documents, and a spaceCd repeats across campuses. */
+/** WHY: the unique key breaks ties: the writer's upserts and deletes reorder documents, and a spaceCd repeats across campuses. */
 const SPACE_SEARCH: RankedSearchSpec<SpaceDoc> = {
   keywordFilter: spaceKeywordFilter,
   tiers: SPACE_TIERS,
@@ -126,14 +125,14 @@ const SPACE_SEARCH: RankedSearchSpec<SpaceDoc> = {
   tiebreak: { spaceCd: 1, buildNo: 1, campus: 1 },
 };
 
-/** WHY: _id breaks ties: SKKU's integer id, which the sync upserts by and never deletes. */
+/** WHY: _id, SKKU's integer id, breaks ties; `sync`, `enrichVersion` and `extensions` are the writer's bookkeeping. */
 const BUILDING_SEARCH: RankedSearchSpec<BuildingDoc> = {
   keywordFilter: buildingKeywordFilter,
   tiers: BUILDING_TIERS,
   strongMinScore: BUILDING_STRONG_MIN_SCORE,
   strongLimit: BUILDING_SEARCH_LIMIT,
   weakLimit: BUILDING_WEAK_LIMIT,
-  projection: { _score: 0, ...SERVED_BUILDING_PROJECTION },
+  projection: { _score: 0, sync: 0, enrichVersion: 0, extensions: 0 },
   tiebreak: { _id: 1 },
 };
 

@@ -1,0 +1,99 @@
+{
+  "_about": "skkumap_dev.facilities as skkuverse-crawler's campusmap module (py/src/skkuverse_crawler/modules/campusmap/sisul.py) wrote it, read with the MongoDB driver on 2026-10-24. `cafeterias`: 10201030 whole (with the fields this server never reads), 20201040 (no spaceCd) and 20201251 (no location) trimmed to the fields the server's cafeteria reads use plus the stamp. `facility`: one kind \"facility\" row whole, which the cafeteria reads filter out. `syncedAt` is the extended-JSON date as an ISO string. No user data.",
+  "cafeterias": [
+    {
+      "_id": "10201030",
+      "bizKind": "0201",
+      "buildNo": "101",
+      "buildingName": { "ko": "600주년기념관", "en": "600th Anniversary Hall" },
+      "campus": "hssc",
+      "category": { "ko": "식당", "en": "Cafeteria" },
+      "description": { "ko": "교직원식당", "en": "Buffet-style meal services" },
+      "floor": { "ko": "6층", "en": "6F" },
+      "floorCode": "06",
+      "hours": {
+        "term": {
+          "weekday": { "open": "11:30", "close": "13:30" },
+          "saturday": null,
+          "sundayAndHolidays": null,
+          "closedOn": { "ko": "매주 토,일,공휴일", "en": "Weekly Sat,Sun,Holiday" }
+        },
+        "vacation": {
+          "weekday": { "open": "11:30", "close": "13:30" },
+          "saturday": null,
+          "sundayAndHolidays": null,
+          "closedOn": { "ko": "매주 토,일,공휴일", "en": "Weekly Sat,Sun,Holiday" }
+        }
+      },
+      "keywords": ["분식", "분식점"],
+      "kind": "cafeteria",
+      "location": { "type": "Point", "coordinates": [126.994501, 37.587584] },
+      "name": { "ko": "패컬티식당", "en": "Faculty Dining Hall" },
+      "phone": "02-745-2290",
+      "remark": null,
+      "spaceCd": "10607A",
+      "spaceName": { "ko": "교직원식당", "en": "Faculty Cafeteria" },
+      "syncedAt": "2026-10-24T13:35:00.569Z"
+    },
+    {
+      "_id": "20201040",
+      "buildNo": "204",
+      "buildingName": { "ko": "복지회관", "en": "Shops & Services Center" },
+      "campus": "nsc",
+      "floor": { "ko": "3층", "en": "3F" },
+      "floorCode": "03",
+      "kind": "cafeteria",
+      "location": { "type": "Point", "coordinates": [126.972533, 37.29396] },
+      "name": { "ko": "구시재식당", "en": "Faculty Cafeteria(Gusijae)" },
+      "spaceCd": null,
+      "syncedAt": "2026-10-24T13:35:00.569Z"
+    },
+    {
+      "_id": "20201251",
+      "buildNo": "226",
+      "buildingName": { "ko": "제2공학관26동", "en": "Engineering 2 (26)" },
+      "campus": "nsc",
+      "floor": { "ko": "지하1층", "en": "B1" },
+      "floorCode": "B1",
+      "kind": "cafeteria",
+      "location": null,
+      "name": { "ko": "해오름식당", "en": "Engineering Building Cafeteria" },
+      "spaceCd": "26B03",
+      "syncedAt": "2026-10-24T13:35:00.569Z"
+    }
+  ],
+  "facility": {
+    "_id": "10202037",
+    "bizKind": "0202",
+    "buildNo": "101",
+    "buildingName": { "ko": "600주년기념관", "en": "600th Anniversary Hall" },
+    "campus": "hssc",
+    "category": { "ko": "패스트푸드", "en": "Fast-food restaurant" },
+    "description": { "ko": "샌드위치 등/ 방학중 미운영", "en": "snack" },
+    "floor": { "ko": "지하1층", "en": "B1" },
+    "floorCode": "B1",
+    "hours": {
+      "term": {
+        "weekday": { "open": "09:00", "close": "19:00" },
+        "saturday": null,
+        "sundayAndHolidays": null,
+        "closedOn": { "ko": "방중운영안함", "en": "Closed during vacation" }
+      },
+      "vacation": {
+        "weekday": null,
+        "saturday": null,
+        "sundayAndHolidays": null,
+        "closedOn": { "ko": "방중운영안함", "en": "Closed during vacation" }
+      }
+    },
+    "keywords": ["패스트푸드", "FAST FOOD", "햄버거"],
+    "kind": "facility",
+    "location": { "type": "Point", "coordinates": [126.994385, 37.587214] },
+    "name": { "ko": "서브웨이", "en": "Subway" },
+    "phone": "02-3673-0100",
+    "remark": "평일 09:00~19:00",
+    "spaceCd": null,
+    "spaceName": null,
+    "syncedAt": "2026-10-24T13:35:00.569Z"
+  }
+}

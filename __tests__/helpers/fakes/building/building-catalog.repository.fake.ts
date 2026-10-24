@@ -1,24 +1,31 @@
 /**
  * In-memory BuildingCatalogRepository over buildings, spaces and connections,
- * with the real queries' filters and projections (pinned in
- * building-catalog.repository.spec.ts): a building by skkuId, a building's spaces by
- * buildNo, a connection from either end (parsed by connectionEnds, as the real
- * read does, so a malformed one is left out), buildings by skkuId list, and a
- * building's cafeterias by buildNo, sorted by conspaceCd. `reads`
+ * with the real queries' filters, projections and parses (pinned in
+ * building-catalog.repository.spec.ts): a building by skkuId (buildingDoc), a
+ * building's spaces by buildNo (floorSpace), a connection from either end
+ * (connectionEnds), buildings by skkuId list (buildingLabel), and a building's
+ * cafeterias by buildNo, sorted by conspaceCd (cafeteriaSummary). Each parse
+ * leaves a malformed document out, and `displayNo` is derived from `buildNo`,
+ * as the real reads do. `reads`
  * names each read in order, for the tests where skipping a read is the
  * behavior. `failWith` makes every read reject.
  */
-import type { BuildingDoc, SpaceDoc } from "../../../../src/building/building.document";
+import type { BuildingDoc, CafeteriaDoc, SpaceDoc } from "../../../../src/building/building.document";
 import type { BuildNo, SkkuId } from "../../../../src/building/building.types";
 import type { BuildingCatalogRepository } from "../../../../src/building/catalog/building-catalog.repository";
-import type { CafeteriaDoc } from "../../../../src/building/cafeteria/building-cafeteria.document";
 import type {
   BuildingLabel,
   CafeteriaSummary,
   ConnectionEnds,
   FloorSpaceDoc,
 } from "../../../../src/building/catalog/building-catalog.document";
-import { connectionEnds } from "../../../../src/building/catalog/building-catalog.schema";
+import { buildingDoc } from "../../../../src/building/building.schema";
+import {
+  buildingLabel,
+  cafeteriaSummary,
+  connectionEnds,
+  floorSpace,
+} from "../../../../src/building/catalog/building-catalog.schema";
 import type { PublicOf } from "../public-of";
 
 export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRepository> {
@@ -35,18 +42,18 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     this.read("findBuildingBySkkuId");
     const building = this.buildings.find((b) => b._id === skkuId);
     if (!building) return null;
-    const projected: Partial<BuildingDoc> = { ...building };
-    delete projected.sync;
-    delete projected.enrichVersion;
-    delete projected.extensions;
-    return projected as BuildingDoc;
+    const parsed = buildingDoc.safeParse(building);
+    return parsed.success ? parsed.data : null;
   }
 
   async listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {
     this.read("listSpacesByBuildNo");
     return this.spaces
       .filter((s) => s.buildNo === buildNo)
-      .map(({ spaceCd, name, floor, conspaceCd }) => ({ spaceCd, name, floor, conspaceCd }));
+      .flatMap((s) => {
+        const parsed = floorSpace.safeParse(s);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   async listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
@@ -63,7 +70,10 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     this.read("listBuildingsBySkkuIds");
     return this.buildings
       .filter((b) => skkuIds.includes(b._id))
-      .map(({ _id, buildNo, displayNo, name }) => ({ _id, buildNo, displayNo, name }));
+      .flatMap((b) => {
+        const parsed = buildingLabel.safeParse(b);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   async listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {
@@ -71,7 +81,10 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     return this.cafeterias
       .filter((c) => c.buildNo === buildNo && c.kind === "cafeteria")
       .sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0))
-      .map(({ _id, name, floor, spaceCd }) => ({ _id, name, floor, spaceCd }));
+      .flatMap((c) => {
+        const parsed = cafeteriaSummary.safeParse(c);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   private read(name: string): void {

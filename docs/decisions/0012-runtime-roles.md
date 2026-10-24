@@ -43,7 +43,7 @@ Each required value names the roles that need it (`src/infra/required-env.ts`): 
 
 ### D5. Runtime switches gate writers only
 
-A switch that turns a poller off (`SUBWAY`, `SHUTTLE_ETA`, `BUILDING_SYNC`) stops its upstream calls and writes, and does not change what an api replica reads: with nothing fresh written, a read serves what its own rules serve for missing data.
+A switch that turns a poller off (`SUBWAY`, `SHUTTLE_ETA`, `SHUTTLE`) stops its upstream calls and writes, and does not change what an api replica reads: with nothing fresh written, a read serves what its own rules serve for missing data.
 
 A poller that spends no paid quota and writes only its own environment's database gets no switch: the mini-app manifest pollers fetch the production origins from development too (mini apps have no development origin), one anonymous GET per origin every four minutes.
 

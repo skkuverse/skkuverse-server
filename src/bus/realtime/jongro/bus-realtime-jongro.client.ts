@@ -67,7 +67,7 @@ export class BusRealtimeJongroClient {
     const what = `jongro ${route.code} list`;
     const url = toJongroArrivalsUrl(route.busRouteId, config.api.seoulBusServiceKey);
     const rows = await this.fetchRows<TopisArrivalRow>({ url, what, operation: "getArrInfoByRouteAllList", code: route.code });
-    return rows.map((row) => this.toArrival(row, what));
+    return rows.map((row) => this.toArrivalDoc(row, what));
   }
 
   async fetchSightings(route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroBusSighting[]> {
@@ -110,7 +110,7 @@ export class BusRealtimeJongroClient {
     if (ticket) logger.error({ event: "bus.topis.quota_exceeded", operation, code, suppressed: ticket.suppressed }, "TOPIS refused a call over the key's daily quota");
   }
 
-  private toArrival(row: TopisArrivalRow, what: string): JongroArrivalDoc {
+  private toArrivalDoc(row: TopisArrivalRow, what: string): JongroArrivalDoc {
     return {
       stationId: row.stId,
       sequence: row.staOrd,

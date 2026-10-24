@@ -19,7 +19,7 @@ A name is how a reader, or an agent, finds code and understands it without a com
 | Repository and client verbs, and `.rules`/`.mapper` predicates, match the declared return type; an `assert…` function returns `void` | `method-verbs.test.ts` |
 | No `// --- X ---` section dividers | `section-comments.test.ts` |
 | Top-level `src/` folders are shared roles or feature modules | `folders.test.ts` |
-| One file per role in a module folder, named after the folder's module (`building-sync.*` in `sync/`) | `folders.test.ts` |
+| One file per role in a module folder, named after the folder's module (`building-catalog.*` in `catalog/`) | `folders.test.ts` |
 | A module with a sub-module keeps no controller or poller at its root | `folders.test.ts` |
 
 ## Picking a name
@@ -58,7 +58,7 @@ Asked to name the same thing, two developers pick the same name about 7% of the 
 | What a block does | A function named for it |
 | What a value means | A constant |
 | A compound condition | An `is…` function or a named boolean |
-| A heading over part of a file | Its own file (`building-sync.mapper.ts`) |
+| A heading over part of a file | Its own file (`building-catalog.mapper.ts`) |
 
 ## Glossary
 

@@ -3,7 +3,7 @@ title: Meals Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-17
+last-updated: 2026-10-24
 audience: internal
 ---
 
@@ -13,7 +13,7 @@ audience: internal
 
 ## Context
 
-Meals serves the cafeterias and their menus to the app's cafeteria-menu screen. It owns no data. The cafeterias are building's: the cafeteria sync (`BuildingCafeteriaService`) mirrors SKKU's facility registry into `facilities`, and meals reads them through `BuildingCafeteriaListService` and their buildings through `BuildingService`, the doors building opens to other features ([ADR 0010, D1](../decisions/0010-server-architecture.md)). The menus are skkuverse-crawler's: it crawls SKKU's menu pages for this week and next and writes one document per cafeteria, KST date and served meal into `meals` (database `MONGO_MEALS_DB_NAME`), which this module only reads.
+Meals serves the cafeterias and their menus to the app's cafeteria-menu screen. It owns no data. The cafeterias are building's: skkuverse-crawler mirrors SKKU's facility registry into `facilities`, building parses the cafeteria rows where it reads them, and meals reads them through `BuildingCafeteriaListService` and their buildings through `BuildingService`, the doors building opens to other features ([ADR 0010, D1](../decisions/0010-server-architecture.md)). The menus are skkuverse-crawler's: it crawls SKKU's menu pages for this week and next and writes one document per cafeteria, KST date and served meal into `meals` (database `MONGO_MEALS_DB_NAME`), which this module only reads.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
@@ -40,7 +40,7 @@ Meals serves the cafeterias and their menus to the app's cafeteria-menu screen. 
 
 ```mermaid
 flowchart LR
-  sisul["SKKU sisulList"] -->|building: BuildingCafeteriaPoller| fac[("facilities")]
+  sisul["SKKU sisulList"] -->|skkuverse-crawler campusmap| fac[("facilities")]
   fac -->|BuildingCafeteriaListService.listCafeterias, cached| svc["MealsCatalogService"]
   bld[("buildings")] -->|BuildingService.listAllBuildings, cached| svc
   svc -->|toCafeteriaList| route["GET /meals/cafeterias"]
@@ -79,6 +79,6 @@ flowchart LR
 
 ## Related
 
-- [Building architecture](building-architecture.md): the cafeteria sync and the `facilities` collection
+- [Building architecture](building-architecture.md): the `facilities` collection and its cafeteria reads
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape and the service door
 - [Docs index](../README.md): writing rules

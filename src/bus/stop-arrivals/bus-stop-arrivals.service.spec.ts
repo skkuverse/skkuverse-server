@@ -1,11 +1,11 @@
 /**
- * BusStopArrivalsService over the stop index (real, over in-memory stores) and a scripted live route and smart view:
+ * BusStopArrivalsService over the stop index (real, over in-memory stores) and a scripted live route and run read:
  * an unknown stop is null; each served route at a
  * stop gets its entry, in the index's order and labeled in the request language, with the server's clock in meta
  * (ADR 0019, D12); one page reads each group's live answer
- * and each service's smart schedule once, and the week after it only when the shown week holds fewer than three runs
- * (review F2); a run at a drop-off is listed until the arrival of its latest estimate, read once per service, while
- * the page shows only the served one (ADR 0019, D12); and a route whose read fails is left out of the page, logged at
+ * and each service's runs of the shown week once, and of the week after it only when the shown week holds fewer than
+ * three runs (review F2), never the smart view; a run at a drop-off is listed until the arrival of its latest estimate,
+ * which the same read carries, while the page shows only the served one (ADR 0019, D12); and a route whose read fails is left out of the page, logged at
  * error at most once a minute per route, while the rest is served. A live entry's action is alight at an HSSC
  * position the data flags drop-off only and board elsewhere, and an HSSC entry's towards is the next stop's catalog
  * name in the request language, as that stop's own page names it, never the line row's name with its marker; the
@@ -26,10 +26,10 @@ import { AppError } from "../../http/app.error";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import type { BusEtaSmartService } from "../eta/smart/bus-eta-smart.service";
+import type { RunList, ShuttleRun } from "../eta/smart/bus-eta-smart.types";
 import type { BusLiveGroupService } from "../live/group/bus-live-group.service";
 import type { LiveGroup } from "../live/bus-live.wire";
 import type { BusRoutePathService } from "../route-path/bus-route-path.service";
-import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import { BusStopIndexService } from "../stop-index/bus-stop-index.service";
 import { BusStopArrivalsService } from "./bus-stop-arrivals.service";
 import type { TimetableEntry } from "./bus-stop-arrivals.types";
@@ -54,32 +54,27 @@ function setup({ aliases = {} as Record<string, string[]>, alightOnlyIndexes = [
   return { service, live, smart, advanceMs };
 }
 
-const activeSchedule = (serviceId: string, times: string[]): SmartSchedule => ({
-  serviceId,
-  status: "active",
-  from: "2026-10-19",
-  selectedDate: "2026-10-20",
-  days: [
-    {
-      date: "2026-10-20",
-      dayOfWeek: 2,
-      display: "visible",
-      notices: [],
-      schedule: times.flatMap((time) => [
-        { time, routeType: "regular", stopTimes: [time, null] },
-        { time, routeType: "hakbu", stopTimes: [time, null] },
-      ]),
-    },
-  ],
-});
+const kst = (date: string, time: string) => new Date(`${date}T${time}:00+09:00`);
 
-const dayOf = (date: string, times: string[]): SmartSchedule["days"][number] => ({
-  date,
-  dayOfWeek: 1,
-  display: "schedule",
-  notices: [],
-  schedule: times.map((time) => ({ time, routeType: "regular", stopTimes: [time, null] })),
-});
+/** The run read's runs of a service on a date: each time as a regular and a hakbu run, no time at the drop-off. */
+function runsOn(serviceId: string, date: string, times: string[], routeTypes = ["regular", "hakbu"]): ShuttleRun[] {
+  return times.flatMap((time) =>
+    routeTypes.map((routeType) => ({
+      runId: `${serviceId}|${routeType}|${date}|${time}`,
+      routeType,
+      date,
+      departureAt: kst(date, time),
+      isLastOfDay: time === times.at(-1),
+      stopTimes: [
+        { shownAt: kst(date, time), isEstimated: false, latestEstimateAt: null },
+        { shownAt: null, isEstimated: false, latestEstimateAt: null },
+      ],
+      estimate: null,
+    })),
+  );
+}
+
+const activeRuns = (serviceId: string, times: string[]): RunList => ({ status: "active", runs: runsOn(serviceId, "2026-10-20", times) });
 
 const liveGroup = (groupId: string, extra: Partial<LiveGroup> = {}): LiveGroup => ({
   groupId,
@@ -109,7 +104,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("serves an aliased pole's shuttle runs, then its Jongno live entry, labeled in the request language", async () => {
     // Arrange
     const { service, live, smart } = setup({ aliases: { "hssc-bus-lot": ["01618"] } });
-    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:00", "14:30"]));
+    smart.runLists.set("campus-inja", activeRuns("campus-inja", ["14:00", "14:30"]));
     live.groups.set("jongro07", liveGroup("jongro07"));
     live.directions.set(`jongro07:1:${versionOf("jongro07")}`, { id: "100900043", label: "To 이화사거리" });
 
@@ -137,7 +132,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("reads each service's smart schedule and each group's live answer once per page", async () => {
     // Arrange
     const { service, live, smart } = setup({ aliases: { "hssc-bus-lot": ["01618"] } });
-    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:30"]));
+    smart.runLists.set("campus-inja", activeRuns("campus-inja", ["14:30"]));
     live.groups.set("jongro07", liveGroup("jongro07"));
 
     // Act
@@ -152,7 +147,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("reads each smart schedule without the smart view's ETag", async () => {
     // Arrange
     const { service, smart } = setup();
-    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:30"]));
+    smart.runLists.set("campus-inja", activeRuns("campus-inja", ["14:30"]));
 
     // Act
     await service.findStopArrivals("hssc-bus-lot", "ko");
@@ -210,8 +205,8 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("continues into the following week when the shown week holds fewer than three runs", async () => {
     // Arrange
     const { service, smart } = setup();
-    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:00", "14:30"]));
-    smart.followingWeeks.set("campus-inja", [dayOf("2026-10-26", ["14:00", "14:30", "15:00"])]);
+    smart.runLists.set("campus-inja", activeRuns("campus-inja", ["14:00", "14:30"]));
+    smart.followingRuns.set("campus-inja", runsOn("campus-inja", "2026-10-26", ["14:00", "14:30", "15:00"], ["regular"]));
 
     // Act
     const page = await service.findStopArrivals("hssc-bus-lot", "ko");
@@ -225,7 +220,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("reads no following week while the shown week holds three runs at every route type of the stop", async () => {
     // Arrange
     const { service, smart } = setup();
-    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:30", "15:00", "15:30"]));
+    smart.runLists.set("campus-inja", activeRuns("campus-inja", ["14:30", "15:00", "15:30"]));
 
     // Act
     await service.findStopArrivals("hssc-bus-lot", "ko");
@@ -237,7 +232,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("reads no following week for a schedule that is not active, whose entries are suspended with no run", async () => {
     // Arrange
     const { service, smart } = setup();
-    smart.schedules.set("campus-inja", { serviceId: "campus-inja", status: "suspended", resumeDate: "2026-11-02", from: null, selectedDate: null, days: [] });
+    smart.runLists.set("campus-inja", { status: "suspended", runs: [] });
 
     // Act
     const page = await service.findStopArrivals("hssc-bus-lot", "ko");
@@ -254,10 +249,9 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("lists a run at a drop-off until its latest estimate's arrival, reading it once per service, and shows no time", async () => {
     // Arrange
     const { service, smart } = setup();
-    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:00", "14:30"]));
-    const latest = activeSchedule("campus-inja", ["14:00", "14:30"]);
-    latest.days[0]!.schedule[0] = { time: "14:00", routeType: "regular", stopTimes: ["14:00", "15:10"], eta: { source: "live", updatedAt: "2026-10-20T04:50:00.000Z" } };
-    smart.latestSchedules.set("campus-inja", latest);
+    const runList = activeRuns("campus-inja", ["14:00", "14:30"]);
+    runList.runs[0]!.stopTimes[1]!.latestEstimateAt = kst("2026-10-20", "15:10");
+    smart.runLists.set("campus-inja", runList);
 
     // Act
     const page = await service.findStopArrivals("nsc-n-center", "ko");
@@ -268,7 +262,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
       ["2026-10-20T14:30:00+09:00", null, null],
       ["2026-10-20T14:00:00+09:00", null, null],
     ]);
-    expect(smart.latestReadServiceIds.filter((serviceId) => serviceId === "campus-inja")).toEqual(["campus-inja"]);
+    expect(smart.readServiceIds.filter((serviceId) => serviceId === "campus-inja")).toEqual(["campus-inja"]);
   });
 
   it("leaves out a route whose read fails, logged at error once a minute, and serves the rest", async () => {

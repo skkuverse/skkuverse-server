@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { JongroArrivalBus } from "../../cache/bus-cache.document";
 import { BusRouteAttributesService } from "../../route-attributes/bus-route-attributes.service";
 import type { RealtimeArrival } from "../group/bus-realtime-group.wire";
-import { toArrival, toRouteArrival, toTravelSeconds } from "./bus-realtime-arrival.rules";
+import { toRealtimeArrival, toRouteArrival, toTravelSeconds } from "./bus-realtime-arrival.rules";
 import type { RouteArrivalFacts, TimedArrival } from "./bus-realtime-arrival.types";
 
 @Injectable()
@@ -16,7 +16,7 @@ export class BusRealtimeArrivalService {
 
   // WHY: TOPIS leaves a slot's text empty when it names no bus for it.
   toArrivals(buses: readonly JongroArrivalBus[], seatCount: number | null): RealtimeArrival[] {
-    return buses.filter((bus) => bus.arrmsg.trim() !== "").map((bus) => toArrival(bus, seatCount));
+    return buses.filter((bus) => bus.arrmsg.trim() !== "").map((bus) => toRealtimeArrival(bus, seatCount));
   }
 
   // WHY: the live route's reading of the same buses (ADR 0019, D1), each read on its route.

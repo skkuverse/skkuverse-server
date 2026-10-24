@@ -1,12 +1,12 @@
 /**
  * CalendarRepository's reads.
  *
- * `public_holidays`, one document per year keyed by the year: every stored
- * year, projected and bounded (which FakeCalendarRepository follows), read at
+ * `public_holidays`, which skkuverse-crawler writes, one document per year
+ * keyed by the year: every stored year, projected and bounded, each parsed
+ * with `publicHolidaysDoc` so one that fails is left out and logged and its
+ * dates fall back to the rule (which FakeCalendarRepository follows), read at
  * most once every ten minutes and waiting for that read once the ten minutes
- * pass, served stale for a day when a reload fails, and read again after
- * clearPublicHolidaysCache(), which the holiday sync calls after writing. The
- * writes are calendar-holiday-sync.repository.spec.ts's.
+ * pass, and served stale for a day when a reload fails.
  *
  * The `skku-rest-days` dataset, which `npm run data` writes and the server
  * only parses (ADR 0013, D6): one document by `_id`, projecting only the
@@ -135,17 +135,22 @@ describe("CalendarRepository.listPublicHolidayYears", () => {
   });
 });
 
-describe("CalendarRepository.clearPublicHolidaysCache", () => {
-  it("makes the next listPublicHolidayYears read again within the hour, as after a sync", async () => {
+describe("CalendarRepository.listPublicHolidayYears parses what the crawler wrote", () => {
+  it("leaves out and logs a year that does not parse, keyed by its _id, and keeps the rest", async () => {
     // Arrange
-    await repository.listPublicHolidayYears();
+    const year2027 = { _id: 2027, holidays: [{ date: "2027-02-30", name: "설날" }], fetchedAt: YEAR_2026.fetchedAt };
+    const stringYear = { ...YEAR_2026, _id: "2025" };
+    toArray.mockResolvedValue([YEAR_2026, year2027, stringYear]);
 
     // Act
-    repository.clearPublicHolidaysCache();
-    await repository.listPublicHolidayYears();
+    const years = await repository.listPublicHolidayYears();
 
     // Assert
-    expect(find).toHaveBeenCalledTimes(2);
+    expect(years).toEqual([YEAR_2026]);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { event: "calendar.public_holidays.invalid_document", invalid: ["2027: holidays.0.date", "2025: _id"] },
+      expect.any(String),
+    );
   });
 });
 

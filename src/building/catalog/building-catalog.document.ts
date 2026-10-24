@@ -1,5 +1,4 @@
-import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
-import type { CafeteriaDoc } from "../cafeteria/building-cafeteria.document";
+import type { BuildingDoc, CafeteriaDoc, ConnectionDoc, SpaceDoc } from "../building.document";
 
 export type ConnectionEnds = Pick<ConnectionDoc, "a" | "b">;
 
