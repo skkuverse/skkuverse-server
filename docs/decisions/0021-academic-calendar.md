@@ -30,7 +30,7 @@ Accepted 2026-10-23.
 
 ### D2. The crawler crawls, the server reads
 
-The server reads `academic_calendars` and never writes it; the crawler owns its shape (`AcademicYearDoc` in `skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/models.py`). The read projects the fields it uses, parses each document with zod and leaves out a document that fails (a semester pair not term 1 then term 2 in order inside its year, an `_id` other than its year, a date that is no calendar date), logging `academic_calendar.invalid_document`; that year is then answered by the rule, never an error to a rider. The read is cached like the public holidays: ten minutes, kept a day through failed reloads. A read that fails with nothing good to serve answers no crawled year, so the rule answers every year and the schedule keeps serving: logged as `academic_calendar.read_failed`, retried once a minute. The crawler owns the Slack alerts for a stale, missing or broken year (its coverage records); the server adds none.
+(An operations detail is left out of the public history.)
 
 ### D3. The default rule
 
