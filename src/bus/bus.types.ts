@@ -40,3 +40,9 @@ export interface ServiceConfigEntry {
 }
 
 export type ServiceConfigMap = Record<string, ServiceConfigEntry>;
+
+/** WHY: a local stop's claims to TOPIS poles, by ARS number and by TOPIS station id (ADR 0019, D5). */
+export interface StopAliases {
+  readonly stopIdByArsId: ReadonlyMap<string, string>;
+  readonly stopIdByTopisId: ReadonlyMap<string, string>;
+}

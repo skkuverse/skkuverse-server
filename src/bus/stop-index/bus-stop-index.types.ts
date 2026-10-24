@@ -3,7 +3,8 @@ import type { BusStopsSnapshot, ScheduleStop, SequenceStop } from "../stops/bus-
 
 /** WHY: a TOPIS pole a stop stands for, as its stored registry station names it. */
 export interface IndexedPole {
-  arsId: string;
+  /** WHY: null at a pole TOPIS gives no ARS number, which only a TOPIS alias names. */
+  arsId: string | null;
   topisId: string;
   stationName: string;
 }
@@ -18,11 +19,7 @@ export interface JongroStopRoute {
   stationsVersion: string;
 }
 
-export interface HsscStopRoute {
-  kind: "hssc";
-  groupId: string;
-  stationIndex: number;
-}
+export interface HsscStopRoute { kind: "hssc"; groupId: string; stationIndex: number }
 
 export type ShuttleStopRoute = Pick<SequenceStop, "action" | "timing"> & {
   kind: "shuttle";
@@ -50,6 +47,7 @@ export interface StopIndex {
   stopIdByArsId: ReadonlyMap<string, string>;
   /** WHY: aliased ARS numbers no stored station has, which serve nothing. */
   unmatchedArsIds: readonly string[];
+  unmatchedTopisIds: readonly string[];
   /** WHY: the first registry route that could not be read, so a pole only it names is not answered as gone. */
   registryFailure?: unknown;
 }

@@ -18,7 +18,7 @@
  */
 import arrivals7800 from "../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import registryRoutes from "../../__tests__/nest/bus/fixtures/jongro-registry-routes.json";
-import { deepFreeze, isHsscPassThrough, isTopisPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toTowards } from "./bus.rules";
+import { deepFreeze, isHsscPassThrough, isTopisPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toStationStopId, toTowards } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -197,6 +197,33 @@ describe("toPoleStopId", () => {
 
     // Act & Assert
     expect(toPoleStopId("00000", aliases)).toBeNull();
+  });
+});
+
+describe("toStationStopId", () => {
+  const aliases = {
+    stopIdByArsId: new Map([
+      ["20253", "sadang-exit9"],
+      ["01618", "hssc-600th"],
+    ]),
+    stopIdByTopisId: new Map([
+      ["200000162", "nsc-skku-to-sadang"],
+      ["100900221", "hssc-bus-lot"],
+    ]),
+  };
+
+  it.each([
+    ["a TOPIS alias of a pole with no ARS number", "0", "200000162", true, "nsc-skku-to-sadang"],
+    ["a TOPIS alias over another stop's ARS alias", "01618", "100900221", true, "hssc-bus-lot"],
+    ["an ARS alias", "20253", "119000302", true, "sadang-exit9"],
+    ["an unaliased pole of a listed route", "27113", "203000101", true, "seoul-27113"],
+    ["a virtual stop of a listed route", "0", "201000404", true, null],
+    ["a TOPIS alias on an unlisted route", "0", "200000162", false, "nsc-skku-to-sadang"],
+    ["an ARS alias on an unlisted route", "20253", "119000302", false, "sadang-exit9"],
+    ["an unaliased pole of an unlisted route", "27113", "203000101", false, null],
+  ])("gives %s the stop id %s", (_case, arsId, topisId, isListed, stopId) => {
+    // Act & Assert
+    expect(toStationStopId({ arsId, topisId }, aliases, isListed)).toBe(stopId);
   });
 });
 

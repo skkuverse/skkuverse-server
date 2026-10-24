@@ -134,9 +134,12 @@ export class BusStopIndexService {
   }
 
   // WHY: stations change at runtime, so an alias no stored station has is a warning once per revision, not a refusal.
-  private warnUnmatchedAliases({ snapshot: { revision }, unmatchedArsIds }: StopIndex): void {
-    if (unmatchedArsIds.length === 0 || this.warnedRevisions.has(revision)) return;
+  private warnUnmatchedAliases({ snapshot: { revision }, unmatchedArsIds, unmatchedTopisIds }: StopIndex): void {
+    if (unmatchedArsIds.length + unmatchedTopisIds.length === 0 || this.warnedRevisions.has(revision)) return;
     this.warnedRevisions.add(revision);
-    logger.warn({ event: "bus.stop_index.alias_unmatched", revision, arsIds: unmatchedArsIds }, "A stop aliases an ARS number no stored station has");
+    logger.warn(
+      { event: "bus.stop_index.alias_unmatched", revision, arsIds: unmatchedArsIds, topisIds: unmatchedTopisIds },
+      "A stop aliases an ARS number or TOPIS station no stored station has",
+    );
   }
 }

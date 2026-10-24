@@ -37,6 +37,8 @@ export interface ScheduleStop {
   /** WHY: the subway registry's slug; a push refuses one the registry does not serve. */
   subwayStationId?: string;
   arsIds?: string[];
+  /** WHY: the TOPIS station ids of the poles it stands for that carry no ARS number (ADR 0019, D5). */
+  topisIds?: string[];
   /** WHY: the campus the stop serves, which a stop list files it under; left out, the list serves none. */
   campus?: Campus;
 }
@@ -59,9 +61,6 @@ export interface ScheduleStopCatalog {
 
 export type EtaOptIns = ReadonlyMap<string, readonly string[]>;
 
-export interface ResolvedStops {
-  sequences: Record<string, Record<string, ServedSequenceStop[]>>;
-  stops: ServedStop[];
-}
+export interface ResolvedStops { sequences: Record<string, Record<string, ServedSequenceStop[]>>; stops: ServedStop[] }
 
-export type BusStopsSnapshot = Readonly<{ revision: number; catalog: Readonly<ScheduleStopCatalog>; hssc: readonly HsscLineStation[]; stopIdByArsId: ReadonlyMap<string, string> }>;
+export type BusStopsSnapshot = Readonly<{ revision: number; catalog: Readonly<ScheduleStopCatalog>; hssc: readonly HsscLineStation[]; stopIdByArsId: ReadonlyMap<string, string>; stopIdByTopisId: ReadonlyMap<string, string> }>;

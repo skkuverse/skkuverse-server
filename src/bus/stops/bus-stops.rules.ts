@@ -87,10 +87,7 @@ function placeKindError(place: Raw, at: string): string | null {
   return isIntIn(place.number, 1, 99) ? null : `${at}: number must be an integer in 1..99`;
 }
 
-interface PlaceContext {
-  places: Map<string, LatLng>;
-  seen: Set<string>;
-}
+interface PlaceContext { places: Map<string, LatLng>; seen: Set<string> }
 
 // WHY: fills `places` with the coordinates a walk may end at.
 function placeErrors(place: unknown, at: string, { places, seen }: PlaceContext): string[] {
@@ -126,10 +123,7 @@ function walkPathError(walk: Raw, at: string, endCoords: (end: unknown) => LatLn
   return meters > MAX_WALK_M ? `${at}: path is ${Math.round(meters)} m, longer than ${MAX_WALK_M} m` : null;
 }
 
-interface WalkContext {
-  stop: Raw;
-  places: ReadonlyMap<string, LatLng>;
-}
+interface WalkContext { stop: Raw; places: ReadonlyMap<string, LatLng> }
 
 function walkShapeError(walk: Raw, at: string, places: ReadonlyMap<string, LatLng>): string | null {
   const ends = [walk.from, walk.to];
@@ -429,16 +423,20 @@ function hsscLineIssues({ stops, hssc }: BusStopsData): BusStopsIssue[] {
   });
 }
 
+const ALIAS_NOUNS = { arsIds: "ARS number", topisIds: "TOPIS station" } as const;
+
 function aliasIssues({ stops }: BusStopsData): BusStopsIssue[] {
-  const claimedAt = new Map<string, string>();
-  return stops.flatMap((stop, stopIndex) =>
-    (stop.arsIds ?? []).flatMap((arsId, aliasIndex) => {
-      const path = ["stops", stopIndex, "arsIds", aliasIndex];
-      const earlier = claimedAt.get(arsId);
-      if (earlier === undefined) claimedAt.set(arsId, path.join("."));
-      return earlier === undefined ? [] : [{ path, message: `ARS number ${arsId} is aliased by ${earlier} too` }];
-    }),
-  );
+  return (["arsIds", "topisIds"] as const).flatMap((key) => {
+    const claimedAt = new Map<string, string>();
+    return stops.flatMap((stop, stopIndex) =>
+      (stop[key] ?? []).flatMap((aliasId, aliasIndex) => {
+        const path = ["stops", stopIndex, key, aliasIndex];
+        const earlier = claimedAt.get(aliasId);
+        if (earlier === undefined) claimedAt.set(aliasId, path.join("."));
+        return earlier === undefined ? [] : [{ path, message: `${ALIAS_NOUNS[key]} ${aliasId} is aliased by ${earlier} too` }];
+      }),
+    );
+  });
 }
 
 // WHY: push checks the snapshot cannot serve past; the read skips the timetable cross-check, which needs another database.
@@ -458,9 +456,11 @@ function overlayIssues({ topis = {} }: BusStopsData, { stationIds }: BusStopsChe
 function servedCoordsIssues({ stops, sequences, hssc }: BusStopsData): BusStopsIssue[] {
   const sequenceStopIds = Object.values(sequences).flatMap((byRouteType) => Object.values(byRouteType).flat().filter(isRecord).map((entry) => entry.stopId));
   const namedIds = new Set([...hssc.stations.map((station) => station.stopId), ...sequenceStopIds]);
-  const isServed = (stop: BusStopsData["stops"][number]): boolean => namedIds.has(stop.id) || (stop.arsIds?.length ?? 0) > 0;
-  const message = (stopId: string): string => `stop ${stopId}: has no coords, but the HSSC line, a sequence or its arsIds serve it, and the app opens only a stop it can place on its map`;
-  return stops.flatMap((stop, index) => (stop.coords === undefined && isServed(stop) ? [{ path: ["stops", index, "coords"], message: message(stop.id) }] : []));
+  const aliasKeyOf = (stop: BusStopsData["stops"][number]) => (stop.arsIds?.length || !stop.topisIds?.length ? "arsIds" : "topisIds");
+  const isServed = (stop: BusStopsData["stops"][number]): boolean => namedIds.has(stop.id) || (stop[aliasKeyOf(stop)]?.length ?? 0) > 0;
+  const message = (stop: BusStopsData["stops"][number]): string =>
+    `stop ${stop.id}: has no coords, but the HSSC line, a sequence or its ${aliasKeyOf(stop)} serve it, and the app opens only a stop it can place on its map`;
+  return stops.flatMap((stop, index) => (stop.coords === undefined && isServed(stop) ? [{ path: ["stops", index, "coords"], message: message(stop) }] : []));
 }
 
 /** WHY: every check a bus-stops push runs after its schema, each issue at its path. */
