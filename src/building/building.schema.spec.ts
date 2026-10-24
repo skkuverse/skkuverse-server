@@ -6,10 +6,20 @@
  *    rejected (the repository then leaves it out and logs it), a geometry the
  *    overlay cannot draw is rejected, unknown fields are dropped, and a skkuId
  *    is either null or a building id (a positive safe integer).
- * That every real document passes is checked where the importer writes them:
- * __tests__/nest/map/campus-shapes-import.test.ts.
+ *  - `cafeteriaDoc`: every cafeteria skkuverse-crawler wrote to skkumap_dev
+ *    passes with the fields it reads, a missing spaceCd or location as null;
+ *    a row missing any field the readers use, of another kind, or with an
+ *    empty buildNo or spaceCd is rejected (the readers then leave it out).
+ *  - `buildingDoc` and `storedSpace`: the buildings and spaces captured from
+ *    skkumap_dev pass with the fields the readers use, the writer's
+ *    bookkeeping dropped and `displayNo` derived from `buildNo`; a document
+ *    missing a required field, or with an id or code the brands reject, fails.
+ * That every real campus shape passes is checked where the importer writes
+ * them: __tests__/nest/map/campus-shapes-import.test.ts.
  */
-import { campusFilter, campusShapeDoc } from "./building.schema";
+import { capturedSkkumap } from "../../__tests__/helpers/building/buildings";
+import { storedFacilities } from "../../__tests__/helpers/building/facilities";
+import { buildingDoc, cafeteriaDoc, campusFilter, campusShapeDoc, storedBuilding, storedSpace } from "./building.schema";
 
 const RING = [
   [126.9944, 37.5873],
@@ -120,5 +130,139 @@ describe("campusShapeDoc reads skkuId as a building id", () => {
     // Assert
     expect(result.success).toBe(true);
     expect(result.data?.skkuId).toBe(skkuId);
+  });
+});
+
+describe("cafeteriaDoc", () => {
+  it("accepts every cafeteria the crawler wrote, keeping only the fields the readers use", () => {
+    // Arrange
+    const { cafeterias } = storedFacilities();
+
+    // Act
+    const parsed = cafeterias.map((doc) => cafeteriaDoc.parse(doc));
+
+    // Assert
+    expect(parsed[0]).toEqual({
+      _id: "10201030",
+      kind: "cafeteria",
+      campus: "hssc",
+      name: { ko: "패컬티식당", en: "Faculty Dining Hall" },
+      buildNo: "101",
+      buildingName: { ko: "600주년기념관", en: "600th Anniversary Hall" },
+      floor: { ko: "6층", en: "6F" },
+      floorCode: "06",
+      spaceCd: "10607A",
+      location: { type: "Point", coordinates: [126.994501, 37.587584] },
+    });
+    expect(parsed[1]?.spaceCd).toBeNull();
+    expect(parsed[2]?.location).toBeNull();
+  });
+
+  it.each(Object.keys(cafeteriaDoc.shape))("rejects a cafeteria without %s", (field) => {
+    // Arrange
+    const [cafeteria] = storedFacilities().cafeterias;
+    delete cafeteria![field];
+
+    // Act & Assert
+    expect(cafeteriaDoc.safeParse(cafeteria).success).toBe(false);
+  });
+
+  it.each([
+    ["a facility of another kind", { kind: "facility" }],
+    ["an empty buildNo", { buildNo: "" }],
+    ["an empty spaceCd", { spaceCd: "" }],
+    ["a campus outside hssc/nsc", { campus: "mars" }],
+    ["a location without coordinates", { location: { type: "Point" } }],
+  ])("rejects %s", (_case, override) => {
+    // Arrange
+    const [cafeteria] = storedFacilities().cafeterias;
+
+    // Act & Assert
+    expect(cafeteriaDoc.safeParse({ ...cafeteria, ...override }).success).toBe(false);
+  });
+
+  it("rejects the registry's other facilities", () => {
+    // Act & Assert
+    expect(cafeteriaDoc.safeParse(storedFacilities().facility).success).toBe(false);
+  });
+});
+
+describe("buildingDoc", () => {
+  it("accepts every captured building, dropping the writer's bookkeeping and deriving displayNo", () => {
+    // Arrange
+    const [anniversaryHall, pavilion] = capturedSkkumap().buildings;
+
+    // Act
+    const hall = buildingDoc.parse(anniversaryHall);
+    const facility = buildingDoc.parse(pavilion);
+
+    // Assert
+    expect(hall).toMatchObject({ _id: 2, buildNo: "101", displayNo: "1", type: "building", updatedAt: new Date("2026-03-16T10:14:08.185Z") });
+    expect(hall.accessibility.detail?.sections[0]?.elevatorStatus).toBe("arrival");
+    expect(hall).not.toHaveProperty("sync");
+    expect(hall).not.toHaveProperty("enrichVersion");
+    expect(hall).not.toHaveProperty("extensions");
+    expect(facility).toMatchObject({ _id: 69, buildNo: null, displayNo: null, type: "facility", attachments: [] });
+  });
+
+  const optionalFields = new Set(["attachments", "updatedAt"]);
+  it.each(Object.keys(storedBuilding.shape).filter((field) => !optionalFields.has(field)))("rejects a building without %s", (field) => {
+    // Arrange
+    const [building] = capturedSkkumap().buildings;
+    delete building![field];
+
+    // Act & Assert
+    expect(buildingDoc.safeParse(building).success).toBe(false);
+  });
+
+  it.each([
+    ["an id that is no building id", { _id: 0 }],
+    ["an empty buildNo", { buildNo: "" }],
+    ["a type outside building/facility", { type: "gate" }],
+    ["a location without coordinates", { location: { type: "Point" } }],
+  ])("rejects %s", (_case, override) => {
+    // Arrange
+    const [building] = capturedSkkumap().buildings;
+
+    // Act & Assert
+    expect(buildingDoc.safeParse({ ...building, ...override }).success).toBe(false);
+  });
+});
+
+describe("storedSpace", () => {
+  it("accepts every captured space with the fields the readers use", () => {
+    // Arrange
+    const { spaces } = capturedSkkumap();
+
+    // Act
+    const parsed = spaces.map((space) => storedSpace.parse(space));
+
+    // Assert
+    expect(parsed[0]).toEqual({
+      spaceCd: "10115",
+      buildNo: "101",
+      campus: "hssc",
+      floor: { ko: "1층", en: "1F" },
+      name: { ko: "예비군연대", en: "Reserved Forces Regiment" },
+      buildingName: { ko: "600주년기념관", en: "600th Anniversary Hall" },
+      conspaceCd: "10101015",
+    });
+  });
+
+  it.each(Object.keys(storedSpace.shape).filter((field) => field !== "buildingName"))("rejects a space without %s", (field) => {
+    // Arrange
+    const [space] = capturedSkkumap().spaces;
+    delete space![field];
+
+    // Act & Assert
+    expect(storedSpace.safeParse(space).success).toBe(false);
+  });
+
+  it("accepts a space with a null spaceCd, which two skkumap_dev spaces carry", () => {
+    // Arrange
+    const [space] = capturedSkkumap().spaces;
+
+    // Act & Assert
+    expect(storedSpace.safeParse({ ...space, spaceCd: null }).success).toBe(true);
   });
 });

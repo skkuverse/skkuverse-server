@@ -10,9 +10,9 @@ import { toCatalogNamedLine } from "../bus.mapper";
 import { toKstInstant } from "../../shared/kst-date.util";
 import { toStationAction, toTowards } from "../bus.rules";
 import { BusEtaSmartService } from "../eta/smart/bus-eta-smart.service";
+import type { RunList } from "../eta/smart/bus-eta-smart.types";
 import { BusLiveGroupService } from "../live/group/bus-live-group.service";
 import type { LiveGroup } from "../live/bus-live.wire";
-import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import type { HsscLineStation } from "../stops/bus-stops.document";
 import type { ScheduleStop } from "../stops/bus-stops.types";
 import { BusStopIndexService } from "../stop-index/bus-stop-index.service";
@@ -30,9 +30,8 @@ interface PageReads {
   hsscLine: readonly HsscLineStation[];
   catalogStops: readonly ScheduleStop[];
   groups: Map<string, Promise<LiveGroup>>;
-  schedules: Map<string, Promise<SmartSchedule>>;
-  latestSchedules: Map<string, Promise<SmartSchedule>>;
-  followingWeeks: Map<string, Promise<SmartSchedule["days"]>>;
+  shownWeeks: Map<string, Promise<RunList>>;
+  shownAndFollowingWeeks: Map<string, Promise<RunList>>;
 }
 
 // SEE: docs/reference/bus-stops-api.md: built from stored data only, through the live route's and smart view's own caches.
@@ -51,7 +50,7 @@ export class BusStopArrivalsService {
     const stop = await this.index.findStop(stopId);
     if (!stop) return null;
     const now = this.clock.now();
-    const reads: PageReads = { lang, now, hsscLine: stop.snapshot.hssc, catalogStops: stop.snapshot.catalog.stops, groups: new Map(), schedules: new Map(), latestSchedules: new Map(), followingWeeks: new Map() };
+    const reads: PageReads = { lang, now, hsscLine: stop.snapshot.hssc, catalogStops: stop.snapshot.catalog.stops, groups: new Map(), shownWeeks: new Map(), shownAndFollowingWeeks: new Map() };
     const entries = await Promise.all(stop.routes.map((route) => this.toEntry(route, reads).catch((err: unknown) => this.leaveOut(stop.id, route, err))));
     const page = { stop: toStopBlock(stop, this.index.servedRecordOf(stop, lang)), routes: entries.flatMap((entry) => (entry ? [entry] : [])) };
     return withMeta(page, { serverNow: toKstInstant(now.getTime()) });
@@ -79,19 +78,18 @@ export class BusStopArrivalsService {
   }
 
   private async toShuttleEntry(route: ShuttleStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
-    const schedule = await this.readOnce(reads.schedules, route.serviceId, () => this.smart.resolveSmart(route.serviceId, reads.lang));
-    const arrivals = await this.nextRunsOf(schedule, route, reads);
-    return toTimetableEntry(route, t(`busconfig.service.${route.serviceId}`, reads.lang), { operation: OPERATION_BY_SCHEDULE_STATUS[schedule.status], arrivals });
+    const shown = await this.readOnce(reads.shownWeeks, route.serviceId, () => this.smart.listRuns(route.serviceId, { from: reads.now, weekCount: 1 }));
+    const arrivals = await this.nextRunsOf(shown, route, reads);
+    return toTimetableEntry(route, t(`busconfig.service.${route.serviceId}`, reads.lang), { operation: OPERATION_BY_SCHEDULE_STATUS[shown.status], arrivals });
   }
 
   // WHY: after a week's last run (a Friday evening) the shown week holds none, so the page reads on into the next, whose
   // runs, tomorrow's at the earliest, keep their served estimates: a live value exists only from an hour before departure.
-  private async nextRunsOf(schedule: SmartSchedule, route: ShuttleStopRoute, reads: PageReads): Promise<TimetableArrival[]> {
-    const latest = await this.readOnce(reads.latestSchedules, route.serviceId, () => this.smart.resolveLatestEstimates(schedule));
-    const next = toTimetableArrivals({ served: schedule, latest }, route, reads.now);
-    if (next.length >= NEXT_RUN_COUNT || schedule.status !== "active") return next;
-    const followingDays = await this.readOnce(reads.followingWeeks, route.serviceId, () => this.smart.resolveFollowingWeek(schedule));
-    return toTimetableArrivals({ served: { ...schedule, days: [...schedule.days, ...followingDays] }, latest }, route, reads.now);
+  private async nextRunsOf(shown: RunList, route: ShuttleStopRoute, reads: PageReads): Promise<TimetableArrival[]> {
+    const next = toTimetableArrivals(shown.runs, route, reads.now);
+    if (next.length >= NEXT_RUN_COUNT || shown.status !== "active") return next;
+    const withFollowing = await this.readOnce(reads.shownAndFollowingWeeks, route.serviceId, () => this.smart.listRuns(route.serviceId, { from: reads.now, weekCount: 2 }));
+    return toTimetableArrivals(withFollowing.runs, route, reads.now);
   }
 
   private groupOf(groupId: string, reads: PageReads): Promise<LiveGroup> {

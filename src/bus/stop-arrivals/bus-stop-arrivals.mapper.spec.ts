@@ -3,14 +3,15 @@
  * config record for a local stop (coordinates from its pole when it has none, aliases as arsIds) or from its pole
  * for a TOPIS one; a live entry carrying the live route's station entry at its index and the vehicles it names
  * (ADR 0019, D12) with the direction (right after towards) and the action given (board, or alight at a drop-off-only
- * station); and a timetable entry carrying its runs. The HSSC line named by its catalog stops moved with
+ * station); and a timetable entry carrying its runs, each a run's stop call served with its departure from the
+ * origin. The HSSC line named by its catalog stops moved with
  * toCatalogNamedLine to src/bus/bus.mapper.spec.ts.
  */
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import type { FoundStop } from "../stop-index/bus-stop-index.types";
 import type { Arrival, Vehicle } from "../bus.wire";
 import type { LiveGroup } from "../live/bus-live.wire";
-import { toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
+import { toLiveEntry, toStopBlock, toTimetableArrival, toTimetableEntry } from "./bus-stop-arrivals.mapper";
 
 const SNAPSHOT = { revision: 1 } as BusStopsSnapshot;
 const POLE = { arsId: "01592", topisId: "100900075", stationName: "혜화역1번출구" };
@@ -118,7 +119,7 @@ describe("toLiveEntry", () => {
 describe("toTimetableEntry", () => {
   it("carries the run's service, route type, action, operation and runs, with no vehicle", () => {
     // Arrange
-    const route = { kind: "shuttle" as const, groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board" as const, timing: "scheduled" as const };
+    const route = { kind: "shuttle" as const, groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board" as const };
     const arrivals = [{ ...arrival(null, ""), status: "scheduled" as const, providerText: null, runDepartureAt: "2026-10-20T14:30:00+09:00" }];
 
     // Act & Assert
@@ -133,5 +134,41 @@ describe("toTimetableEntry", () => {
       vehicles: [],
       arrivals,
     });
+  });
+});
+
+describe("toTimetableArrival", () => {
+  it("serves a run's call as the wire arrival with its departure from the origin last, both at +09:00, and no run id", () => {
+    // Arrange
+    const call = {
+      status: "scheduled" as const,
+      ...{ expectedArrivalAt: new Date("2026-10-22T15:52:00Z"), expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
+      basis: "estimate" as const,
+      stopsAway: null,
+      isLastBus: true,
+      ...{ vehicleId: null, providerText: null },
+      runId: "commute-jamsil|down|2026-10-22|23:30",
+      runDepartureAt: new Date("2026-10-22T14:30:00Z"),
+    };
+
+    // Act
+    const served = toTimetableArrival(call);
+
+    // Assert
+    expect(JSON.stringify(served)).toBe(
+      JSON.stringify({
+        status: "scheduled",
+        expectedArrivalAt: "2026-10-23T00:52:00+09:00",
+        expectedDepartureAt: null,
+        scheduledArrivalAt: null,
+        scheduledDepartureAt: null,
+        basis: "estimate",
+        stopsAway: null,
+        isLastBus: true,
+        vehicleId: null,
+        providerText: null,
+        runDepartureAt: "2026-10-22T23:30:00+09:00",
+      }),
+    );
   });
 });

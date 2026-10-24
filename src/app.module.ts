@@ -3,7 +3,6 @@ import { ConfigModule } from "./config/config.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
 import { CalendarModule } from "./calendar/calendar.module";
-import { CalendarHolidaySyncModule } from "./calendar/holiday-sync/calendar-holiday-sync.module";
 import { BusModule } from "./bus/bus.module";
 import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRegistryModule } from "./bus/registry/bus-registry.module";
@@ -46,11 +45,12 @@ import { UiTransitTabModule } from "./ui/transit/tab/ui-transit-tab.module";
 import { UiScrollModule } from "./ui/scroll/ui-scroll.module";
 import { UiCampusModule } from "./ui/campus/ui-campus.module";
 import { BuildingModule } from "./building/building.module";
-import { BuildingCafeteriaModule } from "./building/cafeteria/building-cafeteria.module";
 import { BuildingCatalogModule } from "./building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "./building/search/building-search.module";
-import { BuildingSyncModule } from "./building/sync/building-sync.module";
 import { BuildingCafeteriaListModule } from "./building/cafeteria-list/building-cafeteria-list.module";
+import { BuildingPlaceModule } from "./building/place/building-place.module";
+import { BuildingPlaceResolveModule } from "./building/place/resolve/building-place-resolve.module";
+import { BuildingPlaceDisplayModule } from "./building/place/display/building-place-display.module";
 import { MealsModule } from "./meals/meals.module";
 import { MealsCatalogModule } from "./meals/catalog/meals-catalog.module";
 import { MealsMenusModule } from "./meals/menus/meals-menus.module";
@@ -99,7 +99,6 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SchedulingModule,
     HealthModule,
     CalendarModule,
-    CalendarHolidaySyncModule,
     BusModule,
     BusCacheModule,
     BusRegistryModule,
@@ -146,9 +145,10 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     // /building/search (route-order.test.ts).
     BuildingSearchModule,
     BuildingCatalogModule,
-    BuildingSyncModule,
-    BuildingCafeteriaModule,
     BuildingCafeteriaListModule,
+    BuildingPlaceModule,
+    BuildingPlaceResolveModule,
+    BuildingPlaceDisplayModule,
     MealsModule,
     MealsCatalogModule,
     MealsMenusModule,

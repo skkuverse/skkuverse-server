@@ -24,7 +24,7 @@ import { jongroArrivalBus, noArrivalBus } from "../../../../__tests__/helpers/bu
 import type { JongroArrivalBus } from "../../cache/bus-cache.document";
 import {
   isLastBus,
-  toArrival,
+  toRealtimeArrival,
   toArrivalCarNumber,
   toArrivalState,
   toCrowding,
@@ -259,13 +259,13 @@ describe("toPassengerCount", () => {
   });
 });
 
-describe("toArrival", () => {
+describe("toRealtimeArrival", () => {
   it("serves a captured 곧 도착 with traTime 112 as arriving, no minutes, 0 stops away", () => {
     // Arrange
     const bus = capturedBus(arrivalsFixture.jongro08, "15", "1");
 
     // Act & Assert
-    expect(toArrival(bus, SEAT_COUNT)).toEqual({
+    expect(toRealtimeArrival(bus, SEAT_COUNT)).toEqual({
       minutes: null,
       stopsAway: 0,
       state: "arriving",
@@ -283,7 +283,7 @@ describe("toArrival", () => {
 
     // Act & Assert
     expect([bus.traTime, bus.sectOrd]).toEqual([484, 2]);
-    expect(toArrival(bus, SEAT_COUNT)).toEqual({
+    expect(toRealtimeArrival(bus, SEAT_COUNT)).toEqual({
       minutes: null,
       stopsAway: 5,
       state: "waiting",
@@ -300,7 +300,7 @@ describe("toArrival", () => {
     const bus = capturedBus(arrivalsFixture.jongro07Waiting, "12", "2");
 
     // Act & Assert
-    expect(toArrival(bus, SEAT_COUNT)).toEqual({
+    expect(toRealtimeArrival(bus, SEAT_COUNT)).toEqual({
       minutes: 2,
       stopsAway: 1,
       state: "running",
@@ -314,7 +314,7 @@ describe("toArrival", () => {
 
   it("serves a phrase no pattern matches as unknown, carrying the phrase", () => {
     // Act & Assert
-    expect(toArrival(jongroArrivalBus({ arrmsg: "결행", traTime: 300 }), SEAT_COUNT)).toMatchObject({
+    expect(toRealtimeArrival(jongroArrivalBus({ arrmsg: "결행", traTime: 300 }), SEAT_COUNT)).toMatchObject({
       state: "unknown",
       minutes: null,
       message: "결행",
@@ -412,11 +412,11 @@ describe("toRouteArrival", () => {
     expect([toRouteArrival(captured7800(26, "1"), ROUTE_7800).state, toRouteArrival(captured7800(1, "1"), ROUTE_7800).state]).toEqual(["running", "waiting"]);
   });
 
-  it("serves a Jongro bus exactly as toArrival does", () => {
+  it("serves a Jongro bus exactly as toRealtimeArrival does", () => {
     // Arrange
     const bus = capturedBus(arrivalsFixture.jongro07Waiting, "12", "2");
 
     // Act & Assert
-    expect(toRouteArrival(bus, { seatCount: SEAT_COUNT, capabilities: { occupancy: true }, passThroughOrds: NO_PASS_THROUGH })).toEqual(toArrival(bus, SEAT_COUNT));
+    expect(toRouteArrival(bus, { seatCount: SEAT_COUNT, capabilities: { occupancy: true }, passThroughOrds: NO_PASS_THROUGH })).toEqual(toRealtimeArrival(bus, SEAT_COUNT));
   });
 });

@@ -5,7 +5,7 @@
  */
 import { FakeBuildingCafeteriaListRepository } from "../../../__tests__/helpers/fakes/building/building-cafeteria-list.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { CafeteriaDoc } from "../cafeteria/building-cafeteria.document";
+import type { CafeteriaDoc } from "../building.document";
 import type { BuildingCafeteriaListRepository } from "./building-cafeteria-list.repository";
 import { BuildingCafeteriaListService } from "./building-cafeteria-list.service";
 

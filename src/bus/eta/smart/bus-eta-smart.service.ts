@@ -15,12 +15,13 @@ import type { SmartSchedule } from "../../schedule/bus-schedule.wire";
 import { BusStopsService } from "../../stops/bus-stops.service";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { BusEtaRepository } from "../bus-eta.repository";
-import { applyEstimates, withStatusMessage } from "./bus-eta-smart.mapper";
-import { pickEstimates, pickLatestEstimates } from "./bus-eta-smart.rules";
-import type { EstimatePick, ServedEstimate } from "./bus-eta-smart.types";
+import { applyEstimates, toDayRuns, withStatusMessage } from "./bus-eta-smart.mapper";
+import { isUnderWayAt, pickEstimates, pickLatestEstimates } from "./bus-eta-smart.rules";
+import type { EstimateInputs, RunList, RunWindow } from "./bus-eta-smart.types";
 
 const HOUR_MS = 60 * 60_000;
 const MAX_AGE_S = 300;
+const NO_ESTIMATES: EstimateInputs = { routeTypes: [], sequences: {}, estimates: new Map() };
 
 @Injectable()
 export class BusEtaSmartService {
@@ -50,55 +51,64 @@ export class BusEtaSmartService {
     return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `private, max-age=${maxAge}`);
   }
 
-  // WHY: the smart view's body without the ETag's hash, for a caller that serves no ETag (the no-store stop page).
-  async resolveSmart(serviceId: string, lang: SupportedLang): Promise<SmartSchedule> {
-    const serviceConfig = serviceConfigOf(serviceId);
-    const resolved = serviceConfig ? await this.schedule.resolveSmartSchedule(serviceId) : null;
+  /** SEE: docs/plans/7800-unified-arrivals.md ("7.2 The run read, and how F1 ends"): each run of the shown week, and of the next for weekCount 2, still under way at `from`. */
+  async listRuns(serviceId: string, { from, weekCount }: RunWindow): Promise<RunList> {
+    const smart = await this.resolveSchedule(serviceId);
+    if (smart.status !== "active" || smart.from === null) return { status: smart.status, runs: [] };
+    const followingDays = weekCount === 2 ? await this.schedule.resolveFollowingWeek(serviceId, smart.from) : [];
+    if (!followingDays) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
+    const routeTypes = serviceConfigOf(serviceId)?.eta?.routeTypes;
+    const inputs = (routeTypes && (await this.estimateInputs(serviceId, routeTypes, { withLatest: true }))) ?? NO_ESTIMATES;
+    // WHY: a run of the following week keeps its served estimate (ADR 0019, D12).
+    const followingInputs = { ...inputs, latestEstimates: undefined };
+    const days = [...smart.days.map((day) => ({ day, inputs })), ...followingDays.map((day) => ({ day, inputs: followingInputs }))];
+    const runs = days.flatMap(({ day, inputs: dayInputs }) => toDayRuns(serviceId, day, dayInputs).flatMap((run) => (run && isUnderWayAt(run, from) ? [run] : [])));
+    return { status: "active", runs };
+  }
+
+  private async resolveSchedule(serviceId: string): Promise<SmartSchedule> {
+    const resolved = serviceConfigOf(serviceId) ? await this.schedule.resolveSmartSchedule(serviceId) : null;
     if (!resolved) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
-    // WHY: applied to a copy after the schedule cache and before hashing, so the ETag follows the estimates.
-    const etaRouteTypes = serviceConfig?.eta?.routeTypes;
-    const result = etaRouteTypes && resolved.status === "active" ? await this.withEstimates(resolved, etaRouteTypes, pickEstimates) : resolved;
-    return withStatusMessage(result, lang);
+    return resolved;
   }
 
-  // WHY: the week after an active smart schedule's, estimates applied by the same precedence, for the stop page's runs.
-  async resolveFollowingWeek(smart: SmartSchedule): Promise<SmartSchedule["days"]> {
-    if (smart.status !== "active" || smart.from === null) return [];
-    const days = await this.schedule.resolveFollowingWeek(smart.serviceId, smart.from);
-    if (!days) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${smart.serviceId}`, 404);
-    const etaRouteTypes = serviceConfigOf(smart.serviceId)?.eta?.routeTypes;
-    return etaRouteTypes ? (await this.withEstimates({ ...smart, days }, etaRouteTypes, pickEstimates)).days : days;
+  // WHY: runs, then the timetable's "HH:mm", applied to a copy after the schedule cache and before hashing, so the
+  // ETag follows the estimates.
+  private async resolveSmart(serviceId: string, lang: SupportedLang): Promise<SmartSchedule> {
+    const resolved = await this.resolveSchedule(serviceId);
+    const routeTypes = serviceConfigOf(serviceId)?.eta?.routeTypes;
+    const inputs = routeTypes && resolved.status === "active" ? await this.estimateInputs(serviceId, routeTypes, { withLatest: false }) : null;
+    return withStatusMessage(inputs ? this.withEstimates(resolved, inputs) : resolved, lang);
   }
 
-  // WHY: for the stop page's listing cutoff only, never served: each run's latest estimate applied, a live value too
-  // old to serve included, from the same cached read (ADR 0019, D12).
-  async resolveLatestEstimates(smart: SmartSchedule): Promise<SmartSchedule> {
-    const etaRouteTypes = serviceConfigOf(smart.serviceId)?.eta?.routeTypes;
-    return etaRouteTypes && smart.status === "active" ? this.withEstimates(smart, etaRouteTypes, pickLatestEstimates) : smart;
-  }
-
-  // WHY: the schedule as resolved when the estimates or the stops cannot be read.
-  private async withEstimates(result: SmartSchedule, routeTypes: readonly string[], pick: EstimatePick): Promise<SmartSchedule> {
-    const [estimates, stops] = await Promise.allSettled([this.pickedEstimates(pick), this.stops.current()]);
-    if (stops.status === "rejected") {
-      this.warnUnestimated(result.serviceId, "bus.eta.stops_unavailable", stops.reason);
-      return result;
-    }
+  private withEstimates(result: SmartSchedule, inputs: EstimateInputs): SmartSchedule {
     try {
-      if (estimates.status === "rejected") throw estimates.reason;
-      return applyEstimates(result, { routeTypes, sequences: stops.value.catalog.sequences[result.serviceId] ?? {}, estimates: estimates.value });
+      return applyEstimates(result, inputs);
     } catch (err: unknown) {
       this.warnUnestimated(result.serviceId, "bus.eta.read_failed", err);
       return result;
     }
   }
 
+  // WHY: null, logged, when the estimates or the stops cannot be read, so the stored timetable serves.
+  private async estimateInputs(serviceId: string, routeTypes: readonly string[], { withLatest }: { withLatest: boolean }): Promise<EstimateInputs | null> {
+    const [docs, stops] = await Promise.allSettled([this.docs.get(), this.stops.current()]);
+    if (stops.status === "rejected") {
+      this.warnUnestimated(serviceId, "bus.eta.stops_unavailable", stops.reason);
+      return null;
+    }
+    if (docs.status === "rejected") {
+      this.warnUnestimated(serviceId, "bus.eta.read_failed", docs.reason);
+      return null;
+    }
+    const now = this.clock.now();
+    const sequences = stops.value.catalog.sequences[serviceId] ?? {};
+    const estimates = pickEstimates(docs.value, now);
+    return withLatest ? { routeTypes, sequences, estimates, latestEstimates: pickLatestEstimates(docs.value, now) } : { routeTypes, sequences, estimates };
+  }
+
   private warnUnestimated(serviceId: string, event: "bus.eta.read_failed" | "bus.eta.stops_unavailable", err: unknown): void {
     const ticket = this.etaReadThrottle.take(`${event} ${serviceId}`);
     if (ticket) logger.warn({ event, serviceId, suppressed: ticket.suppressed, err }, "arrival estimates unavailable, serving the stored timetable");
-  }
-
-  private async pickedEstimates(pick: EstimatePick): Promise<Map<string, ServedEstimate>> {
-    return pick(await this.docs.get(), this.clock.now());
   }
 }

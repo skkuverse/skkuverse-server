@@ -1,7 +1,15 @@
 {
   "src/app.module.ts": {
-    "max": 193,
+    "max": 199,
     "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list. Its max rises with each module added: that commit carries the Architecture-Debt trailer for this file and needs no other reason."
+  },
+  "src/building/place/building-place.rules.ts": {
+    "max": 172,
+    "reason": "ADR 0010 D9, no reachable seam: `toPlaceIndex` derives one index from the synced buildings and spaces and `place-lexicon.json` (places, room keys, prefixes, aliases, offices, patterns), which both the resolve and display flows read whole, and the alias pass needs the places and spaces it is built over; a sibling sub-module cannot hold a part, since siblings share no rules (sub-modules.test.ts) and a parent never imports a child."
+  },
+  "src/building/place/resolve/building-place-resolve.rules.ts": {
+    "max": 273,
+    "reason": "ADR 0010 D9, no reachable seam: `resolvePlace` is one ordered method (off-campus markers, printed codes, building names, weak names, offices, the library board, online, campus only) whose steps read one `PlaceReading` and return early in that order, so the precedence is the decision; the room and alias lookups it calls are reached only from it, and a sibling sub-module cannot share rules with it (sub-modules.test.ts)."
   },
   "src/bus/bus.wire.ts": {
     "max": 96,

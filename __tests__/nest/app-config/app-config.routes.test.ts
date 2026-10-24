@@ -147,6 +147,8 @@ describe("GET /app/config", () => {
       "https://suika-game.game.skkuverse.com": "suika-game",
       "https://wave-run.game.skkuverse.com": "wave-run",
       "https://subway-typing.game.skkuverse.com": "subway-typing",
+      "https://building-stack.game.skkuverse.com": "building-stack",
+      "https://bigger-building.game.skkuverse.com": "bigger-building",
     });
   });
 

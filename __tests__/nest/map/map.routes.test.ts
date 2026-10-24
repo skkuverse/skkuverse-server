@@ -18,7 +18,7 @@
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import type { BuildingDoc, CampusShapeDoc } from "../../../src/building/building.document";
+import type { CampusShapeDoc } from "../../../src/building/building.document";
 import { BuildingRepository } from "../../../src/building/building.repository";
 import { MapCampusModule } from "../../../src/map/campus/map-campus.module";
 import { MapConfigModule } from "../../../src/map/config/map-config.module";
@@ -30,6 +30,7 @@ import type { ActivationDoc, MapPlaceDoc } from "../../../src/map/map.document";
 import { MapModule } from "../../../src/map/map.module";
 import { MapRepository } from "../../../src/map/map.repository";
 import { MiniappsRepository } from "../../../src/miniapps/miniapps.repository";
+import { storedBuilding } from "../../helpers/building/buildings";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMapLayerSetRepository } from "../../helpers/fakes/map/map-layer-set.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
@@ -48,14 +49,13 @@ let app: NestExpressApplication;
 let httpServer: import("http").Server;
 let buildings: FakeBuildingRepository;
 
-const SUSEON = {
+const SUSEON = storedBuilding({
   _id: 2,
-  buildNo: "1",
-  displayNo: "1",
+  buildNo: "101",
   campus: "hssc",
   name: { ko: "수선관", en: "Suseon Hall" },
   location: { type: "Point", coordinates: [126.994479, 37.587361] },
-} as unknown as BuildingDoc;
+});
 
 const FOOTPRINT = {
   _id: "bldg-2-footprint",

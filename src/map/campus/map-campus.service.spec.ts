@@ -184,7 +184,7 @@ describe("MapCampusService.getCampusOverlays", () => {
   it("falls back to Korean when the English name is the EMPTY STRING", async () => {
     // Arrange
     // The shape the database actually produces. Both writers coalesce a missing
-    // English name to "" rather than null — building.sync's
+    // English name to "" rather than null — the buildings writer's
     // `en: item.buildNmEng || ""` — so a `??` fallback here would be dead code
     // and ship a blank English label. TypeScript cannot catch it, because
     // `name.en` is declared non-optional.
@@ -239,7 +239,7 @@ describe("MapCampusService.getCampusOverlays", () => {
     // Arrange
     mockListAllBuildings.mockResolvedValue([
       building({ _id: 1 }),
-      // building.sync uses parseFloat and concedes "undefined → NaN" with no
+      // The buildings writer has used parseFloat and conceded "undefined → NaN" with no
       // guard. NaN serialises to `null` on a field this schema types as
       // `number`, so it must not reach the wire.
       building({ _id: 2, location: { type: "Point", coordinates: [NaN, NaN] } }),

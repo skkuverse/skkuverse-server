@@ -2,10 +2,10 @@
  * In-memory CalendarRepository.
  *
  * `years` holds one `public_holidays` document per year, keyed by the year as
- * the sync's upsert keys it, and listPublicHolidayYears returns them all as the
- * real read does (pinned in calendar.repository.spec.ts). It does not cache:
- * `reads` counts the reads and `clears` the clearPublicHolidaysCache() calls;
- * `failWith` makes every read of the public holidays reject.
+ * skkuverse-crawler's upsert keys it, and listPublicHolidayYears returns them
+ * all as the real read does, each parsed with the same schema, an invalid one
+ * left out (pinned in calendar.repository.spec.ts). It does not cache: `reads`
+ * counts the reads; `failWith` makes every read of the public holidays reject.
  *
  * `storeRestDays` stores the `skku-rest-days` dataset unchecked at the next
  * revision, as `npm run data` would without its checks, so a test can seed an
@@ -26,7 +26,7 @@
 import { CalendarReadError } from "../../../../src/calendar/calendar.error";
 import type { AcademicCalendarDoc, PublicHolidaysDoc } from "../../../../src/calendar/calendar.document";
 import type { CalendarRepository } from "../../../../src/calendar/calendar.repository";
-import { academicCalendarDoc, storedRestDays } from "../../../../src/calendar/calendar.schema";
+import { academicCalendarDoc, publicHolidaysDoc, storedRestDays } from "../../../../src/calendar/calendar.schema";
 import type { PublicHoliday, RestDaysRevision } from "../../../../src/calendar/calendar.types";
 import type { PublicOf } from "../public-of";
 
@@ -35,7 +35,6 @@ const SKKU_REST_DAYS = "skku-rest-days";
 export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
   years = new Map<number, PublicHolidaysDoc>();
   reads = 0;
-  clears = 0;
   failWith: Error | null = null;
   restDaysDataset: { revision: unknown; data: unknown } | null = null;
   failRestDaysWith: Error | null = null;
@@ -44,7 +43,7 @@ export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
   failAcademicWith: Error | null = null;
   academicReadCount = 0;
 
-  /** Stores `holidays` as the synced document of `year`. */
+  /** Stores `holidays` as the crawler's document of `year`. */
   store(year: number, holidays: PublicHoliday[], fetchedAt = new Date("2026-10-16T00:00:00Z")): this {
     this.years.set(year, { _id: year, holidays, fetchedAt });
     return this;
@@ -53,11 +52,10 @@ export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
   async listPublicHolidayYears(): Promise<readonly PublicHolidaysDoc[]> {
     this.reads += 1;
     if (this.failWith) throw this.failWith;
-    return [...this.years.values()].map((doc) => ({ ...doc, holidays: [...doc.holidays] }));
-  }
-
-  clearPublicHolidaysCache(): void {
-    this.clears += 1;
+    return [...this.years.values()].flatMap((doc) => {
+      const parsed = publicHolidaysDoc.safeParse({ ...doc, holidays: doc.holidays.map((holiday) => ({ ...holiday })) });
+      return parsed.success ? [parsed.data] : [];
+    });
   }
 
   /** Stores `data` as the next revision of `skku-rest-days`, unchecked, and returns that revision. */

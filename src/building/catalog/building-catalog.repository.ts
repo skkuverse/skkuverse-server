@@ -5,20 +5,31 @@ import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
-import { parseEach } from "../../shared/zod-list.util";
-import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
-import type { CafeteriaDoc } from "../cafeteria/building-cafeteria.document";
-import { SERVED_BUILDING_PROJECTION } from "../building.query";
+import { isRecord } from "../../shared/object.util";
+import { issuePaths, parseEach } from "../../shared/zod-list.util";
+import type { BuildingDoc, CafeteriaDoc, ConnectionDoc, SpaceDoc } from "../building.document";
+import { SERVED_BUILDING_FIELDS } from "../building.query";
+import { buildingDoc } from "../building.schema";
 import type { BuildNo, SkkuId } from "../building.types";
 import type { BuildingLabel, CafeteriaSummary, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
-import { connectionEnds } from "./building-catalog.schema";
+import { buildingLabel, cafeteriaSummary, connectionEnds, floorSpace } from "./building-catalog.schema";
 
-// WHY: read on every detail request, so a bad connection is reported hourly, not per request.
-const INVALID_CONNECTIONS_LOG_INTERVAL_MS = 60 * 60 * 1000;
+// WHY: read on every detail request, so a bad document is reported hourly, not per request.
+const INVALID_DOCUMENTS_LOG_INTERVAL_MS = 60 * 60 * 1000;
+
+const FLOOR_SPACE_FIELDS = { _id: 0, spaceCd: 1, name: 1, floor: 1, conspaceCd: 1 } as const;
+
+const BUILDING_LABEL_FIELDS = { _id: 1, buildNo: 1, campus: 1, name: 1 } as const;
+
+const CAFETERIA_SUMMARY_FIELDS = { _id: 1, name: 1, floor: 1, spaceCd: 1 } as const;
+
+type InvalidEvent = `building.${"buildings" | "spaces" | "connections" | "cafeterias"}.invalid`;
+
+type InvalidScope = { skkuId: SkkuId } | { buildNo: BuildNo } | { skkuIds: readonly SkkuId[] };
 
 @Injectable()
 export class BuildingCatalogRepository implements OnModuleInit {
-  private readonly invalidConnectionsThrottle = createLogThrottle(INVALID_CONNECTIONS_LOG_INTERVAL_MS);
+  private readonly invalidDocumentsThrottle = createLogThrottle(INVALID_DOCUMENTS_LOG_INTERVAL_MS);
 
   onModuleInit(): Promise<void> {
     return ensureIndexesAtBoot("building.catalog", () => this.ensureIndexes());
@@ -33,23 +44,26 @@ export class BuildingCatalogRepository implements OnModuleInit {
     ]);
   }
 
-  findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
-    return this.buildings().findOne(
+  async findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
+    const building = await this.buildings().findOne(
       { _id: skkuId },
-      { projection: SERVED_BUILDING_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      { projection: SERVED_BUILDING_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS },
     );
+    if (building === null) return null;
+    const parsed = buildingDoc.safeParse(building);
+    if (parsed.success) return parsed.data;
+    this.warnInvalid("building.buildings.invalid", { skkuId }, [`${skkuId}: ${issuePaths(parsed.error)}`]);
+    return null;
   }
 
-  listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {
-    return this.spaces()
-      .find(
-        { buildNo },
-        {
-          projection: { _id: 0, spaceCd: 1, name: 1, floor: 1, conspaceCd: 1 },
-          maxTimeMS: HOT_READ_MAX_TIME_MS,
-        },
-      )
-      .toArray();
+  async listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {
+    const { valid: spaces, invalid } = parseEach(
+      await this.spaces().find({ buildNo }, { projection: FLOOR_SPACE_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS }).toArray(),
+      floorSpace,
+      (doc, index) => (isRecord(doc) && typeof doc.spaceCd === "string" ? doc.spaceCd : `#${index}`),
+    );
+    this.warnInvalid("building.spaces.invalid", { buildNo }, invalid);
+    return spaces;
   }
 
   async listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
@@ -63,34 +77,44 @@ export class BuildingCatalogRepository implements OnModuleInit {
       connectionEnds,
       (_doc, index) => `#${index}`,
     );
-    this.warnInvalidConnections(skkuId, invalid);
+    this.warnInvalid("building.connections.invalid", { skkuId }, invalid);
     return connections;
   }
 
-  listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {
-    return this.facilities()
-      .find(
-        { buildNo, kind: "cafeteria" },
-        { projection: { _id: 1, name: 1, floor: 1, spaceCd: 1 }, sort: { _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
-      )
-      .toArray();
+  async listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {
+    const { valid: cafeterias, invalid } = parseEach(
+      await this.facilities()
+        .find(
+          { buildNo, kind: "cafeteria" },
+          { projection: CAFETERIA_SUMMARY_FIELDS, sort: { _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+        )
+        .toArray(),
+      cafeteriaSummary,
+      (doc, index) => (isRecord(doc) ? String(doc._id) : `#${index}`),
+    );
+    this.warnInvalid("building.cafeterias.invalid", { buildNo }, invalid);
+    return cafeterias;
   }
 
-  listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {
-    return this.buildings()
-      .find(
-        { _id: { $in: [...skkuIds] } },
-        { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
-      )
-      .toArray();
+  async listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {
+    const { valid: labels, invalid } = parseEach(
+      await this.buildings()
+        .find({ _id: { $in: [...skkuIds] } }, { projection: BUILDING_LABEL_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS })
+        .toArray(),
+      buildingLabel,
+      (doc, index) => (isRecord(doc) ? String(doc._id) : `#${index}`),
+    );
+    this.warnInvalid("building.buildings.invalid", { skkuIds }, invalid);
+    return labels;
   }
 
-  private warnInvalidConnections(skkuId: SkkuId, invalid: readonly string[]): void {
-    const ticket = invalid.length > 0 ? this.invalidConnectionsThrottle.take(`${skkuId}:${invalid.join("|")}`) : null;
+  private warnInvalid(event: InvalidEvent, scope: InvalidScope, invalid: readonly string[]): void {
+    const key = `${event}:${Object.values(scope).join(",")}:${invalid.join("|")}`;
+    const ticket = invalid.length > 0 ? this.invalidDocumentsThrottle.take(key) : null;
     if (!ticket) return;
     logger.warn(
-      { event: "building.connections.invalid", skkuId, count: invalid.length, invalid, suppressed: ticket.suppressed },
-      "Connections left out: they do not match the document schema",
+      { event, ...scope, count: invalid.length, invalid, suppressed: ticket.suppressed },
+      "Documents left out: they do not match the document schema",
     );
   }
 

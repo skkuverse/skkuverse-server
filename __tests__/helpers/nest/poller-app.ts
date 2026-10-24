@@ -9,8 +9,6 @@
  * the env at import.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { BuildingCafeteriaClient } from "../../../src/building/cafeteria/building-cafeteria.client";
-import { BuildingSyncClient } from "../../../src/building/sync/building-sync.client";
 import { BusEtaForecastClient } from "../../../src/bus/eta/forecast/bus-eta-forecast.client";
 import { BusEtaProbeClient } from "../../../src/bus/eta/probe/bus-eta-probe.client";
 import { BusEtaTravelClient } from "../../../src/bus/eta/travel/bus-eta-travel.client";
@@ -19,14 +17,11 @@ import { BusShuttleStopClient } from "../../../src/bus/private-file";
 import { BusRealtimeHsscClient } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.client";
 import { BusRealtimeJongroClient } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.client";
 import { BusRoutePathClient } from "../../../src/bus/route-path/bus-route-path.client";
-import { CalendarHolidaySyncClient } from "../../../src/calendar/holiday-sync/calendar-holiday-sync.client";
 import { Clock } from "../../../src/infra/clock";
 import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
 import { NoticesDispatchClient } from "../../../src/notices/dispatch/notices-dispatch.client";
 import { SubwaySeoulApiClient } from "../../../src/subway/seoul-api/subway-seoul-api.client";
 import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
-import { FakeBuildingCafeteriaClient } from "../fakes/building/building-cafeteria.client.fake";
-import { FakeBuildingSyncClient } from "../fakes/building/building-sync.client.fake";
 import { FakeBusEtaForecastClient } from "../fakes/bus/bus-eta-forecast.client.fake";
 import { FakeBusEtaProbeClient } from "../fakes/bus/bus-eta-probe.client.fake";
 import { FakeBusEtaTravelClient } from "../fakes/bus/bus-eta-travel.client.fake";
@@ -35,7 +30,6 @@ import { FakeBusShuttleStopClient } from "../fakes/bus/private-file";
 import { FakeBusRealtimeHsscClient } from "../fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../fakes/bus/bus-realtime-jongro.client.fake";
 import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake";
-import { FakeCalendarHolidaySyncClient } from "../fakes/calendar/calendar-holiday-sync.client.fake";
 import { FakeMiniappsManifestClient } from "../fakes/miniapps/miniapps-manifest.client.fake";
 import { FakeNoticesDispatchClient } from "../fakes/notices/notices-dispatch.client.fake";
 import { FakeSubwaySeoulApiClient } from "../fakes/subway/subway-seoul-api.client.fake";
@@ -49,8 +43,6 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/"),
     overrides: [
-      { provide: BuildingCafeteriaClient, useValue: new FakeBuildingCafeteriaClient() },
-      { provide: BuildingSyncClient, useValue: new FakeBuildingSyncClient() },
       { provide: BusEtaForecastClient, useValue: new FakeBusEtaForecastClient() },
       { provide: BusEtaProbeClient, useValue: new FakeBusEtaProbeClient() },
       { provide: BusEtaTravelClient, useValue: new FakeBusEtaTravelClient() },
@@ -59,7 +51,6 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
       { provide: BusRealtimeHsscClient, useValue: new FakeBusRealtimeHsscClient() },
       { provide: BusRealtimeJongroClient, useValue: new FakeBusRealtimeJongroClient() },
       { provide: BusRoutePathClient, useValue: new FakeBusRoutePathClient() },
-      { provide: CalendarHolidaySyncClient, useValue: new FakeCalendarHolidaySyncClient() },
       { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: NoticesDispatchClient, useValue: new FakeNoticesDispatchClient() },
       { provide: SubwaySeoulApiClient, useValue: new FakeSubwaySeoulApiClient() },
