@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -1131,9 +1131,9 @@ invisible rather than broken. Only `BASE_CHIPS` authors `link` chips; a festival
 
 `layers` turns on every layer it names and touches no other. Unlike `focus` it asks no chip group, so
 it may name base layers such as the route lines, which carry `chipGroupId: null`. A `null` camera
-means the camera does not move. Builds without `layers` in `CHIP_ACTION_KINDS` drop the chip
-(`skkuverse-app/apps/mobile/src/features/map/map.schema.ts`, and `packages/shared/src/map/parser.ts`
-on app `main`). Only `BASE_CHIPS` may author one, and none does today.
+means the camera does not move. Builds whose chip parser lacks `layers` drop the chip
+(`chipActionSchema` in `skkuverse-app/apps/mobile/src/features/map/map-config.schema.ts`, and
+`CHIP_ACTION_KINDS` in `packages/shared/src/map/parser.ts` on app `main`). Only `BASE_CHIPS` may author one, and none does today.
 
 ### 8.2 What a chip tap may change — two rules
 
