@@ -205,14 +205,12 @@ const config = {
     enabled: switches.regionalBusEnabled,
   },
 
+  // CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/plugins/mongo/public_holidays.py writes it in
+  // MONGO_DB_NAME_BUS_CAMPUS, which this server reads as mongo.dbName.
   holidays: {
-    get serviceKey(): string {
-      return roleScoped("DATA_GO_KR_SERVICE_KEY");
-    },
     collections: {
       publicHolidays: "public_holidays",
     },
-    syncIntervalMs: 60 * 60 * 1000,
   },
 
   // CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/module.py writes it in its

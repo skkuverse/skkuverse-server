@@ -93,7 +93,7 @@ Interval 30 s, all day, no service window: 86,400 / 30 = 2,880 calls a day on ea
 
 ### 3.3 Seats
 
-TOPIS gives none (§2). Seats come from GBIS 위치 per vehicle, later (PR 7), polled where pollers run with `DATA_GO_KR_SERVICE_KEY`, which already exists, is poller-scoped (`src/infra/required-env.ts:132`) and holds the same key. Before that PR: one capture of `getBusLocationListv2` beside a TOPIS answer, to check its labels and the plate join. 30 s polling needs the 운영계정.
+TOPIS gives none (§2). Seats come from GBIS 위치 per vehicle, later (PR 7), polled where pollers run with `DATA_GO_KR_SERVICE_KEY`, which holds the same key. The server dropped that required value when skkuverse-crawler took over the public-holiday sync (2026-10-24), so PR 7 adds it back as a `poller` value, with both `config/env.*.keys` files and both Doppler configs. Before that PR: one capture of `getBusLocationListv2` beside a TOPIS answer, to check its labels and the plate join. 30 s polling needs the 운영계정.
 
 ### 3.4 API applications
 
@@ -118,7 +118,7 @@ Applied 2026-10-24 in the owner's data.go.kr account, each 자동승인 → 승�
 - **Writes.** `bus_cache` keys `jongro_stations_7800` and `jongro_locations_7800` (`src/bus/cache/bus-cache.document.ts:90`). The stored key prefix stays `jongro_` so a replica of the previous release reads the Jongno keys it knows during a deploy; the new keys are read only by the new release. `jongro_routes` gets 7800's stations from the arrival rows (ADR 0014, D4); `jongro_route_paths` gets its line and directions from the daily `busRouteInfo` sync (ADR 0014, D8).
 - **Reads.** An api replica reads the same keys through `BusRealtimeGroupService.findJongroReading` (`src/bus/realtime/group/bus-realtime-group.service.ts:75`); no upstream call (D1). Freshness as Jongno: the group's `updatedAt` is null when nothing was written within a minute.
 - **Switch.** `REGIONAL_BUS` (`src/infra/runtime-switches.ts`): on in production and test, off by default in development, gating the 7800 poller only (D5), since development spends production's quota. Off, `/bus/live/<7800 id>` serves `noData`, as for a stopped poller. The Jongno pollers stay unswitched as today.
-- **Required env.** None new: TOPIS reuses `SEOUL_BUS_SERVICE_KEY`; the GBIS seat poller (PR 7) reuses `DATA_GO_KR_SERVICE_KEY` and adds a second switch, `GBIS`, same defaults.
+- **Required env.** TOPIS reuses `SEOUL_BUS_SERVICE_KEY`. The GBIS seat poller (PR 7) adds `DATA_GO_KR_SERVICE_KEY` back (removed with the holiday sync on 2026-10-24) and a second switch, `GBIS`, same defaults.
 - **Not served on the deprecated route.** `/bus/realtime/data/:groupId` is frozen (ADR 0019, D11): its source map (`bus-realtime-group.service.ts:110`) keeps the three Jongno routes only.
 
 ## 5. Mapping 7800 into `arrival`

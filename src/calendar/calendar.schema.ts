@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AcademicCalendarDoc, StoredRestDays } from "./calendar.document";
+import type { AcademicCalendarDoc, PublicHolidaysDoc, StoredRestDays } from "./calendar.document";
 import { isCalendarDate } from "../shared/calendar-date.util";
 import { isRestDayKey, isSemesterPair, toRestDays } from "./calendar.rules";
 
@@ -31,3 +31,9 @@ export const academicCalendarDoc = z
     path: ["semesters"],
     error: "must be term 1 then term 2, each in order inside the academic year",
   }) satisfies z.ZodType<AcademicCalendarDoc>;
+
+export const publicHolidaysDoc = z.object({
+  _id: z.int(),
+  holidays: z.array(z.object({ date: calendarDate, name: z.string() })),
+  fetchedAt: z.date(),
+}) satisfies z.ZodType<PublicHolidaysDoc>;

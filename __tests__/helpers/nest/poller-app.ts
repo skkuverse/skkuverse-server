@@ -17,7 +17,6 @@ import { BusShuttleStopClient } from "../../../src/bus/private-file";
 import { BusRealtimeHsscClient } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.client";
 import { BusRealtimeJongroClient } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.client";
 import { BusRoutePathClient } from "../../../src/bus/route-path/bus-route-path.client";
-import { CalendarHolidaySyncClient } from "../../../src/calendar/holiday-sync/calendar-holiday-sync.client";
 import { Clock } from "../../../src/infra/clock";
 import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
 import { NoticesDispatchClient } from "../../../src/notices/dispatch/notices-dispatch.client";
@@ -31,7 +30,6 @@ import { FakeBusShuttleStopClient } from "../fakes/bus/private-file";
 import { FakeBusRealtimeHsscClient } from "../fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../fakes/bus/bus-realtime-jongro.client.fake";
 import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake";
-import { FakeCalendarHolidaySyncClient } from "../fakes/calendar/calendar-holiday-sync.client.fake";
 import { FakeMiniappsManifestClient } from "../fakes/miniapps/miniapps-manifest.client.fake";
 import { FakeNoticesDispatchClient } from "../fakes/notices/notices-dispatch.client.fake";
 import { FakeSubwaySeoulApiClient } from "../fakes/subway/subway-seoul-api.client.fake";
@@ -53,7 +51,6 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
       { provide: BusRealtimeHsscClient, useValue: new FakeBusRealtimeHsscClient() },
       { provide: BusRealtimeJongroClient, useValue: new FakeBusRealtimeJongroClient() },
       { provide: BusRoutePathClient, useValue: new FakeBusRoutePathClient() },
-      { provide: CalendarHolidaySyncClient, useValue: new FakeCalendarHolidaySyncClient() },
       { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: NoticesDispatchClient, useValue: new FakeNoticesDispatchClient() },
       { provide: SubwaySeoulApiClient, useValue: new FakeSubwaySeoulApiClient() },
