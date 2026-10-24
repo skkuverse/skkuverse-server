@@ -43,7 +43,7 @@ const CAPTURED = {
 
 /** The key appended to the captured body: each first-party game origin and the game that owns it. */
 const GAMES_KEY =
-  '"games":{"origins":{"https://apple-game.game.skkuverse.com":"apple-game","https://suika-game.game.skkuverse.com":"suika-game","https://wave-run.game.skkuverse.com":"wave-run","https://subway-typing.game.skkuverse.com":"subway-typing"}}';
+  '"games":{"origins":{"https://apple-game.game.skkuverse.com":"apple-game","https://suika-game.game.skkuverse.com":"suika-game","https://wave-run.game.skkuverse.com":"wave-run","https://subway-typing.game.skkuverse.com":"subway-typing","https://building-stack.game.skkuverse.com":"building-stack","https://bigger-building.game.skkuverse.com":"bigger-building"}}';
 
 /** The key appended after `games`: the kill switches as revision 1 of `app-features` stores them. */
 const FEATURES_KEY = '"features":{"sharedMapShell":false}';
@@ -51,7 +51,7 @@ const FEATURES_KEY = '"features":{"sharedMapShell":false}';
 /** The captured body with `games`, then `features`, appended as the last keys of `data`, and its weak ETag. */
 const SERVED = {
   text: `${CAPTURED.text.slice(0, -2)},${GAMES_KEY},${FEATURES_KEY}}}`,
-  etag: 'W/"468-ZVHN2xsctwO1lb8IBRE3NaCpeTg"',
+  etag: 'W/"4e4-4gabcmGA7ZUlrsL3w7+S9mIDO+A"',
 };
 
 let app: NestExpressApplication;
