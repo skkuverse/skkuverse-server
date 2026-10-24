@@ -668,7 +668,7 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart bodies", () => {
   });
 });
 
-// The calendar's 2026 rows as getRestDeInfo lists them (__tests__/nest/calendar/fixtures/getrestdeinfo-2026.json).
+// The calendar's 2026 rows as data.go.kr getRestDeInfo listed them, the rows skkuverse-crawler stores in public_holidays.
 const CALENDAR_2026 = [
   { date: "2026-03-01", name: "삼일절" },
   { date: "2026-03-02", name: "대체공휴일(삼일절)" },

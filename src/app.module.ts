@@ -3,7 +3,6 @@ import { ConfigModule } from "./config/config.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
 import { CalendarModule } from "./calendar/calendar.module";
-import { CalendarHolidaySyncModule } from "./calendar/holiday-sync/calendar-holiday-sync.module";
 import { BusModule } from "./bus/bus.module";
 import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRegistryModule } from "./bus/registry/bus-registry.module";
@@ -100,7 +99,6 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SchedulingModule,
     HealthModule,
     CalendarModule,
-    CalendarHolidaySyncModule,
     BusModule,
     BusCacheModule,
     BusRegistryModule,

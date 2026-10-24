@@ -11,11 +11,11 @@ import { parseEach } from "../shared/zod-list.util";
 import { REST_DAYS_LOG_INTERVAL_MS, SKKU_REST_DAYS_DATASET } from "./calendar.constants";
 import type { AcademicCalendarDoc, PublicHolidaysDoc, SkkuRestDaysDatasetDoc } from "./calendar.document";
 import { CalendarReadError } from "./calendar.error";
-import { academicCalendarDoc, storedRestDays } from "./calendar.schema";
+import { academicCalendarDoc, publicHolidaysDoc, storedRestDays } from "./calendar.schema";
 import type { RestDaysRevision } from "./calendar.types";
 
 const HOUR_MS = 60 * 60_000;
-// WHY: a holiday the poller stores reaches every replica within ten minutes (ADR 0012, D6); a failed read
+// WHY: a holiday the crawler stores reaches every replica within ten minutes (ADR 0012, D6); a failed read
 // keeps the last good years a day.
 const STORED_YEARS_TTL_MS = 10 * 60_000;
 const STORED_YEARS_STALE_WINDOW_MS = 24 * HOUR_MS;
@@ -28,10 +28,7 @@ export class CalendarRepository {
     ttlMs: STORED_YEARS_TTL_MS,
     staleWindowMs: STORED_YEARS_STALE_WINDOW_MS,
     serveStale: "on-reload-failure",
-    load: () =>
-      this.publicHolidays()
-        .find({}, { projection: { _id: 1, holidays: 1, fetchedAt: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS })
-        .toArray(),
+    load: () => this.readPublicHolidayYears(),
   });
   // WHY: the crawler writes once a day; the stored years' bound and stale window serve it too.
   private readonly academicYears = createCachedLoader({
@@ -44,10 +41,6 @@ export class CalendarRepository {
 
   listPublicHolidayYears(): Promise<readonly PublicHolidaysDoc[]> {
     return this.storedYears.get();
-  }
-
-  clearPublicHolidaysCache(): void {
-    this.storedYears.clear();
   }
 
   listAcademicYears(): Promise<readonly AcademicCalendarDoc[]> {
@@ -64,6 +57,17 @@ export class CalendarRepository {
     const parsed = storedRestDays.safeParse(doc);
     if (parsed.success) return { revision: parsed.data.revision, restDays: parsed.data.data };
     return this.reportInvalidRestDays(doc.revision, parsed.error);
+  }
+
+  private async readPublicHolidayYears(): Promise<PublicHolidaysDoc[]> {
+    const docs = await this.publicHolidays()
+      .find({}, { projection: { _id: 1, holidays: 1, fetchedAt: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS })
+      .toArray();
+    const { valid, invalid } = parseEach(docs, publicHolidaysDoc, (doc, index) => this.keyOf(doc, index));
+    if (invalid.length > 0) {
+      logger.error({ event: "calendar.public_holidays.invalid_document", invalid }, "Public holiday years left out, their dates answered by the rule");
+    }
+    return valid;
   }
 
   private async readAcademicYears(): Promise<AcademicCalendarDoc[]> {

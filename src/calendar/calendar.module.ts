@@ -6,6 +6,6 @@ import { CalendarService } from "./calendar.service";
 // SEE: docs/explanation/calendar-architecture.md
 @Module({
   providers: [CalendarService, CalendarRepository, Clock],
-  exports: [CalendarService, CalendarRepository],
+  exports: [CalendarService],
 })
 export class CalendarModule {}

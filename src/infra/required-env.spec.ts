@@ -185,26 +185,6 @@ describe("validateEnv refuses an unknown ROLE", () => {
   });
 });
 
-describe("describeMissingRequired DATA_GO_KR_SERVICE_KEY", () => {
-  // The holiday calendar sync cannot call getRestDeInfo without it, and there is no default.
-  it("reports DATA_GO_KR_SERVICE_KEY as missing when it is unset", () => {
-    // Arrange
-    const saved = process.env.DATA_GO_KR_SERVICE_KEY;
-    delete process.env.DATA_GO_KR_SERVICE_KEY;
-
-    // Act & Assert
-    try {
-      jest.isolateModules(() => {
-        const mod = require("./required-env");
-        expect(mod.describeMissingRequired()).toContain("  holidays.serviceKey (env: DATA_GO_KR_SERVICE_KEY)");
-      });
-    } finally {
-      if (saved === undefined) delete process.env.DATA_GO_KR_SERVICE_KEY;
-      else process.env.DATA_GO_KR_SERVICE_KEY = saved;
-    }
-  });
-});
-
 describe("requiredValues scopes each value to the roles that read it", () => {
   it("scopes the pollers' upstream keys to poller, what only serving reads to api, and the rest to all", () => {
     // Act
@@ -232,7 +212,6 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       NAVER_API_KEY_ID: "poller",
       NAVER_API_KEY: "poller",
       TMAP_APP_KEY: "poller",
-      DATA_GO_KR_SERVICE_KEY: "poller",
       SEOUL_SUBWAY_API_KEY: "poller",
       SHUTTLE_TOKEN: "poller",
       SENTRY_DSN: "all",
