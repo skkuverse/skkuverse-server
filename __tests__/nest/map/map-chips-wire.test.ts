@@ -127,6 +127,7 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "link", actionType: "route", actionValue: "/search" },
         isReset: false,
         list: null,
+        tabs: [],
       },
       {
         id: "lost_found",

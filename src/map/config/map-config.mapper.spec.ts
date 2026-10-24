@@ -181,6 +181,16 @@ describe("toMapChips on the tab lens", () => {
     expect(unstated).not.toHaveProperty("tabs");
     expect(unstated).not.toHaveProperty("opensIn");
   });
+
+  it("sends an empty tabs as an empty array, which puts the chip in no tab, rather than leaving the key out", () => {
+    // Act
+    const [chip] = toMapChips([{ ...routes, tabs: [] }], "ko");
+
+    // Assert
+    // An absent `tabs` means the map tab, so dropping the empty array would put the chip back there.
+    expect(chip).toHaveProperty("tabs", []);
+    expect(chip).not.toHaveProperty("opensIn");
+  });
 });
 
 describe("toMapConfig", () => {

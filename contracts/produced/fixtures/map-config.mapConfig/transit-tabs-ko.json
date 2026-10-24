@@ -195,7 +195,8 @@
           "actionValue": "/search"
         },
         "isReset": false,
-        "list": null
+        "list": null,
+        "tabs": []
       },
       {
         "id": "lost_found",

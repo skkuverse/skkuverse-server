@@ -75,7 +75,7 @@ const SPRING_WINDOW = { from: new Date("2027-03-01T15:00:00.000Z"), until: new D
 
 /** What today's code answered inside the eskara-2026 window, by its weak ETag: the bytes of each expected body. */
 const FESTIVAL_ETAGS = {
-  config: { ko: 'W/"240c-rjUyjpFUm6Fpiv5ph54qoHghYFI"', en: 'W/"23de-RP4aVODvRQoU7Ri34SmSBW4uGb4"', zh: 'W/"2410-36YXwr7ZxYK8LVD0MgmCi/OAcrk"' },
+  config: { ko: 'W/"2416-MY5p0LsULrCvLHrVS3Nuk9k+Lyk"', en: 'W/"23e8-VHqHc/ysIDGXtwOjMSyK91kKwYA"', zh: 'W/"241a-qYLbcMycR4KYWaYYpFRdkJKVvu8"' },
   event: 'W/"c727-fVwEys0vAIoqll7o4lBJnn9FoaI"',
   details: 'W/"f425-ALDI+OyhS/VW9shLUW9kAgaizGE"',
 };
