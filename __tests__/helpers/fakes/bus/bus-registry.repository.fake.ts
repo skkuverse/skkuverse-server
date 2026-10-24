@@ -3,7 +3,7 @@
  * real writes keep them (insertRoute never overwrites, updateStations writes
  * only where the stored version is the one read; both pinned in
  * bus-registry.repository.spec.ts). Reads return a copy. `failWith` makes
- * every call reject.
+ * every call reject. `readRouteIds` records the route id of every read.
  */
 import type { JongroRouteDocument } from "../../../../src/bus/registry/bus-registry.document";
 import type { BusRegistryRepository } from "../../../../src/bus/registry/bus-registry.repository";
@@ -12,6 +12,7 @@ import type { PublicOf } from "../public-of";
 export class FakeBusRegistryRepository implements PublicOf<BusRegistryRepository> {
   routes = new Map<string, JongroRouteDocument>();
   failWith: Error | null = null;
+  readRouteIds: string[] = [];
 
   async insertRoute(doc: JongroRouteDocument): Promise<boolean> {
     this.fail();
@@ -21,6 +22,7 @@ export class FakeBusRegistryRepository implements PublicOf<BusRegistryRepository
   }
 
   async findRoute(routeId: string): Promise<JongroRouteDocument | null> {
+    this.readRouteIds.push(routeId);
     this.fail();
     const doc = this.routes.get(routeId);
     return doc === undefined ? null : structuredClone(doc);

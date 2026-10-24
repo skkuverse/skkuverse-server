@@ -71,13 +71,14 @@ class StopIndexBuilder {
   }
 }
 
-/** WHY: each stop's served routes, in the order /bus/config lists the HSSC line, the shuttle groups, then each Jongno route. */
+// WHY: each stop's served routes, in the order /bus/config lists the HSSC line, the shuttle groups, then each Jongno route;
+// an ARS alias of a pole another stop's TOPIS alias claims serves nothing, so it is named with the unmatched ones.
 export function toStopIndex(snapshot: BusStopsSnapshot, routes: readonly RegistryRoute[]): Omit<StopIndex, "registryFailure"> {
   const builder = new StopIndexBuilder(snapshot);
   builder.addHsscLine();
   builder.addSequences();
   for (const route of routes) builder.addJongroRoute(route);
-  const unmatchedArsIds = [...snapshot.stopIdByArsId.keys()].filter((arsId) => !builder.stopIdByArsId.has(arsId));
+  const unmatchedArsIds = [...snapshot.stopIdByArsId].filter(([arsId, stopId]) => builder.stopIdByArsId.get(arsId) !== stopId).map(([arsId]) => arsId);
   const unmatchedTopisIds = [...snapshot.stopIdByTopisId.keys()].filter((topisId) => !builder.matchedTopisIds.has(topisId));
   const index = deepFreeze({ stopById: builder.stopById, stopIdByArsId: builder.stopIdByArsId, unmatchedArsIds, unmatchedTopisIds });
   return { snapshot, ...index };

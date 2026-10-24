@@ -479,8 +479,25 @@ describe("BusStopIndexService with 7800 unlisted", () => {
       asReal<BusRoutePathService>(routePaths),
       { now: () => new Date() },
     );
-    return { service };
+    return { service, registryRepository };
   }
+
+  it("reads 7800's missing registry document once per REGISTRY_RETRY_MS, not once per request", async () => {
+    // Arrange
+    const { service, registryRepository } = setup7800({ isStored: false });
+    const readsOf7800 = () => registryRepository.readRouteIds.filter((routeId) => routeId === "gyeonggi7800").length;
+
+    // Act
+    await service.listStops();
+    await service.findStop("nsc-n-center");
+    await service.findStop("seoul-01592");
+    const withinRetry = readsOf7800();
+    jest.setSystemTime(NOW.getTime() + PAST_REGISTRY_TTL_MS);
+    await service.findStop("nsc-n-center");
+
+    // Assert
+    expect([withinRetry, readsOf7800()]).toEqual([1, 2]);
+  });
 
   it("serves the whole index before 7800's poller stored its stations, logging no unread registry and listing no stop for its alias", async () => {
     // Arrange

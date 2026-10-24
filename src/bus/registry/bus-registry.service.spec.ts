@@ -125,6 +125,28 @@ describe("BusRegistryService.routeOf over the routes stored on 2026-10-17", () =
   });
 });
 
+describe("BusRegistryService.routeOf for a route that stays missing", () => {
+  it("logs it at most once per REGISTRY_TTL_MS, counting the lines it left out, while each read still answers the 503", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    // Built under the fake clock, which its log throttle reads.
+    service = new BusRegistryService(asReal<BusRegistryRepository>(repository), clock);
+    const reads = () => service.routeOf("gyeonggi7800").catch((err: unknown) => err);
+
+    // Act
+    const answers = [await reads(), await reads(), await reads()];
+    jest.setSystemTime(NOW.getTime() + 30_001);
+    await reads();
+
+    // Assert
+    expect(answers.map((err) => (err as { code?: string }).code)).toEqual(["JONGRO_REGISTRY_UNAVAILABLE", "JONGRO_REGISTRY_UNAVAILABLE", "JONGRO_REGISTRY_UNAVAILABLE"]);
+    expect(callsOf("error", "bus.jongro.registry_missing").map(([fields]) => [fields.routeId, fields.suppressed])).toEqual([
+      ["gyeonggi7800", 0],
+      ["gyeonggi7800", 2],
+    ]);
+  });
+});
+
 describe("BusRegistryService.routeOf", () => {
   it("rejects a missing route with a 503 JONGRO_REGISTRY_UNAVAILABLE and logs it at error", async () => {
     // Act & Assert

@@ -45,7 +45,7 @@ export interface StopIndex {
   stopById: ReadonlyMap<string, IndexedStop>;
   /** WHY: every ARS number a served route stops at, to its stop id: `seoul-<arsId>` or the local stop aliasing it. */
   stopIdByArsId: ReadonlyMap<string, string>;
-  /** WHY: aliased ARS numbers no stored station has, which serve nothing. */
+  /** WHY: aliased ARS numbers no stored station has, or whose pole another stop's TOPIS alias claims, which serve nothing. */
   unmatchedArsIds: readonly string[];
   unmatchedTopisIds: readonly string[];
   /** WHY: the first registry route that could not be read, so a pole only it names is not answered as gone. */
