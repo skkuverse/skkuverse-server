@@ -14,6 +14,7 @@ import { BusEtaProbeClient } from "../../../src/bus/eta/probe/bus-eta-probe.clie
 import { BusEtaTravelClient } from "../../../src/bus/eta/travel/bus-eta-travel.client";
 import { BusShuttleGpsClient } from "../../../src/bus/private-file";
 import { BusShuttleStopClient } from "../../../src/bus/private-file";
+import { BusRealtimeGbisClient } from "../../../src/bus/realtime/gbis/bus-realtime-gbis.client";
 import { BusRealtimeHsscClient } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.client";
 import { BusRealtimeJongroClient } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.client";
 import { BusRoutePathClient } from "../../../src/bus/route-path/bus-route-path.client";
@@ -27,6 +28,7 @@ import { FakeBusEtaProbeClient } from "../fakes/bus/bus-eta-probe.client.fake";
 import { FakeBusEtaTravelClient } from "../fakes/bus/bus-eta-travel.client.fake";
 import { FakeBusShuttleGpsClient } from "../fakes/bus/private-file";
 import { FakeBusShuttleStopClient } from "../fakes/bus/private-file";
+import { FakeBusRealtimeGbisClient } from "../fakes/bus/bus-realtime-gbis.client.fake";
 import { FakeBusRealtimeHsscClient } from "../fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../fakes/bus/bus-realtime-jongro.client.fake";
 import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake";
@@ -48,6 +50,7 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
       { provide: BusEtaTravelClient, useValue: new FakeBusEtaTravelClient() },
       { provide: BusShuttleGpsClient, useValue: new FakeBusShuttleGpsClient() },
       { provide: BusShuttleStopClient, useValue: new FakeBusShuttleStopClient() },
+      { provide: BusRealtimeGbisClient, useValue: new FakeBusRealtimeGbisClient() },
       { provide: BusRealtimeHsscClient, useValue: new FakeBusRealtimeHsscClient() },
       { provide: BusRealtimeJongroClient, useValue: new FakeBusRealtimeJongroClient() },
       { provide: BusRoutePathClient, useValue: new FakeBusRoutePathClient() },

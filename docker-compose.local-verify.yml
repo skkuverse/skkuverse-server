@@ -25,6 +25,7 @@ x-api-dev-env: &api-dev-env
   - SUBWAY=off
   - SHUTTLE=off
   - REGIONAL_BUS=off
+  - GBIS=off
 
 services:
   poller:
@@ -45,6 +46,7 @@ services:
       - SUBWAY=off
       - SHUTTLE=off
       - REGIONAL_BUS=off
+      - GBIS=off
 
   api-1:
     environment: *api-dev-env

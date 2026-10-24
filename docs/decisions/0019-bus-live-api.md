@@ -9,7 +9,7 @@ audience: internal
 
 # 0019. Bus Live API — One Arrival Shape for Every Source
 
-> Why `GET /bus/live/:groupId` and the stop page serve every realtime line, Jongno and HSSC alike, and every timetabled shuttle run in one arrival and one vehicle shape, and how the old realtime route is retired. Read it before you add a source, a field or an enum value to either route. Accepted 2026-10-22, D13 to D16 added 2026-10-23; the wire and the client rules are in [bus-live-api.md](../reference/bus-live-api.md), the flows in [bus architecture](../explanation/bus-architecture.md).
+> Why `GET /bus/live/:groupId` and the stop page serve every realtime line, Jongno and HSSC alike, and every timetabled shuttle run in one arrival and one vehicle shape, and how the old realtime route is retired. Read it before you add a source, a field or an enum value to either route. Accepted 2026-10-22, D13 to D16 added 2026-10-23, D17 on 2026-10-24; the wire and the client rules are in [bus-live-api.md](../reference/bus-live-api.md), the flows in [bus architecture](../explanation/bus-architecture.md).
 
 ## Context
 
@@ -120,6 +120,20 @@ Owner, 2026-10-23 (option A): NAVER Map shows a line's 방면 as tabs (종로07:
 - The stop page's live entry carries `direction: { id, label } | null` beside `towards`, since it stands alone (D5): `towards` is the next stop, `direction` the 방면 the station lies on.
 
 Not chosen: a split from the registry's turnaround stop alone, which places the flip the same way but names no terminal, and labels kept by hand per route, a second source that drifts from TOPIS.
+
+### D17. Seats left are the vehicle's, from GBIS, only while fresh
+
+Owner, 2026-10-24 ([7800 plan](../plans/7800-unified-arrivals.md), §3.3 and §5). TOPIS reports no load for 7800 (`reride_Num` is 0 on every row), but GBIS's location API counts each bus's free seats, and 7800 is a seated express bus a rider lets pass when it is full.
+
+- A vehicle carries `seatsLeft`, an integer from 0, or null, right after `occupancy`. It is a key of its own: `occupancy` requires a crowding level, and a seat count is not one.
+- The source is GBIS `buslocationservice/v2/getBusLocationListv2` per route: each bus's `remainSeatCnt`, joined by `vehId`, which is the id TOPIS gives the same bus (13 of the 14 buses GBIS named on 2026-10-24 at 20:22 KST; the 14th stood at the 호매실 terminal with no TOPIS position). Its labels are not shifted, unlike `getBusArrivalItemv2`'s. A negative count, which GBIS's guide documents as no information, is null.
+- Freshness: the poller (`gbis-seats-7800`, switch `GBIS`) asks every 90 s from 04:50 to 02:30 KST (the weekday last bus leaves 사당 at 01:00 and reaches 호매실 about 02:00), at most 867 of the development account's 1,000 calls a day, and the api serves an answer at most 200 s after this server fetched it, so one failed tick keeps the seats and a second serves null. A GBIS outage or spent quota (`bus.gbis.quota_exceeded`) makes seats null and changes nothing else: arrivals and positions come from TOPIS. A bus row that does not parse rejects the whole tick, as a malformed TOPIS row does, so a format change shows as a failing poller and seats go null at the bound rather than serving part of an answer. A `bus_seats` read that fails (a timeout, an Atlas blip) serves no seats and logs `bus.gbis.read_failed` at most once a minute; it never fails the live answer, whose arrivals `bus_cache` holds.
+- Null is every Jongno and HSSC bus (no source), a 7800 bus GBIS did not name or said it does not know, and every 7800 bus with no fresh answer. A null never means full; `0` does.
+- The poller writes one `bus_seats` document per route and the api reads it ([ADR 0012](0012-runtime-roles.md)). It is not a `bus_cache` key: that collection's TTL index drops a key a minute after its write, sooner than the 90 s tick.
+- `capabilities.seats` on `/bus/config` (D2) comes when 7800 is listed there (the plan's PR 8 and Q2): `/bus/config` stays byte for byte until then, and while no listed route has seats, a client shows a seat count only where `seatsLeft` is a number.
+- Additive: the key is new on the vehicle of the live route and the stop page, which clients parse key by key (D3) and whose published schemas allow other keys, so no version moves. Every key stays present (D2): it is null, not missing, where there is no source.
+
+Not chosen: polling every 30 s, which needs the operating account (the plan's Q7), and a join by plate, since the ids match.
 
 ## Consequences
 

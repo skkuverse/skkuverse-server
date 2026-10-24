@@ -67,7 +67,7 @@ const arrival = (vehicleId: string | null, providerText: string): Arrival => ({
   vehicleId,
   providerText,
 });
-const vehicle = (id: string): Vehicle => ({ id, plateNumber: null, occupancy: null, isLastBus: null, isLowFloor: null, position: null, trajectory: null });
+const vehicle = (id: string): Vehicle => ({ id, plateNumber: null, occupancy: null, seatsLeft: null, isLastBus: null, isLowFloor: null, position: null, trajectory: null });
 
 describe("toLiveEntry", () => {
   const group: LiveGroup = {

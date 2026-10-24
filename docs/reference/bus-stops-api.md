@@ -3,7 +3,7 @@ title: Bus Stops API Reference
 type: reference
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-24
 audience: internal
 ---
 
@@ -146,7 +146,7 @@ Every read goes through the caches the stop page already uses (the `bus-stops` d
       {
         "kind": "live", "groupId": "jongro07", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "direction": { "id": "100900220", "label": "성균관대운동장 방면" }, "action": "board",
         "stationsVersion": "0346768f2b776f45", "updatedAt": "2026-10-20T14:09:55+09:00", "operation": "running",
-        "vehicles": [{ "id": "100000203", "plateNumber": "서울74사2703", "occupancy": { "level": "relaxed", "passengerCount": 9 }, "isLastBus": false, "position": { "...": "..." }, "trajectory": [] }],
+        "vehicles": [{ "id": "100000203", "plateNumber": "서울74사2703", "occupancy": { "level": "relaxed", "passengerCount": 9 }, "seatsLeft": null, "isLastBus": false, "position": { "...": "..." }, "trajectory": [] }],
         "arrivals": [{
           "status": "enRoute", "expectedArrivalAt": "2026-10-20T14:13:50+09:00", "expectedDepartureAt": null,
           "scheduledArrivalAt": null, "scheduledDepartureAt": null, "basis": "provider",

@@ -161,7 +161,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     // Arrange
     const { service, live } = setup();
     const arrival = { status: "enRoute" as const, expectedArrivalAt: "2026-10-20T14:12:00+09:00", expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, basis: "estimate" as const, stopsAway: 2, isLastBus: null, vehicleId: "32149", providerText: null };
-    const bus = { id: "32149", plateNumber: null, occupancy: null, isLastBus: null, isLowFloor: null, position: null, trajectory: null };
+    const bus = { id: "32149", plateNumber: null, occupancy: null, seatsLeft: null, isLastBus: null, isLowFloor: null, position: null, trajectory: null };
     live.groups.set("hssc", liveGroup("hssc", { operation: "running", vehicles: [bus, { ...bus, id: "32150" }], stations: [{ stationIndex: 6, stopId: "hssc-hyehwa-exit1", arsId: null, operation: "running", arrivals: [arrival] }] }));
     live.directions.set("hssc:6:null", { id: "toCampus", label: "上学" });
 

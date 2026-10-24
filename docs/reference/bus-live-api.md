@@ -3,7 +3,7 @@ title: Bus Live API Reference
 type: reference
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-24
 audience: internal
 ---
 
@@ -35,7 +35,7 @@ audience: internal
     "updatedAt": "2026-10-20T09:59:55+09:00",
     "operation": "running",
     "vehicles": [{
-      "id": "32149", "plateNumber": null, "occupancy": null, "isLastBus": null, "isLowFloor": null,
+      "id": "32149", "plateNumber": null, "occupancy": null, "seatsLeft": null, "isLastBus": null, "isLowFloor": null,
       "position": {
         "stationIndex": 6, "status": "inTransit", "progress": null, "sectionMeters": null, "coords": null,
         "nextStationAt": "2026-10-20T10:00:20+09:00", "positionAt": "2026-10-20T09:59:50+09:00", "checkedAt": "2026-10-20T09:59:55+09:00"
@@ -118,6 +118,7 @@ The arrival `status` lost `atStop` on 2026-10-23: a standing bus is `arriving`. 
 | `id` | string | Stable for the service day: TOPIS `vehId`, the HSSC line number (one line is one bus) |
 | `plateNumber` | string \| null | The full plate (`서울74사5537`); shorten it on the client if the design wants the last four digits |
 | `occupancy` | object \| null | `{ level: "relaxed" \| "normal" \| "crowded", passengerCount: int \| null }`, from the TOPIS row nearest ahead of the bus |
+| `seatsLeft` | int \| null | Seats still free on the bus, `0` when none ([ADR 0019, D17](../decisions/0019-bus-live-api.md)). Only 7800 has a source, GBIS's `remainSeatCnt` for the same `vehId`, from an answer this server fetched at most 200 s ago; null on every Jongno and HSSC bus, on a 7800 bus GBIS did not name or said it does not know, and on every 7800 bus while GBIS is down, over its quota or outside 04:50–02:30 KST, and whenever `bus_seats` cannot be read |
 | `isLastBus` | boolean \| null | True when any TOPIS row naming the bus says 막차 (TOPIS flags it per row, and a 곧 도착 row carries no [막차] text); every arrival naming the bus carries this value. Null when no row names the bus |
 | `isLowFloor` | boolean \| null | True for a low-floor bus (저상버스), false for a general one, from TOPIS's bus type: its position row's when it has a position, else the arrival row its plate comes from, never a mix ([ADR 0019, D13](../decisions/0019-bus-live-api.md)). Null when that row names no type (an articulated bus, a row written before the field shipped) and always on the HSSC line |
 | `position` | object \| null | Null for a bus an arrival names but no position row has |
@@ -170,6 +171,7 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 - **Minutes.** `remaining = expectedArrivalAt − (deviceNow + offset)`. Show `max(1, round(remaining / 60))` minutes; show 곧 도착 when `status` is `arriving` or `remaining ≤ 60 s`, and keep showing it while the arrival is overdue by up to two minutes; past that, drop the arrival until the next poll replaces it. An `arriving` arrival with a null `expectedArrivalAt` (a standing bus) shows 곧 도착 until a poll stops serving it.
 - **No departure countdown.** A live arrival's `expectedDepartureAt` is always null: never show 출발 or a time until the bus leaves. A standing bus is `arriving`.
 - **Markers.** Dim a marker when `checkedAt` is more than 120 s old and freeze it past 180 s, whatever `positionAt` says: a stop-event source repeats its last event until the next stop, so a minutes-old `positionAt` is normal. Move a marker along `trajectory` between knots, linearly, against `serverNow`, and hold it at the last knot. A poll can take a bus back: an estimate that ran ahead of the feed is withdrawn, so a bus is served at an earlier station than before. On the HSSC line the turnaround no longer does (a bus leaves 농구장 only once a later stop reports it, ADR 0018, D7) and a feed row that puts a bus back in its lap is held off (D8), but the rule holds for every line. A client that never moves a driving marker backward still places a standing one (`waitingToDepart`, or `atStop` with no trajectory) on its served station.
+- **Seats.** Show `seatsLeft` as a count (`37석`) on a vehicle where it is a number, `0` included (만석), and nothing for `null`: a null never means full. It moves at most every 90 s, so read it as a recent count, not a live one. On the stop page the same vehicle object carries it.
 - **Low floor.** Show a 저상 badge on a vehicle whose `isLowFloor` is `true`, and nothing for `false` or `null`. Where `capabilities.lowFloor` is `false` (the HSSC line) hide the badge and any legend for it, since the source never says. A client that wants it on an arrival reads the vehicle its `vehicleId` names; arrivals carry no copy.
 - **Loops.** On a group whose `/bus/config` `isLoop` is true, `s` may pass the last index: place the marker at `s mod stationCount`, the section after the last station leading back to station 0. Jongno 02, whose station list repeats its terminal, is not a loop. The wrap matters only to a client that extrapolates without a cap; one that holds a marker at `stationIndex + 0.95` until a poll confirms the next stop wraps when a poll moves the bus to station 0, and both are valid.
 

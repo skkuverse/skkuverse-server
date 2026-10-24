@@ -18,7 +18,7 @@ function toVehicle(bus: HsscLiveBus, checkedAt: Date): Vehicle {
   const [next] = bus.lapTimes;
   return {
     id: bus.anchor.vehicleId,
-    ...{ plateNumber: null, occupancy: null, isLastBus: null, isLowFloor: null },
+    ...{ plateNumber: null, occupancy: null, seatsLeft: null, isLastBus: null, isLowFloor: null },
     position: {
       stationIndex: bus.stationIndex,
       status: toHsscPositionStatus(bus),
