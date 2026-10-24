@@ -17,7 +17,8 @@ export const EXPLICIT_OFFSET_RE = /(Z|[+-]\d{2}:\d{2})$/;
 export const BASE_CHIPS: readonly MapChipSpec[] = [
   {
     id: "building_map", emoji: "🏢", label: { ko: "건물지도", en: "Building Map", zh: "建筑地图" },
-    action: { kind: "link", actionType: "route", actionValue: "/map/hssc" }, isReset: false, list: null,
+    // WHY: for now the transit tab shows the map tab's chips; a link chip runs on the tab it is tapped on, so no `opensIn`.
+    action: { kind: "link", actionType: "route", actionValue: "/map/hssc" }, isReset: false, list: null, tabs: ["map", "transit"],
   },
   {
     id: "building_code", emoji: "🔢", label: { ko: "건물코드", en: "Building Code", zh: "建筑编号" },
@@ -26,17 +27,12 @@ export const BASE_CHIPS: readonly MapChipSpec[] = [
   },
   {
     id: "lost_found", emoji: "🧳", label: { ko: "분실물", en: "Lost & Found", zh: "失物招领" },
-    action: { kind: "link", actionType: "webview", actionValue: "/skku/lostandfound" }, isReset: false, list: null,
+    action: { kind: "link", actionType: "webview", actionValue: "/skku/lostandfound" }, isReset: false, list: null, tabs: ["map", "transit"],
   },
   {
     id: "inquiry", emoji: "💬", label: { ko: "문의하기", en: "Inquiry", zh: "咨询" },
     // WHY: https, as the home grid's copy of this link must be (`isBrokenLinkAction`); http only redirects here.
-    action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" }, isReset: false, list: null,
-  },
-  {
-    id: "shuttle_routes", emoji: "🚌", label: { ko: "셔틀 노선", en: "Shuttle Routes", zh: "班车路线" },
-    action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
-    isReset: false, list: null, tabs: ["map", "transit"], opensIn: "map",
+    action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" }, isReset: false, list: null, tabs: ["map", "transit"],
   },
 ];
 

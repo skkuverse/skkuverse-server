@@ -337,7 +337,7 @@ async function bootMapApp(map: FakeMapRepository, layerSets: FakeMapLayerSetRepo
 }
 
 const BASE_LAYER_IDS = ["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"];
-const BASE_CHIP_IDS = ["building_map", "building_code", "lost_found", "inquiry", "shuttle_routes"];
+const BASE_CHIP_IDS = ["building_map", "building_code", "lost_found", "inquiry"];
 
 describe("the map routes with a festival live and no layer set ever read", () => {
   let missingApp: NestExpressApplication;
