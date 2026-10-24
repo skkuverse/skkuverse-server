@@ -38,7 +38,7 @@ export interface ShuttleRun {
   estimate: Pick<ServedEstimate, "source" | "updatedAt"> | null;
 }
 
-/** WHY: the shown week, or it and the next, which a stop page reads only when the shown week lists too few runs (review F2). */
+/** WHY: the shown week, or it and the next, which a stop page reads only when the shown week lists too few runs (ADR 0019, D12). */
 export interface RunWindow {
   from: Date;
   weekCount: 1 | 2;
