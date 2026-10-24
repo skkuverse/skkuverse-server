@@ -3,7 +3,7 @@ import type { Campus } from "../../building.types";
 import type { PinnedPlace, PlaceId, PlaceIndex, ResolvedPlace } from "../building-place.types";
 import type { CampusBuilding, CampusPrimaryPlace, PlaceDisplay } from "./building-place-display.types";
 
-// WHY: the owner's order for a session's pin: a room says the most, then a building, then a facility.
+// WHY: a room says the most about where a session is, then a building, then a facility.
 const SPECIFICITY: Readonly<Record<PinnedPlace["kind"], number>> = { space: 0, building: 1, facility: 2 };
 
 const isPinned = (place: ResolvedPlace): place is PinnedPlace => place.kind !== "unresolved";

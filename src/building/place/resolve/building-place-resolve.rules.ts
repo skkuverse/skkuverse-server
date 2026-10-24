@@ -157,15 +157,19 @@ function toMostSpecific(targetSets: ReadonlyArray<readonly string[]>): string[] 
   return unique(targetSets.filter((set) => !targetSets.some((other) => isNarrowedBy(set, other))).flat());
 }
 
-function nscBuildingNumbers(rest: string, index: PlaceIndex): string[][] {
-  return [...rest.matchAll(NSC_BUILDING_NUMBER_PATTERN)].map((m) => `${NSC_BUILDING_DIGIT}${m[1]}`).filter((k) => index.placeByKey.has(k)).map((k) => [k]);
+// WHY: other towns number blocks `NN동` too, so a bare one counts only with a building name, or a campus
+// signal for the natural sciences campus (its text, the hint or the board) and no off-campus word.
+function nscBuildingNumbers(reading: PlaceReading, hits: readonly PlaceAlias[], index: PlaceIndex): string[][] {
+  const isOnNsc = [reading.textCampus, reading.hint, reading.boardCampus].includes("nsc") && !reading.isOffcampusWord;
+  if (hits.length === 0 && !isOnNsc) return [];
+  return [...reading.rest.matchAll(NSC_BUILDING_NUMBER_PATTERN)].map((m) => `${NSC_BUILDING_DIGIT}${m[1]}`).filter((k) => index.placeByKey.has(k)).map((k) => [k]);
 }
 
 function toRemainder(reading: PlaceReading, hits: readonly PlaceAlias[], index: PlaceIndex): string {
   let remainder = toMatchText(reading.rest);
   for (const alias of hits) if (!alias.isWord) remainder = remainder.replaceAll(alias.text, "");
   for (const { pattern } of index.patterns.campusPhrases) {
-    // WHY: as the prototype the labelled set was measured on: a campus phrase restarts from the whole rest.
+    // WHY: with a campus phrase the remainder restarts from the whole rest and keeps the building name, which the labelled set's room matches rely on.
     if (pattern.test(reading.rest)) remainder = toMatchText(reading.rest.replace(new RegExp(pattern.source, `${pattern.flags}g`), " "));
   }
   return remainder.replace(SKKU_NAME_PATTERN, "");
@@ -274,12 +278,13 @@ function resolveBoardRoom(reading: PlaceReading, remainder: string, index: Place
 function resolveUnnamed(reading: PlaceReading, remainder: string, index: PlaceIndex): ResolvedPlace {
   const named = resolveWeakName(reading, index) ?? resolveOffice(reading, index) ?? resolveBoardRoom(reading, remainder, index);
   if (named) return named;
-  if (reading.hasLink || index.patterns.online.test(reading.text)) return unresolved("online");
+  if (reading.hasLink) return unresolved("online");
+  if (index.patterns.online.test(reading.text)) return index.roomKeys.has(toMatchText(reading.rest)) ? UNKNOWN : unresolved("online");
   return reading.isOffcampusWord ? unresolved("offcampus") : resolveCampusOnly(reading, index);
 }
 
 function toNamedKeys(reading: PlaceReading, hits: readonly PlaceAlias[], index: PlaceIndex): string[] | null {
-  const keys = toMostSpecific([...hits.map((a) => a.targets), ...nscBuildingNumbers(reading.rest, index)]);
+  const keys = toMostSpecific([...hits.map((a) => a.targets), ...nscBuildingNumbers(reading, hits, index)]);
   const keysInCampus = reading.textCampus ? inTextCampus(keys, reading, index) : keys;
   if (keys.length > 0 && keysInCampus.length === 0) return reading.codeHits.length > 0 ? keys : null;
   return keysInCampus.length > 0 ? keysInCampus : keys;
