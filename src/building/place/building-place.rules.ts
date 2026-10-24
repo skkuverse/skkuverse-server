@@ -56,7 +56,11 @@ function toIndexedSpaces(spaces: readonly PlaceSpace[]): IndexedSpace[] {
 
 function groupBy<T>(rows: readonly T[], keyOf: (row: T) => string): Map<string, T[]> {
   const groups = new Map<string, T[]>();
-  for (const row of rows) groups.set(keyOf(row), [...(groups.get(keyOf(row)) ?? []), row]);
+  for (const row of rows) {
+    const group = groups.get(keyOf(row));
+    if (group) group.push(row);
+    else groups.set(keyOf(row), [row]);
+  }
   return groups;
 }
 
@@ -181,6 +185,7 @@ export function toPlaceIndex(skkumap: PlaceSkkumap, lexicon: PlaceLexicon): Plac
     prefixByBuildNo,
     aliases,
     officeSpacesByKey: toOfficeSpaces(spaces, lexicon),
+    roomKeys: new Set(spaces.flatMap((s) => s.roomKeys)),
     roomAliases: roomAliases.flatMap((r) => (r.spaces.length === 1 && r.spaces[0] ? [{ text: r.text, space: r.spaces[0] }] : [])).sort((a, b) => b.text.length - a.text.length),
     patterns: toPatterns(lexicon),
     unpinnedFacilities: unpinned,

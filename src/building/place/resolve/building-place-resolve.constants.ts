@@ -1,8 +1,10 @@
 export const LINK_PATTERN =
   /https?:\/\/\S+|www\.\S+|[\p{L}\p{N}_.+-]+@[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)+|\b[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)*\.(?:com|net|org|io|kr|edu)\b\S*/giu;
 
-// QUIRK(skku): a printed room code is a spaceCd as is (`9B217`, `33B101`, `21101A`, `480209`), never a phone or a date.
-export const ROOM_CODE_PATTERN = /(?<![0-9A-Za-z\-./:@])([0-9]{1,3}B?[0-9]{2,6}[A-Za-z]?)(?![0-9A-Za-z])/g;
+// QUIRK(skku): a printed room code is a spaceCd as is (`9B217`, `33B101`, `21101A`, `480209`); a number after a
+// price or count word, or before a counter (`21301원`, `선착순 80301명`), a phone number or a date is no code.
+export const ROOM_CODE_PATTERN =
+  /(?<![0-9A-Za-z\-./:@,])(?<!(?:참가비|비용|금액|가격|요금|상금|정원|인원|선착순|최대|최소|총|약|₩|\$)\s*)([0-9]{1,3}B?[0-9]{2,6}[A-Za-z]?)(?![0-9A-Za-z])(?![,.]\d|원|명|개|번|%|회|시간|일|분|만|천|건|년|월|세|점|위|차|학기)/gu;
 
 export const MIN_ROOM_CODE_LENGTH = 5;
 

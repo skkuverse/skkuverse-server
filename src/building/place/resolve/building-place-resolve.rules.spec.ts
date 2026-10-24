@@ -1,6 +1,15 @@
 /**
- * (An agent tooling note is left out of the public history.)
+ * resolvePlace: one place string a notice names, with the notice's campus
+ * hint and board, to one campus place from skkumap, deterministically. The
+ * text decides; the hint and the board only choose between candidates the
+ * text already produced, so a wrong hint never moves a unique code or name,
+ * and a code or name that still fits both campuses is never guessed.
  *
+ * Guards: the labelled set of 220 second-term notice strings never gets a
+ * wrong building and keeps a floor on recall; the explicit cases pin each
+ * rule of the method order and the lexicon's own places; the adversarial
+ * negatives (another town's `동` numbers, prices and counts, phone numbers,
+ * years) gate precision beyond the labelled set.
  */
 import { placeLabels, skkumapPlaces, type LabelledPlace } from "../../../../__tests__/helpers/building/places";
 import type { BuildNo, Campus, SpaceCd } from "../../building.types";
@@ -51,10 +60,10 @@ function judge(expected: LabelledPlace, got: ResolvedPlace): Verdict {
 }
 
 describe("resolvePlace over the labelled second-term strings", () => {
-  const PROTOTYPE_BLIND_RECALL = 82;
-  const PROTOTYPE_EXACT_ROOMS = 50;
+  const MIN_RIGHT_PINS = 82;
+  const MIN_EXACT_ROOMS = 50;
 
-  it("never pins a place the label does not name, and keeps at least the prototype's recall", () => {
+  it("never pins a place the label does not name, and keeps its recall floor", () => {
     // Arrange
     const labels = placeLabels();
 
@@ -68,8 +77,8 @@ describe("resolvePlace over the labelled second-term strings", () => {
     expect(labels).toHaveLength(220);
     expect(pinnable).toBe(84);
     expect(wrong).toEqual([]);
-    expect(right).toBeGreaterThanOrEqual(PROTOTYPE_BLIND_RECALL);
-    expect(verdicts.filter((v) => v.verdict === "exact room").length).toBeGreaterThanOrEqual(PROTOTYPE_EXACT_ROOMS);
+    expect(right).toBeGreaterThanOrEqual(MIN_RIGHT_PINS);
+    expect(verdicts.filter((v) => v.verdict === "exact room").length).toBeGreaterThanOrEqual(MIN_EXACT_ROOMS);
   });
 });
 
@@ -151,7 +160,7 @@ describe("resolvePlace", () => {
     ["시네마룸", "lib-nsc", space("nsc", "480211", "248")],
     ["시네마룸", null, unresolved("unknown")],
     ["온라인", "lib-nsc", unresolved("online")],
-  ] as const)("knows the owner-approved additions: %j board %j", (text, source, expected) => {
+  ] as const)("knows the lexicon's own places and the library board: %j board %j", (text, source, expected) => {
     // Act & Assert
     expect(resolve(text, null, source)).toEqual(expected);
   });
@@ -188,5 +197,64 @@ describe("resolvePlace", () => {
     // Act & Assert
     expect(resolve("국제관 9B217호", "nsc")).toEqual(space("hssc", "9B217", "109"));
     expect(resolve("경영관 33B101", "nsc", "dorm-nsc")).toEqual(space("hssc", "33B101", "133"));
+  });
+});
+
+describe("resolvePlace on adversarial negatives", () => {
+  it.each([
+    ["서울 구로 31동 301호", null, null],
+    ["강남 11동 회의실", null, null],
+    ["동대문 22동 2층", null, null],
+    ["삼성전자 수원사업장 21동", null, null],
+    ["삼성전자 수원사업장 21동", "nsc", null],
+    ["판교 테크노밸리 22동 3층", null, "dorm-nsc"],
+  ] as const)("pins no campus building for another town's 동 number in %j, hint %j, board %j", (text, hint, source) => {
+    // Act & Assert
+    expect(resolve(text, hint, source).kind).toBe("unresolved");
+  });
+
+  it.each([
+    ["참가비 21301원", null],
+    ["선착순 80301명", "hssc"],
+    ["선착순 80301", "hssc"],
+    ["상금 총 22201만 원", null],
+    ["모집 인원 11301명", "nsc"],
+    ["31301회 접속", "hssc"],
+    ["문의 000-0000-0000", "nsc"],
+    ["000-0000-0000", null],
+    ["20261학기", null],
+    ["2026.10.24 14:00", "hssc"],
+  ] as const)("reads no room code in the price, count, phone number or date %j, hint %j", (text, hint) => {
+    // Act & Assert
+    expect(resolve(text, hint).kind).toBe("unresolved");
+  });
+
+  it.each([
+    ["21301", "nsc", space("nsc", "21301", "221")],
+    ["21301호", "nsc", space("nsc", "21301", "221")],
+    ["80301 강의실", "hssc", space("hssc", "80301", "108")],
+    ["제1공학관 21동 21301", null, space("nsc", "21301", "221")],
+  ] as const)("still reads a code standing alone, before a room word or after its building: %j", (text, hint, expected) => {
+    // Act & Assert
+    expect(resolve(text, hint)).toEqual(expected);
+  });
+
+  it("reads a printed code beside an online word as the room, since a hybrid session names its room", () => {
+    // Act & Assert
+    expect(resolve("온라인 80301", "hssc")).toEqual(space("hssc", "80301", "108"));
+  });
+
+  it("does not call a room named after an online word online", () => {
+    // Act & Assert
+    expect(resolve("인터넷실")).toEqual(unresolved("unknown"));
+    expect(resolve("2층 인터넷실", "nsc")).toEqual(unresolved("unknown"));
+    expect(resolve("의관 인터넷실")).toEqual(space("nsc", "92201", "292"));
+  });
+
+  it("keeps a campus building number that the text, the hint or the board puts on the natural sciences campus", () => {
+    // Act & Assert
+    expect(resolve("자과캠 21동 301호")).toEqual(space("nsc", "21301", "221"));
+    expect(resolve("21동 2층", "nsc")).toEqual(building("nsc", "221"));
+    expect(resolve("21동 2층", null, "dorm-nsc")).toEqual(building("nsc", "221"));
   });
 });

@@ -42,6 +42,7 @@ export interface PlaceIndex {
   prefixByBuildNo: ReadonlyMap<string, string>;
   aliases: readonly PlaceAlias[];
   officeSpacesByKey: ReadonlyMap<string, readonly IndexedSpace[]>;
+  roomKeys: ReadonlySet<string>;
   roomAliases: ReadonlyArray<{ text: string; space: IndexedSpace }>;
   patterns: PlacePatterns;
   unpinnedFacilities: readonly SkkuId[];
