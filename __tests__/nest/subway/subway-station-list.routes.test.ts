@@ -4,8 +4,8 @@
  * `subway-station-coords` revision 1 in FakeSubwayStationCoordsRepository,
  * FakeSubwayRepository and a fixed Clock. What it guards: one request lists
  * every served station in SUBWAY_STATIONS order, each with its slug, its title
- * and its lines' display data in the request language and its camera point,
- * as the wire publishes it; the body follows Accept-Language, so it is
+ * and its lines' display data in the request language, its campus and its
+ * camera point, as the wire publishes it; the body follows Accept-Language, so it is
  * `private, max-age=300` with `meta.lang`; the general limiter counts it; and
  * coords the server lacks, for one station or for all because the dataset was
  * never read, are served as null in a 200, never a 503 (ADR 0013 D6).
@@ -45,6 +45,7 @@ function bootWith(coordsRepository: FakeSubwayStationCoordsRepository): Promise<
 interface ListedStationBody {
   id: string;
   title: string;
+  campus: string;
   lines: Array<{ code: string; name: string; marker: { text: string } }>;
   coords: { lat: number; lng: number } | null;
 }
@@ -73,6 +74,7 @@ describe("GET /subway/stations", () => {
     expect(stationOf(res.body, "hyehwa")).toEqual({
       id: "hyehwa",
       title: "혜화역",
+      campus: "hssc",
       lines: [{ code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } }],
       coords: { lat: 37.582336, lng: 127.001844 },
     });
@@ -81,6 +83,25 @@ describe("GET /subway/stations", () => {
       ["K1", "수인분당선", "수"],
     ]);
     expect(stationOf(res.body, "gwanggyo-jungang")?.coords).toEqual({ lat: 37.288617, lng: 127.051478 });
+    expectWire(subwayStationList, res.body.data);
+  });
+
+  it("files every station under its campus, as the bus stop list does: 혜화 under hssc, the rest under nsc, as the wire publishes it", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/subway/stations");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.stations.map((station: ListedStationBody) => [station.id, station.campus])).toEqual([
+      ["sungkyunkwan", "nsc"],
+      ["hyehwa", "hssc"],
+      ["jeongja", "nsc"],
+      ["jamsil", "nsc"],
+      ["dogok", "nsc"],
+      ["gangnam", "nsc"],
+      ["yangjae", "nsc"],
+      ["gwanggyo-jungang", "nsc"],
+    ]);
     expectWire(subwayStationList, res.body.data);
   });
 

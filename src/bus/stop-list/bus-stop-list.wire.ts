@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { campus } from "../../shared/campus.wire";
 
 const latLng = z.object({ lat: z.number(), lng: z.number() });
 
@@ -35,7 +36,7 @@ const listedStop = z.object({
   coords: latLng.nullable(),
   /** WHY: the TOPIS ARS numbers of the poles it stands for; null for a local stop that aliases none. */
   arsIds: z.array(z.string()).nullable(),
-  campus: z.enum(["hssc", "nsc"]).nullable(),
+  campus: campus.nullable(),
   /** WHY: in /bus/config's group order; `kind` is an open enum, and a client skips a kind it does not know. */
   routes: z.array(z.discriminatedUnion("kind", [liveRoute, timetableRoute])),
 });

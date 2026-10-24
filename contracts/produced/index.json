@@ -176,6 +176,11 @@
     "export": "vehiclePosition",
     "routes": []
   },
+  "campus.campus": {
+    "source": "src/shared/campus.wire.ts",
+    "export": "campus",
+    "routes": []
+  },
   "fcm.miniAppPushPayload": {
     "source": "src/infra/fcm.wire.ts",
     "export": "miniAppPushPayload",

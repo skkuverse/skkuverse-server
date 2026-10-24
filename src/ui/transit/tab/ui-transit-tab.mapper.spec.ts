@@ -36,6 +36,7 @@ function group(overrides: Partial<BusGroup> = {}): BusGroup {
 const HYEHWA: ServedStation = {
   id: "hyehwa",
   title: { ko: "혜화역", en: "Hyehwa Station", zh: "惠化站" },
+  campus: "hssc",
   lines: [{ code: "4", name: { ko: "4호선", en: "Line 4", zh: "4号线" }, color: "00A5DE", marker: { text: { ko: "4", en: "4", zh: "4" }, color: "007FAB" } }],
 };
 
@@ -43,6 +44,7 @@ const HYEHWA: ServedStation = {
 const JEONGJA: ServedStation = {
   id: "jeongja",
   title: { ko: "정자역", en: "Jeongja Station", zh: "亭子站" },
+  campus: "nsc",
   lines: [
     {
       code: "D1",

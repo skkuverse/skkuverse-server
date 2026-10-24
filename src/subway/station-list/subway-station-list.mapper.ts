@@ -7,5 +7,5 @@ type ListedStation = SubwayStationList["stations"][number];
 
 export function toListedStation(station: ServedStation, coords: LatLng | null, lang: SupportedLang): ListedStation {
   const lines = station.lines.map(({ code, name, color, marker }) => ({ code, name: name[lang], color, marker: { text: marker.text[lang], color: marker.color } }));
-  return { id: station.id, title: station.title[lang], lines, coords };
+  return { id: station.id, title: station.title[lang], campus: station.campus, lines, coords };
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isHex6 } from "../../infra/color";
+import { campus } from "../../shared/campus.wire";
 import { linkActionType } from "../../shared/link-action.wire";
 import { findRepeatedId } from "../ui.rules";
 import { localizedText, slug } from "../ui.schema";
@@ -36,7 +37,7 @@ const transitSectionFile = z.strictObject({
   type: z.literal("item_list"),
   id: slug,
   title: localizedText.optional(),
-  campus: z.enum(["hssc", "nsc"]).optional(),
+  campus: campus.optional(),
   items: z.array(transitItemFile).min(1),
 });
 

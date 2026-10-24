@@ -901,7 +901,7 @@ this order:
 
 Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true`, `chipGroupId: null` and `tabs: ["transit"]` (§8.9);
 the Jongno ones share the same style, `{ color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20",
-minZoom: 13 }`: the opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches
+minZoom: 12 }`: the opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches
 this route only once a user turns a line on. The app's `MapRouteOverlay` reads `color`, `width`,
 `outlineWidth`, `outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath
 every marker, so the lines never cover a building label.

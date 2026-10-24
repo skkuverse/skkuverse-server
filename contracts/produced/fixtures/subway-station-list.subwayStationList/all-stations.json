@@ -1,10 +1,11 @@
 {
-  "_about": "Synthetic: GET /subway/stations, Accept-Language ko, as the route answers it 2026-10-24: the served stations of SUBWAY_STATIONS mapped by toListedStation in src/subway/station-list/subway-station-list.mapper.ts, each joined to its coords from revision 1 of subway-station-coords (__tests__/nest/subway/fixtures/subway-station-coords.dataset.json). Never captured from a running server, since the route is new; not trimmed.",
+  "_about": "Synthetic: GET /subway/stations, Accept-Language ko, as the route answers it 2026-10-24, each station with its campus: the served stations of SUBWAY_STATIONS mapped by toListedStation in src/subway/station-list/subway-station-list.mapper.ts, each joined to its coords from revision 1 of subway-station-coords (__tests__/nest/subway/fixtures/subway-station-coords.dataset.json). Never captured from a running server, since the route is new; not trimmed.",
   "data": {
     "stations": [
       {
         "id": "sungkyunkwan",
         "title": "성균관대역",
+        "campus": "nsc",
         "lines": [
           {
             "code": "1",
@@ -24,6 +25,7 @@
       {
         "id": "hyehwa",
         "title": "혜화역",
+        "campus": "hssc",
         "lines": [
           {
             "code": "4",
@@ -43,6 +45,7 @@
       {
         "id": "jeongja",
         "title": "정자역",
+        "campus": "nsc",
         "lines": [
           {
             "code": "D1",
@@ -71,6 +74,7 @@
       {
         "id": "jamsil",
         "title": "잠실역",
+        "campus": "nsc",
         "lines": [
           {
             "code": "2",
@@ -99,6 +103,7 @@
       {
         "id": "dogok",
         "title": "도곡역",
+        "campus": "nsc",
         "lines": [
           {
             "code": "3",
@@ -127,6 +132,7 @@
       {
         "id": "gangnam",
         "title": "강남역",
+        "campus": "nsc",
         "lines": [
           {
             "code": "2",
@@ -155,6 +161,7 @@
       {
         "id": "yangjae",
         "title": "양재역",
+        "campus": "nsc",
         "lines": [
           {
             "code": "3",
@@ -183,6 +190,7 @@
       {
         "id": "gwanggyo-jungang",
         "title": "광교중앙역",
+        "campus": "nsc",
         "lines": [
           {
             "code": "D1",
