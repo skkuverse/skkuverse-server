@@ -126,6 +126,7 @@ describe("SubwayTrackingService.track", () => {
       arrivalAt: at("20:42:30"),
       source: "estimated",
       position: { stationId: "KR-1-P152", state: "arrived" },
+      isFirstTrain: false,
     });
   });
 
@@ -363,6 +364,7 @@ describe("SubwayTrackingService.track for an express passing stations it does no
       arrivalAt: onSaturday("10:15:36"),
       source: "estimated",
       position: { stationId: "KR-1-P157", state: "departed" },
+      isFirstTrain: false,
     });
   });
 });
@@ -393,6 +395,7 @@ describe("SubwayTrackingService.track for an express seen before its first stop"
       arrivalAt: onSaturday("10:26:21"),
       source: "estimated",
       position: { stationId: "KR-1-P152", state: "departed" },
+      isFirstTrain: false,
     });
   });
 });
@@ -598,6 +601,7 @@ describe("SubwayTrackingService.track on a trainset line", () => {
       arrivalAt: onMonday("21:04:10"),
       source: "estimated",
       position: { stationId: PANGYO, state: "arrived" },
+      isFirstTrain: true,
     });
   });
 

@@ -1,0 +1,6 @@
+{
+  "_about": "Synthetic, added with the field by app ADR 0022 D4 before any consumer: GET /subway/stations/hyehwa/arrivals at 20:41:02 KST on Friday 2026-10-16, Accept-Language ko, over the stores of __tests__/nest/subway/subway-arrivals.routes.test.ts (its meta, lang left out as the response interceptor adds it); untrimmed.",
+  "data": {
+    "serverNow": "2026-10-16T20:41:02+09:00"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords",
+  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords; extended 2026-10-24 for the first-train flag, no other value changed: each train's isFirstTrain, false, as none was its service day's first train.",
   "data": {
     "station": {
       "id": "jeongja",
@@ -41,7 +41,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:07:59.442Z",
                 "stopsAway": 2,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "1174",
@@ -49,7 +50,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:16:59.442Z",
                 "stopsAway": null,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "1176",
@@ -57,7 +59,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:21:24.000Z",
                 "stopsAway": null,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               }
             ]
           },
@@ -79,7 +82,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:01:49.000Z",
                 "stopsAway": 0,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "1165",
@@ -87,7 +91,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:12:07.000Z",
                 "stopsAway": 2,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "1167",
@@ -95,7 +100,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:18:59.442Z",
                 "stopsAway": null,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               }
             ]
           }
@@ -132,7 +138,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:05:40.000Z",
                 "stopsAway": 1,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "6138",
@@ -140,7 +147,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:16:30.000Z",
                 "stopsAway": 3,
-                "source": "scheduled"
+                "source": "scheduled",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "6544",
@@ -148,7 +156,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:26:10.000Z",
                 "stopsAway": null,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               }
             ]
           },
@@ -170,7 +179,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:08:59.442Z",
                 "stopsAway": 3,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "6549",
@@ -178,7 +188,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:14:29.442Z",
                 "stopsAway": null,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               },
               {
                 "trainNo": "6119",
@@ -186,7 +197,8 @@
                 "express": false,
                 "arrivalAt": "2026-10-18T08:19:05.000Z",
                 "stopsAway": null,
-                "source": "estimated"
+                "source": "estimated",
+                "isFirstTrain": false
               }
             ]
           }

@@ -341,6 +341,13 @@
       "GET subway/stations/:stationId/arrivals"
     ]
   },
+  "subway-arrivals.subwayStationArrivalsMeta": {
+    "source": "src/subway/arrivals/subway-arrivals.wire.ts",
+    "export": "subwayStationArrivalsMeta",
+    "routes": [
+      "GET subway/stations/:stationId/arrivals"
+    ]
+  },
   "subway-station-list.subwayStationList": {
     "source": "src/subway/station-list/subway-station-list.wire.ts",
     "export": "subwayStationList",

@@ -34,6 +34,7 @@ const HYEHWA: SubwayArrivalsDoc = {
         express: false,
         arrivalAt: new Date("2026-10-16T12:02:30Z"),
         source: "live",
+        isFirstTrain: false,
         position: { stationId: "S1-4-421", state: "departed" },
       },
     ],

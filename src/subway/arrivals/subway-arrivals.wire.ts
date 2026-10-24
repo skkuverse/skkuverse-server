@@ -7,11 +7,16 @@ const trainArrival = z.object({
   trainNo: z.string(),
   destination: z.string(),
   express: z.boolean(),
-  /** WHY: an instant, not seconds left: the app counts down against its own clock (owner decision 2026-10-17). */
+  /** WHY: an instant, not seconds left (owner decision 2026-10-17): the app counts down against `meta.serverNow`. */
   arrivalAt: z.iso.datetime(),
   /** WHY: 0 at the station, 1 to 3 at an upstream one; null when nothing reported the train or it is farther. */
   stopsAway: z.int().nonnegative().nullable(),
   source: z.enum(["live", "estimated", "scheduled"]),
+  /**
+   * WHY: the earliest train of its direction with a time at this platform on the service day's table; every served
+   * train is a run of that table, live ones too, so it is never unknown. The app labels it as the first train (app ADR 0022, D4).
+   */
+  isFirstTrain: z.boolean(),
 });
 
 const directionArrivals = z.object({
@@ -52,4 +57,10 @@ export const subwayStationArrivals = z.object({
   lines: z.array(lineArrivals),
 });
 
+export const subwayStationArrivalsMeta = z.object({
+  /** WHY: the server's clock at +09:00 when it built the response, which a client's clock offset is read from. */
+  serverNow: z.iso.datetime({ offset: true }),
+});
+
 export type SubwayStationArrivals = z.input<typeof subwayStationArrivals>;
+export type SubwayStationArrivalsMeta = z.input<typeof subwayStationArrivalsMeta>;
