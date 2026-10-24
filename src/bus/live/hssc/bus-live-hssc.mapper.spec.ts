@@ -1,5 +1,5 @@
 /**
- * The HSSC line in the live shape (ADR 0019, D2, D5, D6, D8): one vehicle per fresh bus with no plate, occupancy,
+ * The HSSC line in the live shape (ADR 0019, D2, D5, D6, D8): one vehicle per fresh bus with no plate, occupancy, seats,
  * last-bus or low-floor flag the feed never gives, a position from its latest stop event checked when the poller wrote, each stop
  * a station named by its stop id with no pole number, running while a bus is fresh, and no data without one.
  */
@@ -36,6 +36,7 @@ describe("toLiveHsscGroup", () => {
           id: "32149",
           plateNumber: null,
           occupancy: null,
+          seatsLeft: null,
           isLastBus: null,
           isLowFloor: null,
           position: {

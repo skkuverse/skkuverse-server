@@ -90,6 +90,8 @@ export const vehicle = z.object({
   id: z.string(),
   plateNumber: z.string().nullable(),
   occupancy: z.object({ level: crowding, passengerCount: z.int().nullable() }).nullable(),
+  /** WHY: seats still free, 0 when none; null when the source never reports seats or has no fresh answer (ADR 0019, D17). */
+  seatsLeft: z.int().min(0).nullable(),
   isLastBus: z.boolean().nullable(),
   /** WHY: the vehicle's own, from its position row, else the arrival row naming it, never both (ADR 0019, D13); null when unsaid. */
   isLowFloor: z.boolean().nullable(),

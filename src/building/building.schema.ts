@@ -34,7 +34,7 @@ export const campusShapeDoc = z.object({
   order: z.number(),
 }) satisfies z.ZodType<CampusShapeDoc>;
 
-// CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/modules/campusmap/models.py writes
+// CONTRACT(skkuverse-crawler): `FacilityDoc` of skkuverse-crawler/py/src/skkuverse_crawler/modules/campusmap/models.py writes
 // `facilities`, so a cafeteria is parsed where it is read (ADR 0010, D2); one that fails is left out and logged.
 export const cafeteriaDoc = z.object({
   _id: z.string().min(1),
@@ -49,8 +49,8 @@ export const cafeteriaDoc = z.object({
   location: buildingCard.shape.location.nullable(),
 }) satisfies z.ZodType<Omit<CafeteriaDoc, "syncedAt">>;
 
-// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/decisions/adr-014-campus-map-ownership.md moves the
-// `buildings` and `spaces` writes to the crawler. Read tolerantly (ADR 0010, D2): SKKU's stamps as any string.
+// CONTRACT(skkuverse-crawler): `EnrichedBuilding` and `Space` of skkuverse-crawler/py/src/skkuverse_crawler/modules/campusmap/models.py
+// write `buildings` and `spaces`. Read tolerantly (ADR 0010, D2): SKKU's stamps as any string.
 export const storedBuilding = buildingCard.omit({ campusLabel: true, displayNo: true }).extend({
   _id: skkuId,
   buildNo: buildNo.nullable(),
