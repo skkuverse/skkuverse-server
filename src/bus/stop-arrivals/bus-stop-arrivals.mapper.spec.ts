@@ -119,7 +119,7 @@ describe("toLiveEntry", () => {
 describe("toTimetableEntry", () => {
   it("carries the run's service, route type, action, operation and runs, with no vehicle", () => {
     // Arrange
-    const route = { kind: "shuttle" as const, groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board" as const, timing: "scheduled" as const };
+    const route = { kind: "shuttle" as const, groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board" as const };
     const arrivals = [{ ...arrival(null, ""), status: "scheduled" as const, providerText: null, runDepartureAt: "2026-10-20T14:30:00+09:00" }];
 
     // Act & Assert

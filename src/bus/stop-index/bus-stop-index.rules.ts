@@ -47,8 +47,8 @@ class StopIndexBuilder {
     const services = Object.entries(STOP_SERVICE_IDS_BY_GROUP_ID).flatMap(([groupId, serviceIds]) => serviceIds.map((serviceId) => ({ groupId, serviceId })));
     for (const { groupId, serviceId } of services) {
       for (const [routeType, sequence] of Object.entries(this.snapshot.catalog.sequences[serviceId] ?? {})) {
-        sequence.forEach(({ stopId, action, timing }, sequenceIndex) => {
-          if (stopId) this.addRoute(stopId, { kind: "shuttle", groupId, serviceId, routeType, sequenceIndex, action, timing });
+        sequence.forEach(({ stopId, action }, sequenceIndex) => {
+          if (stopId) this.addRoute(stopId, { kind: "shuttle", groupId, serviceId, routeType, sequenceIndex, action });
         });
       }
     }

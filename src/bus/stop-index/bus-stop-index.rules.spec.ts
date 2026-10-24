@@ -178,8 +178,8 @@ describe("toStopIndex", () => {
 
     // Assert
     expect(routesAt(index, "hssc-bus-lot")).toEqual([
-      { kind: "shuttle", groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board", timing: "scheduled" },
-      { kind: "shuttle", groupId: "campus", serviceId: "campus-inja", routeType: "hakbu", sequenceIndex: 0, action: "board", timing: "scheduled" },
+      { kind: "shuttle", groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board" },
+      { kind: "shuttle", groupId: "campus", serviceId: "campus-inja", routeType: "hakbu", sequenceIndex: 0, action: "board" },
     ]);
     expect(routesAt(index, "nsc-n-center")?.map((route) => (route.kind === "shuttle" ? `${route.serviceId}:${route.routeType}:${route.action}` : route.kind))).toEqual([
       "campus-inja:regular:alight",
@@ -191,7 +191,7 @@ describe("toStopIndex", () => {
       "commute-gwanggyo:up:alight",
     ]);
     expect(routesAt(index, "yangjae-exit2")).toEqual([
-      { kind: "shuttle", groupId: "commute", serviceId: "commute-gangnam-yangjae", routeType: "up", sequenceIndex: 1, action: "board", timing: "scheduled" },
+      { kind: "shuttle", groupId: "commute", serviceId: "commute-gangnam-yangjae", routeType: "up", sequenceIndex: 1, action: "board" },
     ]);
   });
 
