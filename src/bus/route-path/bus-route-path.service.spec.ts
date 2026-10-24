@@ -22,7 +22,6 @@ import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import type { Position } from "../../shared/geojson.types";
 import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
 import { capturedRoutePathOf, storedJongroRoutePathDocuments } from "../../../__tests__/helpers/bus/bus-route-path";
 import type { BusRoutePathClient } from "./bus-route-path.client";
 import { ROUTE_PATHS_LOG_INTERVAL_MS, ROUTE_PATHS_RETRY_MS, ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
@@ -31,7 +30,7 @@ import { toPathVersion } from "./bus-route-path.rules";
 import { BusRoutePathService } from "./bus-route-path.service";
 import type { FetchedRoutePath } from "./bus-route-path.types";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const NOW = new Date("2026-10-18T03:00:00Z");
 const clock: Clock = { now: () => NOW };

@@ -101,7 +101,7 @@ export class BusConfigService {
   // WHY: a Jongro group answers its realtime route's 503 when the attributes were never read or lack its route
   // (ADR 0013, D6), and a group that names stops, a Jongro one's by alias, the stops' 503 when they were never read.
   private async readGroupSources(id: string): Promise<GroupSources> {
-    const isJongroGroup = JONGRO_ROUTES.some((route) => route.id === id);
+    const isJongroGroup = JONGRO_ROUTES.some((route) => route.isListed && route.id === id);
     const stops = isJongroGroup || STOP_GROUP_IDS.includes(id) ? await this.stops.current() : NO_STOPS;
     if (!isJongroGroup) return { ...NO_JONGRO_SOURCES, stops };
     await this.routeAttributes.attributesOf(id);

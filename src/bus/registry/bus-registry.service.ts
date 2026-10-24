@@ -3,7 +3,6 @@ import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
 import type { JongroRoute } from "../bus.types";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
 import { BusRegistryBootstrappingError, BusRegistryMissingError } from "./bus-registry.error";
@@ -151,6 +150,6 @@ export class BusRegistryService {
     if (identity === undefined) throw new Error(`Unknown Jongro route ${routeId}`);
     const doc = await this.repository.findRoute(routeId);
     if (doc === null) throw new BusRegistryMissingError(routeId);
-    return toRegistryRoute(toJongroRoute(identity), doc);
+    return toRegistryRoute(identity, doc);
   }
 }

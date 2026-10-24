@@ -22,7 +22,6 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
 import { capturedStationsOf, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
 import type { BusRegistryRepository } from "./bus-registry.repository";
 import { toStationsVersion } from "./bus-registry.rules";
@@ -30,7 +29,7 @@ import { BusRegistryBootstrappingError } from "./bus-registry.error";
 import { BusRegistryService } from "./bus-registry.service";
 import type { ObservedStation } from "./bus-registry.types";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const NOW = new Date("2026-10-17T12:00:00Z");
 const clock: Clock = { now: () => NOW };

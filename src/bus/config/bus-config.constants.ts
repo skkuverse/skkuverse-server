@@ -30,7 +30,5 @@ export const HSSC_DIRECTIONS = [
 export const TOWARDS_LABEL_KEY = "busconfig.lineDirection.towards";
 export const TERMINAL_PLACEHOLDER = "{terminal}";
 
-export const JONGRO_LIVE_SCREEN = {
-  isLoop: false,
-  capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true, lowFloor: true },
-} as const;
+// WHY: each TOPIS route states its own capabilities (JONGRO_ROUTES), served right after this.
+export const JONGRO_LIVE_SCREEN = { isLoop: false } as const;

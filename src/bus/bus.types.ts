@@ -3,13 +3,25 @@ export interface TransferLine {
   color: string;
 }
 
-export interface JongroRoute {
-  readonly id: string;
-  readonly code: string;
-  readonly busRouteId: string;
+/** WHY: what a route's source can ever supply on the live route, so a null there means unknown now (ADR 0019, D2). */
+export interface JongroRouteCapabilities {
+  readonly positionSource: "gps";
+  readonly occupancy: boolean;
+  readonly plateNumber: boolean;
+  readonly lastBus: boolean;
+  readonly lowFloor: boolean;
 }
 
-export type JongroRouteIdentity = Pick<JongroRoute, "id" | "busRouteId">;
+export interface JongroRoute {
+  readonly id: string;
+  /** WHY: what the pollers and bus_cache keys are named by (`jongro_stations_07`), stated, never read from the id. */
+  readonly code: string;
+  readonly busRouteId: string;
+  readonly capabilities: JongroRouteCapabilities;
+  /** WHY: an unlisted route is polled and served on /bus/live, but /bus/config lists no group for it. */
+  readonly isListed: boolean;
+  readonly pollIntervalMs: number;
+}
 
 export interface JongroRouteAttributes {
   readonly themeColor: string;

@@ -489,3 +489,42 @@ describe("toBusGroups directions", () => {
     for (const id of ["campus", "fasttrack", "commute"]) expect(screenOf(id)).not.toHaveProperty("directions");
   });
 });
+
+// WHY: what a Jongro group's live screen states and whether it is listed are its route's own facts (ADR 0013, D2),
+// so a route the TOPIS list states differently is served differently, and the three Jongro routes as before.
+describe("toBusGroups per-route facts", () => {
+  const groupsOf = (routes: AttributedJongroRoute[]) =>
+    toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN });
+  const restated = (id: string, facts: Partial<AttributedJongroRoute["route"]>) =>
+    jongroRoutes.map((jongroRoute) => (jongroRoute.route.id === id ? { ...jongroRoute, route: { ...jongroRoute.route, ...facts } } : jongroRoute));
+
+  it("serves a Jongro group the capabilities its route states", () => {
+    // Arrange
+    const capabilities = { positionSource: "gps", occupancy: false, plateNumber: true, lastBus: true, lowFloor: true } as const;
+
+    // Act
+    const groups = groupsOf(restated("jongro07", { capabilities }));
+
+    // Assert
+    expect(groups.find((group) => group.id === "jongro07")?.screen).toMatchObject({ isLoop: false, capabilities });
+    expect(groups.find((group) => group.id === "jongro08")?.screen).toMatchObject({ capabilities: { occupancy: true } });
+  });
+
+  it("leaves out a route that is not listed, keeping the others in order", () => {
+    // Act
+    const groups = groupsOf(restated("jongro07", { isListed: false }));
+
+    // Assert
+    expect(groups.map((group) => group.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro08"]);
+  });
+});
+
+describe("toBusGroupIds per-route facts", () => {
+  it("lists only the routes that are listed", () => {
+    // Arrange
+    const routes = JONGRO_ROUTES.map((route) => (route.id === "jongro08" ? { ...route, isListed: false } : route));
+
+    // Act & Assert
+    expect(toBusGroupIds(routes)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07"]);
+  });
+});

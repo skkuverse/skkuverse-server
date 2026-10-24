@@ -1,32 +1,12 @@
 /**
- * A Jongro route's identity in code becomes a JongroRoute: its id, the route
- * code after the `jongro` prefix and its TOPIS route id, and no TOPIS URL or
- * key, which the client builds at each call (ADR 0012, D4). The attributes are
- * stored, not part of the route (ADR 0013, D2). The HSSC
- * line is named by its catalog stops in a language, as the stop page and the
- * stop list head its stations: toCatalogNamedLine moved here from
+ * The HSSC line is named by its catalog stops in a language, as the stop page
+ * and the stop list head its stations: toCatalogNamedLine moved here from
  * src/bus/stop-arrivals/bus-stop-arrivals.mapper.spec.ts, its line stations
- * reduced to the name and stop id it reads.
+ * reduced to the name and stop id it reads. A TOPIS route's code is stated in
+ * JONGRO_ROUTES (src/bus/bus.constants.spec.ts), so no mapper reads it from
+ * the id any more.
  */
-import { toCatalogNamedLine, toJongroRoute } from "./bus.mapper";
-
-describe("toJongroRoute", () => {
-  it("keeps the identity's fields and reads the code after the jongro prefix", () => {
-    // Arrange
-    const identity = { id: "jongro07", busRouteId: "100900004" };
-
-    // Act
-    const route = toJongroRoute(identity);
-
-    // Assert
-    expect(route).toEqual({ id: "jongro07", code: "07", busRouteId: "100900004" });
-  });
-
-  it("reads a two-digit code past 09", () => {
-    // Act & Assert
-    expect(toJongroRoute({ id: "jongro13", busRouteId: "1" }).code).toBe("13");
-  });
-});
+import { toCatalogNamedLine } from "./bus.mapper";
 
 describe("toCatalogNamedLine", () => {
   const station = (name: string, stopId: string | null) => ({ stopId, name });
