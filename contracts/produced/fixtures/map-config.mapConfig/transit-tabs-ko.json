@@ -180,7 +180,11 @@
           "actionValue": "/map/hssc"
         },
         "isReset": false,
-        "list": null
+        "list": null,
+        "tabs": [
+          "map",
+          "transit"
+        ]
       },
       {
         "id": "building_code",
@@ -211,7 +215,11 @@
           "actionValue": "https://webview.skkuverse.com/skku/lostandfound"
         },
         "isReset": false,
-        "list": null
+        "list": null,
+        "tabs": [
+          "map",
+          "transit"
+        ]
       },
       {
         "id": "inquiry",
@@ -226,7 +234,11 @@
           "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
         },
         "isReset": false,
-        "list": null
+        "list": null,
+        "tabs": [
+          "map",
+          "transit"
+        ]
       }
     ],
     "cameraDefaults": {

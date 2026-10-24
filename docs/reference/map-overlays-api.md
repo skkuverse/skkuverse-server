@@ -1367,7 +1367,9 @@ tab a tap switches to; absent, the tap stays on the tab it was made on.
 
 A chip runs where its result shows. The transit tab's chips are a billboard for the map tab: a chip
 whose result is on the map lists both tabs and names `opensIn: "map"`, so a tap on the transit tab
-switches to the map tab and turns the chip on there.
+switches to the map tab and turns the chip on there. A `link` chip opens a page, not a result on the
+map, so it names no `opensIn` and runs on the tab it was tapped on. For now the transit tab shows the
+map tab's chips: `building_map`, `lost_found` and `inquiry` list both tabs.
 
 An empty `tabs` means the chip appears in no tab of the shared-map shell. Builds and shells that
 ignore `tabs` keep it in the map tab, so an empty `tabs` retires a chip from the shared-map shell
@@ -1377,7 +1379,8 @@ alone. The `building_code` chip has one because the shell's search field does it
 | --- | --- |
 | `building_numbers`, `building_labels`, `campus_geometry` | `["map", "transit"]` |
 | the route line layers (`jongro02_route`, `jongro08_route`, `jongro07_route`, `hssc_route`) | `["transit"]` |
-| every festival layer, and every chip but `building_code` | absent: the map tab only |
+| the `building_map`, `lost_found` and `inquiry` chips | `["map", "transit"]` |
+| every festival layer and every festival chip | absent: the map tab only |
 | the `building_code` chip | `[]`: no tab of the shared-map shell, the map tab elsewhere |
 
 A route line layer keeps `chipGroupId: null` on the transit tab. Installed builds read a grouped

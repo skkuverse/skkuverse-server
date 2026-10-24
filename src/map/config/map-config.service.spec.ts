@@ -548,7 +548,21 @@ describe("MapConfigService", () => {
     });
   });
 
-  it("keeps every other chip on the map tab, stating neither tabs nor opensIn", async () => {
+  it.each(["ko", "en", "zh"] as const)("serves building_map, lost_found and inquiry to both tabs in %s, running where they are tapped", async (lang) => {
+    // Act
+    const served = await svc.getMapConfig(lang);
+
+    // Assert
+    // For now the transit tab shows the map tab's chips; a link chip opens a page, so it names no opensIn.
+    const mirrored = served.chips.filter((c) => ["building_map", "lost_found", "inquiry"].includes(c.id));
+    expect(mirrored.map((c) => c.id)).toEqual(["building_map", "lost_found", "inquiry"]);
+    for (const chip of mirrored) {
+      expect(chip.tabs).toEqual(["map", "transit"]);
+      expect(chip).not.toHaveProperty("opensIn");
+    }
+  });
+
+  it("keeps every festival chip on the map tab, stating neither tabs nor opensIn", async () => {
     // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
@@ -558,9 +572,10 @@ describe("MapConfigService", () => {
     const ko = await svc.getMapConfig("ko");
 
     // Assert
-    const others = ko.chips.filter((c) => c.id !== "building_code");
-    expect(others).toHaveLength(ko.chips.length - 1);
-    for (const chip of others) {
+    const baseIds = new Set(BASE_CHIPS.map((c) => c.id));
+    const festivalChips = ko.chips.filter((c) => !baseIds.has(c.id));
+    expect(festivalChips).toHaveLength(1 + CONFIG.chips.length);
+    for (const chip of festivalChips) {
       expect(chip).not.toHaveProperty("tabs");
       expect(chip).not.toHaveProperty("opensIn");
     }

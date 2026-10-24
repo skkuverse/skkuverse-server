@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip of each /map/config body gained the map tab and opensIn map on purpose (a chip runs where its result shows; app ADR 0022 D1), and its ETag was recomputed from the new body. On 2026-10-24 the building_code chip of each /map/config body gained an empty tabs on purpose (the shared-map shell's search field replaces it, so that shell lists it in no tab), and its ETag was recomputed from the new body. On 2026-10-24 each route line layer of each /map/config body went from minZoom 13 to 12 on purpose (the shared-map shell frames a whole line in the half sheet at about zoom 12.5), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip was removed from each /map/config body on purpose (the transit tab already draws a picked bus's line, so the chip duplicated it; the route line layers stay), and its ETag was recomputed from the new body.",
+  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip of each /map/config body gained the map tab and opensIn map on purpose (a chip runs where its result shows; app ADR 0022 D1), and its ETag was recomputed from the new body. On 2026-10-24 the building_code chip of each /map/config body gained an empty tabs on purpose (the shared-map shell's search field replaces it, so that shell lists it in no tab), and its ETag was recomputed from the new body. On 2026-10-24 each route line layer of each /map/config body went from minZoom 13 to 12 on purpose (the shared-map shell frames a whole line in the half sheet at about zoom 12.5), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip was removed from each /map/config body on purpose (the transit tab already draws a picked bus's line, so the chip duplicated it; the route line layers stay), and its ETag was recomputed from the new body. On 2026-10-24 the building_map, lost_found and inquiry chips of each /map/config body gained tabs map and transit on purpose (for now the transit tab shows the map tab's chips), and its ETag was recomputed from the new body.",
   "config": {
     "ko": {
       "status": 200,
@@ -187,7 +187,11 @@
                 "actionValue": "/map/hssc"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "building_code",
@@ -218,7 +222,11 @@
                 "actionValue": "https://webview.skkuverse.com/skku/lostandfound"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "inquiry",
@@ -233,7 +241,11 @@
                 "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             }
           ],
           "cameraDefaults": {
@@ -249,7 +261,7 @@
           }
         }
       },
-      "etag": "W/\"caa-f0isPJ8NLQyM+q5uYle+CBdufjI\""
+      "etag": "W/\"cf5-wHhFDGJuvuf1p0zHQLpPYORN6Fo\""
     },
     "en": {
       "status": 200,
@@ -437,7 +449,11 @@
                 "actionValue": "/map/hssc"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "building_code",
@@ -468,7 +484,11 @@
                 "actionValue": "https://webview.skkuverse.com/skku/lostandfound"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "inquiry",
@@ -483,7 +503,11 @@
                 "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             }
           ],
           "cameraDefaults": {
@@ -499,7 +523,7 @@
           }
         }
       },
-      "etag": "W/\"ca1-3QWXNV+PMcgB18F0mOm6PMUmJq8\""
+      "etag": "W/\"cec-wqx3j61psCDdeIoY3Fys19TX288\""
     },
     "zh": {
       "status": 200,
@@ -687,7 +711,11 @@
                 "actionValue": "/map/hssc"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "building_code",
@@ -718,7 +746,11 @@
                 "actionValue": "https://webview.skkuverse.com/skku/lostandfound"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "inquiry",
@@ -733,7 +765,11 @@
                 "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
               },
               "isReset": false,
-              "list": null
+              "list": null,
+              "tabs": [
+                "map",
+                "transit"
+              ]
             }
           ],
           "cameraDefaults": {
@@ -749,7 +785,7 @@
           }
         }
       },
-      "etag": "W/\"ca4-aM8gLdQDwEL+DBBiS80omaUdxrU\""
+      "etag": "W/\"cef-DQw2NWaaIgQfO8MSy/P/DRhd90A\""
     }
   },
   "event": {
