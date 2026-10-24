@@ -1,9 +1,10 @@
 {
-  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/hssc-layover.json: the bus laying over at 농구장.",
+  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/hssc-layover.json: the bus laying over at 농구장. Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus.",
   "data": {
     "id": "32150",
     "plateNumber": null,
     "occupancy": null,
+    "seatsLeft": null,
     "isLastBus": null,
     "isLowFloor": null,
     "position": {

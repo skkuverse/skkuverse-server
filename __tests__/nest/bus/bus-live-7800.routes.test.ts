@@ -6,7 +6,10 @@
  * the origin waiting to depart, TOPIS's `[0번째 전]` one stop away, stops away counting only the stations a bus stops
  * at, no occupancy, no low-floor answer for TOPIS's busType 2, and no stop id at any pole no local stop aliases. With
  * its stations stored but no bus_cache key (a stopped poller, or REGIONAL_BUS off after one stored them), it answers
- * noData. The frozen realtime route serves no 7800.
+ * noData. The frozen realtime route serves no 7800. With GBIS's 2026-10-24 20:22 answer stored by one seat poller tick
+ * (fixtures/gbis-location-7800.json, through a scripted client), each vehicle GBIS names by the same vehId serves its
+ * seats left, every other vehicle null, and once that answer is past its 200 s bound, every vehicle null again; when
+ * bus_seats cannot be read, it still answers 200 with every arrival, its vehicles' seats null.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -20,6 +23,10 @@ import { BusLiveJongroModule } from "../../../src/bus/live/jongro/bus-live-jongr
 import { BusLiveModule } from "../../../src/bus/live/bus-live.module";
 import { liveGroup, liveGroupMeta } from "../../../src/bus/live/bus-live.wire";
 import { BusRealtimeArrivalModule } from "../../../src/bus/realtime/arrival/bus-realtime-arrival.module";
+import { BusRealtimeGbisClient } from "../../../src/bus/realtime/gbis/bus-realtime-gbis.client";
+import { BusRealtimeGbisModule } from "../../../src/bus/realtime/gbis/bus-realtime-gbis.module";
+import { BusRealtimeGbisRepository } from "../../../src/bus/realtime/gbis/bus-realtime-gbis.repository";
+import { BusRealtimeGbisService } from "../../../src/bus/realtime/gbis/bus-realtime-gbis.service";
 import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
 import { BusRealtimeGroupModule } from "../../../src/bus/realtime/group/bus-realtime-group.module";
 import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.module";
@@ -41,12 +48,17 @@ import { storedRouteAttributesRepository } from "../../helpers/bus/route-attribu
 import { ROUTE_7800, arrivalDocs7800, registryDoc7800, sightings7800 } from "../../helpers/bus/topis-7800";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
+import { FakeBusRealtimeGbisClient } from "../../helpers/fakes/bus/bus-realtime-gbis.client.fake";
+import { FakeBusRealtimeGbisRepository } from "../../helpers/fakes/bus/bus-realtime-gbis.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import gbisCapture from "./fixtures/gbis-location-7800.json";
 
 const NOW = new Date("2026-10-24T08:51:10Z");
 const busCache = new FakeBusCacheRepository();
 const client = new FakeBusRealtimeJongroClient();
+const gbisClient = new FakeBusRealtimeGbisClient();
+const seats = new FakeBusRealtimeGbisRepository();
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -64,6 +76,7 @@ beforeAll(async () => {
       BusRealtimeModule,
       BusRealtimeHsscModule,
       BusRealtimeJongroModule,
+      BusRealtimeGbisModule,
       BusRealtimeArrivalModule,
       BusRealtimeGroupModule,
       BusRealtimeHsscEtaModule,
@@ -77,6 +90,8 @@ beforeAll(async () => {
     overrides: [
       { provide: BusCacheRepository, useValue: busCache },
       { provide: BusRealtimeJongroClient, useValue: client },
+      { provide: BusRealtimeGbisClient, useValue: gbisClient },
+      { provide: BusRealtimeGbisRepository, useValue: seats },
       { provide: BusRegistryRepository, useValue: registryRepository },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
@@ -182,6 +197,76 @@ describe("GET /bus/live/gyeonggi7800 over 7800's capture", () => {
 
     // Assert
     expect([res.status, res.body.error.code]).toEqual([404, "GROUP_NOT_FOUND"]);
+  });
+});
+
+// One seat poller tick at NOW over GBIS's answer, as the test reads it: each bus's vehId and remainSeatCnt.
+async function pollSeats(): Promise<void> {
+  gbisClient.seats = gbisCapture.response.msgBody.busLocationList.map(({ vehId, remainSeatCnt }) => ({ vehicleId: String(vehId), seatsLeft: remainSeatCnt }));
+  await app.get(BusRealtimeGbisService).refresh(ROUTE_7800);
+}
+
+describe("GET /bus/live/gyeonggi7800 with GBIS's seats stored", () => {
+  beforeAll(async () => {
+    await pollCapture();
+    await pollSeats();
+  });
+
+  afterAll(() => {
+    seats.seatsByRouteId.clear();
+  });
+
+  it("serves each vehicle GBIS names by its vehId its seats left, and every other vehicle null", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/live/gyeonggi7800");
+
+    // Assert
+    expectWire(liveGroup, res.body.data);
+    const vehicles = res.body.data.vehicles as Array<{ id: string; seatsLeft: number | null }>;
+    const seated = vehicles.filter(({ seatsLeft }) => seatsLeft !== null).map(({ id, seatsLeft }) => [id, seatsLeft]);
+    expect(seated.sort(([a], [b]) => String(a).localeCompare(String(b)))).toEqual([
+      ["200010839", 41],
+      ["200010899", 70],
+      ["200011123", 35],
+      ["200011605", 65],
+      ["200011682", 39],
+      ["200011684", 37],
+      ["233000041", 70],
+      ["233000065", 35],
+    ]);
+    expect(vehicles.length).toBeGreaterThan(seated.length);
+  });
+
+  it("answers 200 with every arrival and no seats when bus_seats cannot be read", async () => {
+    // Arrange
+    seats.readFailWith = new Error("operation exceeded time limit");
+
+    // Act
+    let res: request.Response;
+    try {
+      res = await request(httpServer).get("/bus/live/gyeonggi7800");
+    } finally {
+      seats.readFailWith = null;
+    }
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(liveGroup, res.body.data);
+    expect(res.body.data.stations).toHaveLength(80);
+    expect((res.body.data.vehicles as Array<{ seatsLeft: number | null }>).filter(({ seatsLeft }) => seatsLeft !== null)).toEqual([]);
+  });
+
+  it("serves every vehicle null once the stored answer is past its 200 s bound", async () => {
+    // Arrange
+    const stored = seats.seatsByRouteId.get("gyeonggi7800")!;
+    seats.seatsByRouteId.set("gyeonggi7800", { ...stored, checkedAt: new Date(NOW.getTime() - 200_001) });
+
+    // Act
+    const res = await request(httpServer).get("/bus/live/gyeonggi7800");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect((res.body.data.vehicles as Array<{ seatsLeft: number | null }>).filter(({ seatsLeft }) => seatsLeft !== null)).toEqual([]);
   });
 });
 

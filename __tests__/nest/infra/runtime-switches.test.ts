@@ -35,6 +35,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         subwayEnabled: true,
         shuttleEnabled: true,
         regionalBusEnabled: true,
+        gbisEnabled: true,
       },
       errors: [],
     });
@@ -51,6 +52,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         subwayEnabled: false,
         shuttleEnabled: false,
         regionalBusEnabled: false,
+        gbisEnabled: false,
       },
       errors: [],
     });
@@ -127,6 +129,16 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(prod).toEqual({ switches: expect.objectContaining({ regionalBusEnabled: false }), errors: [] });
   });
 
+  it("development may turn the GBIS seat pollers on, and production may turn them off", () => {
+    // Act
+    const dev = resolveRuntimeSwitches({ GBIS: "on" }, "development");
+    const prod = resolveRuntimeSwitches({ GBIS: "off" }, "production");
+
+    // Assert
+    expect(dev).toEqual({ switches: expect.objectContaining({ gbisEnabled: true }), errors: [] });
+    expect(prod).toEqual({ switches: expect.objectContaining({ gbisEnabled: false }), errors: [] });
+  });
+
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches({ PUSH_DELIVERY: "live" }, "development");
@@ -172,6 +184,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["SUBWAY", "yes"],
     ["SHUTTLE", "1"],
     ["REGIONAL_BUS", "true"],
+    ["GBIS", "yes"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
     // Act & Assert
     for (const mode of ["production", "development", "test"] as const) {
@@ -284,6 +297,14 @@ describe("where the switches may be set", () => {
     ])("%s run no regional bus poller", (_label, env) => {
       // Assert
       expect(env).toMatch(/- REGIONAL_BUS=off\n/);
+    });
+
+    it.each([
+      ["the api replicas", apiEnv],
+      ["the poller", pollerEnv],
+    ])("%s run no GBIS seat poller", (_label, env) => {
+      // Assert
+      expect(env).toMatch(/- GBIS=off\n/);
     });
   });
 });

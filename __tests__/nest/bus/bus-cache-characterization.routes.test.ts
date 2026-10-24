@@ -218,6 +218,7 @@ describe("bus_cache between a poller process and an api replica", () => {
   it("registers the realtime pollers under the names the registry reports", () => {
     // Assert
     expect([...pollers.keys()].filter((n) => !n.startsWith("shuttle-eta")).sort()).toEqual([
+      "gbis-seats-7800",
       "hssc",
       "shuttle-gps",
       "shuttle-stop-reports",

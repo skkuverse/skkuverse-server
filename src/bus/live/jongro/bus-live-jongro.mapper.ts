@@ -50,8 +50,8 @@ function toPosition({ position, tracking, checkedAt }: TrackedPosition): Vehicle
   };
 }
 
-function toNearestFields(nearest: TimedArrival | undefined, lastBusIds: ReadonlySet<string>): Pick<Vehicle, "occupancy" | "isLastBus"> {
-  return nearest ? { occupancy: toOccupancy(nearest.arrival), isLastBus: lastBusIds.has(nearest.bus.vehId) } : { occupancy: null, isLastBus: null };
+function toNearestFields(nearest: TimedArrival | undefined, lastBusIds: ReadonlySet<string>): Pick<Vehicle, "occupancy" | "seatsLeft" | "isLastBus"> {
+  return nearest ? { occupancy: toOccupancy(nearest.arrival), seatsLeft: null, isLastBus: lastBusIds.has(nearest.bus.vehId) } : { occupancy: null, seatsLeft: null, isLastBus: null };
 }
 
 // WHY: low-floor is the vehicle's own, so its position row alone decides it and its rows never give two answers (ADR 0019, D13).
@@ -99,4 +99,10 @@ export function toLiveJongroGroup(groupId: string, reading: JongroReading, alias
     vehicles: toVehicles(reading, stations, states),
     stations,
   };
+}
+
+/** WHY: TOPIS reports no seats, so each vehicle takes the ones GBIS gave its id, in place (ADR 0019, D17). */
+export function withSeatsLeft(group: LiveGroup, seatsLeftByVehicleId: ReadonlyMap<string, number>): LiveGroup {
+  if (seatsLeftByVehicleId.size === 0) return group;
+  return { ...group, vehicles: group.vehicles.map((vehicle) => ({ ...vehicle, seatsLeft: seatsLeftByVehicleId.get(vehicle.id) ?? null })) };
 }

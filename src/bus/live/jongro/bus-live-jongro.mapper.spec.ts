@@ -4,7 +4,8 @@
  * vehicle an arrival names without a position, each placed row a station with its stop id (aliases resolved), its
  * pole's number, its operation and at most two arrivals, a bus standing at the station first and arriving (D14), and the
  * group fresh as its staler key. A vehicle is low-floor by one row: its position's bus type when it has a position, else
- * the arrival row its plate comes from.
+ * the arrival row its plate comes from. Every vehicle's seats left is null from the reading; `withSeatsLeft` joins the
+ * seats a fresh GBIS answer gives by vehicle id, changing nothing else (ADR 0019, D17).
  */
 import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import { jongroArrivalBus, jongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
@@ -16,7 +17,7 @@ import { BusRealtimeArrivalService } from "../../realtime/arrival/bus-realtime-a
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
 import type { JongroBusTracking, JongroReading } from "../../realtime/group/bus-realtime-group.types";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
-import { toLiveJongroGroup } from "./bus-live-jongro.mapper";
+import { toLiveJongroGroup, withSeatsLeft } from "./bus-live-jongro.mapper";
 
 const POSITIONS_AT = new Date("2026-10-20T00:59:55Z");
 const NO_ALIASES = { stopIdByArsId: new Map<string, string>(), stopIdByTopisId: new Map<string, string>() };
@@ -98,6 +99,7 @@ describe("toLiveJongroGroup", () => {
           id: "100000103",
           plateNumber: "서울74사5537",
           occupancy: { level: "relaxed", passengerCount: 9 },
+          seatsLeft: null,
           isLastBus: false,
           isLowFloor: null,
           position: {
@@ -157,7 +159,7 @@ describe("toLiveJongroGroup", () => {
     const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [unseen] }], positions: [] }), NO_ALIASES);
 
     // Assert
-    expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, isLastBus: true, isLowFloor: null, position: null, trajectory: null }]);
+    expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, seatsLeft: null, isLastBus: true, isLowFloor: null, position: null, trajectory: null }]);
   });
 
   it("serves a bus's last-bus flag once: true on the vehicle and on every arrival naming it when any of its rows says so", () => {
@@ -474,5 +476,55 @@ describe("toLiveJongroGroup on 7800's captured rows", () => {
     expect(unreported.vehicles).toHaveLength(15);
     expect(unreported.vehicles.filter(({ occupancy }) => occupancy !== null)).toEqual([]);
     expect(reported.vehicles.find(({ id }) => id === "200011532")?.occupancy).toEqual({ level: "relaxed", passengerCount: 0 });
+  });
+
+  it("serves every vehicle's seats left as null from the reading alone", () => {
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), NO_ALIASES);
+
+    // Assert
+    expect(group.vehicles.filter(({ seatsLeft }) => seatsLeft !== null)).toEqual([]);
+  });
+});
+
+describe("withSeatsLeft", () => {
+  const unseen = { bus: jongroArrivalBus({ vehId: "100000200", plainNo: "서울74사5600", staOrd: 2 }), arrival: running(), travelSeconds: 300 };
+  const group = () => {
+    const rows = [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [unseen] }];
+    return toLiveJongroGroup("jongro07", reading({ rows }), NO_ALIASES);
+  };
+
+  it("joins each vehicle's seats left by its id, tracked or not, 0 included, and null for one the seats do not name", () => {
+    // Arrange
+    const seatsLeftById = new Map([
+      ["100000103", 0],
+      ["200011684", 37],
+    ]);
+
+    // Act
+    const joined = withSeatsLeft(group(), seatsLeftById);
+
+    // Assert
+    expect(joined.vehicles.map(({ id, seatsLeft }) => [id, seatsLeft])).toEqual([
+      ["100000103", 0],
+      ["100000200", null],
+    ]);
+    expect(withSeatsLeft(group(), new Map([["100000200", 12]])).vehicles.map(({ seatsLeft }) => seatsLeft)).toEqual([null, 12]);
+  });
+
+  it("changes nothing but seatsLeft, keeping each vehicle's key order", () => {
+    // Arrange
+    const served = group();
+
+    // Act
+    const joined = withSeatsLeft(served, new Map([["100000103", 41]]));
+
+    // Assert
+    expect(JSON.stringify(joined)).toBe(JSON.stringify(served).replace('"seatsLeft":null', '"seatsLeft":41'));
+  });
+
+  it("serves the group unchanged with no seats", () => {
+    // Act & Assert
+    expect(withSeatsLeft(group(), new Map())).toEqual(group());
   });
 });

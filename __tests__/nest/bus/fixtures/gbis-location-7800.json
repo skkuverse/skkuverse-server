@@ -1,0 +1,197 @@
+{
+  "_about": "GBIS buslocationservice/v2/getBusLocationListv2?routeId=200000150&format=json (7800), captured 2026-10-24 20:22:50 KST in one call; the whole answer, nothing trimmed, no service key in it. Its vehId values are the TOPIS vehIds /bus/live/gyeonggi7800 served at the same minute (13 of 14; 233000041 stood at the 호매실 terminal, stationSeq 79, with no TOPIS position).",
+  "response": {
+    "comMsgHeader": "",
+    "msgHeader": {
+      "queryTime": "2026-10-24 20:22:50.769",
+      "resultCode": 0,
+      "resultMessage": "정상적으로 처리되었습니다."
+    },
+    "msgBody": {
+      "busLocationList": [
+        {
+          "crowded": 1,
+          "lowPlate": 0,
+          "plateNo": "경기70사1641",
+          "remainSeatCnt": 41,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 2,
+          "stationId": 201000458,
+          "stationSeq": 3,
+          "taglessCd": 1,
+          "vehId": 200010839
+        },
+        {
+          "crowded": 1,
+          "lowPlate": 0,
+          "plateNo": "경기70사1724",
+          "remainSeatCnt": 37,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 0,
+          "stationId": 201000146,
+          "stationSeq": 18,
+          "taglessCd": 0,
+          "vehId": 200011684
+        },
+        {
+          "crowded": 1,
+          "lowPlate": 0,
+          "plateNo": "경기70사1176",
+          "remainSeatCnt": 35,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 2,
+          "stationId": 200000162,
+          "stationSeq": 24,
+          "taglessCd": 1,
+          "vehId": 233000065
+        },
+        {
+          "crowded": 0,
+          "lowPlate": 2,
+          "plateNo": "경기70사1712",
+          "remainSeatCnt": 65,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 0,
+          "stationId": 226000039,
+          "stationSeq": 31,
+          "taglessCd": 0,
+          "vehId": 200011605
+        },
+        {
+          "crowded": 1,
+          "lowPlate": 0,
+          "plateNo": "경기70사1664",
+          "remainSeatCnt": 35,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 1,
+          "stationId": 120000671,
+          "stationSeq": 38,
+          "taglessCd": 0,
+          "vehId": 200011123
+        },
+        {
+          "crowded": 0,
+          "lowPlate": 2,
+          "plateNo": "경기70사1647",
+          "remainSeatCnt": 70,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 0,
+          "stationId": 277101688,
+          "stationSeq": 40,
+          "taglessCd": 1,
+          "vehId": 200010899
+        },
+        {
+          "crowded": 1,
+          "lowPlate": 0,
+          "plateNo": "경기70사1721",
+          "remainSeatCnt": 39,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 1,
+          "stationId": 119000302,
+          "stationSeq": 41,
+          "taglessCd": 0,
+          "vehId": 200011682
+        },
+        {
+          "crowded": 1,
+          "lowPlate": 0,
+          "plateNo": "경기70사1666",
+          "remainSeatCnt": 23,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 1,
+          "stationId": 277103220,
+          "stationSeq": 49,
+          "taglessCd": 0,
+          "vehId": 200011125
+        },
+        {
+          "crowded": 0,
+          "lowPlate": 2,
+          "plateNo": "경기70사1713",
+          "remainSeatCnt": 31,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 1,
+          "stationId": 200000251,
+          "stationSeq": 56,
+          "taglessCd": 0,
+          "vehId": 200011606
+        },
+        {
+          "crowded": 2,
+          "lowPlate": 0,
+          "plateNo": "경기70사1709",
+          "remainSeatCnt": 17,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 2,
+          "stationId": 200000158,
+          "stationSeq": 59,
+          "taglessCd": 1,
+          "vehId": 200011531
+        },
+        {
+          "crowded": 0,
+          "lowPlate": 2,
+          "plateNo": "경기70사1714",
+          "remainSeatCnt": 60,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 2,
+          "stationId": 201000360,
+          "stationSeq": 65,
+          "taglessCd": 0,
+          "vehId": 200011607
+        },
+        {
+          "crowded": 1,
+          "lowPlate": 0,
+          "plateNo": "경기70사1723",
+          "remainSeatCnt": 38,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 0,
+          "stationId": 201000358,
+          "stationSeq": 73,
+          "taglessCd": 0,
+          "vehId": 200011685
+        },
+        {
+          "crowded": 0,
+          "lowPlate": 2,
+          "plateNo": "경기70사1145",
+          "remainSeatCnt": 70,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 0,
+          "stationId": 201000447,
+          "stationSeq": 79,
+          "taglessCd": 1,
+          "vehId": 233000041
+        },
+        {
+          "crowded": 0,
+          "lowPlate": 2,
+          "plateNo": "경기70사1646",
+          "remainSeatCnt": 70,
+          "routeId": 200000150,
+          "routeTypeCd": 11,
+          "stateCd": 0,
+          "stationId": 201000447,
+          "stationSeq": 79,
+          "taglessCd": 1,
+          "vehId": 200010898
+        }
+      ]
+    }
+  }
+}

@@ -205,6 +205,14 @@ const config = {
     enabled: switches.regionalBusEnabled,
   },
 
+  // WHY: the GBIS seat poller spends most of a 1,000-call daily quota on the key production holds.
+  gbis: {
+    enabled: switches.gbisEnabled,
+    get serviceKey(): string {
+      return roleScoped("DATA_GO_KR_SERVICE_KEY");
+    },
+  },
+
   // CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/plugins/mongo/public_holidays.py writes it in
   // MONGO_DB_NAME_BUS_CAMPUS, which this server reads as mongo.dbName.
   holidays: {
@@ -287,6 +295,7 @@ const config = {
     subway: string;
     shuttle: string;
     regionalBus: string;
+    gbis: string;
   } {
     return {
       push: switches.pushDelivery,
@@ -296,6 +305,7 @@ const config = {
       subway: switches.subwayEnabled ? "on" : "off",
       shuttle: switches.shuttleEnabled ? "on" : "off",
       regionalBus: switches.regionalBusEnabled ? "on" : "off",
+      gbis: switches.gbisEnabled ? "on" : "off",
     };
   },
 };

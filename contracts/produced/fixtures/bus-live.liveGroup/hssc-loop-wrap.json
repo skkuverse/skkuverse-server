@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: GET /bus/live/hssc at 10:00 KST on 2026-10-20 over bus_cache seeded in the shapes the pollers write (line 32149 just left 문묘입구(등교), its trajectory passing the last index back to 농구장 at s 11), the stored jongro_routes, jongro-route-attributes and bus-stops fixtures of __tests__/nest/bus/fixtures; the route has no production traffic to capture yet.",
+  "_about": "Synthetic: GET /bus/live/hssc at 10:00 KST on 2026-10-20 over bus_cache seeded in the shapes the pollers write (line 32149 just left 문묘입구(등교), its trajectory passing the last index back to 농구장 at s 11), the stored jongro_routes, jongro-route-attributes and bus-stops fixtures of __tests__/nest/bus/fixtures; the route has no production traffic to capture yet. Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus.",
   "data": {
     "groupId": "hssc",
     "stationsVersion": null,
@@ -10,6 +10,7 @@
         "id": "32149",
         "plateNumber": null,
         "occupancy": null,
+        "seatsLeft": null,
         "isLastBus": null,
         "isLowFloor": null,
         "position": {

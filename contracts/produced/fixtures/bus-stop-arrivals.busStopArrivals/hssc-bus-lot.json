@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-bus-lot/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a shuttle stop that aliases 종로07's pole 01618, so it lists the 인자셔틀's timetable entries and a 종로07 live entry); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16).",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-bus-lot/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a shuttle stop that aliases 종로07's pole 01618, so it lists the 인자셔틀's timetable entries and a 종로07 live entry); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16). Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus.",
   "data": {
     "stop": {
       "id": "hssc-bus-lot",
@@ -127,6 +127,7 @@
               "level": "relaxed",
               "passengerCount": 9
             },
+            "seatsLeft": null,
             "isLastBus": false,
             "isLowFloor": true,
             "position": {
