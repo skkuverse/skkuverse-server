@@ -15,7 +15,7 @@ export class BusRealtimeArrivalService {
   }
 
   // WHY: TOPIS leaves a slot's text empty when it names no bus for it.
-  toArrivals(buses: readonly JongroArrivalBus[], seatCount: number): RealtimeArrival[] {
+  toArrivals(buses: readonly JongroArrivalBus[], seatCount: number | null): RealtimeArrival[] {
     return buses.filter((bus) => bus.arrmsg.trim() !== "").map((bus) => toArrival(bus, seatCount));
   }
 

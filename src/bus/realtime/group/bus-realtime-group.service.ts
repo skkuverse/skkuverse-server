@@ -5,7 +5,7 @@ import type { WithMeta } from "../../../http/response.types";
 import { Clock } from "../../../infra/clock";
 import { createLogThrottle } from "../../../infra/log-throttle";
 import logger from "../../../infra/logger";
-import { JONGRO_ROUTES } from "../../bus.constants";
+import { TOPIS_ROUTES } from "../../bus.constants";
 import { toKstInstant } from "../../../shared/kst-date.util";
 import type { JongroRoute, JongroRouteAttributes } from "../../bus.types";
 import type { BusCacheEntry, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
@@ -29,7 +29,7 @@ import type { DeprecatedCaller, GroupView, JongroBusTracking, JongroReading, Pla
 import type { RealtimeBus, RealtimeGroup, RealtimeGroupMeta, StationEta } from "./bus-realtime-group.wire";
 
 type GroupSource = () => Promise<GroupView>;
-type SeatedRoute = RegistryRoute & Pick<JongroRouteAttributes, "seatCount">;
+type SeatedRoute = RegistryRoute & { seatCount: JongroRouteAttributes["seatCount"] | null };
 
 @Injectable()
 export class BusRealtimeGroupService {
@@ -69,12 +69,12 @@ export class BusRealtimeGroupService {
     return source ? source() : Promise.resolve(null);
   }
 
-  // WHY: the live route maps a Jongno group from the same reads and joins as this view, with when each key was written
-  // (ADR 0019); null for a group that is not a Jongno route.
+  // WHY: the live route maps a TOPIS group from the same reads and joins as this view, with when each key was written
+  // (ADR 0019); null for a group that is not a TOPIS route. A route whose source reports no load reads no seat count.
   async findJongroReading(groupId: string): Promise<JongroReading | null> {
-    const route = JONGRO_ROUTES.find((candidate) => candidate.id === groupId);
+    const route = TOPIS_ROUTES.find((candidate) => candidate.id === groupId);
     if (!route) return null;
-    const seatCount = await this.arrival.seatCountOf(route.id);
+    const seatCount = route.capabilities.occupancy ? await this.arrival.seatCountOf(route.id) : null;
     const [registryRoute, positionsEntry, arrivalsEntry] = await Promise.all([
       this.jongro.registryRouteOf(route.id),
       this.jongro.findPositionsEntry(route.code),
@@ -106,7 +106,7 @@ export class BusRealtimeGroupService {
 
   private sourcesByGroupId(): Map<string, GroupSource> {
     const sources = new Map<string, GroupSource>([["hssc", async () => ({ buses: toRealtimeBuses(await this.hssc.listBuses()), stationEtas: [] })]]);
-    for (const route of JONGRO_ROUTES.filter(({ id }) => FROZEN_JONGRO_ROUTE_IDS.includes(id))) sources.set(route.id, () => this.readJongroGroup(route));
+    for (const route of TOPIS_ROUTES.filter(({ id }) => FROZEN_JONGRO_ROUTE_IDS.includes(id))) sources.set(route.id, () => this.readJongroGroup(route));
     return sources;
   }
 

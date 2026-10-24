@@ -10,7 +10,7 @@
  * the list held them. The attributes are the `jongro-route-attributes`
  * dataset's; nothing here holds a TOPIS URL or key.
  */
-import { JONGRO_ROUTES } from "./bus.constants";
+import { JONGRO_ROUTES, REGIONAL_ROUTES, TOPIS_ROUTES } from "./bus.constants";
 
 // WHY: two-digit codes as Seoul names village buses, so `jongro_locations_07` has no `_007` twin. The ids are code
 // (ADR 0013, D2), so a spec checks them.
@@ -104,5 +104,53 @@ describe("JONGRO_ROUTES", () => {
     expect(Object.isFrozen(JONGRO_ROUTES)).toBe(true);
     expect(JONGRO_ROUTES.every((route) => Object.isFrozen(route))).toBe(true);
     expect(JONGRO_ROUTES.every((route) => Object.isFrozen(route.capabilities))).toBe(true);
+  });
+});
+
+// WHY: the owner's decisions of 2026-10-24 (docs/plans/7800-unified-arrivals.md, Q2, Q4 and Q6).
+describe("REGIONAL_ROUTES", () => {
+  it("holds 7800 by the GBIS route id TOPIS answers it by, as group gyeonggi7800, unlisted, polled every 30 s", () => {
+    // Act & Assert
+    expect(REGIONAL_ROUTES.map(({ id, code, busRouteId, isListed, pollIntervalMs }) => ({ id, code, busRouteId, isListed, pollIntervalMs }))).toEqual([
+      { id: "gyeonggi7800", code: "7800", busRouteId: "200000150", isListed: false, pollIntervalMs: 30_000 },
+    ]);
+  });
+
+  it("states what TOPIS supplies for 7800: GPS, plates, last bus and bus type, but no load", () => {
+    // Act
+    const [capabilities] = REGIONAL_ROUTES.map((route) => route.capabilities);
+
+    // Assert
+    expect(capabilities).toEqual({ positionSource: "gps", occupancy: false, plateNumber: true, lastBus: true, lowFloor: true });
+    expect(Object.keys(capabilities!)).toEqual(["positionSource", "occupancy", "plateNumber", "lastBus", "lowFloor"]);
+  });
+
+  it("is frozen, so no request can change a route", () => {
+    // Act & Assert
+    expect(Object.isFrozen(REGIONAL_ROUTES)).toBe(true);
+    expect(REGIONAL_ROUTES.every((route) => Object.isFrozen(route) && Object.isFrozen(route.capabilities))).toBe(true);
+  });
+});
+
+describe("TOPIS_ROUTES", () => {
+  it("lists the Jongno routes, then the regional ones, each id and code once", () => {
+    // Act
+    const ids = TOPIS_ROUTES.map((route) => route.id);
+    const codes = TOPIS_ROUTES.map((route) => route.code);
+
+    // Assert
+    expect(ids).toEqual(["jongro02", "jongro07", "jongro08", "gyeonggi7800"]);
+    expect([new Set(ids).size, new Set(codes).size]).toEqual([4, 4]);
+    expect(codes.filter((code) => !/^\d+$/.test(code))).toEqual([]);
+    expect(Object.isFrozen(TOPIS_ROUTES)).toBe(true);
+  });
+
+  it("holds no TOPIS URL or service key, so a role without the key can import it", () => {
+    // Act
+    const serialized = JSON.stringify(TOPIS_ROUTES);
+
+    // Assert
+    expect(serialized).not.toContain("serviceKey");
+    expect(serialized).not.toContain(process.env.SEOUL_BUS_SERVICE_KEY as string);
   });
 });

@@ -13,9 +13,9 @@ export interface TimedText {
   seconds: number;
 }
 
-/** WHY: what reading a bus on its route takes: the seat count crowding compares with, whether the route's source reports load, and the ords it passes through. */
+/** WHY: what reading a bus on its route takes: the seat count crowding compares with (none where the source reports no load), whether it reports load, and the ords it passes through. */
 export interface RouteArrivalFacts {
-  seatCount: number;
+  seatCount: number | null;
   capabilities: Pick<JongroRouteCapabilities, "occupancy">;
   passThroughOrds: ReadonlySet<number>;
 }

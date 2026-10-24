@@ -5,8 +5,9 @@ import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import type { LatLng } from "../../shared/lat-lng.types";
+import type { JongroRoute } from "../bus.types";
 import type { ServedStop } from "../bus.wire";
-import { JONGRO_ROUTES } from "../bus.constants";
+import { TOPIS_ROUTES } from "../bus.constants";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusRoutePathService } from "../route-path/bus-route-path.service";
@@ -68,8 +69,8 @@ export class BusStopIndexService {
     const nowMs = this.clock.now().getTime();
     const held = this.built;
     if (held?.retryAtMs != null && nowMs < held.retryAtMs && held.index.snapshot.revision === snapshot.revision) return held.index;
-    const reads = await Promise.allSettled(JONGRO_ROUTES.map((route) => this.registry.routeOf(route.id)));
-    const key = [snapshot.revision, ...reads.map((read) => (read.status === "fulfilled" ? read.value.stationsVersion : "unread"))].join(":");
+    const reads = await Promise.allSettled(TOPIS_ROUTES.map((route) => this.readRoute(route)));
+    const key = [snapshot.revision, ...reads.map((read) => (read.status === "fulfilled" ? (read.value?.stationsVersion ?? "none") : "unread"))].join(":");
     const failed = reads.find((read): read is PromiseRejectedResult => read.status === "rejected");
     const index = held?.key === key ? held.index : this.buildIndex(snapshot, reads, failed);
     if (failed) this.logUnreadRoutes(reads);
@@ -77,8 +78,14 @@ export class BusStopIndexService {
     return index;
   }
 
-  private buildIndex(snapshot: StopIndex["snapshot"], reads: PromiseSettledResult<RegistryRoute>[], failed: PromiseRejectedResult | undefined): StopIndex {
-    const routes = reads.flatMap((read): RegistryRoute[] => (read.status === "fulfilled" ? [read.value] : []));
+  // WHY: an unlisted route adds only aliased poles (ADR 0019, D5), so one not stored yet (REGIONAL_BUS=off stores none)
+  // fails nothing; a failed read of the shared collection is the listed routes' to report.
+  private readRoute(route: JongroRoute): Promise<RegistryRoute | null> {
+    return route.isListed ? this.registry.routeOf(route.id) : this.registry.findRouteOf(route.id).catch(() => null);
+  }
+
+  private buildIndex(snapshot: StopIndex["snapshot"], reads: PromiseSettledResult<RegistryRoute | null>[], failed: PromiseRejectedResult | undefined): StopIndex {
+    const routes = reads.flatMap((read): RegistryRoute[] => (read.status === "fulfilled" && read.value !== null ? [read.value] : []));
     const index: StopIndex = { ...toStopIndex(snapshot, routes), ...(failed && { registryFailure: failed.reason }) };
     if (!failed) this.warnUnmatchedAliases(index);
     return index;
@@ -121,8 +128,8 @@ export class BusStopIndexService {
     }
   }
 
-  private logUnreadRoutes(reads: PromiseSettledResult<RegistryRoute>[]): void {
-    const routeIds = JONGRO_ROUTES.filter((_route, index) => reads[index]?.status === "rejected").map((route) => route.id);
+  private logUnreadRoutes(reads: PromiseSettledResult<RegistryRoute | null>[]): void {
+    const routeIds = TOPIS_ROUTES.filter((_route, index) => reads[index]?.status === "rejected").map((route) => route.id);
     const err: unknown = reads.find((read): read is PromiseRejectedResult => read.status === "rejected")?.reason;
     const ticket = this.logThrottle.take(`unread:${routeIds.join(",")}`);
     if (ticket) {
