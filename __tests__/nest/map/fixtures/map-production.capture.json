@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip of each /map/config body gained the map tab and opensIn map on purpose (a chip runs where its result shows; app ADR 0022 D1), and its ETag was recomputed from the new body. On 2026-10-24 the building_code chip of each /map/config body gained an empty tabs on purpose (the shared-map shell's search field replaces it, so that shell lists it in no tab), and its ETag was recomputed from the new body.",
+  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body. On 2026-10-24 the shuttle_routes chip of each /map/config body gained the map tab and opensIn map on purpose (a chip runs where its result shows; app ADR 0022 D1), and its ETag was recomputed from the new body. On 2026-10-24 the building_code chip of each /map/config body gained an empty tabs on purpose (the shared-map shell's search field replaces it, so that shell lists it in no tab), and its ETag was recomputed from the new body. On 2026-10-24 each route line layer of each /map/config body went from minZoom 13 to 12 on purpose (the shared-map shell frames a whole line in the half sheet at about zoom 12.5), and its ETag was recomputed from the new body.",
   "config": {
     "ko": {
       "status": 200,
@@ -106,7 +106,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -126,7 +126,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -146,7 +146,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -166,7 +166,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "FFFFFF",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -274,7 +274,7 @@
           }
         }
       },
-      "etag": "W/\"dbc-ySUOVyjhCXjT+L7bdqvbkCw8BKg\""
+      "etag": "W/\"dbc-LdTleyMJesuZRmG9QpTk4/u+4yc\""
     },
     "en": {
       "status": 200,
@@ -381,7 +381,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -401,7 +401,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -421,7 +421,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -441,7 +441,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "FFFFFF",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -549,7 +549,7 @@
           }
         }
       },
-      "etag": "W/\"db4-60Z9P8ciypA+M7D3NWGT7OrUtd8\""
+      "etag": "W/\"db4-oqpw+8JWscSONbrIZNCRW9kGmDs\""
     },
     "zh": {
       "status": 200,
@@ -656,7 +656,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -676,7 +676,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -696,7 +696,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -716,7 +716,7 @@
                 "width": 5,
                 "outlineWidth": 1.5,
                 "outlineColor": "FFFFFF",
-                "minZoom": 13
+                "minZoom": 12
               },
               "tabs": [
                 "transit"
@@ -824,7 +824,7 @@
           }
         }
       },
-      "etag": "W/\"db5-0RPyvKt8sd31TuyD+CnViPnCle4\""
+      "etag": "W/\"db5-AOx22zVTwOMVoft7m514/ZwsuCQ\""
     }
   },
   "event": {
