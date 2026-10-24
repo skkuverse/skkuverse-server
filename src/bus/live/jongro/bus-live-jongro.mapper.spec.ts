@@ -6,7 +6,13 @@
  * group fresh as its staler key. A vehicle is low-floor by one row: its position's bus type when it has a position, else
  * the arrival row its plate comes from.
  */
+import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import { jongroArrivalBus, jongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
+import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
+import { isTopisPassThrough } from "../../bus.rules";
+import type { JongroRouteCapabilities } from "../../bus.types";
+import type { JongroArrivalBus } from "../../cache/bus-cache.document";
+import { BusRealtimeArrivalService } from "../../realtime/arrival/bus-realtime-arrival.service";
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
 import type { JongroBusTracking, JongroReading } from "../../realtime/group/bus-realtime-group.types";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
@@ -321,5 +327,116 @@ describe("toLiveJongroGroup low floor", () => {
       ["100000103", null],
       ["100000200", null],
     ]);
+  });
+});
+
+// WHY: 7800 as TOPIS answered it on 2026-10-24 (topis-7800-arrivals.json), each row read slot by slot as the realtime
+// view reads it, on a route stated as the TOPIS list will state it (unlisted, GPS, no load): it runs through the Jongno
+// path unchanged except that stops away leave out its 19 `…(미정차)` stations and no vehicle serves an occupancy.
+describe("toLiveJongroGroup on 7800's captured rows", () => {
+  const rows7800 = arrivals7800.msgBody.itemList;
+  const MADE_AT_7800_MS = Date.parse("2026-10-24T17:51:03+09:00");
+  const CHECKED_AT_7800 = new Date("2026-10-24T08:51:10Z");
+  const CAPABILITIES_7800 = { positionSource: "gps", occupancy: false, plateNumber: true, lastBus: true, lowFloor: true } as const;
+  const arrivalService = new BusRealtimeArrivalService(storedRouteAttributesService());
+
+  // The test's own reading of a captured row's two slots, as BusRealtimeJongroClient reads them.
+  const capturedBuses = (row: (typeof rows7800)[number]): JongroArrivalBus[] =>
+    (["1", "2"] as const).map((slot) => {
+      const field = (name: string) => (row as Record<string, string>)[`${name}${slot}`]!;
+      return {
+        traTime: Number(field("traTime")),
+        sectOrd: Number(field("sectOrd")),
+        staOrd: Number(row.staOrd),
+        arrmsg: field("arrmsg"),
+        isLast: field("isLast") === "1",
+        plainNo: field("plainNo"),
+        vehId: field("vehId"),
+        rerideDiv: Number(field("rerdie_Div")),
+        rerideNum: Number(field("reride_Num")),
+      };
+    });
+
+  const passThroughOrds = new Set(rows7800.filter((row) => isTopisPassThrough(row.stNm)).map((row) => Number(row.staOrd)));
+  const reading7800 = (capabilities: JongroRouteCapabilities): JongroReading => ({
+    route: {
+      ...{ id: "gyeonggi7800", code: "7800", busRouteId: "200000150", capabilities, isListed: false, pollIntervalMs: 30_000 },
+      stationsVersion: "7800000000000000",
+      turnaroundTopisId: "121001315",
+      registryStations: rows7800.map((row) => ({ topisId: row.stId, arsId: row.arsId, stationName: row.stNm, sequence: Number(row.staOrd) })),
+      stations: [],
+      mapping: {},
+      topisIds: rows7800.map((row) => row.stId),
+      passThroughOrds,
+    },
+    rows: rows7800.map((row) => ({
+      stationIndex: Number(row.staOrd) - 1,
+      madeAtMs: MADE_AT_7800_MS,
+      slots: arrivalService.toTimedArrivals(capturedBuses(row), { seatCount: 45, capabilities, passThroughOrds }),
+    })),
+    positions: [],
+    arrivalsCheckedAt: CHECKED_AT_7800,
+    positionsCheckedAt: CHECKED_AT_7800,
+  });
+  const arrivalsAt = (group: ReturnType<typeof toLiveJongroGroup>, staOrd: number) => group.stations.find((station) => station.stationIndex === staOrd - 1)!.arrivals;
+
+  it("serves [0번째 전] en route at mkTm plus its travel time, 1 stop away", () => {
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), new Map());
+
+    // Assert
+    expect(arrivalsAt(group, 26)[0]).toEqual({
+      status: "enRoute",
+      expectedArrivalAt: "2026-10-24T17:53:37+09:00",
+      ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
+      basis: "provider",
+      stopsAway: 1,
+      isLastBus: false,
+      vehicleId: "200010901",
+      providerText: "2분34초후[0번째 전]",
+    });
+  });
+
+  it("serves both slots at 호매실동차고지 waiting to depart, naming no vehicle, and the station running", () => {
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), new Map());
+
+    // Assert
+    expect(group.stations[0]).toMatchObject({ stationIndex: 0, stopId: null, arsId: null, operation: "running" });
+    expect(group.stations[0]!.arrivals.map(({ status, vehicleId, stopsAway, providerText }) => [status, vehicleId, stopsAway, providerText])).toEqual([
+      ["waitingToDepart", null, null, "출발대기"],
+      ["waitingToDepart", null, null, "출발대기"],
+    ]);
+  });
+
+  it("counts only the stations a bus stops at, which TOPIS's [N번째 전] does not", () => {
+    // Act
+    const group = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), new Map());
+
+    // Assert
+    const counts = (staOrd: number) => arrivalsAt(group, staOrd).map(({ providerText, stopsAway }) => [providerText, stopsAway]);
+    expect(counts(31)).toEqual([
+      ["10분25초후[5번째 전]", 3],
+      ["17분57초후[8번째 전]", 6],
+    ]);
+    expect(counts(37)).toEqual([
+      ["2분51초후[1번째 전]", 1],
+      ["12분18초후[5번째 전]", 1],
+    ]);
+    expect(counts(25)).toEqual([
+      ["6분38초후[2번째 전]", 3],
+      ["19분57초후[9번째 전]", 10],
+    ]);
+  });
+
+  it("serves no vehicle an occupancy on a route whose source reports no load, and the rows' reading on one that does", () => {
+    // Act
+    const unreported = toLiveJongroGroup("gyeonggi7800", reading7800(CAPABILITIES_7800), new Map());
+    const reported = toLiveJongroGroup("gyeonggi7800", reading7800({ ...CAPABILITIES_7800, occupancy: true }), new Map());
+
+    // Assert
+    expect(unreported.vehicles).toHaveLength(15);
+    expect(unreported.vehicles.filter(({ occupancy }) => occupancy !== null)).toEqual([]);
+    expect(reported.vehicles.find(({ id }) => id === "200011532")?.occupancy).toEqual({ level: "relaxed", passengerCount: 0 });
   });
 });

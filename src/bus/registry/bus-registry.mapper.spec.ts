@@ -72,6 +72,26 @@ describe("toRegistryRoute", () => {
     // Assert
     expect(mapping["constructor"]).toEqual({ sequence: 2, stationName: "stop constructor" });
   });
+
+  // WHY: stops away leave out the stations a bus passes without stopping (ADR 0019, D4), which TOPIS names `…(미정차)`.
+  it("derives the ords of the stored stations a bus passes through, whatever ARS number they carry", () => {
+    // Arrange
+    const doc = documentOf(["A", "B", "C", "D", "E"]);
+    doc.stations[1]!.stationName = "효행공원(미정차)";
+    doc.stations[2]!.stationName = "사당역사거리(미정차)";
+    doc.stations[2]!.arsId = "78420";
+
+    // Act
+    const { passThroughOrds } = toRegistryRoute(committed, doc);
+
+    // Assert
+    expect([...passThroughOrds]).toEqual([2, 3]);
+  });
+
+  it("derives no pass-through ord on a route that stops everywhere", () => {
+    // Act & Assert
+    expect(toRegistryRoute(committed, documentOf(["A", "B", "C"])).passThroughOrds.size).toBe(0);
+  });
 });
 
 describe("toRegistryStations", () => {
