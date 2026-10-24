@@ -514,25 +514,17 @@ describe("MapConfigService", () => {
     for (const layer of transitLayers) expect(layer.chipGroupId).toBeNull();
   });
 
-  it.each([
-    ["ko", "셔틀 노선"],
-    ["en", "Shuttle Routes"],
-    ["zh", "班车路线"],
-  ] as const)("serves the shuttle routes chip to both tabs in %s, opening in the map tab and turning the four route lines on without a camera move", async (lang, label) => {
+  it.each(["ko", "en", "zh"] as const)("serves no shuttle routes chip in %s, while still serving the four route line layers", async (lang) => {
     // Act
     const served = await svc.getMapConfig(lang);
 
     // Assert
-    expect(served.chips.find((c) => c.id === "shuttle_routes")).toEqual({
-      id: "shuttle_routes",
-      label,
-      icon: { kind: "emoji", emoji: "🚌" },
-      action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
-      isReset: false,
-      list: null,
-      tabs: ["map", "transit"],
-      opensIn: "map",
-    });
+    // The transit tab draws a picked bus's line itself, so a chip turning all four on duplicated it.
+    expect(served.chips.find((c) => c.id === "shuttle_routes")).toBeUndefined();
+    expect(served.chips.filter((c) => c.action.kind === "layers")).toEqual([]);
+    // The app's line sheet turns `<groupId>_route` on from this list to draw a selected line.
+    const layerIds = served.layers.map((l) => l.id);
+    expect(layerIds).toEqual(expect.arrayContaining(["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"]));
   });
 
   it.each([
@@ -566,8 +558,8 @@ describe("MapConfigService", () => {
     const ko = await svc.getMapConfig("ko");
 
     // Assert
-    const others = ko.chips.filter((c) => c.id !== "shuttle_routes" && c.id !== "building_code");
-    expect(others).toHaveLength(ko.chips.length - 2);
+    const others = ko.chips.filter((c) => c.id !== "building_code");
+    expect(others).toHaveLength(ko.chips.length - 1);
     for (const chip of others) {
       expect(chip).not.toHaveProperty("tabs");
       expect(chip).not.toHaveProperty("opensIn");

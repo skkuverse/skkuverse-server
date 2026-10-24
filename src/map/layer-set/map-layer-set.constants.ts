@@ -33,11 +33,6 @@ export const BASE_CHIPS: readonly MapChipSpec[] = [
     // WHY: https, as the home grid's copy of this link must be (`isBrokenLinkAction`); http only redirects here.
     action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" }, isReset: false, list: null,
   },
-  {
-    id: "shuttle_routes", emoji: "🚌", label: { ko: "셔틀 노선", en: "Shuttle Routes", zh: "班车路线" },
-    action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
-    isReset: false, list: null, tabs: ["map", "transit"], opensIn: "map",
-  },
 ];
 
 // WHY: one route per data source; the app keys its overlay cache on the string, so layers sharing it cost one fetch.

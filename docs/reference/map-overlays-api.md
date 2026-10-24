@@ -1133,7 +1133,7 @@ invisible rather than broken. Only `BASE_CHIPS` authors `link` chips; a festival
 it may name base layers such as the route lines, which carry `chipGroupId: null`. A `null` camera
 means the camera does not move. Builds without `layers` in `CHIP_ACTION_KINDS` drop the chip
 (`skkuverse-app/apps/mobile/src/features/map/map.schema.ts`, and `packages/shared/src/map/parser.ts`
-on app `main`). Only `BASE_CHIPS` authors one.
+on app `main`). Only `BASE_CHIPS` may author one, and none does today.
 
 ### 8.2 What a chip tap may change — two rules
 
@@ -1194,9 +1194,7 @@ The row always opens with the **base chips**, `BASE_CHIPS` in
 건물코드 (route `/search`), 분실물 (web view `/skku/lostandfound`) and 문의하기 (external, the Kakao
 channel chat), each with `isReset: false` and `list: null`. They are the campus sheet's former service
 buttons; the first four tiles of the home grid carry the same links for builds that drop a `link`
-chip. A fifth base chip, 셔틀 노선 (`shuttle_routes`, Shuttle Routes / 班车路线), shows in both tabs and
-opens in the map tab (`tabs: ["map", "transit"]`, `opensIn: "map"`): a `layers` chip that turns on the
-four route line layers with a `null` camera. While a layer set is live, **the reset chip, then every chip authored in the layer set's
+chip. While a layer set is live, **the reset chip, then every chip authored in the layer set's
 config**, in file order, follow them. Outside an activation window `chips` is the base chips alone.
 
 **The reset chip is synthesised, not authored.** Its id is `<layerSetId>_all` (`eskara-2026_all`), its
@@ -1379,14 +1377,17 @@ alone. The `building_code` chip has one because the shell's search field does it
 | --- | --- |
 | `building_numbers`, `building_labels`, `campus_geometry` | `["map", "transit"]` |
 | the route line layers (`jongro02_route`, `jongro08_route`, `jongro07_route`, `hssc_route`) | `["transit"]` |
-| every festival layer, and every chip but `shuttle_routes` and `building_code` | absent: the map tab only |
-| the `shuttle_routes` chip | `["map", "transit"]`, with `opensIn: "map"` |
+| every festival layer, and every chip but `building_code` | absent: the map tab only |
 | the `building_code` chip | `[]`: no tab of the shared-map shell, the map tab elsewhere |
 
 A route line layer keeps `chipGroupId: null` on the transit tab. Installed builds read a grouped
 layer as festival content and hide its toggle, so grouping the route lines would take the Jongno
-route toggles away from them. That is why the transit tab's chip is a `layers` chip, which asks no
-group, rather than a `focus` chip.
+route toggles away from them. A chip that turns a route line on is therefore a `layers` chip, which
+asks no group, never a `focus` chip.
+
+No chip turns the route lines on. The app's transit tab draws a picked bus's line by turning its
+`<groupId>_route` layer on from this list, so the route line layers stay on `/map/config` without
+a chip.
 
 ## 9. Known gaps
 
