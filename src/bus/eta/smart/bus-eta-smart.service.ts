@@ -58,7 +58,7 @@ export class BusEtaSmartService {
     const followingDays = weekCount === 2 ? await this.schedule.resolveFollowingWeek(serviceId, smart.from) : [];
     if (!followingDays) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
     const routeTypes = serviceConfigOf(serviceId)?.eta?.routeTypes;
-    const inputs = (routeTypes && (await this.estimateInputs(serviceId, routeTypes))) ?? NO_ESTIMATES;
+    const inputs = (routeTypes && (await this.estimateInputs(serviceId, routeTypes, { withLatest: true }))) ?? NO_ESTIMATES;
     // WHY: a run of the following week keeps its served estimate (ADR 0019, D12).
     const followingInputs = { ...inputs, latestEstimates: undefined };
     const days = [...smart.days.map((day) => ({ day, inputs })), ...followingDays.map((day) => ({ day, inputs: followingInputs }))];
@@ -77,7 +77,7 @@ export class BusEtaSmartService {
   private async resolveSmart(serviceId: string, lang: SupportedLang): Promise<SmartSchedule> {
     const resolved = await this.resolveSchedule(serviceId);
     const routeTypes = serviceConfigOf(serviceId)?.eta?.routeTypes;
-    const inputs = routeTypes && resolved.status === "active" ? await this.estimateInputs(serviceId, routeTypes) : null;
+    const inputs = routeTypes && resolved.status === "active" ? await this.estimateInputs(serviceId, routeTypes, { withLatest: false }) : null;
     return withStatusMessage(inputs ? this.withEstimates(resolved, inputs) : resolved, lang);
   }
 
@@ -91,7 +91,7 @@ export class BusEtaSmartService {
   }
 
   // WHY: null, logged, when the estimates or the stops cannot be read, so the stored timetable serves.
-  private async estimateInputs(serviceId: string, routeTypes: readonly string[]): Promise<EstimateInputs | null> {
+  private async estimateInputs(serviceId: string, routeTypes: readonly string[], { withLatest }: { withLatest: boolean }): Promise<EstimateInputs | null> {
     const [docs, stops] = await Promise.allSettled([this.docs.get(), this.stops.current()]);
     if (stops.status === "rejected") {
       this.warnUnestimated(serviceId, "bus.eta.stops_unavailable", stops.reason);
@@ -103,7 +103,8 @@ export class BusEtaSmartService {
     }
     const now = this.clock.now();
     const sequences = stops.value.catalog.sequences[serviceId] ?? {};
-    return { routeTypes, sequences, estimates: pickEstimates(docs.value, now), latestEstimates: pickLatestEstimates(docs.value, now) };
+    const estimates = pickEstimates(docs.value, now);
+    return withLatest ? { routeTypes, sequences, estimates, latestEstimates: pickLatestEstimates(docs.value, now) } : { routeTypes, sequences, estimates };
   }
 
   private warnUnestimated(serviceId: string, event: "bus.eta.read_failed" | "bus.eta.stops_unavailable", err: unknown): void {
