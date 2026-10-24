@@ -11,6 +11,8 @@ audience: internal
 
 > The design for 길찾기, the map tab's first feature: one departure spec that every bus, shuttle and subway source maps into, routes and lines kept as one dataset so a new route is a data push, a pure planner that chains the first catchable vehicle per leg, the 7800 poller, the subway timetable coverage it needs, and the PR sequence. Nothing here is built yet. This rewrite supersedes the 2026-10-20 version of this file: the taxi option, the 혜화역 → 인사캠 corridor, the `/ui/transit/routes` API and the static options JSON are dropped, and its HSSC segment estimate shipped as [ADR 0018](../decisions/0018-hssc-arrival-estimates.md).
 
+> **Revised 2026-10-24 by [7800-unified-arrivals.md](7800-unified-arrivals.md):** 7800 joins the TOPIS bus pipeline instead of a `journey/` poller, the shared shape is the `/bus/live` `arrival`, and the stop call type keeps its expected and scheduled pairs. Where the two disagree, that file wins until this one is rewritten.
+
 ## Scope and owner decisions
 
 Owner, 2026-10-24:
