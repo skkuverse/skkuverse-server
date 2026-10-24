@@ -3,8 +3,8 @@
  * registry the code's network and revision 1 of `subway-topology` join into
  * passes; a copy missing any field of a line, a station, a
  * platform, a direction, a line's marker or a neighbor fails; a slug, a
- * platform id, a color, a marker color, a Seoul station code or an upstream
- * list off its shape fails with its path, and so does a marker whose text is
+ * platform id, a color, a marker color, a Seoul station code, a campus or an
+ * upstream list off its shape fails with its path, and so does a marker whose text is
  * not exactly one character (one grapheme) in any language.
  * The checks across entries are toNetworkIssues' and toTopologyIssues'.
  */
@@ -57,6 +57,7 @@ describe("subwayRegistryFile", () => {
     [["stations", 0], "id"],
     [["stations", 0], "name"],
     [["stations", 0], "seoulName"],
+    [["stations", 0], "campus"],
     [["stations", 0], "platforms"],
     [["stations", 0, "platforms", 0], "id"],
     [["stations", 0, "platforms", 0], "line"],
@@ -101,6 +102,7 @@ describe("subwayRegistryFile", () => {
     ["four upstream platforms", ["stations", 0, "platforms", 0, "directions", "up"], "upstreamPlatformIds", ["KR-1-P154", "KR-1-P155", "KR-1-1715", "KR-1-1716"]],
     ["a numbering no line uses", ["lines", 0, "seoul"], "trainNumbers", "trip"],
     ["a timetable source of its own", ["stations", 0, "platforms", 0, "timetable"], "source", "kric"],
+    ["a campus the bus stop list does not serve", ["stations", 0], "campus", "seoul"],
   ] as const)("rejects %s with its path", (_case, path, field, value) => {
     // Arrange
     const raw = copyOf();

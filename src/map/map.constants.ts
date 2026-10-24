@@ -13,7 +13,7 @@ const TRANSIT_OVERLAYS_ENDPOINT = "/map/overlays/transit";
 // WHY: opt-in, so installed apps draw no line until a user turns one on; one green for every route, never its stored
 // card color, with a dark edge that stays legible over green parks. chipGroupId stays null on the transit tab too:
 // an installed build reads a grouped layer as festival content and hides its toggle.
-const ROUTE_LINE_LAYER = { defaultVisibleWhen: { kind: "never" }, userConfigurable: true, endpoint: TRANSIT_OVERLAYS_ENDPOINT, chipGroupId: null, style: { color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20", minZoom: 13 }, tabs: ["transit"] } as const;
+const ROUTE_LINE_LAYER = { defaultVisibleWhen: { kind: "never" }, userConfigurable: true, endpoint: TRANSIT_OVERLAYS_ENDPOINT, chipGroupId: null, style: { color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20", minZoom: 12 }, tabs: ["transit"] } as const;
 
 const MAP_AND_TRANSIT_TABS = ["map", "transit"] as const;
 

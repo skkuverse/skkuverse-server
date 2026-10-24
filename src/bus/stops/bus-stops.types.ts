@@ -1,4 +1,5 @@
 import type { I18n, SupportedLang } from "../../infra/types";
+import type { Campus } from "../../shared/campus.wire";
 import type { LatLng } from "../../shared/lat-lng.types";
 import type { ServedSequenceStop, ServedStop } from "../bus.wire";
 import type { HsscLineStation } from "./bus-stops.document";
@@ -37,7 +38,7 @@ export interface ScheduleStop {
   subwayStationId?: string;
   arsIds?: string[];
   /** WHY: the campus the stop serves, which a stop list files it under; left out, the list serves none. */
-  campus?: "hssc" | "nsc";
+  campus?: Campus;
 }
 
 export interface SequenceStop {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { campus } from "../../shared/campus.wire";
 import { linkActionType } from "../../shared/link-action.wire";
 
 /** WHY: `type` is an open glyph name; the app draws a generic glyph for one it lacks and keeps `color` and `text`. */
@@ -47,7 +48,7 @@ const transitSection = z.object({
   type: z.literal("item_list"),
   id: z.string(),
   title: z.string().nullable(),
-  campus: z.enum(["hssc", "nsc"]).optional(),
+  campus: campus.optional(),
   items: z.array(transitItem),
 });
 

@@ -99,7 +99,7 @@
           "width": 5,
           "outlineWidth": 1.5,
           "outlineColor": "1B5E20",
-          "minZoom": 13
+          "minZoom": 12
         },
         "tabs": [
           "transit"
@@ -119,7 +119,7 @@
           "width": 5,
           "outlineWidth": 1.5,
           "outlineColor": "1B5E20",
-          "minZoom": 13
+          "minZoom": 12
         },
         "tabs": [
           "transit"
@@ -139,7 +139,7 @@
           "width": 5,
           "outlineWidth": 1.5,
           "outlineColor": "1B5E20",
-          "minZoom": 13
+          "minZoom": 12
         },
         "tabs": [
           "transit"
@@ -159,7 +159,7 @@
           "width": 5,
           "outlineWidth": 1.5,
           "outlineColor": "FFFFFF",
-          "minZoom": 13
+          "minZoom": 12
         },
         "tabs": [
           "transit"
