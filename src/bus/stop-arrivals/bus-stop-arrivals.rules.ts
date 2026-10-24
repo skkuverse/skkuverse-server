@@ -1,17 +1,18 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
-import { toKstInstant } from "../../shared/kst-date.util";
+import type { StopCall } from "../bus.types";
 import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import type { ShuttleStopRoute } from "../stop-index/bus-stop-index.types";
 import { NEXT_RUN_COUNT } from "./bus-stop-arrivals.constants";
-import type { TimetableArrival } from "./bus-stop-arrivals.types";
+import { toTimetableArrival } from "./bus-stop-arrivals.mapper";
+import type { RunCall, TimetableArrival } from "./bus-stop-arrivals.types";
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
 type RunStop = Pick<ShuttleStopRoute, "routeType" | "sequenceIndex" | "timing" | "action">;
 type ScheduleEntry = SmartSchedule["days"][number]["schedule"][number];
-type DatedRun = { atMs: number; arrival: TimetableArrival };
+type DatedRun = { atMs: number; call: RunCall };
 type ListedSchedules = { served: SmartSchedule; latest: SmartSchedule };
 
 const toKstMs = (date: string, time: string): number => moment.tz(`${date} ${time}`, "YYYY-MM-DD HH:mm", KST_TIME_ZONE).valueOf();
@@ -26,8 +27,8 @@ function toRunAtMs(date: string, departure: string, time: string | null): number
 
 // WHY: a boarding stop fills the departure pair, an alighting stop the arrival pair; an estimate the smart view applied
 // at an estimated stop is the expected one, any other time the timetable's (ADR 0019, D1).
-function toRunInstants(atIso: string | null, isEstimated: boolean, action: RunStop["action"]): Pick<TimetableArrival, "expectedArrivalAt" | "expectedDepartureAt" | "scheduledArrivalAt" | "scheduledDepartureAt"> {
-  const [expected, scheduled] = isEstimated ? [atIso, null] : [null, atIso];
+function toRunInstants(at: Date | null, isEstimated: boolean, action: RunStop["action"]): Pick<StopCall, "expectedArrivalAt" | "expectedDepartureAt" | "scheduledArrivalAt" | "scheduledDepartureAt"> {
+  const [expected, scheduled] = isEstimated ? [at, null] : [null, at];
   return action === "board"
     ? { expectedArrivalAt: null, expectedDepartureAt: expected, scheduledArrivalAt: null, scheduledDepartureAt: scheduled }
     : { expectedArrivalAt: expected, expectedDepartureAt: null, scheduledArrivalAt: scheduled, scheduledDepartureAt: null };
@@ -50,30 +51,31 @@ function toListedAtMs({ date, departure }: { date: string; departure: string }, 
   return isTimetableTime || !latestTime ? shownAtMs : Math.max(toRunAtMs(date, departure, latestTime), shownAtMs);
 }
 
-type DayContext = { date: string; lastDeparture: string; latestStopTimesByRun: ReadonlyMap<string, ScheduleEntry["stopTimes"]> };
+type DayContext = { serviceId: string; date: string; lastDeparture: string; latestStopTimesByRun: ReadonlyMap<string, ScheduleEntry["stopTimes"]> };
 
-function toRun({ time: departure, stopTimes, eta }: ScheduleEntry & { time: string }, stop: RunStop, { date, lastDeparture, latestStopTimesByRun }: DayContext): DatedRun {
+function toRun({ time: departure, stopTimes, eta }: ScheduleEntry & { time: string }, stop: RunStop, { serviceId, date, lastDeparture, latestStopTimesByRun }: DayContext): DatedRun {
   const time = stopTimes?.[stop.sequenceIndex] ?? null;
   const isEstimated = time !== null && stop.timing === "estimated" && eta !== undefined;
   const latestTime = latestStopTimesByRun.get(runSlotOf(date, stop.routeType, departure))?.[stop.sequenceIndex];
   const atMs = toListedAtMs({ date, departure }, { time, isEstimated }, latestTime);
-  const shownIso = time === null ? null : toKstInstant(toRunAtMs(date, departure, time));
-  const arrival: TimetableArrival = {
+  const shownAt = time === null ? null : new Date(toRunAtMs(date, departure, time));
+  const call: RunCall = {
     status: "scheduled",
-    ...toRunInstants(shownIso, isEstimated, stop.action),
+    ...toRunInstants(shownAt, isEstimated, stop.action),
     basis: isEstimated ? "estimate" : "timetable",
     stopsAway: null,
     isLastBus: departure === lastDeparture,
     ...{ vehicleId: null, providerText: null },
-    runDepartureAt: toKstInstant(toKstMs(date, departure)),
+    runId: `${serviceId}|${stop.routeType}|${date}|${departure}`,
+    runDepartureAt: new Date(toKstMs(date, departure)),
   };
-  return { atMs, arrival };
+  return { atMs, call };
 }
 
-function toDayRuns({ date, schedule: entries }: SmartSchedule["days"][number], stop: RunStop, latestStopTimesByRun: DayContext["latestStopTimesByRun"]): DatedRun[] {
+function toDayRuns({ date, schedule: entries }: SmartSchedule["days"][number], stop: RunStop, { serviceId, latestStopTimesByRun }: Pick<DayContext, "serviceId" | "latestStopTimesByRun">): DatedRun[] {
   const departures = entries.flatMap((entry) => (entry.routeType === stop.routeType && typeof entry.time === "string" ? [{ ...entry, time: entry.time }] : []));
   const lastDeparture = departures.map(({ time }) => time).sort().at(-1) ?? "";
-  return departures.map((entry) => toRun(entry, stop, { date, lastDeparture, latestStopTimesByRun }));
+  return departures.map((entry) => toRun(entry, stop, { serviceId, date, lastDeparture, latestStopTimesByRun }));
 }
 
 /**
@@ -87,9 +89,9 @@ export function toTimetableArrivals(schedules: SmartSchedule | ListedSchedules, 
   const fromMs = Math.floor(now.getTime() / MINUTE_MS) * MINUTE_MS;
   const latestStopTimesByRun = toLatestStopTimesByRun(latest);
   return schedule.days
-    .flatMap((day) => toDayRuns(day, stop, latestStopTimesByRun))
+    .flatMap((day) => toDayRuns(day, stop, { serviceId: schedule.serviceId, latestStopTimesByRun }))
     .filter(({ atMs }) => atMs >= fromMs)
     .sort((a, b) => a.atMs - b.atMs)
     .slice(0, NEXT_RUN_COUNT)
-    .map(({ arrival }) => arrival);
+    .map(({ call }) => toTimetableArrival(call));
 }
