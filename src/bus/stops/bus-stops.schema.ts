@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { campus } from "../../shared/campus.wire";
 import { ARS_ID_PATTERN, HSSC_POSITION_COUNT, STOP_ID_PATTERN, TOPIS_STOP_ID_PREFIX } from "../bus.constants";
 import type { BusStopsData, StoredBusStops } from "./bus-stops.document";
 import type { ScheduleStop, SequenceStop } from "./bus-stops.types";
@@ -12,7 +13,7 @@ const stopId = z
 
 // WHY: the catalog checks name each stop and sequence in their own words at push (bus-stops.rules.ts), so the
 // structure here stops at what they need: a stop keeps every field it has, and a sequence stop is any value.
-const stop = z.looseObject({ id: stopId, arsIds: z.array(arsId).optional(), campus: z.enum(["hssc", "nsc"]).optional() }).transform((checked: unknown) => checked as ScheduleStop);
+const stop = z.looseObject({ id: stopId, arsIds: z.array(arsId).optional(), campus: campus.optional() }).transform((checked: unknown) => checked as ScheduleStop);
 
 const hsscStation = z.strictObject({
   stopId: stopId.nullable(),
