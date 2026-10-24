@@ -1,5 +1,6 @@
 import { toKstInstant } from "../../../shared/kst-date.util";
-import { toPoleStopId, toServedArsId } from "../../bus.rules";
+import { toServedArsId, toStationStopId } from "../../bus.rules";
+import type { StopAliases } from "../../bus.types";
 import type { Vehicle, VehiclePosition } from "../../bus.wire";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";
 import type { JongroReading, PlacedArrivalRow, TrackedPosition } from "../../realtime/group/bus-realtime-group.types";
@@ -21,12 +22,13 @@ import type { JongroStationContext, JongroVehicleStates } from "./bus-live-jongr
 
 const SECOND_MS = 1000;
 
-function toStation(row: PlacedArrivalRow, { route, stopIdByArsId, states }: JongroStationContext): LiveStation {
-  const arsId = route.registryStations[row.stationIndex]?.arsId ?? null;
+function toStation(row: PlacedArrivalRow, { route, aliases, states }: JongroStationContext): LiveStation {
+  const station = route.registryStations[row.stationIndex];
+  const arsId = station?.arsId ?? null;
   const rowArrivals = row.slots.flatMap((slot) => toJongroArrival(slot, row.madeAtMs) ?? []);
   return {
     stationIndex: row.stationIndex,
-    stopId: toPoleStopId(arsId, stopIdByArsId),
+    stopId: station ? toStationStopId(station, aliases, route.isListed) : null,
     arsId: toServedArsId(arsId),
     operation: toStationOperation(row.slots),
     arrivals: toStationArrivals(rowArrivals, row.stationIndex, states),
@@ -84,9 +86,9 @@ function toVehicles(reading: JongroReading, stations: readonly LiveStation[], { 
 }
 
 /** WHY: a Jongno group as the live route serves it (ADR 0019), its stops named through the bus-stops aliases. */
-export function toLiveJongroGroup(groupId: string, reading: JongroReading, stopIdByArsId: ReadonlyMap<string, string>): LiveGroup {
+export function toLiveJongroGroup(groupId: string, reading: JongroReading, aliases: StopAliases): LiveGroup {
   const states = toVehicleStates(reading);
-  const stations = reading.rows.map((row) => toStation(row, { route: reading.route, stopIdByArsId, states }));
+  const stations = reading.rows.map((row) => toStation(row, { route: reading.route, aliases, states }));
   const updatedAt = toOlderInstant(reading.arrivalsCheckedAt, reading.positionsCheckedAt);
   return {
     groupId,

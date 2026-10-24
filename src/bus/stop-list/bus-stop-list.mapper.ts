@@ -45,7 +45,7 @@ function toPoleNames({ id, poles: [pole] }: LocatedStop): LocalizedText {
 
 /** WHY: `names` are a local stop's config record names, one per language; a TOPIS pole has none and is its stored Korean name. */
 export function toListedStop(stop: LocatedStop, names: LocalizedText | null, lines: StopLines): ListedStop {
-  const arsIds = stop.localStop ? stop.localStop.arsIds : stop.poles.map((pole) => pole.arsId);
+  const arsIds = stop.localStop ? stop.localStop.arsIds : stop.poles.flatMap((pole) => pole.arsId ?? []);
   return {
     id: stop.id,
     name: names ?? toPoleNames(stop),

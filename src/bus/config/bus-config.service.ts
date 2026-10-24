@@ -33,7 +33,7 @@ type JongroSources = Omit<GroupSources, "stops">;
 const NO_JONGRO_SOURCES: JongroSources = { routes: [], attributes: null, pathStationsByRouteId: new Map() };
 
 // WHY: a group that reads no stops is built beside shuttle groups from none, which its lookup by id drops.
-const NO_STOPS: BusStopsSnapshot = { revision: 0, catalog: { stops: [], sequences: {} }, hssc: [], stopIdByArsId: new Map() };
+const NO_STOPS: BusStopsSnapshot = { revision: 0, catalog: { stops: [], sequences: {} }, hssc: [], stopIdByArsId: new Map(), stopIdByTopisId: new Map() };
 
 @Injectable()
 export class BusConfigService {

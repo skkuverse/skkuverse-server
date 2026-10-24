@@ -16,7 +16,6 @@ export class BusLiveJongroService {
   async findLiveGroup(groupId: string): Promise<LiveGroup | null> {
     const reading = await this.realtime.findJongroReading(groupId);
     if (!reading) return null;
-    const { stopIdByArsId } = await this.stops.current();
-    return toLiveJongroGroup(groupId, reading, stopIdByArsId);
+    return toLiveJongroGroup(groupId, reading, await this.stops.current());
   }
 }

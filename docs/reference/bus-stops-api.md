@@ -34,7 +34,7 @@ A stop id names one physical pole, never a place, and is opaque to clients. It m
 | Shuttle stop | the dataset's slug | `hssc-bus-lot`, `nsc-n-center`, `jeongja-exit3` | `bus-stops` `stops[].id`, as `/bus/config` serves it in `screen.stops[].id` and `stopSequences[].stopId` |
 | HSSC stop | the dataset's slug | `hssc-hyehwa-exit1` | `bus-stops` `hssc.stations[].stopId`; the two non-stop 혜화동로터리 positions have none |
 
-A pole a local stop aliases (`arsIds` in `bus-stops`, pushed only after an on-site confirmation) resolves to that local stop: `seoul-<ARS number>` answers the local stop's page, whose `stop.id` is the slug. Without an alias two sources stay two stops, however close: `hssc-600th` and `seoul-01616` are two pages. A route that lists a pole twice, as 종로02 lists its terminal `01881` first and last, serves it at its first index only.
+A pole a local stop aliases (`arsIds` in `bus-stops`, or `topisIds` for a pole TOPIS gives no ARS number; pushed only after an on-site confirmation) resolves to that local stop: `seoul-<ARS number>` answers the local stop's page, whose `stop.id` is the slug. Without an alias two sources stay two stops, however close: `hssc-600th` and `seoul-01616` are two pages. A route that lists a pole twice, as 종로02 lists its terminal `01881` first and last, serves it at its first index only. A route `/bus/config` does not list (7800) adds only the poles a local stop aliases.
 
 ## Stop ids on the realtime stations
 
