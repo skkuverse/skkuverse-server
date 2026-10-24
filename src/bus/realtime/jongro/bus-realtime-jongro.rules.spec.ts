@@ -23,9 +23,8 @@ import {
   toTopisInteger,
 } from "./bus-realtime-jongro.rules";
 import { JONGRO_ROUTES } from "../../bus.constants";
-import { toJongroRoute } from "../../bus.mapper";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const route07 = jongroRoutes.find((r) => r.code === "07")!;

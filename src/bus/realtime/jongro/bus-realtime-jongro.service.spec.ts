@@ -35,7 +35,6 @@ import originIdling from "../../../../__tests__/nest/bus/fixtures/jongro02-origi
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../../infra/clock";
 import { JONGRO_ROUTES } from "../../bus.constants";
-import { toJongroRoute } from "../../bus.mapper";
 import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
@@ -45,7 +44,7 @@ import type { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { BusRealtimeJongroService } from "./bus-realtime-jongro.service";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 let now = NOW;

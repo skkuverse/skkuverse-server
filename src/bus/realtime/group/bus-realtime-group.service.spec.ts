@@ -46,6 +46,7 @@ import type { BusRealtimeHsscRepository } from "../hssc/bus-realtime-hssc.reposi
 import { BusRealtimeHsscService } from "../hssc/bus-realtime-hssc.service";
 import type { BusRealtimeJongroClient } from "../jongro/bus-realtime-jongro.client";
 import { BusRealtimeJongroService } from "../jongro/bus-realtime-jongro.service";
+import { FROZEN_JONGRO_ROUTE_IDS } from "./bus-realtime-group.constants";
 import { BusRealtimeGroupService } from "./bus-realtime-group.service";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -226,6 +227,23 @@ describe("BusRealtimeGroupService.getGroup", () => {
       message: "Unknown groupId: nope",
       httpStatus: 404,
     });
+  });
+});
+
+// WHY: the deprecated route is frozen (ADR 0019, D11): it serves the HSSC line and the three Jongro routes it served
+// when frozen, by an explicit list, so a TOPIS route added later is served on /bus/live only.
+describe("BusRealtimeGroupService.getGroup frozen groups", () => {
+  it.each(["hssc", "jongro02", "jongro07", "jongro08"])("serves %s", async (groupId) => {
+    // Act
+    const group = await service.getGroup(groupId);
+
+    // Assert
+    expect(group.data.groupId).toBe(groupId);
+  });
+
+  it("names exactly the three Jongro routes it was frozen with", () => {
+    // Act & Assert
+    expect(FROZEN_JONGRO_ROUTE_IDS).toEqual(["jongro02", "jongro07", "jongro08"]);
   });
 });
 

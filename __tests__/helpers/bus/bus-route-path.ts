@@ -9,7 +9,6 @@
  * a stored line stores it here.
  */
 import { JONGRO_ROUTES } from "../../../src/bus/bus.constants";
-import { toJongroRoute } from "../../../src/bus/bus.mapper";
 import type { BusRoutePathClient } from "../../../src/bus/route-path/bus-route-path.client";
 import type { JongroRoutePathDocument } from "../../../src/bus/route-path/bus-route-path.document";
 import type { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
@@ -21,7 +20,7 @@ import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake"
 import { FakeBusRoutePathRepository } from "../fakes/bus/bus-route-path.repository.fake";
 import { asReal } from "../fakes/public-of";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const STORED_AT = new Date("2026-10-18T03:00:00Z");
 

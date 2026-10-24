@@ -4,7 +4,6 @@ import { Clock } from "../../infra/clock";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
 import type { JongroRoute } from "../bus.types";
 import { BusRoutePathClient } from "./bus-route-path.client";
 import { ROUTE_PATHS_LOG_INTERVAL_MS, ROUTE_PATHS_RETRY_MS, ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
@@ -44,7 +43,7 @@ export class BusRoutePathService {
   // WHY: a missing line is left out rather than drawn from a committed copy, and the daily sync writes it (ADR 0012, D3).
   async listRoutePaths(): Promise<RoutePaths> {
     const byId = new Map((await this.readStored()).map((doc) => [doc._id, doc]));
-    const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+    const jongroRoutes = JONGRO_ROUTES;
     const missingIds = jongroRoutes.filter((route) => !byId.has(route.id)).map((route) => route.id);
     const ticket = missingIds.length > 0 ? this.logThrottle.take(`missing:${missingIds.join(",")}`) : null;
     if (ticket) {

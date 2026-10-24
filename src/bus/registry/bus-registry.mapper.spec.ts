@@ -4,12 +4,13 @@
  * and the TOPIS id → first ord mapping that places a bus. The transfer lines
  * are stored attributes the config view joins (ADR 0013, D2).
  */
+import { JONGRO_ROUTES } from "../bus.constants";
 import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument } from "./bus-registry.document";
 import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
 
 
-const committed: JongroRoute = { id: "jongro07", code: "07", busRouteId: "100900004" };
+const committed: JongroRoute = JONGRO_ROUTES.find((route) => route.id === "jongro07")!;
 
 const documentOf = (topisIds: string[], overrides: Partial<JongroRouteDocument> = {}): JongroRouteDocument => ({
   _id: "jongro07",

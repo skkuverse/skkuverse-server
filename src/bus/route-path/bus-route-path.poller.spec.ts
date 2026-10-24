@@ -5,11 +5,10 @@
  */
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { JONGRO_ROUTES } from "../bus.constants";
-import { toJongroRoute } from "../bus.mapper";
 import { BusRoutePathPoller } from "./bus-route-path.poller";
 import type { BusRoutePathService } from "./bus-route-path.service";
 
-const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
+const jongroRoutes = JONGRO_ROUTES;
 
 const sync = jest.fn();
 const registerPoller = jest.fn();
