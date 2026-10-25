@@ -3,7 +3,8 @@
  * src/shared/miniapp-target.util.spec.ts). Also the two checks the registry
  * schema refines with: one emoji per logo,
  * counted in graphemes, and a startUrl on the web view that addresses a page.
- * And the one 404 both flows answer an unregistered id with.
+ * And the one 404 both flows answer an unregistered id with, and a signing key's
+ * format: a key the key tool issues, never one of the 8 small-order points.
  *
  * toRegistryIssues, the push check of who may start where (ADR 0013, D2):
  * each first-party origin is the startUrl origin of exactly the
@@ -15,7 +16,9 @@ import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixtu
 import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } from "../infra/origins";
 import { WEBVIEW_ORIGIN } from "../shared/webview-origin.constants";
 import { toMiniAppRegistry } from "./miniapps.mapper";
-import { isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, toMiniAppNotFound, toRegistryIssues } from "./miniapps.rules";
+import { createHash } from "node:crypto";
+import { newSigningKey } from "../../__tests__/helpers/miniapps/signing-keys";
+import { isIssuedSigningKey, isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, toMiniAppNotFound, toRegistryIssues } from "./miniapps.rules";
 import { checkedRegistry } from "./miniapps.schema";
 
 describe("isKnownMiniAppTarget", () => {
@@ -29,6 +32,36 @@ describe("isKnownMiniAppTarget", () => {
   it("refuses a well-formed target naming nothing registered", () => {
     // Act & Assert
     expect(isKnownMiniAppTarget("no-such-app/x", registry.detailsById)).toBe(false);
+  });
+});
+
+// EVIDENCE: the 8 canonical encodings of the Ed25519 points of order 1, 2, 4 and 8 (libsodium's blocklist), each
+// checked to be on the curve with that order; a signature under one verifies for messages its holder never signed.
+const SMALL_ORDER_KEYS = [
+  ["the identity", "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"],
+  ["the point of order 2", "7P_______________________________________38"],
+  ["a point of order 4", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"],
+  ["the other point of order 4", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA"],
+  ["a point of order 8", "xxdqcD1N2E-6PAt2DRBnDyogU_osOczGTsf9d5KsA3o"],
+  ["a second point of order 8", "xxdqcD1N2E-6PAt2DRBnDyogU_osOczGTsf9d5KsA_o"],
+  ["a third point of order 8", "JuiVj8KyJ7BFw_SJ8u-Y8NXfrAXTxjM5sTgCiG1T_AU"],
+  ["a fourth point of order 8", "JuiVj8KyJ7BFw_SJ8u-Y8NXfrAXTxjM5sTgCiG1T_IU"],
+] as const;
+
+const keyIdOf = (publicKey: string): string => createHash("sha256").update(Buffer.from(publicKey, "base64url")).digest("hex").slice(0, 16);
+
+describe("isIssuedSigningKey", () => {
+  it("accepts a key the key tool issued, with its key id", () => {
+    // Arrange
+    const { keyId, publicKey } = newSigningKey();
+
+    // Act & Assert
+    expect(isIssuedSigningKey({ keyId, publicKey })).toBe(true);
+  });
+
+  it.each(SMALL_ORDER_KEYS)("refuses %s, a small-order key, even under its own key id", (_label, publicKey) => {
+    // Act & Assert
+    expect(isIssuedSigningKey({ keyId: keyIdOf(publicKey), publicKey })).toBe(false);
   });
 });
 
