@@ -6,13 +6,12 @@
  * every served station in SUBWAY_STATIONS order, each with its slug, its title
  * and its lines' display data in the request language, its campus and its
  * camera point, as the wire publishes it; the body follows Accept-Language, so it is
- * `private, max-age=300` with `meta.lang`; the general limiter counts it; and
+ * `private, max-age=300` with `meta.lang`; the general rate-limit class counts it, once; and
  * coords the server lacks, for one station or for all because the dataset was
  * never read, are served as null in a 200, never a 503 (ADR 0013 D6).
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { RATE_LIMIT_MAX_PER_MINUTE } from "../../../src/http/general-rate-limit.middleware";
 import { Clock } from "../../../src/infra/clock";
 import { SubwayStationCoordsModule } from "../../../src/subway/station-coords/subway-station-coords.module";
 import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
@@ -33,11 +32,11 @@ const CLOCK: Clock = { now: () => new Date("2026-10-24T03:00:00.000Z") };
 
 const SERVED_ORDER = ["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae", "gwanggyo-jungang", "sadang", "geumjeong", "jongno-5-ga"];
 
-function bootWith(coordsRepository: FakeSubwayStationCoordsRepository): Promise<NestExpressApplication> {
+function bootWith(coordsRepository: FakeSubwayStationCoordsRepository, rateLimitPolicy = new FakeRateLimitPolicy()): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: [SubwayModule, SubwayStationsModule, SubwayStationCoordsModule, SubwayStationListModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
+      { provide: RateLimitPolicy, useValue: rateLimitPolicy },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: SubwayStationCoordsRepository, useValue: coordsRepository },
       { provide: Clock, useValue: CLOCK },
@@ -57,9 +56,10 @@ const stationOf = (body: { data: { stations: ListedStationBody[] } }, id: string
 
 describe("GET /subway/stations", () => {
   let app: NestExpressApplication;
+  const rateLimitPolicy = new FakeRateLimitPolicy();
 
   beforeAll(async () => {
-    app = await bootWith(storedStationCoordsRepository());
+    app = await bootWith(storedStationCoordsRepository(), rateLimitPolicy);
   });
 
   afterAll(async () => {
@@ -157,12 +157,16 @@ describe("GET /subway/stations", () => {
     expect(stationOf(zh.body, "jeongja")?.lines.map((line) => line.marker.text)).toEqual(["新", "水"]);
   });
 
-  it("is counted by the general limiter bound to subway", async () => {
+  it("is counted by the general rate-limit class bound to subway, once", async () => {
+    // Arrange
+    const before = rateLimitPolicy.counts.get("general")!;
+
     // Act
     const res = await request(app.getHttpServer()).get("/subway/stations");
 
     // Assert
-    expect(res.headers["ratelimit-limit"]).toBe(String(RATE_LIMIT_MAX_PER_MINUTE));
+    expect(res.status).toBe(200);
+    expect(rateLimitPolicy.counts.get("general")! - before).toBe(1);
   });
 });
 

@@ -41,6 +41,10 @@ const LAYER_BY_BLOCK: Readonly<Record<string, string>> = {
   "boundaries/http": "http",
   "boundaries/perimeter-layer": "perimeter",
 };
+// The boundary blocks over named folders of a shared layer, each by the folders it holds to.
+const FOLDERS_BY_BLOCK: Readonly<Record<string, readonly string[]>> = {
+  "boundaries/perimeter-implementations": ["perimeter/current", "perimeter/local-dev"],
+};
 const ROLE_GLOB = /^(?:src\/)?\*\*\/\*\.(?:([a-z]+)|\{([a-z,]+)\})\.ts$/;
 
 /** `src/<m>/**\/*<tail>` per scope folder, and each root file that ends in `<tail>`. */
@@ -66,6 +70,8 @@ export function requiredGlobs(name: string, scopes: readonly string[]): string[]
   if (feature !== null) return [`src/${feature[1]}/${"*/".repeat(Number(feature[2]) - 1)}*.ts`];
   const layer = LAYER_BY_BLOCK[name];
   if (layer !== undefined) return [`src/${layer}/**/*.ts`];
+  const folders = FOLDERS_BY_BLOCK[name];
+  if (folders !== undefined) return folders.map((folder) => `src/${folder}/**/*.ts`);
   // The migrated/syntax blocks split the scopes between a pair (with and without the clock ban); the pair is read below.
   return name.startsWith("boundaries/") || name.startsWith("migrated/") ? [] : undefined;
 }
@@ -80,7 +86,8 @@ export function scopeBlockProblems(blocks: readonly Linter.Config[], scopes: rea
     if (required === undefined) continue;
     const files = filesOf(block);
     for (const glob of required) if (!files.includes(glob)) problems.push(`${block.name}: files miss ${glob}`);
-    const isSrcWide = block.name.startsWith("boundaries/") && !block.name.startsWith("boundaries/feature/") && LAYER_BY_BLOCK[block.name] === undefined;
+    const isSrcWide =
+      block.name.startsWith("boundaries/") && !block.name.startsWith("boundaries/feature/") && LAYER_BY_BLOCK[block.name] === undefined && FOLDERS_BY_BLOCK[block.name] === undefined;
     if (isSrcWide) for (const glob of files) if (!glob.startsWith("src/**/")) problems.push(`${block.name}: files narrow src/ to ${glob}`);
     for (const ignored of (block.ignores ?? []).map(String)) {
       const roles = ROLE_GLOB.exec(ignored);
@@ -178,6 +185,19 @@ describe("scope block rule applies as specified", () => {
 
     // Act & Assert
     expect(requiredGlobs("boundaries/perimeter-layer", scopes)).toEqual(["src/perimeter/**/*.ts"]);
+    expect(scopeBlockProblems(whole, scopes, new Set(["src/notices/notices.topics.ts"]))).toEqual([]);
+    expect(scopeBlockProblems(narrowed, scopes, none).length).toBeGreaterThan(0);
+  });
+
+  // WHY: an implementation leaves for the overlay (ADR 0023, D4), so the rule holds both implementation folders whole.
+  it("reads the boundary over the perimeter's implementation folders as a boundary over both, whole", () => {
+    // Arrange
+    const both = ["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"];
+    const whole = [...covering(), block("boundaries/perimeter-implementations", both)];
+    const narrowed = [...covering(), block("boundaries/perimeter-implementations", ["src/perimeter/current/**/*.ts"])];
+
+    // Act & Assert
+    expect(requiredGlobs("boundaries/perimeter-implementations", scopes)).toEqual(both);
     expect(scopeBlockProblems(whole, scopes, new Set(["src/notices/notices.topics.ts"]))).toEqual([]);
     expect(scopeBlockProblems(narrowed, scopes, none).length).toBeGreaterThan(0);
   });

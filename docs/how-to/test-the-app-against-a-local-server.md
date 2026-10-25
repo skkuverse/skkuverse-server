@@ -18,7 +18,6 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | Env var | development | production | What "off" means |
 | --- | --- | --- | --- |
 | `PUSH_DELIVERY` | `suppressed` | `live` | `postToFcmFunction` logs `push.delivery.suppressed` and returns `{ sent: 0 }` without calling the Cloud Function. Callers record it as a completed send, so `_dev` notices get `pushedAt`. |
-| `RATE_LIMIT` | `off` | `on` | Every limiter skips. Locally every simulator request comes from one loopback address. |
 | `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed) and the bus timetable cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
 | `SHUTTLE_ETA` | `off` | `on` | No NAVER Directions or TMAP call: the 인자셔틀 arrival-estimate jobs, which use metered keys, do not run. Smart schedules still apply whatever estimates `bus_campus_dev.shuttle_eta` holds. Production may set it `off`. |
 | `SUBWAY` | `off` | `on` | No Seoul subway API call or train-map crawl: the subway pollers do not run. The API key and its daily quota are shared with production. Production may set it `off`. |
@@ -26,6 +25,8 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | `REGIONAL_BUS` | `off` | `on` | No TOPIS call for the regional routes (7800): neither its realtime poller (`jongro-7800`) nor its daily line sync (`jongro-path-7800`) runs. On a database where no 7800 poller ever stored its stations (a laptop's `_dev`), `/bus/live/gyeonggi7800` answers `503 JONGRO_REGISTRY_UNAVAILABLE` and logs `bus.jongro.registry_missing` at most every 30 s; where they are stored, it answers `noData`, as for a stopped poller. The key's daily quota per operation is production's too, with 6,752 arrival calls a day to spare. Production may set it `off`. |
 | `GBIS` | `off` | `on` | No GBIS call for 7800's seats: its seat poller (`gbis-seats-7800`) does not run, so `/bus/live/gyeonggi7800` serves every `vehicle.seatsLeft` as `null` once the stored answer is 200 s old. The key's GBIS quota is 1,000 calls a day, production's too, which spends up to 867 of it. Production may set it `off`. |
 | `NOTICE_OVERVIEW` | `on` | `off` | No skkuverse-ai call for a search overview: `GET /notices/overview` answers `data.overview: null` with `meta.reason: "unavailable"` before it retrieves, so the app hides the card. The reverse of the others: production defaults it `off` until the route has a cost guard, and development keeps the feature working. Tests turn it on in `jest.setup.ts`. |
+
+No switch turns the rate limit off: the perimeter mode chooses the limiter. `local-dev` limits each IP to 300 requests a minute across every route, and every simulator request comes from one loopback address, so a burst past that answers 429 as production would.
 
 `CACHE=off` leaves two caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 
@@ -63,10 +64,10 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
    A phone or a tunnel needs the `overlay` mode, the perimeter production runs:
 
    ```bash
-   npm run build && NODE_ENV=development PERIMETER_MODE=overlay HOST=0.0.0.0 RATE_LIMIT=on CACHE=on npm run dev:watch
+   npm run build && NODE_ENV=development PERIMETER_MODE=overlay HOST=0.0.0.0 CACHE=on npm run dev:watch
    ```
 
-   A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `RATE_LIMIT=on CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
+   The `overlay` mode reads its rate limits from `PERIMETER_SETTINGS`, which `npm run env:pull` renders from the dev Doppler config. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
 
 3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing (`skkuverse-app/LESSONS.md`). Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
 
@@ -79,13 +80,12 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 Set it on the command, like `USE_PROD_API`. These are per-run values: they are not in Doppler or `config/env.*.keys`, and a test fails if production's compose file or key lists set one.
 
 ```bash
-RATE_LIMIT=on npm run dev        # reproduce a 429, or while a tunnel is up
 CACHE=on npm run dev             # check a TTL, a stale fallback or a Cache-Control value
 ```
 
-Three combinations refuse to boot (`config.invalid_runtime_switch`): `PUSH_DELIVERY=live` in development, and `RATE_LIMIT=off` or `CACHE=off` in production. A real push is checked after deploying, in production.
+Two combinations refuse to boot (`config.invalid_runtime_switch`): `PUSH_DELIVERY=live` in development and `CACHE=off` in production. A real push is checked after deploying, in production.
 
-A production override may only reduce outbound effects (`PUSH_DELIVERY=suppressed`, `SHUTTLE_ETA=off`, as `docker-compose.local-verify.yml` sets them). `PUSH_DELIVERY=suppressed` in production drops pushes rather than pausing them: the dispatcher still claims each notice and stamps `pushedAt`, so nothing is sent later. Tests keep production's defaults: every test mocks `fetch`, and the limiter tests expect 429s.
+A production override may only reduce outbound effects (`PUSH_DELIVERY=suppressed`, `SHUTTLE_ETA=off`, as `docker-compose.local-verify.yml` sets them). `PUSH_DELIVERY=suppressed` in production drops pushes rather than pausing them: the dispatcher still claims each notice and stamps `pushedAt`, so nothing is sent later. Tests keep production's defaults: every test mocks `fetch`.
 
 ## What still reaches production
 

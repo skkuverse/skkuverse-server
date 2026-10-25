@@ -159,10 +159,6 @@ const config = {
     fcmTimeoutMs: FCM_TIMEOUT_MS,
   },
 
-  rateLimit: {
-    enabled: switches.rateLimitEnabled,
-  },
-
   cache: {
     enabled: switches.cacheEnabled,
   },
@@ -292,7 +288,6 @@ const config = {
 
   getSideEffectsSummary(): {
     push: string;
-    rateLimit: string;
     cache: string;
     shuttleEta: string;
     subway: string;
@@ -303,7 +298,6 @@ const config = {
   } {
     return {
       push: switches.pushDelivery,
-      rateLimit: switches.rateLimitEnabled ? "on" : "off",
       cache: switches.cacheEnabled ? "on" : "off",
       shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
       subway: switches.subwayEnabled ? "on" : "off",

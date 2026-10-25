@@ -434,3 +434,39 @@ describe("validateEnv loads the overlay entry in overlay mode", () => {
     );
   });
 });
+
+describe("requiredValues PERIMETER_SETTINGS", () => {
+  // WHY: the overlay's rate-limit policy reads its limits from it, and every role constructs every class (ADR 0023, D4).
+  const production = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...process.env, NODE_ENV: "production", SENTRY_DSN: "disabled", HOST: "0.0.0.0", ...env });
+
+  it.each(["api", "poller", "combined"])("is required in overlay mode for ROLE=%s", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role });
+    delete env.PERIMETER_SETTINGS;
+
+    // Act & Assert
+    expect(listMissingRequired(env).map((v) => v.env)).toEqual(["PERIMETER_SETTINGS"]);
+  });
+
+  it.each(["local-dev", "test"])("is not required in %s mode, which reads no settings", (mode) => {
+    // Act & Assert
+    expect(requiredValues({ NODE_ENV: "development", PERIMETER_MODE: mode }).map((v) => v.env)).not.toContain("PERIMETER_SETTINGS");
+  });
+
+  it("refuses a production overlay boot without it, naming it", () => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: "api" });
+    delete env.PERIMETER_SETTINGS;
+
+    // Act & Assert
+    expect(() => validateEnv(env)).toThrow(/Missing required config[\s\S]*perimeter\.settings \(env: PERIMETER_SETTINGS\)/);
+  });
+
+  it.each(["api", "poller"])("refuses a production overlay boot of ROLE=%s whose settings the overlay refuses", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role, PERIMETER_SETTINGS: Buffer.from('{"perimeterName01":{}}').toString("base64url") });
+
+    // Act & Assert
+    expect(() => validateEnv(env)).toThrow(/Invalid perimeter[\s\S]*PERIMETER_SETTINGS: perimeterName01/);
+  });
+});

@@ -48,18 +48,19 @@ function sourceFiles(dir: string): string[] {
 
 const PRD = allowlist("config/env.prd.keys");
 const DEV = allowlist("config/env.dev.keys");
-// Production adds SENTRY_DSN, so its list is the longest.
-const REQUIRED = requiredValues({ NODE_ENV: "production" }).map((v) => v.env);
+// Production adds SENTRY_DSN, and its overlay mode PERIMETER_SETTINGS, so its list is the longest.
+const REQUIRED = requiredValues({ NODE_ENV: "production", PERIMETER_MODE: "overlay" }).map((v) => v.env);
 
-/** Run describeMissingRequired() with exactly `names` set, under `nodeEnv` and, when given, `role`. */
-function missingWithOnly(names: string[], nodeEnv: string, role?: string): string[] {
-  const touched = new Set([...REQUIRED, ...names, "NODE_ENV", "USE_PROD_API", "API_HSSC_NEW_DEV", "ROLE"]);
+/** Run describeMissingRequired() with exactly `names` set, under `nodeEnv` and, when given, `role` and `mode`. */
+function missingWithOnly(names: string[], nodeEnv: string, role?: string, mode?: string): string[] {
+  const touched = new Set([...REQUIRED, ...names, "NODE_ENV", "USE_PROD_API", "API_HSSC_NEW_DEV", "ROLE", "PERIMETER_MODE"]);
   const saved = new Map([...touched].map((k) => [k, process.env[k]]));
   try {
     for (const k of touched) delete process.env[k];
     for (const k of names) process.env[k] = `value-of-${k}`;
     process.env.NODE_ENV = nodeEnv;
     if (role !== undefined) process.env.ROLE = role;
+    process.env.PERIMETER_MODE = mode ?? saved.get("PERIMETER_MODE");
     let missing: string[] = [];
     jest.isolateModules(() => {
       missing = require("../../../src/infra/required-env").describeMissingRequired();
@@ -88,6 +89,16 @@ describe("config/env.*.keys — the names render_env.py writes", () => {
   ])("a .env with only the %s names passes bootstrap validation", (_label, names, nodeEnv) => {
     // Act & Assert
     expect(missingWithOnly(names, nodeEnv)).toEqual([]);
+  });
+
+  // WHY: production runs the overlay, which reads its limits from PERIMETER_SETTINGS in every role (ADR 0023, D4).
+  it.each(["api", "poller"])("a .env with only the prd names passes in overlay mode, ROLE=%s, and fails without PERIMETER_SETTINGS", (role) => {
+    // Arrange
+    const withoutSettings = PRD.filter((n) => n !== "PERIMETER_SETTINGS");
+
+    // Act & Assert
+    expect(missingWithOnly(PRD, "production", role, "overlay")).toEqual([]);
+    expect(missingWithOnly(withoutSettings, "production", role, "overlay")).toEqual(["  perimeter.settings (env: PERIMETER_SETTINGS)"]);
   });
 
   it("the validation really fails when a listed required name is absent", () => {

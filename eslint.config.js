@@ -199,6 +199,9 @@ const SRC_SYNTAX_PLUGIN = {
     "import-paths": CORE_RULES.get("no-restricted-imports"),
     // Another alias, so the perimeter blocks keep their own patterns beside the feature and import-path blocks.
     "perimeter-imports": CORE_RULES.get("no-restricted-imports"),
+    // And one for what a perimeter implementation may import, beside the perimeter blocks' own patterns.
+    "perimeter-implementation-imports": CORE_RULES.get("no-restricted-imports"),
+    "perimeter-calls": CORE_RESTRICTED_SYNTAX,
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
     "generic-names": CORE_RULES.get("id-denylist"),
   },
@@ -374,6 +377,28 @@ const PERIMETER_IMPLEMENTATION_PATTERNS = [
     message: "Nothing imports the overlay's private build output: the registry loads it by path (ADR 0023, D4).",
   },
 ];
+
+// (A perimeter detail is left out of the public history.)
+const PERIMETER_SHARED_MODULES = [
+  "guarded-lookup.util",
+  "ip-address.util",
+  "link-action.types",
+  "link-action.util",
+  "link-action.wire",
+  "link-target.util",
+  "log-throttle.types",
+  "log-throttle.util",
+  "miniapp-target.types",
+  "miniapp-target.util",
+  "outbound-blocked.error",
+  "outbound-guard.util",
+  "outbound-url.util",
+  "webview-origin.constants",
+  "webview-url.util",
+];
+
+// An import that leaves an implementation's folder for anything but the ports file or a listed shared module.
+const PERIMETER_OUTSIDE_IMPORT = `^\\.\\./(?!perimeter\\.ports$)(?!\\.\\./shared/(?:${PERIMETER_SHARED_MODULES.map((m) => m.replaceAll(".", "\\.")).join("|")})$)`;
 
 // Feature code and src/http/ reach src/perimeter/ through the ports file alone (ADR 0023, D8).
 const PERIMETER_PORTS_ONLY_PATTERN = {
@@ -837,6 +862,53 @@ module.exports = [
     files: ["src/http/**/*.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/perimeter-imports": ["error", { patterns: [...PERIMETER_IMPLEMENTATION_PATTERNS, PERIMETER_PORTS_ONLY_PATTERN] }] },
+  },
+  {
+    // ADR 0023, D4: an implementation leaves for the overlay, which is built against the ports file, the listed
+    // src/shared/ modules and packages, so it imports nothing else from this repository but its own folder.
+    name: "boundaries/perimeter-implementations",
+    files: ["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/perimeter-implementation-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: PERIMETER_OUTSIDE_IMPORT,
+              message:
+                "A perimeter implementation imports only ../perimeter.ports, the src/shared/ modules eslint.config.js lists, its own folder and packages: take the rest through PerimeterDeps.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // ADR 0023, D8: a limiter, a token verification or a constant-time comparison is a perimeter decision, made
+    // only behind a port, so it leaves for the overlay with the rest.
+    name: "perimeter/calls",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts", "src/perimeter/**", "src/private/**"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/perimeter-calls": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='rateLimit'], CallExpression[callee.property.name='rateLimit']",
+          message: "Build a limiter only in src/perimeter/: bind its class through RateLimitPolicy.handlerFor().",
+        },
+        {
+          selector: "CallExpression[callee.property.name='verifyIdToken']",
+          message: "Verify a token only in src/perimeter/: bind RequestAuthenticationMiddleware, which asks REQUEST_AUTHENTICATOR.",
+        },
+        {
+          selector: "CallExpression[callee.name='timingSafeEqual'], CallExpression[callee.property.name='timingSafeEqual']",
+          message: "Compare a credential only in src/perimeter/: ask INTERNAL_AUTHORIZER or the push authorizer.",
+        },
+      ],
+    },
   },
   {
     // The boundaries above read import declarations: a `require()` or an `import()` call would pass them all,

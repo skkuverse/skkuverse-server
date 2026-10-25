@@ -11,7 +11,7 @@
   "guard": 30,
   "interceptor": 53,
   "mapper": 122,
-  "middleware": 55,
+  "middleware": 40,
   "module": 16,
   "pipe": 31,
   "poller": 33,
