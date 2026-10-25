@@ -1361,8 +1361,9 @@ The app's map tab and transit tab share one map, and each tab draws it through i
 (app ADR 0022). A layer's or a chip's `tabs` names the tabs whose lens shows it. A layer is still
 subject to `defaultVisibleWhen` on a tab that lists it. An absent `tabs` means `["map"]`. Builds
 released before app ADR 0022 ignore the field and show every layer and chip in the map tab. A build
-that parses it applies it only under the shared-map shell (`features.sharedMapShell` on
-`/app/config`); with the flag off it shows them as those builds do. A chip's `opensIn` names the
+that parses it applies it only under the shared-map shell; a build that still chose its shell by
+`features.sharedMapShell` on `/app/config`, which the server no longer serves, shows them as those
+builds do. A chip's `opensIn` names the
 tab a tap switches to; absent, the tap stays on the tab it was made on.
 
 A chip runs where its result shows. The transit tab's chips are a billboard for the map tab: a chip
