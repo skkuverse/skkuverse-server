@@ -31,10 +31,7 @@ type TopisArrivalRow = { [K in `${TopisBusField}${BusSlot}`]: string } & {
   stNm: string;
   mkTm: string;
   arsId: string;
-  term?: string;
-  firstTm?: string;
-  lastTm?: string;
-};
+} & Partial<Record<"term" | "firstTm" | "lastTm", string>>;
 
 const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
@@ -122,8 +119,7 @@ export class BusRealtimeJongroClient {
       eventDate: row.mkTm,
       stationNumber: row.arsId,
       eta: row.arrmsg1,
-      buses: BUS_SLOTS.map((slot) => this.toArrivalBus(row, slot, what)),
-      ...toServiceHours(row),
+      ...{ buses: BUS_SLOTS.map((slot) => this.toArrivalBus(row, slot, what)), ...toServiceHours(row) },
     };
   }
 

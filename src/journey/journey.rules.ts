@@ -1,7 +1,7 @@
 import { captureGroups } from "../shared/regex.util";
 import { JOURNEY_PLACE_KINDS, PLACE_REF_PATTERN } from "./journey.constants";
 import type { JourneyLeg, JourneyLine, JourneyRoutesData, RideLeg } from "./journey.document";
-import type { CitedPlace, JourneyCatalog, JourneyIssue, JourneyReference, LegEnds, PlaceKind, PlaceRef } from "./journey.types";
+import type { CitedPlace, JourneyCatalog, JourneyIssue, JourneyReference, JourneySourceId, LegEnds, PlaceKind, PlaceRef } from "./journey.types";
 
 type Path = Array<string | number>;
 
@@ -76,17 +76,23 @@ function subwayRideIssues({ board, alight }: RideLeg, line: JourneyLine, { subwa
   return message === null ? [] : [{ path: [], message }];
 }
 
+function topisRideIssues({ board, alight }: RideLeg, line: JourneyLine, { topisRideIssueOf }: JourneyCatalog): JourneyIssue[] {
+  if (topisRideIssueOf === null) return [{ path: ["line"], message: "no stored bus-stops, jongro_routes or jongro_route_paths, so the ride's station order was not checked", warning: true }];
+  const message = topisRideIssueOf({ lineId: line.sourceLineId, boardStopId: toPlaceRef(board.place)?.id ?? "", alightStopId: toPlaceRef(alight.place)?.id ?? "" });
+  return message === null ? [] : [{ path: [], message }];
+}
+
+const RIDE_ISSUES_BY_SOURCE: Readonly<Record<JourneySourceId, typeof busRideIssues>> = { busTimetable: busRideIssues, subway: subwayRideIssues, topis: topisRideIssues };
+
 function rideIssues(data: JourneyRoutesData, catalog: JourneyCatalog): JourneyIssue[] {
   const lineById = new Map(data.lines.map((line) => [line.id, line]));
   return data.routes.flatMap((route, routeIndex) =>
     route.options.flatMap((option, optionIndex) =>
       option.legs.flatMap((leg, legIndex): JourneyIssue[] => {
         if (leg.kind !== "ride") return [];
-        const at = ["routes", routeIndex, "options", optionIndex, "legs", legIndex];
-        const line = lineById.get(leg.line);
+        const [at, line] = [["routes", routeIndex, "options", optionIndex, "legs", legIndex], lineById.get(leg.line)] as const;
         if (!line) return [{ path: [...at, "line"], message: `"${leg.line}" is no line of this dataset` }];
-        const issues = line.source === "subway" ? subwayRideIssues(leg, line, catalog) : busRideIssues(leg, line, catalog);
-        return issues.map((issue) => ({ ...issue, path: [...at, ...issue.path] }));
+        return RIDE_ISSUES_BY_SOURCE[line.source](leg, line, catalog).map((issue) => ({ ...issue, path: [...at, ...issue.path] }));
       }),
     ),
   );
@@ -94,11 +100,7 @@ function rideIssues(data: JourneyRoutesData, catalog: JourneyCatalog): JourneyIs
 
 /** WHY: what the dataset must hold together whatever its places resolve to: unique ids, chained legs, known lines, ordered rides. */
 export function toJourneyRoutesIssues(data: JourneyRoutesData, catalog: JourneyCatalog): JourneyIssue[] {
-  return [
-    ...duplicateIssues(data.lines.map((line) => line.id), (index) => ["lines", index, "id"]),
-    ...duplicateIssues(data.routes.map((route) => route.id), (index) => ["routes", index, "id"]),
-    ...data.routes.flatMap((route, routeIndex) => duplicateIssues(route.options.map((option) => option.id), (index) => ["routes", routeIndex, "options", index, "id"])),
-    ...chainIssues(data),
-    ...rideIssues(data, catalog),
-  ];
+  const optionIdIssues = data.routes.flatMap((route, routeIndex) => duplicateIssues(route.options.map((option) => option.id), (index) => ["routes", routeIndex, "options", index, "id"]));
+  const lineAndRouteIdIssues = [...duplicateIssues(data.lines.map((line) => line.id), (index) => ["lines", index, "id"]), ...duplicateIssues(data.routes.map((route) => route.id), (index) => ["routes", index, "id"])];
+  return [...lineAndRouteIdIssues, ...optionIdIssues, ...chainIssues(data), ...rideIssues(data, catalog)];
 }

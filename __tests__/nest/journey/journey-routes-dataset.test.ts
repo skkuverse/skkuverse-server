@@ -7,7 +7,10 @@
  * `bus-stops` push that drops a cited stop is refused while the journey dataset names it. Against the stored
  * `subway-timetables` too, revision 2's 4호선 → 금정 → 1호선 options pass; a ride is refused for a platform of another
  * station, a platform on another line than the ride's, and platforms no train of a day type runs between in order; with
- * no stored timetables the train order is a warning, not a refusal.
+ * no stored timetables the train order is a warning, not a refusal. Against the stored registry and route lines with
+ * 7800's, and the four 7800 stops `bus-stops` aliases, revision 3's 종로 08 and 7800 options pass, each pole cited by its
+ * station id; a TOPIS ride is refused at a pole its route does not call at and when it alights before it boards; a
+ * `bus-stops` push that drops the alias a cited 7800 pole needs is refused.
  */
 import path from "path";
 import { storedJongroRouteDocuments } from "../../helpers/bus/bus-registry";
@@ -284,5 +287,68 @@ describe("loadCatalog journey-routes with the subway options", () => {
       "journey-routes: routes.1.options.1.legs.1.line: no stored subway-timetables, so the ride's train order was not checked",
       "journey-routes: routes.1.options.1.legs.3.line: no stored subway-timetables, so the ride's train order was not checked",
     ]);
+  });
+});
+
+describe("loadCatalog journey-routes with the TOPIS options", () => {
+  const revision3 = () => datasetFixture("./fixtures/journey-routes-revision-3.dataset.json");
+  const proposal = (require("../bus/fixtures/bus-stops-7800-proposal.json") as { stops: Array<Record<string, unknown>> }).stops;
+  const storedTables = () => ({ parts: subwayTimetablesFixture().map((table) => ({ key: `${table.operator}-${table.line}-${table.dayType}`, data: table })) });
+  const withPoles = () => ({ ...stored(), "subway-timetables": storedTables(), "bus-stops": { ...stored()["bus-stops"], stops: [...stored()["bus-stops"].stops, ...structuredClone(proposal)] } });
+  const topis = () => ({ jongroRoutes: [...storedJongroRouteDocuments(), registryDoc7800()], jongroRoutePaths: storedJongroRoutePathDocuments(), buildings: BUILDINGS });
+  const checkTopis = (data: unknown, collections: Record<string, unknown> = topis()) => issueLines(checkData(loadCatalog(srcLoader), "journey-routes", data, withPoles(), collections));
+  const legsOf = (data: any, routeIndex: number, optionId: string) => data.routes[routeIndex].options.find((option: { id: string }) => option.id === optionId).legs;
+
+  it("accepts revision 3, the 종로 08 and 7800 options each way, its poles cited by station id", () => {
+    // Act
+    const lines = checkTopis(revision3());
+
+    // Assert
+    expect(lines).toEqual([]);
+  });
+
+  it("Off the route: refuses a 7800 ride that boards at a 종로 08 pole", () => {
+    // Arrange
+    const data = revision3();
+    const legs = legsOf(data, 0, "line4-7800");
+    legs[2].to = "bus_stop:100900046";
+    legs[3].board.place = "bus_stop:100900046";
+
+    // Act
+    const lines = checkTopis(data);
+
+    // Assert
+    expect(lines).toEqual(expect.arrayContaining(["journey-routes: routes.0.options.3.legs.3: gyeonggi7800 does not call at 100900046"]));
+  });
+
+  it("Reversed pair: refuses a 종로 08 ride that alights before it boards", () => {
+    // Arrange
+    const data = revision3();
+    const legs = legsOf(data, 0, "jongro08-line1");
+    [legs[1].board.place, legs[1].alight.place] = [legs[1].alight.place, legs[1].board.place];
+    [legs[0].to, legs[2].from] = [legs[1].board.place, legs[1].alight.place];
+
+    // Act
+    const lines = checkTopis(data);
+
+    // Assert
+    expect(lines).toEqual(expect.arrayContaining(["journey-routes: routes.0.options.2.legs.1: jongro08 does not call at 100900191 and then at 100900046"]));
+  });
+
+  it("refuses a bus-stops push that drops the alias a cited 7800 pole needs, rechecking journey-routes", () => {
+    // Arrange
+    const busStops = withPoles()["bus-stops"];
+    delete busStops.stops.find((stop: { id: string }) => stop.id === "sadang-exit9").arsIds;
+
+    // Act
+    const lines = issueLines(checkData(loadCatalog(srcLoader), "bus-stops", busStops, { ...withPoles(), "journey-routes": revision3() }, { ...topis(), busSchedules: null }));
+
+    // Assert
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "journey-routes: routes.0.options.3.legs.3: gyeonggi7800 does not call at 119000302",
+        'journey-routes: routes.0.options.3.legs.3.board.place: "119000302" is not a stop of bus-stops',
+      ]),
+    );
   });
 });
