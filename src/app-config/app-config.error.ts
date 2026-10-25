@@ -1,7 +1,8 @@
 import { AppError } from "../http/app.error";
 
-// WHY: the gates are the force-update floor, so no default may stand in for them; the app reads a failed
-// /app/config as "no gate this launch" and keeps its last good copy (skkuverse-app app-config.client.ts).
+// WHY: the gates are the force-update floor, so no default may stand in for them.
+// CONTRACT(skkuverse-app): skkuverse-app/apps/mobile/src/bootstrap/app-config.client.ts skips the gate on a
+// failed /app/config (required: false); only the origins keep their last good copy, not the gate.
 export class AppConfigPlatformGatesUnavailableError extends AppError {
   constructor() {
     super("APP_PLATFORM_GATES_UNAVAILABLE", "The app platform gates are unavailable", 503);
