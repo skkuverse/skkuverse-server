@@ -91,6 +91,12 @@ import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
 import { SubwayPlatformArrivalsModule } from "./subway/platform-arrivals/subway-platform-arrivals.module";
 import { SubwayArrivalsModule } from "./subway/arrivals/subway-arrivals.module";
 import { SubwayHistoryModule } from "./subway/history/subway-history.module";
+import { BusDeparturesModule } from "./bus/departures/bus-departures.module";
+import { BusDeparturesTimetableModule } from "./bus/departures/timetable/bus-departures-timetable.module";
+import { JourneyModule } from "./journey/journey.module";
+import { JourneyDeparturesModule } from "./journey/departures/journey-departures.module";
+import { JourneyPlacesModule } from "./journey/places/journey-places.module";
+import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
 
 // WHY: imports in boot order: config (fails loud on a missing value), the poller registry, then health.
 // LangMiddleware is not bound here but in bootstrapHttpApp (src/http/http-app.bootstrap.ts); its QUIRK says why.
@@ -191,6 +197,12 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayPlatformArrivalsModule,
     SubwayArrivalsModule,
     SubwayHistoryModule,
+    BusDeparturesModule,
+    BusDeparturesTimetableModule,
+    JourneyModule,
+    JourneyDeparturesModule,
+    JourneyPlacesModule,
+    JourneyRoutesModule,
   ],
 })
 export class AppModule {}

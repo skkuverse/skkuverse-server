@@ -1,0 +1,463 @@
+{
+  "_about": "Synthetic, never captured from production, which serves no journey route yet: GET /journey/routes at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/journey/journey-routes.routes.test.ts (revision 1 of journey-routes, the 인자셔틀 timetable and a live estimate of the 14:30 run); each walk's path trimmed to its first and last point.",
+  "data": {
+    "routes": [
+      {
+        "id": "hssc-to-nsc",
+        "name": "인사캠 → 자과캠",
+        "from": {
+          "kind": "skku_building",
+          "id": "1",
+          "name": "정문",
+          "coords": {
+            "lat": 37.584865,
+            "lng": 126.997131
+          },
+          "platformId": null,
+          "action": null
+        },
+        "to": {
+          "kind": "skku_building",
+          "id": "7",
+          "name": "정문",
+          "coords": {
+            "lat": 37.290649,
+            "lng": 126.974074
+          },
+          "platformId": null,
+          "action": null
+        },
+        "options": [
+          {
+            "id": "inja",
+            "name": "인자셔틀",
+            "mode": "shuttle",
+            "status": "running",
+            "warnings": [],
+            "reason": null,
+            "nextServiceAt": null,
+            "leaveAt": "2026-10-20T14:23:00+09:00",
+            "arriveAt": "2026-10-20T15:49:00+09:00",
+            "legs": [
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "skku_building",
+                  "id": "1",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.584865,
+                    "lng": 126.997131
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "hssc-bus-lot",
+                  "name": "학생회관 버스 주차장",
+                  "coords": {
+                    "lat": 37.587367,
+                    "lng": 126.993643
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "startAt": "2026-10-20T14:23:00+09:00",
+                "endAt": "2026-10-20T14:29:00+09:00",
+                "basis": "estimate",
+                "durationSec": 360,
+                "distanceM": 473,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.584867,
+                    "lng": 126.997138
+                  },
+                  {
+                    "lat": 37.587366,
+                    "lng": 126.993644
+                  }
+                ]
+              },
+              {
+                "kind": "ride",
+                "mode": "shuttle",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "hssc-bus-lot",
+                  "name": "학생회관 버스 주차장",
+                  "coords": {
+                    "lat": 37.587367,
+                    "lng": 126.993643
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "nsc-n-center",
+                  "name": "N센터 앞",
+                  "coords": {
+                    "lat": 37.292298,
+                    "lng": 126.975057
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "startAt": "2026-10-20T14:30:00+09:00",
+                "endAt": "2026-10-20T15:45:00+09:00",
+                "basis": "estimate",
+                "durationSec": 4500,
+                "distanceM": null,
+                "label": "인자셔틀",
+                "icon": "shuttle",
+                "color": "003626",
+                "line": {
+                  "id": "inja",
+                  "name": "인자셔틀"
+                },
+                "board": {
+                  "status": "scheduled",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": "2026-10-20T14:30:00+09:00",
+                  "basis": "timetable",
+                  "stopsAway": null,
+                  "runId": "campus-inja|regular|2026-10-20|14:30",
+                  "vehicleId": null,
+                  "headsign": "인사캠 → 자과캠",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": null
+                },
+                "alight": {
+                  "status": "scheduled",
+                  "expectedArrivalAt": "2026-10-20T15:45:00+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "estimate",
+                  "stopsAway": null,
+                  "runId": "campus-inja|regular|2026-10-20|14:30",
+                  "vehicleId": null,
+                  "headsign": "인사캠 → 자과캠",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": null
+                },
+                "later": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": "2026-10-20T15:00:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "campus-inja|regular|2026-10-20|15:00",
+                    "vehicleId": null,
+                    "headsign": "인사캠 → 자과캠",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": null
+                  },
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": "2026-10-20T15:30:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "campus-inja|regular|2026-10-20|15:30",
+                    "vehicleId": null,
+                    "headsign": "인사캠 → 자과캠",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": null
+                  }
+                ],
+                "vehicles": [],
+                "waitSec": 60,
+                "observedAt": "2026-10-20T14:05:00+09:00"
+              },
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "nsc-n-center",
+                  "name": "N센터 앞",
+                  "coords": {
+                    "lat": 37.292298,
+                    "lng": 126.975057
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "to": {
+                  "kind": "skku_building",
+                  "id": "7",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.290649,
+                    "lng": 126.974074
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "startAt": "2026-10-20T15:45:00+09:00",
+                "endAt": "2026-10-20T15:49:00+09:00",
+                "basis": "estimate",
+                "durationSec": 240,
+                "distanceM": 269,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.292434,
+                    "lng": 126.975071
+                  },
+                  {
+                    "lat": 37.290814,
+                    "lng": 126.974065
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "nsc-to-hssc",
+        "name": "자과캠 → 인사캠",
+        "from": {
+          "kind": "skku_building",
+          "id": "7",
+          "name": "정문",
+          "coords": {
+            "lat": 37.290649,
+            "lng": 126.974074
+          },
+          "platformId": null,
+          "action": null
+        },
+        "to": {
+          "kind": "skku_building",
+          "id": "1",
+          "name": "정문",
+          "coords": {
+            "lat": 37.584865,
+            "lng": 126.997131
+          },
+          "platformId": null,
+          "action": null
+        },
+        "options": [
+          {
+            "id": "inja",
+            "name": "인자셔틀",
+            "mode": "shuttle",
+            "status": "running",
+            "warnings": [],
+            "reason": null,
+            "nextServiceAt": null,
+            "leaveAt": "2026-10-20T14:25:00+09:00",
+            "arriveAt": "2026-10-20T15:58:00+09:00",
+            "legs": [
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "skku_building",
+                  "id": "7",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.290649,
+                    "lng": 126.974074
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "nsc-opposite",
+                  "name": "N센터 맞은편",
+                  "coords": {
+                    "lat": 37.292536,
+                    "lng": 126.975077
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "startAt": "2026-10-20T14:25:00+09:00",
+                "endAt": "2026-10-20T14:29:00+09:00",
+                "basis": "estimate",
+                "durationSec": 240,
+                "distanceM": 269,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.290814,
+                    "lng": 126.974065
+                  },
+                  {
+                    "lat": 37.292436,
+                    "lng": 126.975065
+                  }
+                ]
+              },
+              {
+                "kind": "ride",
+                "mode": "shuttle",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "nsc-opposite",
+                  "name": "N센터 맞은편",
+                  "coords": {
+                    "lat": 37.292536,
+                    "lng": 126.975077
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "hssc-600th",
+                  "name": "600주년기념관 앞",
+                  "coords": {
+                    "lat": 37.587258,
+                    "lng": 126.993904
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "startAt": "2026-10-20T14:30:00+09:00",
+                "endAt": "2026-10-20T15:52:00+09:00",
+                "basis": "estimate",
+                "durationSec": 4920,
+                "distanceM": null,
+                "label": "인자셔틀",
+                "icon": "shuttle",
+                "color": "003626",
+                "line": {
+                  "id": "jain",
+                  "name": "인자셔틀"
+                },
+                "board": {
+                  "status": "scheduled",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": "2026-10-20T14:30:00+09:00",
+                  "basis": "timetable",
+                  "stopsAway": null,
+                  "runId": "campus-jain|regular|2026-10-20|14:30",
+                  "vehicleId": null,
+                  "headsign": "자과캠 → 인사캠",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": null
+                },
+                "alight": {
+                  "status": "unknown",
+                  "expectedArrivalAt": "2026-10-20T15:52:00+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "estimate",
+                  "stopsAway": null,
+                  "runId": "campus-jain|regular|2026-10-20|14:30",
+                  "vehicleId": null,
+                  "headsign": "자과캠 → 인사캠",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": null
+                },
+                "later": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": "2026-10-20T16:00:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "campus-jain|regular|2026-10-20|16:00",
+                    "vehicleId": null,
+                    "headsign": "자과캠 → 인사캠",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": null
+                  }
+                ],
+                "vehicles": [],
+                "waitSec": 60,
+                "observedAt": null
+              },
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "hssc-600th",
+                  "name": "600주년기념관 앞",
+                  "coords": {
+                    "lat": 37.587258,
+                    "lng": 126.993904
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "to": {
+                  "kind": "skku_building",
+                  "id": "1",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.584865,
+                    "lng": 126.997131
+                  },
+                  "platformId": null,
+                  "action": null
+                },
+                "startAt": "2026-10-20T15:52:00+09:00",
+                "endAt": "2026-10-20T15:58:00+09:00",
+                "basis": "estimate",
+                "durationSec": 360,
+                "distanceM": 446,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.587255,
+                    "lng": 126.993897
+                  },
+                  {
+                    "lat": 37.584867,
+                    "lng": 126.997138
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

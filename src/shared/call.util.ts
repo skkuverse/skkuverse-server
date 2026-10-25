@@ -1,4 +1,4 @@
-import type { StopCall } from "./call.types";
+import type { CallInstantKey, CallSide, RunIdentity, StopCall, TimetabledStopTime } from "./call.types";
 import type { Call } from "./call.wire";
 import { toKstInstant } from "./kst-date.util";
 
@@ -21,5 +21,25 @@ export function toCall(stopCall: StopCall): Call {
     isLastRun: stopCall.isLastRun,
     isExpress: stopCall.isExpress,
     providerText: stopCall.providerText,
+  };
+}
+
+/** WHY: the one time a call is compared by, in the order ADR 0022 D2 fixes and clients read. */
+export function toCallTime(call: Pick<StopCall, CallInstantKey>): Date | null {
+  return call.expectedDepartureAt ?? call.scheduledDepartureAt ?? call.expectedArrivalAt ?? call.scheduledArrivalAt;
+}
+
+// WHY: an estimate shown at the stop is the expected time, beside the timetable's own there, if any (ADR 0022, D2).
+export function toTimetabledCall({ shownAt, timetableAt, isEstimated }: TimetabledStopTime, side: CallSide, run: RunIdentity): StopCall {
+  const isShownEstimate = shownAt !== null && isEstimated;
+  const [expected, scheduled] = isShownEstimate ? [shownAt, timetableAt] : [null, shownAt];
+  const departure = side === "board" ? { expected, scheduled } : { expected: null, scheduled: null };
+  const arrival = side === "alight" ? { expected, scheduled } : { expected: null, scheduled: null };
+  return {
+    status: "scheduled",
+    ...{ expectedArrivalAt: arrival.expected, expectedDepartureAt: departure.expected, scheduledArrivalAt: arrival.scheduled, scheduledDepartureAt: departure.scheduled },
+    basis: isShownEstimate ? "estimate" : "timetable",
+    ...{ stopsAway: null, runId: run.runId, vehicleId: null, headsign: run.headsign },
+    ...{ isFirstRun: run.isFirstRun, isLastRun: run.isLastRun, isExpress: null, providerText: null },
   };
 }

@@ -7,7 +7,7 @@
  * key order.
  */
 import type { StopCall } from "./call.types";
-import { toCall } from "./call.util";
+import { toCall, toCallTime, toTimetabledCall } from "./call.util";
 import { call as callWire } from "./call.wire";
 
 const WIRE_KEYS = Object.keys(callWire.shape);
@@ -78,5 +78,67 @@ describe("toCall", () => {
     // Assert
     expect(served).not.toHaveProperty("runDepartureAt");
     expect(Object.keys(served)).toEqual(WIRE_KEYS);
+  });
+});
+
+describe("toCallTime", () => {
+  const at = (iso: string) => new Date(iso);
+  const NONE = { expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null };
+
+  it.each([
+    ["the expected departure first", { expectedDepartureAt: at("2026-10-22T01:02:00Z"), scheduledDepartureAt: at("2026-10-22T01:00:00Z"), expectedArrivalAt: at("2026-10-22T00:59:00Z") }, "2026-10-22T01:02:00.000Z"],
+    ["then the scheduled departure", { scheduledDepartureAt: at("2026-10-22T01:00:00Z"), expectedArrivalAt: at("2026-10-22T00:59:00Z"), scheduledArrivalAt: at("2026-10-22T00:58:00Z") }, "2026-10-22T01:00:00.000Z"],
+    ["then the expected arrival", { expectedArrivalAt: at("2026-10-22T00:59:00Z"), scheduledArrivalAt: at("2026-10-22T00:58:00Z") }, "2026-10-22T00:59:00.000Z"],
+    ["then the scheduled arrival", { scheduledArrivalAt: at("2026-10-22T00:58:00Z") }, "2026-10-22T00:58:00.000Z"],
+  ])("reads %s", (_case, instants, expected) => {
+    // Act
+    const time = toCallTime({ ...NONE, ...instants });
+
+    // Assert
+    expect(time?.toISOString()).toBe(expected);
+  });
+
+  it("is null for a call with no instant", () => {
+    // Act & Assert
+    expect(toCallTime(NONE)).toBeNull();
+  });
+});
+
+describe("toTimetabledCall", () => {
+  const RUN = { runId: "campus-inja|regular|2026-10-20|14:00", headsign: "인사캠 → 자과캠", isFirstRun: true, isLastRun: false };
+  const SHOWN = new Date("2026-10-20T06:10:00Z");
+  const TIMETABLE = new Date("2026-10-20T06:00:00Z");
+
+  it("Boarding stop: the timetable time is the scheduled departure, basis timetable", () => {
+    // Act
+    const boarding = toTimetabledCall({ shownAt: TIMETABLE, timetableAt: TIMETABLE, isEstimated: false }, "board", RUN);
+
+    // Assert
+    expect(boarding).toEqual({
+      status: "scheduled",
+      expectedArrivalAt: null,
+      expectedDepartureAt: null,
+      scheduledArrivalAt: null,
+      scheduledDepartureAt: TIMETABLE,
+      basis: "timetable",
+      stopsAway: null,
+      ...{ runId: RUN.runId, vehicleId: null, headsign: RUN.headsign, isFirstRun: true, isLastRun: false, isExpress: null, providerText: null },
+    });
+  });
+
+  it("Estimated alighting stop: the estimate is the expected arrival beside the timetable's own, basis estimate", () => {
+    // Act
+    const alighting = toTimetabledCall({ shownAt: SHOWN, timetableAt: TIMETABLE, isEstimated: true }, "alight", RUN);
+
+    // Assert
+    expect(alighting).toMatchObject({ expectedArrivalAt: SHOWN, scheduledArrivalAt: TIMETABLE, expectedDepartureAt: null, scheduledDepartureAt: null, basis: "estimate" });
+  });
+
+  it("No time at the stop: every instant null and basis timetable, even when flagged estimated", () => {
+    // Act
+    const unknown = toTimetabledCall({ shownAt: null, timetableAt: null, isEstimated: true }, "alight", RUN);
+
+    // Assert
+    expect(unknown).toMatchObject({ expectedArrivalAt: null, scheduledArrivalAt: null, basis: "timetable" });
   });
 });

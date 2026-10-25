@@ -1,0 +1,97 @@
+import { captureGroups } from "../shared/regex.util";
+import { JOURNEY_PLACE_KINDS, PLACE_REF_PATTERN } from "./journey.constants";
+import type { JourneyLeg, JourneyRoutesData } from "./journey.document";
+import type { CitedPlace, JourneyCatalog, JourneyIssue, JourneyReference, LegEnds, PlaceKind, PlaceRef } from "./journey.types";
+
+type Path = Array<string | number>;
+
+const isPlaceKind = (kind: string): kind is PlaceKind => (JOURNEY_PLACE_KINDS as readonly string[]).includes(kind);
+
+export function toPlaceRef(ref: string): PlaceRef | null {
+  const groups = captureGroups(ref, PLACE_REF_PATTERN, 2);
+  return groups && isPlaceKind(groups[0]) ? { kind: groups[0], id: groups[1] } : null;
+}
+
+export function toLegEnds(leg: JourneyLeg): LegEnds {
+  if (leg.kind === "walk") return { from: leg.from, to: leg.to };
+  if (leg.kind === "transfer") return { from: leg.at, to: leg.at };
+  return { from: leg.board.place, to: leg.alight.place };
+}
+
+/** WHY: every place the dataset cites, with where it sits and the role that limits its kind (ADR 0022, D4). */
+export function toCitedPlaces({ routes }: JourneyRoutesData): CitedPlace[] {
+  return routes.flatMap((route, routeIndex) => [
+    { ref: route.from, path: ["routes", routeIndex, "from"], role: "routeEnd" as const, platformId: null },
+    { ref: route.to, path: ["routes", routeIndex, "to"], role: "routeEnd" as const, platformId: null },
+    ...route.options.flatMap((option, optionIndex) =>
+      option.legs.flatMap((leg, legIndex): CitedPlace[] => {
+        const at: Path = ["routes", routeIndex, "options", optionIndex, "legs", legIndex];
+        if (leg.kind === "walk") return [{ ref: leg.from, path: [...at, "from"], role: "walkEnd", platformId: null }, { ref: leg.to, path: [...at, "to"], role: "walkEnd", platformId: null }];
+        if (leg.kind === "transfer") return [leg.fromPlatformId, leg.toPlatformId].map((platformId, side) => ({ ref: leg.at, path: [...at, side === 0 ? "fromPlatformId" : "toPlatformId"], role: "transferAt", platformId }));
+        return (["board", "alight"] as const).map((side) => ({ ref: leg[side].place, path: [...at, side, "place"], role: "rideStop", platformId: leg[side].platformId ?? null }));
+      }),
+    ),
+  ]);
+}
+
+// WHY: the stops and stop areas cited are bus-stops identities, so its incoming-reference check refuses deleting one.
+export function journeyRoutesReferences(data: JourneyRoutesData): JourneyReference[] {
+  return toCitedPlaces(data).flatMap(({ ref, path }) => {
+    const place = toPlaceRef(ref);
+    return place && (place.kind === "bus_stop" || place.kind === "bus_stop_area") ? [{ dataset: "bus-stops", id: place.id, path }] : [];
+  });
+}
+
+function duplicateIssues(ids: readonly string[], at: (index: number) => Path): JourneyIssue[] {
+  return ids.flatMap((id, index) => (ids.indexOf(id) === index ? [] : [{ path: at(index), message: `"${id}" is used twice` }]));
+}
+
+function chainIssues(data: JourneyRoutesData): JourneyIssue[] {
+  return data.routes.flatMap((route, routeIndex) =>
+    route.options.flatMap((option, optionIndex) => {
+      const at = ["routes", routeIndex, "options", optionIndex, "legs"];
+      const ends = option.legs.map(toLegEnds);
+      const starts = [route.from, ...ends.map((end) => end.to)];
+      const issues = ends.flatMap((end, legIndex) => (end.from === starts[legIndex] ? [] : [{ path: [...at, legIndex], message: `starts at ${end.from}, not at ${starts[legIndex]}, where the option is by then` }]));
+      const last = ends.at(-1)?.to;
+      return last === route.to ? issues : [...issues, { path: at, message: `ends at ${last}, not at the route's ${route.to}` }];
+    }),
+  );
+}
+
+// WHY: a timetabled ride boards at a boarding stop and alights at an alighting one after it, in one route type's sequence.
+function isOrderedRide(sequences: Readonly<Record<string, readonly { stopId?: string; action: string }[]>> | undefined, boardId: string, alightId: string): boolean {
+  return Object.values(sequences ?? {}).some((sequence) => {
+    const board = sequence.findIndex((stop) => stop.stopId === boardId && stop.action === "board");
+    return board >= 0 && sequence.some((stop, index) => index > board && stop.stopId === alightId && stop.action === "alight");
+  });
+}
+
+function rideIssues(data: JourneyRoutesData, catalog: JourneyCatalog): JourneyIssue[] {
+  const lineById = new Map(data.lines.map((line) => [line.id, line]));
+  return data.routes.flatMap((route, routeIndex) =>
+    route.options.flatMap((option, optionIndex) =>
+      option.legs.flatMap((leg, legIndex): JourneyIssue[] => {
+        if (leg.kind !== "ride") return [];
+        const at = ["routes", routeIndex, "options", optionIndex, "legs", legIndex];
+        const line = lineById.get(leg.line);
+        if (!line) return [{ path: [...at, "line"], message: `"${leg.line}" is no line of this dataset` }];
+        if (catalog.sequencesByService === null) return [{ path: [...at, "line"], message: "no stored bus-stops, so the ride's stop order was not checked", warning: true }];
+        const [board, alight] = [toPlaceRef(leg.board.place)?.id ?? "", toPlaceRef(leg.alight.place)?.id ?? ""];
+        if (isOrderedRide(catalog.sequencesByService[line.sourceLineId], board, alight)) return [];
+        return [{ path: at, message: `${line.sourceLineId} has no sequence that boards at ${board} and then alights at ${alight}` }];
+      }),
+    ),
+  );
+}
+
+/** WHY: what the dataset must hold together whatever its places resolve to: unique ids, chained legs, known lines, ordered rides. */
+export function toJourneyRoutesIssues(data: JourneyRoutesData, catalog: JourneyCatalog): JourneyIssue[] {
+  return [
+    ...duplicateIssues(data.lines.map((line) => line.id), (index) => ["lines", index, "id"]),
+    ...duplicateIssues(data.routes.map((route) => route.id), (index) => ["routes", index, "id"]),
+    ...data.routes.flatMap((route, routeIndex) => duplicateIssues(route.options.map((option) => option.id), (index) => ["routes", routeIndex, "options", index, "id"])),
+    ...chainIssues(data),
+    ...rideIssues(data, catalog),
+  ];
+}
