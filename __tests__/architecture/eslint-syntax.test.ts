@@ -545,6 +545,49 @@ describe("firebase/no-credential", () => {
   });
 });
 
+// WHY: a limiter, a token verification or a constant-time comparison is a perimeter decision (ADR 0023, D8), made
+// only behind a port, so it leaves for the overlay with the rest.
+describe("perimeter/calls", () => {
+  const file = "src/http/x.middleware.ts";
+
+  it("rejects building a limiter, verifying a token or comparing in constant time", () => {
+    // Arrange
+    const sources = [
+      'import { rateLimit } from "express-rate-limit"; const limiter = rateLimit({ limit: 5 });',
+      "const limiter = expressRateLimit.rateLimit({ limit: 5 });",
+      "await admin.auth().verifyIdToken(idToken);",
+      'import crypto from "crypto"; crypto.timingSafeEqual(a, b);',
+      'import { timingSafeEqual } from "node:crypto"; timingSafeEqual(a, b);',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("perimeter/calls", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("passes the port calls that stand for them", () => {
+    // Arrange
+    const sources = ['const limiter = policy.handlerFor("general");', "await authenticator.authenticate(request);", "await authorizer.authorize(scope, request);"];
+
+    // Act
+    const reported = sources.filter((source) => lint("perimeter/calls", file, source).length > 0);
+
+    // Assert
+    expect(reported).toEqual([]);
+  });
+
+  it("covers src/ but the perimeter and the overlay's build output, and no spec", () => {
+    // Arrange
+    const { files, ignores } = block("perimeter/calls");
+
+    // Act & Assert
+    expect(files).toEqual(["src/**/*.ts"]);
+    expect(ignores).toEqual(["src/**/*.spec.ts", "src/perimeter/**", "src/private/**"]);
+  });
+});
+
 /**
  * boundaries/module-loads has one exception in src/ (ADR 0023, D4): the perimeter overlay's entry is loaded by
  * path, so no static import names it. The exception is one `require` of `OVERLAY_ENTRY`, a path built from the
