@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { campus } from "../../shared/campus.wire";
-
-const latLng = z.object({ lat: z.number(), lng: z.number() });
+import { latLng } from "../../shared/lat-lng.wire";
 
 /** WHY: every language in one body, so a shared cache may keep it; each is what a request in that language is served. */
 const localizedText = z.object({ ko: z.string(), en: z.string(), zh: z.string() });

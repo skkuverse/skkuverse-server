@@ -5,11 +5,12 @@
  * than TOPIS's staOrd − sectOrd, since an arrival row's sectOrd is the next stop's own staOrd. A bus the positions show
  * standing at the station comes first there, arriving and 0 stops away, whether or not TOPIS dropped it from the row, and
  * the row's slots follow without it, two at most (ADR 0019, D14). A vehicle's occupancy comes from the arrival row nearest ahead of it,
- * its last-bus flag from any row that names it, carried by every arrival naming it, and its plate is TOPIS's full plate.
+ * its plate is TOPIS's full plate, and a bus's last-run flag, from any row that names it, is carried by every call naming it
+ * (ADR 0022, D2); a live call has no run, headsign, first-run or express flag of its own.
  * Its low-floor flag is read from TOPIS's bus type: true for a low-floor bus, false for a general one, null otherwise.
  */
 import { jongroArrivalBus, jongroPositionDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
-import type { StopCall } from "../../bus.types";
+import type { StopCall } from "../../../shared/call.types";
 import type { JongroBusTracking, TrackedPosition } from "../../realtime/group/bus-realtime-group.types";
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
 import {
@@ -51,11 +52,13 @@ describe("toJongroCall", () => {
       scheduledDepartureAt: null,
       basis: "provider",
       stopsAway: 3,
-      isLastBus: false,
+      isLastRun: false,
       vehicleId: "100000103",
       providerText: "3분5초후[2번째 전]",
       runId: null,
-      runDepartureAt: null,
+      headsign: null,
+      isFirstRun: null,
+      isExpress: null,
     });
   });
 
@@ -114,10 +117,10 @@ const named = (extra: Partial<StopCall> = {}): StopCall => ({
   ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
   basis: "provider",
   stopsAway: 1,
-  isLastBus: false,
+  isLastRun: false,
   vehicleId: "100000103",
   providerText: "곧 도착",
-  ...{ runId: null, runDepartureAt: null },
+  ...{ runId: null, headsign: null, isFirstRun: null, isExpress: null },
   ...extra,
 });
 const vehicleStatesOf = (standing: Array<[string, number]>, lastBusIds: string[], namedVehicleIds: string[] = ["100000103"]) => ({
@@ -128,8 +131,8 @@ const vehicleStatesOf = (standing: Array<[string, number]>, lastBusIds: string[]
 
 describe("withVehicleState", () => {
   it.each([
-    ["not the last bus", vehicleStatesOf([], []), { status: "arriving", stopsAway: 1, isLastBus: false }],
-    ["the last bus by another row", vehicleStatesOf([], ["100000103"]), { status: "arriving", stopsAway: 1, isLastBus: true }],
+    ["not the last bus", vehicleStatesOf([], []), { status: "arriving", stopsAway: 1, isLastRun: false }],
+    ["the last bus by another row", vehicleStatesOf([], ["100000103"]), { status: "arriving", stopsAway: 1, isLastRun: true }],
   ] as const)("serves a bus that is %s with the vehicle's flag, its status and stops away the row's", (_case, vehicleStates, expected) => {
     // Act & Assert
     expect(withVehicleState(named(), vehicleStates)).toMatchObject(expected);
@@ -137,17 +140,17 @@ describe("withVehicleState", () => {
 
   it("keeps the slot's own flag on an arrival that names no vehicle", () => {
     // Act & Assert
-    expect(withVehicleState(named({ vehicleId: null, stopsAway: null, isLastBus: true, status: "waitingToDepart" }), vehicleStatesOf([], []))).toMatchObject({
+    expect(withVehicleState(named({ vehicleId: null, stopsAway: null, isLastRun: true, status: "waitingToDepart" }), vehicleStatesOf([], []))).toMatchObject({
       status: "waitingToDepart",
       stopsAway: null,
-      isLastBus: true,
+      isLastRun: true,
     });
   });
 });
 
 // WHY: Seoul BIS signage: a bus standing at a stop reads arriving until it leaves, and TOPIS drops it from that stop's row (ADR 0019, D14).
 describe("toStationCalls", () => {
-  const standingCall = { status: "arriving", expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, basis: "provider", stopsAway: 0, runId: null, runDepartureAt: null };
+  const standingCall = { status: "arriving", expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, basis: "provider", stopsAway: 0, runId: null, headsign: null, isFirstRun: null, isExpress: null };
   const behind = named({ status: "enRoute", expectedArrivalAt: new Date("2026-10-20T10:02:00+09:00"), stopsAway: 3, vehicleId: "100000104", providerText: "3분후[2번째 전]" });
   const waitingSlot = named({ status: "waitingToDepart", expectedArrivalAt: null, stopsAway: null, vehicleId: null, providerText: "출발대기" });
 
@@ -157,8 +160,8 @@ describe("toStationCalls", () => {
 
     // Assert
     expect(calls).toEqual([
-      { ...standingCall, isLastBus: null, vehicleId: "100000103", providerText: null },
-      { ...behind, isLastBus: false },
+      { ...standingCall, isLastRun: null, vehicleId: "100000103", providerText: null },
+      { ...behind, isLastRun: false },
     ]);
   });
 
@@ -168,8 +171,8 @@ describe("toStationCalls", () => {
 
     // Assert
     expect(calls).toEqual([
-      { ...standingCall, isLastBus: true, vehicleId: "100000103", providerText: "곧 도착" },
-      { ...behind, isLastBus: false },
+      { ...standingCall, isLastRun: true, vehicleId: "100000103", providerText: "곧 도착" },
+      { ...behind, isLastRun: false },
     ]);
   });
 

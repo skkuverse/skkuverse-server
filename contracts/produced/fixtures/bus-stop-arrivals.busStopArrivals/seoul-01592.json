@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/seoul-01592/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a pole 종로07 and 종로08 share, 종로07 with one arrival and its tracked bus, a general one by its position row's busType); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16). Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus. Each stop's stopAreaId (ADR 0022, D4) is added by hand as null, since no stop area is stored.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/seoul-01592/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a pole 종로07 and 종로08 share, 종로07 with one arrival and its tracked bus, a general one by its position row's busType); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16). Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus. Each stop's stopAreaId (ADR 0022, D4) is added by hand as null, since no stop area is stored. Reshaped by hand to ADR 0022's call (D2, D3), as the server serves it since: each arrival gains runId, headsign, isFirstRun and isExpress and takes isLastRun in place of isLastBus, in the call's key order (a live call: no run, its entry's direction label as headsign; a timetabled run: its run id, the entry's label as headsign, whether it is the day's first run of its route type), and each vehicle loses isLastBus.",
   "data": {
     "stop": {
       "id": "seoul-01592",
@@ -37,7 +37,6 @@
               "passengerCount": 9
             },
             "seatsLeft": null,
-            "isLastBus": false,
             "isLowFloor": false,
             "position": {
               "stationIndex": 14,
@@ -77,8 +76,12 @@
             "scheduledDepartureAt": null,
             "basis": "provider",
             "stopsAway": 3,
-            "isLastBus": false,
+            "runId": null,
             "vehicleId": "100000203",
+            "headsign": "성균관대운동장 방면",
+            "isFirstRun": null,
+            "isLastRun": false,
+            "isExpress": null,
             "providerText": "4분10초후[2번째 전]"
           }
         ]
