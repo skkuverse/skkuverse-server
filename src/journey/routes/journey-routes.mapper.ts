@@ -5,7 +5,7 @@ import { toCall, toCallTime } from "../../shared/call.util";
 import { toKstInstant } from "../../shared/kst-date.util";
 import type { Place } from "../../shared/place.wire";
 import type { JourneyLeg, JourneyOption, JourneyRoute } from "../journey.document";
-import { toLegBasis } from "./journey-routes.rules";
+import { toAlightTime, toLegBasis } from "./journey-routes.rules";
 import type { CitedLegPlace, PlannedLeg, PlannedOption, PlannedRide, PlannedStep, ServedLeg, ServedOption, ServedRoute } from "./journey-routes.types";
 
 const MINUTE_S = 60;
@@ -47,7 +47,8 @@ function timeOf(call: StopCall): Date {
 
 function toServedRide({ leg, line, board, alight, later, vehicles, waitSec, observedAt }: PlannedRide, served: Served): ServedLeg {
   const { from, to } = placesOf(toLegPlaces(leg), served);
-  const [startAt, endAt] = [timeOf(board), timeOf(alight)];
+  const [startAt, endAt] = [timeOf(board), toAlightTime(alight)];
+  if (!endAt) throw new Error("journey: a ride was planned on an alight call with no time");
   const name = line.name[served.lang];
   return {
     kind: "ride",

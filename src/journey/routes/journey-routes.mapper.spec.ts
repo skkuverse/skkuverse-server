@@ -1,7 +1,8 @@
 /**
  * How a planned route is served (ADR 0022, D5): a walk with its label, icon, minutes as seconds, distance and path (null
  * without one), a transfer between two platforms of one station, a ride with its line's name, icon and color, its
- * board, alight and later calls as served calls, its basis the weaker of its calls and its duration between them; an
+ * board, alight and later calls as served calls, its basis the weaker of its calls, its end the alight call's arrival
+ * before its departure (ADR 0022, D5, amended 2026-10-25) and its duration between them; an
  * option not running with no legs and its next service at +09:00; options in the planner's order; a leg's places by
  * ref and platform. Places a running option cites are resolved before; one that is not throws.
  */
@@ -73,6 +74,20 @@ describe("toServedRoute", () => {
       ...{ startAt: "2026-10-20T14:30:00+09:00", endAt: "2026-10-20T15:52:00+09:00", durationSec: 4920, distanceM: null, basis: "estimate", waitSec: 60, observedAt: null },
     });
     expect(ride).toMatchObject({ later: [expect.objectContaining({ scheduledDepartureAt: "2026-10-20T15:00:00+09:00" })], vehicles: [] });
+  });
+
+  it("Alight time: ends a ride at its alight call's arrival when the call also names a departure there", () => {
+    // Arrange
+    const [walk, ride] = (RUNNING as Extract<PlannedOption, { status: "running" }>).legs;
+    const alight = call({ scheduledArrivalAt: kst("15:51"), scheduledDepartureAt: kst("15:52") });
+    const planned: PlannedOption = { status: "running", leaveAt: kst("14:23"), arriveAt: kst("15:51"), legs: [walk!, { ...(ride as Extract<typeof ride, { line: JourneyLine }>), alight }] };
+
+    // Act
+    const served = toServedRoute(ROUTE, { planned: [planned, ENDED], order: [0, 1] }, { places: PLACES, lang: "en" });
+
+    // Assert
+    expect(served.options[0]!.legs[1]).toMatchObject({ startAt: "2026-10-20T14:30:00+09:00", endAt: "2026-10-20T15:51:00+09:00", durationSec: 4860 });
+    expect(served.options[0]!.legs[1]).toMatchObject({ alight: { scheduledArrivalAt: "2026-10-20T15:51:00+09:00", scheduledDepartureAt: "2026-10-20T15:52:00+09:00" } });
   });
 
   it("serves an option not running with no legs, its next service at +09:00, in the planner's order", () => {

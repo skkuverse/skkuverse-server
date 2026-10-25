@@ -1,0 +1,1384 @@
+{
+  "_about": "Revision 2 of journey-routes as pushed to skku_content_dev on 2026-10-25: revision 1 (the two 인자셔틀 options) plus the 4호선 → 금정 → 1호선 option each way (ADR 0022 D7, docs/plans/transit-route-planner.md PR (f)); each new walk measured with TMAP pedestrian routing (POST /tmap/routes/pedestrian, WGS84GEO) on 2026-10-25 between the gate's building point and the station's subway-station-coords point, its path rounded to six decimals; ride fallback minutes from subway-timetables revision 3.",
+  "catchMarginSec": 60,
+  "lines": [
+    {
+      "id": "inja",
+      "source": "busTimetable",
+      "sourceLineId": "campus-inja",
+      "mode": "shuttle",
+      "name": {
+        "ko": "인자셔틀",
+        "en": "INJA Shuttle",
+        "zh": "仁自班车"
+      },
+      "color": "003626",
+      "icon": "shuttle"
+    },
+    {
+      "id": "jain",
+      "source": "busTimetable",
+      "sourceLineId": "campus-jain",
+      "mode": "shuttle",
+      "name": {
+        "ko": "인자셔틀",
+        "en": "INJA Shuttle",
+        "zh": "仁自班车"
+      },
+      "color": "003626",
+      "icon": "shuttle"
+    },
+    {
+      "id": "line4",
+      "source": "subway",
+      "sourceLineId": "4",
+      "mode": "subway",
+      "name": {
+        "ko": "4호선",
+        "en": "Line 4",
+        "zh": "4号线"
+      },
+      "color": "00A5DE",
+      "icon": "subway"
+    },
+    {
+      "id": "line1",
+      "source": "subway",
+      "sourceLineId": "1",
+      "mode": "subway",
+      "name": {
+        "ko": "1호선",
+        "en": "Line 1",
+        "zh": "1号线"
+      },
+      "color": "0052A4",
+      "icon": "subway"
+    }
+  ],
+  "routes": [
+    {
+      "id": "hssc-to-nsc",
+      "name": {
+        "ko": "인사캠 → 자과캠",
+        "en": "HSSC → NSC",
+        "zh": "人文校区 → 自然校区"
+      },
+      "from": "skku_building:1",
+      "to": "skku_building:7",
+      "options": [
+        {
+          "id": "inja",
+          "name": {
+            "ko": "인자셔틀",
+            "en": "INJA Shuttle",
+            "zh": "仁自班车"
+          },
+          "mode": "shuttle",
+          "legs": [
+            {
+              "kind": "walk",
+              "from": "skku_building:1",
+              "to": "bus_stop:hssc-bus-lot",
+              "minutes": 6,
+              "distanceM": 473,
+              "evidence": "TMAP pedestrian 2026-10-25, 인사캠 정문→학생회관 버스 주차장: 473 m, 356 s",
+              "path": [
+                {
+                  "lat": 37.584867,
+                  "lng": 126.997138
+                },
+                {
+                  "lat": 37.584911,
+                  "lng": 126.997122
+                },
+                {
+                  "lat": 37.584886,
+                  "lng": 126.996749
+                },
+                {
+                  "lat": 37.584803,
+                  "lng": 126.995777
+                },
+                {
+                  "lat": 37.584847,
+                  "lng": 126.995666
+                },
+                {
+                  "lat": 37.585011,
+                  "lng": 126.995491
+                },
+                {
+                  "lat": 37.585472,
+                  "lng": 126.995158
+                },
+                {
+                  "lat": 37.585678,
+                  "lng": 126.995008
+                },
+                {
+                  "lat": 37.586119,
+                  "lng": 126.994688
+                },
+                {
+                  "lat": 37.586172,
+                  "lng": 126.99465
+                },
+                {
+                  "lat": 37.586183,
+                  "lng": 126.994552
+                },
+                {
+                  "lat": 37.586714,
+                  "lng": 126.994158
+                },
+                {
+                  "lat": 37.587194,
+                  "lng": 126.993838
+                },
+                {
+                  "lat": 37.587283,
+                  "lng": 126.993763
+                },
+                {
+                  "lat": 37.5873,
+                  "lng": 126.993686
+                },
+                {
+                  "lat": 37.587366,
+                  "lng": 126.993644
+                }
+              ]
+            },
+            {
+              "kind": "ride",
+              "line": "inja",
+              "board": {
+                "place": "bus_stop:hssc-bus-lot"
+              },
+              "alight": {
+                "place": "bus_stop:nsc-n-center"
+              },
+              "rideMinutes": 82,
+              "evidence": "shuttle_eta baseline mean over 47 runs, 2026-10-25 (60 to 122 min); read only when a run has no time at the alight stop"
+            },
+            {
+              "kind": "walk",
+              "from": "bus_stop:nsc-n-center",
+              "to": "skku_building:7",
+              "minutes": 4,
+              "distanceM": 269,
+              "evidence": "TMAP pedestrian 2026-10-25, N센터 앞→자과캠 정문: 269 m, 234 s",
+              "path": [
+                {
+                  "lat": 37.292434,
+                  "lng": 126.975071
+                },
+                {
+                  "lat": 37.292484,
+                  "lng": 126.974446
+                },
+                {
+                  "lat": 37.29225,
+                  "lng": 126.974404
+                },
+                {
+                  "lat": 37.292217,
+                  "lng": 126.974399
+                },
+                {
+                  "lat": 37.292142,
+                  "lng": 126.974385
+                },
+                {
+                  "lat": 37.292064,
+                  "lng": 126.974501
+                },
+                {
+                  "lat": 37.291787,
+                  "lng": 126.974454
+                },
+                {
+                  "lat": 37.291703,
+                  "lng": 126.974437
+                },
+                {
+                  "lat": 37.291553,
+                  "lng": 126.974412
+                },
+                {
+                  "lat": 37.291473,
+                  "lng": 126.974399
+                },
+                {
+                  "lat": 37.290903,
+                  "lng": 126.974296
+                },
+                {
+                  "lat": 37.290867,
+                  "lng": 126.974293
+                },
+                {
+                  "lat": 37.29082,
+                  "lng": 126.974318
+                },
+                {
+                  "lat": 37.290814,
+                  "lng": 126.974065
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "line4-line1",
+          "name": {
+            "ko": "4호선 · 1호선",
+            "en": "Line 4 · Line 1",
+            "zh": "4号线 · 1号线"
+          },
+          "mode": "subway",
+          "legs": [
+            {
+              "kind": "walk",
+              "from": "skku_building:1",
+              "to": "subway_station:hyehwa",
+              "minutes": 8,
+              "distanceM": 568,
+              "evidence": "TMAP pedestrian 2026-10-25, 인사캠 정문→혜화역 (the station's subway-station-coords point): 568 m, 480 s",
+              "path": [
+                {
+                  "lat": 37.584867,
+                  "lng": 126.997138
+                },
+                {
+                  "lat": 37.584828,
+                  "lng": 126.997149
+                },
+                {
+                  "lat": 37.584786,
+                  "lng": 126.997172
+                },
+                {
+                  "lat": 37.584611,
+                  "lng": 126.997263
+                },
+                {
+                  "lat": 37.5845,
+                  "lng": 126.997324
+                },
+                {
+                  "lat": 37.584464,
+                  "lng": 126.997347
+                },
+                {
+                  "lat": 37.584289,
+                  "lng": 126.997469
+                },
+                {
+                  "lat": 37.584131,
+                  "lng": 126.997574
+                },
+                {
+                  "lat": 37.58412,
+                  "lng": 126.997588
+                },
+                {
+                  "lat": 37.584109,
+                  "lng": 126.997599
+                },
+                {
+                  "lat": 37.583922,
+                  "lng": 126.997752
+                },
+                {
+                  "lat": 37.583872,
+                  "lng": 126.997797
+                },
+                {
+                  "lat": 37.583864,
+                  "lng": 126.99781
+                },
+                {
+                  "lat": 37.58385,
+                  "lng": 126.997844
+                },
+                {
+                  "lat": 37.583811,
+                  "lng": 126.99788
+                },
+                {
+                  "lat": 37.58357,
+                  "lng": 126.998119
+                },
+                {
+                  "lat": 37.583445,
+                  "lng": 126.998238
+                },
+                {
+                  "lat": 37.583098,
+                  "lng": 126.998574
+                },
+                {
+                  "lat": 37.583086,
+                  "lng": 126.998574
+                },
+                {
+                  "lat": 37.583059,
+                  "lng": 126.998574
+                },
+                {
+                  "lat": 37.583048,
+                  "lng": 126.998577
+                },
+                {
+                  "lat": 37.583034,
+                  "lng": 126.998558
+                },
+                {
+                  "lat": 37.582945,
+                  "lng": 126.998688
+                },
+                {
+                  "lat": 37.582873,
+                  "lng": 126.998788
+                },
+                {
+                  "lat": 37.582903,
+                  "lng": 126.998824
+                },
+                {
+                  "lat": 37.582928,
+                  "lng": 126.998852
+                },
+                {
+                  "lat": 37.582828,
+                  "lng": 126.998958
+                },
+                {
+                  "lat": 37.582631,
+                  "lng": 126.999221
+                },
+                {
+                  "lat": 37.58245,
+                  "lng": 126.99946
+                },
+                {
+                  "lat": 37.582337,
+                  "lng": 126.999613
+                },
+                {
+                  "lat": 37.582248,
+                  "lng": 126.999738
+                },
+                {
+                  "lat": 37.582234,
+                  "lng": 126.99976
+                },
+                {
+                  "lat": 37.582198,
+                  "lng": 126.999827
+                },
+                {
+                  "lat": 37.582148,
+                  "lng": 127.000027
+                },
+                {
+                  "lat": 37.582237,
+                  "lng": 127.000594
+                },
+                {
+                  "lat": 37.582262,
+                  "lng": 127.000746
+                },
+                {
+                  "lat": 37.582312,
+                  "lng": 127.001102
+                },
+                {
+                  "lat": 37.582337,
+                  "lng": 127.001291
+                },
+                {
+                  "lat": 37.582362,
+                  "lng": 127.001566
+                },
+                {
+                  "lat": 37.582317,
+                  "lng": 127.001705
+                },
+                {
+                  "lat": 37.582323,
+                  "lng": 127.001705
+                }
+              ]
+            },
+            {
+              "kind": "ride",
+              "line": "line4",
+              "board": {
+                "place": "subway_station:hyehwa",
+                "platformId": "S1-4-420"
+              },
+              "alight": {
+                "place": "subway_station:geumjeong",
+                "platformId": "KR-4-443"
+              },
+              "rideMinutes": 53,
+              "evidence": "subway-timetables revision 3 (2026-10-25) S1-4-weekday, Hyehwa departure to Geumjeong arrival: 52.5 to 53.5 min over 123 trains; read only when the door cannot place the train at the alight platform"
+            },
+            {
+              "kind": "transfer",
+              "at": "subway_station:geumjeong",
+              "fromPlatformId": "KR-4-443",
+              "toPlatformId": "KR-1-P149",
+              "minutes": 1,
+              "evidence": "same-island cross-platform transfer at Geumjeong: platform 4 (line 4 toward Oido) faces platform 3 (line 1 toward Cheonan), wikitree 2015-10-21 (8 to 10 steps, about 5 s); 1 min is the dataset's smallest"
+            },
+            {
+              "kind": "ride",
+              "line": "line1",
+              "board": {
+                "place": "subway_station:geumjeong",
+                "platformId": "KR-1-P149"
+              },
+              "alight": {
+                "place": "subway_station:sungkyunkwan",
+                "platformId": "KR-1-P153"
+              },
+              "rideMinutes": 11,
+              "evidence": "subway-timetables revision 3 (2026-10-25) KR-1-weekday, Geumjeong departure to Sungkyunkwan Univ. arrival: median 11 min (8.5 to 16.5) over 134 trains; read only when the door cannot place the train at the alight platform"
+            },
+            {
+              "kind": "walk",
+              "from": "subway_station:sungkyunkwan",
+              "to": "skku_building:7",
+              "minutes": 23,
+              "distanceM": 1590,
+              "evidence": "TMAP pedestrian 2026-10-25, 성균관대역→자과캠 정문 (the station's subway-station-coords point): 1590 m, 1336 s",
+              "path": [
+                {
+                  "lat": 37.300344,
+                  "lng": 126.970749
+                },
+                {
+                  "lat": 37.300308,
+                  "lng": 126.971049
+                },
+                {
+                  "lat": 37.300283,
+                  "lng": 126.971268
+                },
+                {
+                  "lat": 37.300005,
+                  "lng": 126.971215
+                },
+                {
+                  "lat": 37.299894,
+                  "lng": 126.971196
+                },
+                {
+                  "lat": 37.299794,
+                  "lng": 126.972057
+                },
+                {
+                  "lat": 37.29978,
+                  "lng": 126.972196
+                },
+                {
+                  "lat": 37.299777,
+                  "lng": 126.972207
+                },
+                {
+                  "lat": 37.299591,
+                  "lng": 126.972085
+                },
+                {
+                  "lat": 37.299547,
+                  "lng": 126.972124
+                },
+                {
+                  "lat": 37.299511,
+                  "lng": 126.972135
+                },
+                {
+                  "lat": 37.299461,
+                  "lng": 126.972137
+                },
+                {
+                  "lat": 37.299211,
+                  "lng": 126.971987
+                },
+                {
+                  "lat": 37.299155,
+                  "lng": 126.97194
+                },
+                {
+                  "lat": 37.299041,
+                  "lng": 126.971843
+                },
+                {
+                  "lat": 37.298972,
+                  "lng": 126.971774
+                },
+                {
+                  "lat": 37.2988,
+                  "lng": 126.971593
+                },
+                {
+                  "lat": 37.298722,
+                  "lng": 126.971496
+                },
+                {
+                  "lat": 37.298669,
+                  "lng": 126.971429
+                },
+                {
+                  "lat": 37.298411,
+                  "lng": 126.971213
+                },
+                {
+                  "lat": 37.298211,
+                  "lng": 126.97164
+                },
+                {
+                  "lat": 37.298188,
+                  "lng": 126.971624
+                },
+                {
+                  "lat": 37.298125,
+                  "lng": 126.971568
+                },
+                {
+                  "lat": 37.297994,
+                  "lng": 126.971451
+                },
+                {
+                  "lat": 37.297919,
+                  "lng": 126.97139
+                },
+                {
+                  "lat": 37.297833,
+                  "lng": 126.971321
+                },
+                {
+                  "lat": 37.297411,
+                  "lng": 126.971021
+                },
+                {
+                  "lat": 37.297183,
+                  "lng": 126.970907
+                },
+                {
+                  "lat": 37.297008,
+                  "lng": 126.970813
+                },
+                {
+                  "lat": 37.296772,
+                  "lng": 126.970707
+                },
+                {
+                  "lat": 37.296758,
+                  "lng": 126.970702
+                },
+                {
+                  "lat": 37.296689,
+                  "lng": 126.970677
+                },
+                {
+                  "lat": 37.296611,
+                  "lng": 126.97064
+                },
+                {
+                  "lat": 37.296486,
+                  "lng": 126.970602
+                },
+                {
+                  "lat": 37.296464,
+                  "lng": 126.970593
+                },
+                {
+                  "lat": 37.29623,
+                  "lng": 126.970515
+                },
+                {
+                  "lat": 37.295975,
+                  "lng": 126.970435
+                },
+                {
+                  "lat": 37.295497,
+                  "lng": 126.970338
+                },
+                {
+                  "lat": 37.295378,
+                  "lng": 126.970321
+                },
+                {
+                  "lat": 37.295208,
+                  "lng": 126.970302
+                },
+                {
+                  "lat": 37.294444,
+                  "lng": 126.970263
+                },
+                {
+                  "lat": 37.294392,
+                  "lng": 126.970263
+                },
+                {
+                  "lat": 37.294311,
+                  "lng": 126.970282
+                },
+                {
+                  "lat": 37.294303,
+                  "lng": 126.970282
+                },
+                {
+                  "lat": 37.29402,
+                  "lng": 126.970271
+                },
+                {
+                  "lat": 37.293895,
+                  "lng": 126.970224
+                },
+                {
+                  "lat": 37.293175,
+                  "lng": 126.970185
+                },
+                {
+                  "lat": 37.293131,
+                  "lng": 126.970179
+                },
+                {
+                  "lat": 37.292917,
+                  "lng": 126.970179
+                },
+                {
+                  "lat": 37.292597,
+                  "lng": 126.970157
+                },
+                {
+                  "lat": 37.290998,
+                  "lng": 126.970057
+                },
+                {
+                  "lat": 37.290931,
+                  "lng": 126.970163
+                },
+                {
+                  "lat": 37.290878,
+                  "lng": 126.971293
+                },
+                {
+                  "lat": 37.290834,
+                  "lng": 126.972421
+                },
+                {
+                  "lat": 37.290803,
+                  "lng": 126.973068
+                },
+                {
+                  "lat": 37.290809,
+                  "lng": 126.973196
+                },
+                {
+                  "lat": 37.290812,
+                  "lng": 126.973279
+                },
+                {
+                  "lat": 37.290809,
+                  "lng": 126.973457
+                },
+                {
+                  "lat": 37.290806,
+                  "lng": 126.973585
+                },
+                {
+                  "lat": 37.290806,
+                  "lng": 126.973804
+                },
+                {
+                  "lat": 37.290814,
+                  "lng": 126.974065
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nsc-to-hssc",
+      "name": {
+        "ko": "자과캠 → 인사캠",
+        "en": "NSC → HSSC",
+        "zh": "自然校区 → 人文校区"
+      },
+      "from": "skku_building:7",
+      "to": "skku_building:1",
+      "options": [
+        {
+          "id": "inja",
+          "name": {
+            "ko": "인자셔틀",
+            "en": "INJA Shuttle",
+            "zh": "仁自班车"
+          },
+          "mode": "shuttle",
+          "legs": [
+            {
+              "kind": "walk",
+              "from": "skku_building:7",
+              "to": "bus_stop:nsc-opposite",
+              "minutes": 4,
+              "distanceM": 269,
+              "evidence": "TMAP pedestrian 2026-10-25, 자과캠 정문→N센터 맞은편: 269 m, 203 s",
+              "path": [
+                {
+                  "lat": 37.290814,
+                  "lng": 126.974065
+                },
+                {
+                  "lat": 37.29082,
+                  "lng": 126.974318
+                },
+                {
+                  "lat": 37.290867,
+                  "lng": 126.974293
+                },
+                {
+                  "lat": 37.290903,
+                  "lng": 126.974296
+                },
+                {
+                  "lat": 37.291473,
+                  "lng": 126.974399
+                },
+                {
+                  "lat": 37.291553,
+                  "lng": 126.974412
+                },
+                {
+                  "lat": 37.291703,
+                  "lng": 126.974437
+                },
+                {
+                  "lat": 37.291787,
+                  "lng": 126.974454
+                },
+                {
+                  "lat": 37.292064,
+                  "lng": 126.974501
+                },
+                {
+                  "lat": 37.292142,
+                  "lng": 126.974385
+                },
+                {
+                  "lat": 37.292217,
+                  "lng": 126.974399
+                },
+                {
+                  "lat": 37.29225,
+                  "lng": 126.974404
+                },
+                {
+                  "lat": 37.292484,
+                  "lng": 126.974446
+                },
+                {
+                  "lat": 37.292436,
+                  "lng": 126.975065
+                }
+              ]
+            },
+            {
+              "kind": "ride",
+              "line": "jain",
+              "board": {
+                "place": "bus_stop:nsc-opposite"
+              },
+              "alight": {
+                "place": "bus_stop:hssc-600th"
+              },
+              "rideMinutes": 82,
+              "evidence": "shuttle_eta baseline mean over 47 runs, 2026-10-25 (60 to 122 min); read only when a run has no time at the alight stop"
+            },
+            {
+              "kind": "walk",
+              "from": "bus_stop:hssc-600th",
+              "to": "skku_building:1",
+              "minutes": 6,
+              "distanceM": 446,
+              "evidence": "TMAP pedestrian 2026-10-25, 600주년기념관 앞→인사캠 정문: 446 m, 335 s",
+              "path": [
+                {
+                  "lat": 37.587255,
+                  "lng": 126.993897
+                },
+                {
+                  "lat": 37.587175,
+                  "lng": 126.993952
+                },
+                {
+                  "lat": 37.587128,
+                  "lng": 126.993977
+                },
+                {
+                  "lat": 37.58675,
+                  "lng": 126.994244
+                },
+                {
+                  "lat": 37.586705,
+                  "lng": 126.994272
+                },
+                {
+                  "lat": 37.586658,
+                  "lng": 126.994294
+                },
+                {
+                  "lat": 37.586222,
+                  "lng": 126.994627
+                },
+                {
+                  "lat": 37.586172,
+                  "lng": 126.99465
+                },
+                {
+                  "lat": 37.586119,
+                  "lng": 126.994688
+                },
+                {
+                  "lat": 37.585678,
+                  "lng": 126.995008
+                },
+                {
+                  "lat": 37.585472,
+                  "lng": 126.995158
+                },
+                {
+                  "lat": 37.585011,
+                  "lng": 126.995491
+                },
+                {
+                  "lat": 37.584847,
+                  "lng": 126.995666
+                },
+                {
+                  "lat": 37.584803,
+                  "lng": 126.995777
+                },
+                {
+                  "lat": 37.584886,
+                  "lng": 126.996749
+                },
+                {
+                  "lat": 37.584911,
+                  "lng": 126.997122
+                },
+                {
+                  "lat": 37.584867,
+                  "lng": 126.997138
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "line1-line4",
+          "name": {
+            "ko": "1호선 · 4호선",
+            "en": "Line 1 · Line 4",
+            "zh": "1号线 · 4号线"
+          },
+          "mode": "subway",
+          "legs": [
+            {
+              "kind": "walk",
+              "from": "skku_building:7",
+              "to": "subway_station:sungkyunkwan",
+              "minutes": 22,
+              "distanceM": 1620,
+              "evidence": "TMAP pedestrian 2026-10-25, 자과캠 정문→성균관대역 (the station's subway-station-coords point): 1620 m, 1303 s",
+              "path": [
+                {
+                  "lat": 37.290814,
+                  "lng": 126.974065
+                },
+                {
+                  "lat": 37.290806,
+                  "lng": 126.973804
+                },
+                {
+                  "lat": 37.290806,
+                  "lng": 126.973585
+                },
+                {
+                  "lat": 37.290809,
+                  "lng": 126.973457
+                },
+                {
+                  "lat": 37.290812,
+                  "lng": 126.973279
+                },
+                {
+                  "lat": 37.290809,
+                  "lng": 126.973196
+                },
+                {
+                  "lat": 37.290803,
+                  "lng": 126.973068
+                },
+                {
+                  "lat": 37.290834,
+                  "lng": 126.972421
+                },
+                {
+                  "lat": 37.290878,
+                  "lng": 126.971293
+                },
+                {
+                  "lat": 37.290931,
+                  "lng": 126.970163
+                },
+                {
+                  "lat": 37.290998,
+                  "lng": 126.970057
+                },
+                {
+                  "lat": 37.292597,
+                  "lng": 126.970157
+                },
+                {
+                  "lat": 37.292917,
+                  "lng": 126.970179
+                },
+                {
+                  "lat": 37.293131,
+                  "lng": 126.970179
+                },
+                {
+                  "lat": 37.293175,
+                  "lng": 126.970185
+                },
+                {
+                  "lat": 37.293895,
+                  "lng": 126.970224
+                },
+                {
+                  "lat": 37.29402,
+                  "lng": 126.970271
+                },
+                {
+                  "lat": 37.294303,
+                  "lng": 126.970282
+                },
+                {
+                  "lat": 37.294311,
+                  "lng": 126.970282
+                },
+                {
+                  "lat": 37.294392,
+                  "lng": 126.970263
+                },
+                {
+                  "lat": 37.294444,
+                  "lng": 126.970263
+                },
+                {
+                  "lat": 37.295208,
+                  "lng": 126.970302
+                },
+                {
+                  "lat": 37.295378,
+                  "lng": 126.970321
+                },
+                {
+                  "lat": 37.295497,
+                  "lng": 126.970338
+                },
+                {
+                  "lat": 37.295975,
+                  "lng": 126.970435
+                },
+                {
+                  "lat": 37.29623,
+                  "lng": 126.970515
+                },
+                {
+                  "lat": 37.296464,
+                  "lng": 126.970593
+                },
+                {
+                  "lat": 37.296486,
+                  "lng": 126.970602
+                },
+                {
+                  "lat": 37.296611,
+                  "lng": 126.97064
+                },
+                {
+                  "lat": 37.296689,
+                  "lng": 126.970677
+                },
+                {
+                  "lat": 37.296758,
+                  "lng": 126.970702
+                },
+                {
+                  "lat": 37.296772,
+                  "lng": 126.970707
+                },
+                {
+                  "lat": 37.297008,
+                  "lng": 126.970813
+                },
+                {
+                  "lat": 37.297183,
+                  "lng": 126.970907
+                },
+                {
+                  "lat": 37.297411,
+                  "lng": 126.971021
+                },
+                {
+                  "lat": 37.297833,
+                  "lng": 126.971321
+                },
+                {
+                  "lat": 37.297919,
+                  "lng": 126.97139
+                },
+                {
+                  "lat": 37.297994,
+                  "lng": 126.971451
+                },
+                {
+                  "lat": 37.298125,
+                  "lng": 126.971568
+                },
+                {
+                  "lat": 37.298188,
+                  "lng": 126.971624
+                },
+                {
+                  "lat": 37.298211,
+                  "lng": 126.97164
+                },
+                {
+                  "lat": 37.298411,
+                  "lng": 126.971213
+                },
+                {
+                  "lat": 37.298669,
+                  "lng": 126.971429
+                },
+                {
+                  "lat": 37.298722,
+                  "lng": 126.971496
+                },
+                {
+                  "lat": 37.2988,
+                  "lng": 126.971593
+                },
+                {
+                  "lat": 37.298972,
+                  "lng": 126.971774
+                },
+                {
+                  "lat": 37.299041,
+                  "lng": 126.971843
+                },
+                {
+                  "lat": 37.299155,
+                  "lng": 126.97194
+                },
+                {
+                  "lat": 37.299211,
+                  "lng": 126.971987
+                },
+                {
+                  "lat": 37.299461,
+                  "lng": 126.972137
+                },
+                {
+                  "lat": 37.299511,
+                  "lng": 126.972135
+                },
+                {
+                  "lat": 37.299547,
+                  "lng": 126.972124
+                },
+                {
+                  "lat": 37.299591,
+                  "lng": 126.972085
+                },
+                {
+                  "lat": 37.299777,
+                  "lng": 126.972207
+                },
+                {
+                  "lat": 37.299791,
+                  "lng": 126.972271
+                },
+                {
+                  "lat": 37.299819,
+                  "lng": 126.972324
+                },
+                {
+                  "lat": 37.299869,
+                  "lng": 126.972337
+                },
+                {
+                  "lat": 37.300155,
+                  "lng": 126.972387
+                },
+                {
+                  "lat": 37.300338,
+                  "lng": 126.972418
+                },
+                {
+                  "lat": 37.30036,
+                  "lng": 126.972404
+                },
+                {
+                  "lat": 37.300383,
+                  "lng": 126.97239
+                },
+                {
+                  "lat": 37.300427,
+                  "lng": 126.972357
+                },
+                {
+                  "lat": 37.300447,
+                  "lng": 126.972229
+                },
+                {
+                  "lat": 37.30058,
+                  "lng": 126.970993
+                },
+                {
+                  "lat": 37.300513,
+                  "lng": 126.970988
+                }
+              ]
+            },
+            {
+              "kind": "ride",
+              "line": "line1",
+              "board": {
+                "place": "subway_station:sungkyunkwan",
+                "platformId": "KR-1-P153"
+              },
+              "alight": {
+                "place": "subway_station:geumjeong",
+                "platformId": "KR-1-P149"
+              },
+              "rideMinutes": 11,
+              "evidence": "subway-timetables revision 3 (2026-10-25) KR-1-weekday, Sungkyunkwan Univ. departure to Geumjeong arrival: median 11 min (8 to 17) over 133 trains; read only when the door cannot place the train at the alight platform"
+            },
+            {
+              "kind": "transfer",
+              "at": "subway_station:geumjeong",
+              "fromPlatformId": "KR-1-P149",
+              "toPlatformId": "KR-4-443",
+              "minutes": 1,
+              "evidence": "same-island cross-platform transfer at Geumjeong: platform 2 (line 1 toward Seoul) faces platform 1 (line 4 toward Danggogae), wikitree 2015-10-21 (8 to 10 steps, about 5 s); 1 min is the dataset's smallest"
+            },
+            {
+              "kind": "ride",
+              "line": "line4",
+              "board": {
+                "place": "subway_station:geumjeong",
+                "platformId": "KR-4-443"
+              },
+              "alight": {
+                "place": "subway_station:hyehwa",
+                "platformId": "S1-4-420"
+              },
+              "rideMinutes": 53,
+              "evidence": "subway-timetables revision 3 (2026-10-25) S1-4-weekday, Geumjeong departure to Hyehwa arrival: 52.5 to 53 min over 124 trains; read only when the door cannot place the train at the alight platform"
+            },
+            {
+              "kind": "walk",
+              "from": "subway_station:hyehwa",
+              "to": "skku_building:1",
+              "minutes": 10,
+              "distanceM": 694,
+              "evidence": "TMAP pedestrian 2026-10-25, 혜화역→인사캠 정문 (the station's subway-station-coords point): 694 m, 586 s",
+              "path": [
+                {
+                  "lat": 37.582337,
+                  "lng": 127.001855
+                },
+                {
+                  "lat": 37.5829,
+                  "lng": 127.001768
+                },
+                {
+                  "lat": 37.582881,
+                  "lng": 127.001591
+                },
+                {
+                  "lat": 37.583478,
+                  "lng": 127.001485
+                },
+                {
+                  "lat": 37.583598,
+                  "lng": 127.001288
+                },
+                {
+                  "lat": 37.583675,
+                  "lng": 127.001227
+                },
+                {
+                  "lat": 37.5835,
+                  "lng": 127.000771
+                },
+                {
+                  "lat": 37.583439,
+                  "lng": 127.000596
+                },
+                {
+                  "lat": 37.583378,
+                  "lng": 127.000435
+                },
+                {
+                  "lat": 37.583342,
+                  "lng": 127.000341
+                },
+                {
+                  "lat": 37.583228,
+                  "lng": 126.999963
+                },
+                {
+                  "lat": 37.583206,
+                  "lng": 126.999894
+                },
+                {
+                  "lat": 37.583078,
+                  "lng": 126.999641
+                },
+                {
+                  "lat": 37.582961,
+                  "lng": 126.999399
+                },
+                {
+                  "lat": 37.582878,
+                  "lng": 126.999202
+                },
+                {
+                  "lat": 37.582828,
+                  "lng": 126.998958
+                },
+                {
+                  "lat": 37.582928,
+                  "lng": 126.998852
+                },
+                {
+                  "lat": 37.582903,
+                  "lng": 126.998824
+                },
+                {
+                  "lat": 37.582873,
+                  "lng": 126.998788
+                },
+                {
+                  "lat": 37.582945,
+                  "lng": 126.998688
+                },
+                {
+                  "lat": 37.583034,
+                  "lng": 126.998558
+                },
+                {
+                  "lat": 37.583048,
+                  "lng": 126.998577
+                },
+                {
+                  "lat": 37.583059,
+                  "lng": 126.998574
+                },
+                {
+                  "lat": 37.583086,
+                  "lng": 126.998574
+                },
+                {
+                  "lat": 37.583098,
+                  "lng": 126.998574
+                },
+                {
+                  "lat": 37.583445,
+                  "lng": 126.998238
+                },
+                {
+                  "lat": 37.58357,
+                  "lng": 126.998119
+                },
+                {
+                  "lat": 37.583811,
+                  "lng": 126.99788
+                },
+                {
+                  "lat": 37.58385,
+                  "lng": 126.997844
+                },
+                {
+                  "lat": 37.583864,
+                  "lng": 126.99781
+                },
+                {
+                  "lat": 37.583872,
+                  "lng": 126.997797
+                },
+                {
+                  "lat": 37.583922,
+                  "lng": 126.997752
+                },
+                {
+                  "lat": 37.584109,
+                  "lng": 126.997599
+                },
+                {
+                  "lat": 37.58412,
+                  "lng": 126.997588
+                },
+                {
+                  "lat": 37.584131,
+                  "lng": 126.997574
+                },
+                {
+                  "lat": 37.584289,
+                  "lng": 126.997469
+                },
+                {
+                  "lat": 37.584464,
+                  "lng": 126.997347
+                },
+                {
+                  "lat": 37.5845,
+                  "lng": 126.997324
+                },
+                {
+                  "lat": 37.584611,
+                  "lng": 126.997263
+                },
+                {
+                  "lat": 37.584786,
+                  "lng": 126.997172
+                },
+                {
+                  "lat": 37.584828,
+                  "lng": 126.997149
+                },
+                {
+                  "lat": 37.584867,
+                  "lng": 126.997138
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

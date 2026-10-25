@@ -91,6 +91,7 @@ import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
 import { SubwayPlatformArrivalsModule } from "./subway/platform-arrivals/subway-platform-arrivals.module";
 import { SubwayArrivalsModule } from "./subway/arrivals/subway-arrivals.module";
 import { SubwayHistoryModule } from "./subway/history/subway-history.module";
+import { SubwayTimetableDeparturesModule } from "./subway/timetable/departures/subway-timetable-departures.module";
 import { BusDeparturesModule } from "./bus/departures/bus-departures.module";
 import { BusDeparturesTimetableModule } from "./bus/departures/timetable/bus-departures-timetable.module";
 import { JourneyModule } from "./journey/journey.module";
@@ -197,6 +198,7 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     SubwayPlatformArrivalsModule,
     SubwayArrivalsModule,
     SubwayHistoryModule,
+    SubwayTimetableDeparturesModule,
     BusDeparturesModule,
     BusDeparturesTimetableModule,
     JourneyModule,

@@ -18,6 +18,11 @@ export function toLegBasis(board: StopCall, alight: StopCall): StopCall["basis"]
 
 const timeMsOf = (call: StopCall): number => toCallTime(call)?.getTime() ?? Number.NaN;
 
+// SEE: docs/decisions/0022-journey-and-call-spec.md ("D5. Legs, options and routes"): a rider leaves a run when it arrives.
+export function toAlightTime(call: StopCall): Date | null {
+  return call.expectedArrivalAt ?? call.scheduledArrivalAt ?? call.expectedDepartureAt ?? call.scheduledDepartureAt;
+}
+
 // WHY: a vehicle with no seat left is skipped; unknown seats count as boardable, as 7800 seats no standing riders (ADR 0022, D7).
 function isCatchable({ board }: Departure, readyAtMs: number, { vehicles }: DepartureBoard): boolean {
   return timeMsOf(board) >= readyAtMs && (board.vehicleId === null || vehicles[board.vehicleId]?.seatsLeft !== 0);
@@ -46,7 +51,7 @@ function toRide(leg: RideLeg, board: DepartureBoard, { arrivedAtMs, readyAtMs, l
   const vehicles = [...vehicleIds].flatMap((id) => board.vehicles[id] ?? []);
   const boardAtMs = timeMsOf(boarded.board);
   const planned = { leg, line, board: boarded.board, alight, later, vehicles, waitSec: Math.round((boardAtMs - arrivedAtMs) / 1000), observedAt: boarded.observedAt };
-  return { planned, boardAtMs, alightAtMs: timeMsOf(alight) };
+  return { planned, boardAtMs, alightAtMs: toAlightTime(alight)?.getTime() ?? Number.NaN };
 }
 
 // WHY: the legs before the first ride start as late as the boarding allows, so the option says when to leave.

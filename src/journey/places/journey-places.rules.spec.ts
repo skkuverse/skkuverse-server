@@ -28,6 +28,7 @@ const CATALOG: JourneyCatalog = {
   ]),
   platformIdsByStation: new Map([["hyehwa", new Set(["S1-4-420"])]]),
   sequencesByService: {},
+  subwayRideIssueOf: null,
 };
 const fixture = (): JourneyRoutesData => journeyRoutesFixture() as JourneyRoutesData;
 const messages = (data: JourneyRoutesData, catalog = CATALOG) => toPlaceIssues(data, catalog).map((issue) => `${issue.path.join(".")}: ${issue.message}${issue.warning ? " (warning)" : ""}`);

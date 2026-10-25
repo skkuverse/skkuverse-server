@@ -1,10 +1,11 @@
 import { Module } from "@nestjs/common";
 import { BusDeparturesTimetableModule } from "../../bus/departures/timetable/bus-departures-timetable.module";
+import { SubwayTimetableDeparturesModule } from "../../subway/timetable/departures/subway-timetable-departures.module";
 import { JourneyModule } from "../journey.module";
 import { JourneyDeparturesService } from "./journey-departures.service";
 
 @Module({
-  imports: [JourneyModule, BusDeparturesTimetableModule],
+  imports: [JourneyModule, BusDeparturesTimetableModule, SubwayTimetableDeparturesModule],
   providers: [JourneyDeparturesService],
   exports: [JourneyDeparturesService],
 })

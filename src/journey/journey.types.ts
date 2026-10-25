@@ -49,4 +49,6 @@ export interface JourneyCatalog {
   platformIdsByStation: ReadonlyMap<string, ReadonlySet<string>>;
   /** WHY: `bus-stops` sequences, service id to route type to stops; null when no `bus-stops` is stored. */
   sequencesByService: Readonly<Record<string, Readonly<Record<string, readonly SequenceStopRef[]>>>> | null;
+  /** WHY: why the stored `subway-timetables` refuse a subway ride, null when they accept it; null when none is stored. */
+  subwayRideIssueOf: ((ride: { lineId: string; boardPlatformId: string; alightPlatformId: string }) => string | null) | null;
 }
