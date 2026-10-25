@@ -309,15 +309,15 @@ describe("the Seoul pollers with the stored topology", () => {
     expect(stores.trainmapClient.calls).toEqual([]);
   });
 
-  it("Neighbor added: keeps a row at 관악 as an event at KR-1-P146 once the TTL has passed after the push, and drops it before", async () => {
+  it("Neighbor added: keeps a row at 세마 as an event at KR-1-P158 once the TTL has passed after the push, and drops it before", async () => {
     // Arrange
     const stores = storesHolding(subwayTopologyFixture());
-    stores.apiClient.positions.set("1호선", [arrivedAt("관악")]);
+    stores.apiClient.positions.set("1호선", [arrivedAt("세마")]);
     const app = await boot(stores);
     const seoul = app.get(SubwaySeoulService);
     await seoul.observeApi();
     const added = subwayTopologyFixture();
-    added.neighbors["KR-1-P146"] = { line: "1", seoulName: "관악" };
+    added.neighbors["KR-1-P158"] = { line: "1", seoulName: "세마" };
     stores.topology.storeTopology(added);
 
     // Act
@@ -327,7 +327,7 @@ describe("the Seoul pollers with the stored topology", () => {
 
     // Assert
     expect(before.events.map((event) => event.platformId)).toEqual([]);
-    expect(after.events.map((event) => event.platformId)).toEqual(["KR-1-P146"]);
+    expect(after.events.map((event) => event.platformId)).toEqual(["KR-1-P158"]);
   });
 
   it("Database blip after a good read: keeps matching rows with the last loaded topology while reloads fail", async () => {
