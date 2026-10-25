@@ -55,6 +55,23 @@ describe("FIRST_PARTY_MINIAPP_ORIGINS", () => {
   });
 });
 
+describe("BRIDGE_ORIGINS", () => {
+  it("bridges the web view and every first-party mini app but the closed ESKARA 2026 site", () => {
+    // Act & Assert
+    // The festival closed on 2026-10-09: its origin keeps its owner, so a link to it still opens in the
+    // eskara-2026 shell, but no page it serves may call native code any more.
+    expect(BRIDGE_ORIGINS).toEqual([
+      "https://webview.skkuverse.com",
+      "https://mukja.mini.skkuverse.com",
+      "https://playlist.mini.skkuverse.com",
+      "https://booth-box.mini.skkuverse.com",
+      "https://inja.mini.skkuverse.com",
+      "https://timetable.mini.skkuverse.com",
+    ]);
+    expect(MINIAPP_ID_BY_FIRST_PARTY_ORIGIN["https://eskara.miniapp.skkuverse.com"]).toBe("eskara-2026");
+  });
+});
+
 describe("GAME_ID_BY_FIRST_PARTY_ORIGIN", () => {
   const gameOrigins = Object.keys(GAME_ID_BY_FIRST_PARTY_ORIGIN);
 

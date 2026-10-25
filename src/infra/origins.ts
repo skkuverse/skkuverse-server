@@ -44,8 +44,8 @@ export const GAME_ID_BY_FIRST_PARTY_ORIGIN: Readonly<Record<string, string>> = O
 });
 
 // WHY: each entry is a trust decision: it hands `Linking.openURL` and the map-select channel to every
-// page its host serves.
-export const BRIDGE_ORIGINS = [WEBVIEW_ORIGIN, ...FIRST_PARTY_MINIAPP_ORIGINS] as const;
+// page its host serves. ESKARA 2026 closed on 2026-10-09: its site keeps its shell owner but loses the bridge.
+export const BRIDGE_ORIGINS = [WEBVIEW_ORIGIN, ...FIRST_PARTY_MINIAPP_ORIGINS.filter((origin) => origin !== ESKARA_MINIAPP_ORIGIN)] as const;
 
 // WHY: not BRIDGE_ORIGINS: a browser read of public GET responses, not native code; no credentials.
 export const CORS_ORIGINS = [WEBVIEW_ORIGIN] as const;
