@@ -135,7 +135,7 @@ Keep the `[하차전용]` (and `[미정차]`) markers in the names until the app
 
 A pole with no ARS number takes its TOPIS station id in `topisIds` the same way. On a route `/bus/config` does not list (7800), only an aliased pole is a stop: its station serves the local stop's `stopId` on `/bus/live/<groupId>`, the local stop's page lists the route, and the route's other poles stay off `GET /bus/stops`.
 
-Removing an alias is the same edit in reverse: the pole's own page `seoul-<ARS number>` serves again, and the stations name it.
+Removing an alias is the same edit in reverse: the pole's own page `seoul-<ARS number>` serves again, and the stations name it. An unlisted route's pole exists only through its alias, so that alias stays while the journey dataset names the pole ([ADR 0022, D4](../decisions/0022-journey-and-call-spec.md)): a dataset that declares `recheckTriggers: ["bus-stops"]` (`scripts/lib/datasets/catalog.js`) refuses the push that removes it.
 
 ### Add a stop area
 

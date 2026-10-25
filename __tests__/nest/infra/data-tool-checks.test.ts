@@ -32,6 +32,13 @@
  * and `issuesOf` gets it from `collectionOf(key)`, null when it was not read.
  * A check never reads a collection its dataset does not declare, and no other
  * dataset's check reads one.
+ *
+ * Deleting an id another stored dataset cites is refused by the incoming
+ * check. A dataset that needs more of another's content than its ids (an
+ * alias that must stay, ADR 0022 D4) declares it in `recheckTriggers`: a push
+ * or check of that one runs the declaring dataset's `issuesOf` again over its
+ * stored data, against the content being checked and with its own collections
+ * and parts read, and its refusing issues refuse the push as its own.
  */
 import path from "node:path";
 import type { Db } from "mongodb";
@@ -170,6 +177,55 @@ const undeclaredReadCatalog = {
     },
   },
 };
+
+interface Stop {
+  id: string;
+  aliases?: string[];
+}
+interface Journeys {
+  stops: string[];
+  poles: string[];
+}
+type StoredOf = (name: string) => unknown;
+
+/**
+ * `stops` lists stops, each pole only through a stop's alias, and declares its ids; `journeys` cites stop ids, and
+ * names poles that must stay some stop's alias in `storedOf("stops")`, so it declares `recheckTriggers: ["stops"]`
+ * and the `timetables` collection, whose absence it reports as a warning.
+ */
+const recheckCatalog = {
+  sources: {},
+  collections: { timetables: { database: "MONGO_DB_NAME_TIMETABLES", name: "timetables" } },
+  datasets: {
+    stops: {
+      owner: "src/stops",
+      schema: z.strictObject({ stops: z.array(z.strictObject({ id: z.string(), aliases: z.array(z.string()).optional() })) }),
+      referencesOf: () => [],
+      idsOf: (data: { stops: Stop[] }) => data.stops.map((stop) => stop.id),
+    },
+    journeys: {
+      owner: "src/journeys",
+      schema: z.strictObject({ stops: z.array(z.string()), poles: z.array(z.string()) }),
+      recheckTriggers: ["stops"],
+      collections: ["timetables"],
+      issuesOf: (journeys: Journeys, { storedOf, collectionOf }: { storedOf: StoredOf; collectionOf: CollectionOf }) => {
+        const stops = (storedOf("stops") as { stops: Stop[] } | null)?.stops ?? [];
+        const unaliased = journeys.poles.flatMap((pole, i) => (stops.some((stop) => stop.aliases?.includes(pole)) ? [] : [{ path: ["poles", i], message: `pole ${pole} is no stop's alias` }]));
+        const unread = collectionOf("timetables") === null ? [{ path: [], message: "timetables not read", warning: true }] : [];
+        return [...unaliased, ...unread];
+      },
+      referencesOf: (journeys: Journeys) => journeys.stops.map((id, i) => ({ dataset: "stops", id, path: ["stops", i] })),
+    },
+    notes: {
+      owner: "src/notes",
+      schema: z.strictObject({ text: z.string() }),
+      referencesOf: () => [],
+    },
+  },
+};
+
+const sadangStops = { stops: [{ id: "nsc-skku-to-sadang", aliases: ["200000162"] }, { id: "hssc-bus-lot" }] };
+const sadangJourneys = { stops: ["nsc-skku-to-sadang"], poles: ["200000162"] };
 
 const partOf = (table: Table) => ({ key: table.line, data: table, summary: { trainCount: table.trains.length } });
 const line1 = { line: "1", trains: ["05:30"] };
@@ -461,6 +517,80 @@ describe("checkData's collectionOf", () => {
   });
 });
 
+describe("checkData's incoming references and recheckTriggers", () => {
+  it("refuses deleting a stop another dataset cites, naming the citing dataset and path", () => {
+    // Arrange
+    const stored = { stops: sadangStops, journeys: sadangJourneys };
+
+    // Act
+    const issues = checkData(recheckCatalog, "stops", { stops: [{ id: "hssc-bus-lot" }] }, stored, { timetables: [] });
+
+    // Assert
+    expect(issues).toContainEqual({ dataset: "journeys", path: ["stops", 0], message: '"nsc-skku-to-sadang" is no longer in stops' });
+  });
+
+  it("refuses a push that only removes an alias, as the declaring dataset's own check of its stored data against the pushed content", () => {
+    // Arrange
+    const stored = { stops: sadangStops, journeys: sadangJourneys };
+    const withoutAlias = { stops: [{ id: "nsc-skku-to-sadang" }, { id: "hssc-bus-lot" }] };
+
+    // Act
+    const issues = checkData(recheckCatalog, "stops", withoutAlias, stored, { timetables: [] });
+
+    // Assert
+    expect(issues).toEqual([{ dataset: "journeys", path: ["poles", 0], message: "pole 200000162 is no stop's alias" }]);
+  });
+
+  it("passes a push that keeps the alias, and runs no recheck while the declaring dataset is not stored", () => {
+    // Arrange
+    const renamed = { stops: [{ id: "nsc-skku-to-sadang", aliases: ["200000162"] }, { id: "hssc-600th" }] };
+
+    // Act
+    const kept = checkData(recheckCatalog, "stops", renamed, { stops: sadangStops, journeys: sadangJourneys }, { timetables: [] });
+    const unstored = checkData(recheckCatalog, "stops", { stops: [] }, { stops: sadangStops }, { timetables: [] });
+
+    // Assert
+    expect(kept).toEqual([]);
+    expect(unstored).toEqual([]);
+  });
+
+  it("refuses on the recheck's issues only: its warnings neither refuse nor print as the pushed dataset's", () => {
+    // Arrange
+    const stored = { stops: sadangStops, journeys: sadangJourneys };
+
+    // Act
+    const result = checkContent(recheckCatalog, "stops", sadangStops, stored);
+
+    // Assert
+    expect(result).toEqual({ issues: [], warnings: [] });
+  });
+
+  it("runs no recheck for a dataset no entry names in its recheckTriggers", () => {
+    // Arrange
+    const stored = { stops: sadangStops, journeys: { ...sadangJourneys, poles: ["999999999"] } };
+
+    // Act
+    const issues = checkData(recheckCatalog, "notes", { text: "x" }, stored, {});
+
+    // Assert
+    expect(issues).toEqual([]);
+  });
+
+  it("readCollections reads the collections of each dataset that a pushed one triggers a recheck of", async () => {
+    // Arrange
+    const reader = jest.fn(async () => []);
+
+    // Act
+    const forStops = await readCollections(recheckCatalog, ["stops"], reader);
+    const forNotes = await readCollections(recheckCatalog, ["notes"], reader);
+
+    // Assert
+    expect(forStops).toEqual({ timetables: [] });
+    expect(forNotes).toEqual({});
+    expect(reader.mock.calls).toEqual([["timetables", recheckCatalog.collections.timetables]]);
+  });
+});
+
 describe("checkStored", () => {
   let mongod: TestMongod;
   let dbModule: DbModule;
@@ -603,6 +733,46 @@ describe("checkStored", () => {
     expect(forNotes).toEqual({});
     expect(forRuns).toEqual({ timetables: [] });
     expect(reader).toHaveBeenCalledTimes(1);
+  });
+
+  it("rechecks each stored dataset that declares a checked one in recheckTriggers, reading its collections", async () => {
+    // Arrange
+    await store.create(db, "stops", { stops: [{ id: "nsc-skku-to-sadang" }] }, { by: "a@example.com", now: NOW });
+    await store.create(db, "journeys", sadangJourneys, { by: "a@example.com", now: NOW });
+    const reader = jest.fn(async () => []);
+
+    // Act
+    const result = await checkStored(db, recheckCatalog, ["stops"], reader);
+
+    // Assert
+    expect(result.issues).toEqual([{ dataset: "journeys", path: ["poles", 0], message: "pole 200000162 is no stop's alias" }]);
+    expect(reader.mock.calls).toEqual([["timetables", recheckCatalog.collections.timetables]]);
+  });
+
+  it("readStored adds the parts of a parted dataset a checked one triggers a recheck of, which the recheck reads", async () => {
+    // Arrange
+    const partedRecheck = {
+      sources: {},
+      datasets: {
+        tables: {
+          ...readingCatalog.datasets.tables,
+          recheckTriggers: ["notes"],
+          issuesOf: (tables: Table[], { storedOf }: { storedOf: StoredOf }) =>
+            (storedOf("notes") as { text: string }).text === "no line 2" && tables.some((table) => table.line === "2") ? [{ path: ["2"], message: "line 2 is stored" }] : [],
+        },
+        notes: readingCatalog.datasets.notes,
+      },
+    };
+    await parts.create(db, "tables", [partOf(line1), partOf(line2)], { by: "a@example.com", now: NOW });
+    await store.create(db, "notes", { text: "x" }, { by: "a@example.com", now: NOW });
+
+    // Act
+    const { stored } = await readStored(db, partedRecheck, ["notes"]);
+    const issues = checkData(partedRecheck, "notes", { text: "no line 2" }, stored);
+
+    // Assert
+    expect(stored.tables.parts.map((entry: { data?: Table }) => entry.data?.line)).toEqual(["1", "2"]);
+    expect(issues).toEqual([{ dataset: "tables", path: ["2"], message: "line 2 is stored" }]);
   });
 
   it("lists a dataset with nothing stored as missing, not as an issue", async () => {

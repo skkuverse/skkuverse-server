@@ -36,6 +36,18 @@
  *                    check reads through `issuesOf`'s `collectionOf(key)`,
  *                    read from the environment the run targets, or null when
  *                    not read
+ *   recheckTriggers  optional: the other datasets whose content its
+ *                    `issuesOf` depends on beyond their `idsOf`. When one of
+ *                    them is pushed or checked, this dataset's `issuesOf` runs
+ *                    again over its own stored data, `storedOf(<that one>)`
+ *                    being the content checked, with its own `reads` and
+ *                    `collections` read too; its refusing issues refuse that
+ *                    push, reported as this dataset's (checks.js, step 5). A
+ *                    dataset that needs an alias of `bus-stops` to stay, as a
+ *                    journey dataset naming an unlisted route's pole does
+ *                    (ADR 0022, D4), declares `recheckTriggers: ["bus-stops"]`
+ *                    and refuses, in its `issuesOf`, a pole the stored
+ *                    `bus-stops` no longer aliases
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
