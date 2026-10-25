@@ -3,7 +3,7 @@
  * registry the code's network and revision 1 of `subway-topology` join into
  * passes; a copy missing any field of a line, a station, a
  * platform, a direction, a line's marker or a neighbor fails; a slug, a
- * platform id, a color, a marker color, a Seoul station code, a campus or an
+ * platform id, a statnId, a station number (frCode), a color, a marker color, a Seoul station code, a campus or an
  * upstream list off its shape fails with its path, and so does a marker whose text is
  * not exactly one character (one grapheme) in any language.
  * The checks across entries are toNetworkIssues' and toTopologyIssues'.
@@ -122,6 +122,40 @@ describe("subwayRegistryFile", () => {
 
     // Assert
     expect(messages).toContainEqual(expect.stringMatching(new RegExp(`^${[...path, field].join("\\.")}`)));
+  });
+
+  it.each(["statnId", "frCode"])("rejects a platform with no %s, which every served platform declares", (field) => {
+    // Act
+    const messages = messagesOf(without(["stations", 0, "platforms", 0], field));
+
+    // Assert
+    expect(messages).toEqual([`stations.0.platforms.0.${field}: Invalid input: expected string, received undefined`]);
+  });
+
+  it.each([
+    ["a statnId of four digits, the line's subwayId", "statnId", "1001"],
+    ["a statnId with a letter", "statnId", "100108015P"],
+    ["a frCode with a lower-case letter", "frCode", "p153"],
+    ["a frCode of the KRIC id", "frCode", "KR-1-P153"],
+  ])("rejects %s with its path", (_case, field, value) => {
+    // Arrange
+    const raw = copyOf();
+    at(raw, ["stations", 0, "platforms", 0])[field] = value;
+
+    // Act
+    const messages = messagesOf(raw);
+
+    // Assert
+    expect(messages).toEqual([expect.stringMatching(new RegExp(`^stations\\.0\\.platforms\\.0\\.${field}: must be`))]);
+  });
+
+  it.each(["420", "P153", "K230", "D7", "D18", "P144-1"])("accepts the station number %s", (frCode) => {
+    // Arrange
+    const raw = copyOf();
+    at(raw, ["stations", 0, "platforms", 0]).frCode = frCode;
+
+    // Act & Assert
+    expect(messagesOf(raw)).toEqual([]);
   });
 
   it.each([

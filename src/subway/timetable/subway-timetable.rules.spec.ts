@@ -233,8 +233,8 @@ describe("toPlatformTimetableKey", () => {
 
 describe("toPlatformTimetableKey by the timetable source's operator", () => {
   it.each([
-    ["종로5가 1호선, a Seoul Metro platform that Korail's xlsx times", { id: "S1-1-154", line: "1", timetable: { source: "korail" } }, "weekday", "KR-1-weekday"],
-    ["금정 4호선, a Korail platform that the Seoul timetable times", { id: "KR-4-443", line: "4", timetable: { source: "seoul-station", stationCode: "1458" } }, "saturday", "S1-4-saturday"],
+    ["종로5가 1호선, a Seoul Metro platform that Korail's xlsx times", { id: "S1-1-154", line: "1", statnId: "1001000129", frCode: "129", timetable: { source: "korail" } }, "weekday", "KR-1-weekday"],
+    ["금정 4호선, a Korail platform that the Seoul timetable times", { id: "KR-4-443", line: "4", statnId: "1004000443", frCode: "443", timetable: { source: "seoul-station", stationCode: "1458" } }, "saturday", "S1-4-saturday"],
   ] as const)("keys %s by its source's table", (_label, platform, dayType, key) => {
     // Act
     const tableKey = toPlatformTimetableKey(platform, dayType);
