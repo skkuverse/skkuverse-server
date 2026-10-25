@@ -14,7 +14,10 @@
             "lng": 126.997131
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:1"
+          }
         },
         "to": {
           "kind": "skku_building",
@@ -25,7 +28,10 @@
             "lng": 126.974074
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:7"
+          }
         },
         "options": [
           {
@@ -54,7 +60,10 @@
             "lng": 126.974074
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:7"
+          }
         },
         "to": {
           "kind": "skku_building",
@@ -65,7 +74,10 @@
             "lng": 126.997131
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:1"
+          }
         },
         "options": [
           {
