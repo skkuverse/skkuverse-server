@@ -62,7 +62,7 @@ function toPredictedDepartures({ group, legStations, query }: TopisBoardInput): 
   const observedAt = toInstant(group.updatedAt);
   const alightCalls = callsAt(group.stations, legStations.alightIndex);
   return callsAt(group.stations, legStations.boardIndex)
-    .filter((board) => board.vehicleId !== null && toCallTime(board) !== null)
+    .filter((board) => board.vehicleId !== null && timeMsOf(board) <= query.until.getTime())
     .map((board) => {
       const alight = alightCalls.find((call) => call.vehicleId === board.vehicleId && timeMsOf(call) > timeMsOf(board)) ?? null;
       return { lineId: query.lineId, board, alight, observedAt };

@@ -32,6 +32,7 @@ import positions7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-po
 import busTypesFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-bus-types.json";
 import serviceHoursFixture from "../../../../__tests__/nest/bus/fixtures/topis-arrivals-service-hours.json";
 import { ROUTE_7800, arrivalDocs7800, sightings7800 } from "../../../../__tests__/helpers/bus/topis-7800";
+import { serviceHoursDocs } from "../../../../__tests__/helpers/bus/topis-service-hours";
 import logger from "../../../infra/logger";
 import { JONGRO_ROUTES } from "../../bus.constants";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
@@ -758,5 +759,18 @@ describe("BusRealtimeJongroClient.fetchArrivals service hours", () => {
     // Assert
     expect([zero!.term, blank!.term, zero!.firstTm]).toEqual([undefined, undefined, "2026-10-25T06:00:00+09:00"]);
     expect(Object.keys(withoutFields!).filter((key) => ["term", "firstTm", "lastTm"].includes(key))).toEqual([]);
+  });
+});
+
+describe("BusRealtimeJongroClient over the service-hours capture", () => {
+  it.each([["jongro08"], ["gyeonggi7800"]] as const)("reads %s's rows as the docs the journey route tests seed bus_cache with", async (route) => {
+    // Arrange
+    respond(serviceHoursFixture[route]);
+
+    // Act
+    const arrivals = await new BusRealtimeJongroClient().fetchArrivals({ code: route, busRouteId: "0" });
+
+    // Assert
+    expect(arrivals).toEqual(serviceHoursDocs(route));
   });
 });
