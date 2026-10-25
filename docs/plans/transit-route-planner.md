@@ -9,7 +9,7 @@ audience: internal
 
 # Transit Route Planner
 
-> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-10-25: (a) to (e) are in production; (f) and (g) are on `dev`. `journey-routes` revision 2 is in `_dev` and production; revision 3, (g)'s options, passed a production dry run and waits for the (g) deploy, and `_dev` refuses it until `bus_campus_dev` stores 7800's registry route.
+> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-10-25: (a) to (g) are in production (PR #342), serving `journey-routes` revision 3's eight options; (h) is built and needs no dataset change.
 
 ## Scope
 
@@ -46,7 +46,12 @@ Every PR is test-first with `the test-first workflow` (ADR 0011, D9). (a) to (c)
 | (g) | **The TOPIS door, 종로08 and 7800.** `bus/departures/topis/`; the Jongno poller stores `term` per route and `firstTm`/`lastTm` per station (optional on read); boarding past the two predicted vehicles at the rider's arrival plus half of `term`; a vehicle with `seatsLeft: 0` skipped; `nextServiceAt` from `firstTm`. Push 종로08 → 종로5가 → 1호선 and 4호선 → 사당 → 7800, both ways | The 사당 boarding call equals `/bus/live/gyeonggi7800` at `sadang-exit9` for the same vehicle, and a 종로08 board equals `/bus/live/jongro08` at `100900046`; a leg past both predicted vehicles names none and carries `basis: estimate`; a stored document without `term` serves with no extrapolation |
 | (h) | **Subway realtime first legs, `later` and `warnings`.** The subway door boards from the platform's stored arrivals when its catchable train is among them; ride legs fill `later` (at most two) and options `warnings` (`tightTransfer`, `connectionAtRisk`) | A first subway leg's board call equals `/subway/stations/hyehwa/arrivals` for the same `runId`; `later` lists the next two catchable calls; a transfer under the threshold warns |
 
-Until (h), `later` and `warnings` are served as empty arrays: every key is present from (e).
+Every key is present from (e). (h) as built, on 2026-10-25:
+
+- **Subway realtime.** The door reads the board platform's calls through `SubwayArrivalsService.listPlatformCalls`, the calls `/subway/stations/:stationId/arrivals` serves, and boards a timetable train the board lists `live` or `estimated` by that call, matched by `runId`, keeping the ride's first and last flags. The train's delay past its timetable arrival there moves its alight call's expected arrival by as much, as an estimate. A stale state or a train past the stored three per direction boards from the timetable. A ride boards at `toBoardTime`, the call's time or its expected arrival when later, since a live subway call keeps its timetable departure (ADR 0022, D5, amended).
+- **`later`.** At most the next two catchable listed calls after the boarded one, from every door that lists departures, a full vehicle skipped. A TOPIS headway board carries none: ADR 0022 D7 keeps a bus leg to the upstream's predicted vehicles, and a headway call names no run a rider could let pass, so `later` holds only calls that exist.
+- **`warnings`.** See [The planner](#the-planner).
+- **No service.** `notStarted` joins `ended` and `unavailable`, and overnight TOPIS hours come from `jongro_routes` (ADR 0022, D7, amended). No `journey-routes` revision is needed.
 
 Caps each PR respects: `src/bus/bus.wire.ts` sits at its size exemption, so (a) moves the call and vehicle out before adding anything; `docs/explanation/bus-architecture.md` and `subway-architecture.md` are at the 200-line module-doc cap, so the shared terms (call, run, run id, stop area) stay in ADR 0022 and a PR that adds a glossary row trims first.
 
@@ -223,7 +228,7 @@ export interface DepartureSource {
 | `BusDeparturesTimetableService` | `bus/departures/timetable/` | `BusEtaSmartService.listRuns`, the service's `bus-stops` sequence | (e) |
 | `BusDeparturesTopisService` | `bus/departures/topis/` | `BusLiveGroupService.findLiveGroup` (the calls, vehicles and GBIS seats `/bus/live` serves), `BusRealtimeJongroService.findArrivalsEntry` (the stored row's `term`, `firstTm`, `lastTm`), `BusStopIndexService` (stop id to station index) | (g) |
 | `BusDeparturesHsscService` | `bus/departures/hssc/` | ADR 0018's engine | with the HSSC first-mile option |
-| `SubwayTimetableDeparturesService` | `subway/timetable/departures/` | `SubwayTimetableService` for both platforms, `CalendarService` for the day type; from (h), `subway_arrivals` through the subway root repository | (f), (h) |
+| `SubwayTimetableDeparturesService` | `subway/timetable/departures/` | `SubwayTimetableService` for both platforms, `CalendarService` for the day type; from (h), the board platform's calls through `SubwayArrivalsService.listPlatformCalls`, the station board's own, as the TOPIS door reads `/bus/live`'s | (f), (h) |
 | `JourneyDeparturesService` (the registry) | `journey/departures/` | the doors, by the line's `source` | (e) |
 
 - `bus/departures/` is a root with one sub-module per source (ADR 0022, D6), so each door stays within the four-dependency constructor cap and a sibling's service is all it imports.
@@ -248,9 +253,11 @@ for leg in option.legs:
     dep = first catchable
     none, and continuation is headway and readyAt < serviceEndsAt
         → a call at readyAt + headwaySec / 2: status unknown, basis estimate, no vehicle
-    none otherwise → notRunning, reason "ended", nextServiceAt = board.nextServiceAt
+    none otherwise → notRunning, nextServiceAt = board.nextServiceAt,
+        reason "notStarted" when that falls later the same KST date, else "ended"
     alightAt = timeOf(dep.alight) ?? timeOf(dep.board) + leg.rideMinutes
-    later = the next two catchable listed departures after dep         (from (h))
+    later = the next two catchable listed departures after dep, never a headway call
+    after an earlier ride: warn by this ride's waitSec (tightTransfer, connectionAtRisk)
     leaveAt ??= max(now, timeOf(dep.board) - walkedBeforeFirstRide - catchMargin)
     t = alightAt
 arriveAt = t
@@ -260,9 +267,14 @@ arriveAt = t
 - `waitSec` is the boarding time minus when the rider is ready at the stop.
 - **Realtime reach** (D7): a bus leg uses the upstream's predicted vehicles and nothing past them, then the half-headway call, shown as approximate ("약") because its basis is `estimate`. A subway leg past the stored trains boards from the timetable.
 - **Full buses** (D7): `seatsLeft: 0` skips the vehicle; null seats count as boardable, since 7800 seats no standing riders.
-- **No service** (D7): an option with a leg that has no run left is `notRunning` with `reason: ended` and `nextServiceAt`, the next first departure of that leg.
+- **No service** (D7): an option with a leg that has no run left is `notRunning` with `nextServiceAt`, the next first departure of that leg, and `reason: notStarted` when that falls later the same KST date, else `ended`.
 - **Order.** Running options by `arriveAt`, data order breaking a tie, then the others in data order. No "fastest" flag: the app decides emphasis.
-- **`warnings`** (from (h)), open codes: `tightTransfer` when the slack between a ride's alight and the next board is under a threshold set in (h); `connectionAtRisk` when that slack is smaller than the uncertainty of an `estimate` board.
+- **`warnings`** (from (h)), open codes, `{ code, message }`, the message naming the next ride's board place in the request language. The slack is the next ride's `waitSec`: its board minus the rider reaching its stop after the previous ride's alight and the walks between. The first ride has no connection.
+
+  | Code | When | Threshold and its evidence |
+  | --- | --- | --- |
+  | `tightTransfer` | slack under `TIGHT_TRANSFER_SEC` | 120 s. TOPIS predictions 0–3 min out miss by 60–80 s at p90 ([ADR 0014](../decisions/0014-jongro-realtime-from-topis.md)), and the dataset's walks are whole TMAP minutes that leave out the walk inside a station (revision 3's 사당 walk says so), so the 60 s catch margin covers no such miss under 120 s. |
+  | `connectionAtRisk` | slack under the uncertainty of the arrival before it, or of a named run's estimated board | `ESTIMATE_UNCERTAINTY_SEC`, 150 s, for an estimated arrival or board: the p90 error of this server's bus estimates at their longest measured horizon, TOPIS 1.5–2.5 min at 3–10 min (ADR 0014) and the HSSC engine 142 s three stops ahead ([ADR 0018](../decisions/0018-hssc-arrival-estimates.md)). Longer rides are unmeasured, so this is a floor. A ride boarded on a TOPIS headway adds half the stored `term`: the bus comes anywhere within the headway, and the estimate sits mid-way. A headway board names no run, so it cannot be missed. |
 
 The routes service is the planner's only caller. It reads the dataset, builds one `DepartureQuery` per distinct `(source, line, board, alight)` over `[now, now + PLAN_HORIZON_MS]` (3 hours), awaits them together, catches each failure into the board map, resolves the cited places, and plans each route.
 
