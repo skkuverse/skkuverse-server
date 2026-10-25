@@ -6,7 +6,7 @@
  * most 2 minutes old is served as the tracker stored it, whatever SUBWAY says,
  * since the switch stops only the poller (ADR 0012, D5); an older or missing
  * state serves that platform's timetable alone at the request's time, every
- * train `scheduled`; and at a station of two platforms
+ * train on the `timetable` basis; and at a station of two platforms
  * each is judged on its own ("One line stale"), on Gangnam's line 2 and Shinbundang
  * platforms. A served station carries its stored coords; with none stored for
  * it, or none read at all, it serves the station with null coords, never a
@@ -50,7 +50,7 @@ function storedAgo(ageMs: number, platformId = "S1-4-420"): SubwayArrivalsDoc {
 
 type Arrivals = Awaited<ReturnType<SubwayArrivalsService["findStationArrivals"]>>;
 
-const sourcesOf = (arrivals: Arrivals, index = 0) => arrivals?.data.lines[index]?.directions.flatMap((d) => d.trains.map((t) => t.source));
+const basesOf = (arrivals: Arrivals, index = 0) => arrivals?.data.lines[index]?.directions.flatMap((d) => d.trains.map((t) => t.basis));
 
 const enabled = subway.enabled;
 afterEach(() => {
@@ -78,8 +78,8 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T11:39:00.000Z");
-    expect(sourcesOf(arrivals)).toEqual(["live"]);
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T20:39:00+09:00");
+    expect(basesOf(arrivals)).toEqual(["provider"]);
   });
 
   it.each([
@@ -94,8 +94,8 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.data.lines[0]?.generatedAt).toBe(NOW.toISOString());
-    expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T20:41:00+09:00");
+    expect(basesOf(arrivals)).toEqual(Array(6).fill("timetable"));
   });
 
   it("serves a fresh stored state with SUBWAY=off, which stops only the poller", async () => {
@@ -108,8 +108,8 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T11:40:55.000Z");
-    expect(sourcesOf(arrivals)).toEqual(["live"]);
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T20:40:55+09:00");
+    expect(basesOf(arrivals)).toEqual(["provider"]);
   });
 
   it("serves the timetable alone, every train scheduled, with SUBWAY=off and no fresh state", async () => {
@@ -122,8 +122,8 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.data.lines[0]?.generatedAt).toBe(NOW.toISOString());
-    expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
+    expect(arrivals?.data.lines[0]?.generatedAt).toBe("2026-10-16T20:41:00+09:00");
+    expect(basesOf(arrivals)).toEqual(Array(6).fill("timetable"));
   });
 
   it("One line stale: serves the fresh platform from its document and the stale one from its timetable alone", async () => {
@@ -137,11 +137,11 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
 
     // Assert
     expect(arrivals?.data.lines.map((l) => [l.platformId, l.generatedAt])).toEqual([
-      ["S1-2-222", "2026-10-16T11:40:55.000Z"],
-      ["DX-D1-4307", NOW.toISOString()],
+      ["S1-2-222", "2026-10-16T20:40:55+09:00"],
+      ["DX-D1-4307", "2026-10-16T20:41:00+09:00"],
     ]);
-    expect(sourcesOf(arrivals, 0)).toEqual(["live"]);
-    expect(sourcesOf(arrivals, 1)).toEqual(Array(6).fill("scheduled"));
+    expect(basesOf(arrivals, 0)).toEqual(["provider"]);
+    expect(basesOf(arrivals, 1)).toEqual(Array(6).fill("timetable"));
   });
 
   it("serves meta.serverNow, the clock at +09:00, beside a fresh state and beside the timetable alone", async () => {

@@ -14,7 +14,7 @@ const TRAIN = {
   direction: "down",
   destination: "서동탄",
   express: false,
-  stops: [{ station: "KR-1-0153", arr: 74460, dep: 74490 }],
+  stops: [{ station: "KR-1-P153", arr: 74460, dep: 74490 }],
 };
 
 const FILE = { ...STORED, trains: [TRAIN] };
@@ -44,7 +44,7 @@ describe("timetableFile", () => {
   it.each([
     ["a train number with its prefix", { ...TRAIN, trainNo: "K0493" }],
     ["a three-digit train number", { ...TRAIN, trainNo: "493" }],
-    ["a negative time", { ...TRAIN, stops: [{ station: "KR-1-0153", arr: -30, dep: 74490 }] }],
+    ["a negative time", { ...TRAIN, stops: [{ station: "KR-1-P153", arr: -30, dep: 74490 }] }],
     ["a train without stops", { ...TRAIN, stops: [] }],
   ])("rejects %s", (_label, train) => {
     // Act & Assert

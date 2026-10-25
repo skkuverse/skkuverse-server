@@ -1,0 +1,19 @@
+{
+  "_about": "Synthetic, never captured: a timetabled 인자셔틀 run as GET /bus/stops/nsc-n-center/arrivals serves it in __tests__/nest/bus/bus-stop-arrivals.routes.test.ts at 14:10 KST on 2026-10-20 (the 14:30 run stored with 15:15 at the drop-off and a live estimate of 15:20): the estimate in the expected pair beside the timetable's time in the scheduled pair (ADR 0022, D2), its run id, and the stop page's runDepartureAt left out, which the call does not carry.",
+  "data": {
+    "status": "scheduled",
+    "expectedArrivalAt": "2026-10-20T15:20:00+09:00",
+    "expectedDepartureAt": null,
+    "scheduledArrivalAt": "2026-10-20T15:15:00+09:00",
+    "scheduledDepartureAt": null,
+    "basis": "estimate",
+    "stopsAway": null,
+    "runId": "campus-inja|regular|2026-10-20|14:30",
+    "vehicleId": null,
+    "headsign": "인사캠 → 자과캠",
+    "isFirstRun": false,
+    "isLastRun": false,
+    "isExpress": null,
+    "providerText": null
+  }
+}

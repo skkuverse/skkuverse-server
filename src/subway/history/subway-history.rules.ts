@@ -34,7 +34,7 @@ export function toPredictionDoc(made: PredictionMade): SubwayPredictionDoc {
 }
 
 // WHY: an arrived row is the arrival itself; an approaching row 30 s on stands in for it only until one is seen.
-// EVIDENCE: at KR-1-0153 on 2026-10-17 the arrived row came about 10 s after the approaching row's 30 s.
+// EVIDENCE: at KR-1-P153 on 2026-10-17 the arrived row came about 10 s after the approaching row's 30 s.
 const REPLACEABLE_OBSERVED_STATES: Readonly<Record<TrainState, readonly (TrainState | null)[]>> = {
   approaching: [null],
   arrived: [null, "approaching"],

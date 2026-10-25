@@ -3,7 +3,7 @@ title: Update Subway Timetables
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -48,6 +48,8 @@ Rerun when:
 
    A rebuilt Seoul table whose trains equal the pulled file's keeps the pulled source revision, so it pushes as unchanged.
 
+   To add stations to a Seoul line without calling again for the ones its pulled tables hold, add `--seoul-keep-pulled` (keep those stations' stop times) and `--seoul-rows scripts/subway-timetable/seoul-rows` (read the saved answers, save the new ones; six calls a station). Commit the saved files with the change. A new Seoul Metro timetable takes neither option.
+
 3. Preview, then push to `_dev` with a note:
 
    ```bash
@@ -67,7 +69,7 @@ diff of subway-timetables (revision 1 -> 2):
   removed    S1-9-holiday  {"source":{...},"trainCount":250}
 ```
 
-A train counts by its whole row, so a train whose times moved is listed as both added and removed. Check that only the tables you rebuilt changed, and that each train count is plausible. A refusal names the table and the path, such as `S1-4-saturday: no table for S1-4-420 saturday`, `KR-1-weekday.KR-1-0153: 1 stop time(s) outside the service window: 0409 17940 s` or `KR-1-weekday.json.trains.2.trainNo: ...`, and writes nothing. A train outside the service window needs the window widened first: change `SERVICE_WINDOW_OPENS_SEC` or `SERVICE_WINDOW_CLOSES_SEC` in `src/subway/timetable/subway-timetable.constants.ts`, deploy, then push.
+A train counts by its whole row, so a train whose times moved is listed as both added and removed. Check that only the tables you rebuilt changed, and that each train count is plausible. A refusal names the table and the path, such as `S1-4-saturday: no table for S1-4-420 saturday`, `KR-1-weekday.KR-1-P153: 1 stop time(s) outside the service window: 0409 17940 s` or `KR-1-weekday.json.trains.2.trainNo: ...`, and writes nothing. A train outside the service window needs the window widened first: change `SERVICE_WINDOW_OPENS_SEC` or `SERVICE_WINDOW_CLOSES_SEC` in `src/subway/timetable/subway-timetable.constants.ts`, deploy, then push.
 
 Warnings follow the table lines and refuse nothing; `check` prints them too:
 
@@ -78,7 +80,7 @@ Warnings follow the table lines and refuse nothing; `check` prints them too:
 ```
 
 - A `subway-topology.…` warning means the pushed routes disagree with the stored topology. When the coverage change is deliberate, push the matching topology next ([edit-runtime-data.md](edit-runtime-data.md)); its push refuses until the two agree. Otherwise the converter lost a station: fix it before pushing.
-- A warning at `<key>.<platform>.<direction>` names a run over 510 s between two stops the tracker follows, a train in view under 10 minutes before the platform, or a skipped station. The tracker's estimate is blind there, so close the gap in the topology's watched platforms and the converter's covered stations.
+- A warning at `<key>.<platform>.<direction>` names a run over 600 s between two stops the tracker follows, a train in view under 10 minutes before the platform, or a skipped station. The tracker's estimate is blind there, so close the gap in the topology's watched platforms and the converter's covered stations.
 
 ### Push to production
 

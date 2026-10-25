@@ -4,7 +4,8 @@
  * vehicle an arrival names without a position, each placed row a station with its stop id (aliases resolved), its
  * pole's number, its operation and at most two arrivals, a bus standing at the station first and arriving (D14), and the
  * group fresh as its staler key. A vehicle is low-floor by one row: its position's bus type when it has a position, else
- * the arrival row its plate comes from. Every vehicle's seats left is null from the reading; `withSeatsLeft` joins the
+ * the arrival row its plate comes from; its last-run flag is its calls', never its own (ADR 0022, D2). Every vehicle's
+ * seats left is null from the reading; `withSeatsLeft` joins the
  * seats a fresh GBIS answer gives by vehicle id, changing nothing else (ADR 0019, D17).
  */
 import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
@@ -100,7 +101,6 @@ describe("toLiveJongroGroup", () => {
           plateNumber: "서울74사5537",
           occupancy: { level: "relaxed", passengerCount: 9 },
           seatsLeft: null,
-          isLastBus: false,
           isLowFloor: null,
           position: {
             stationIndex: 0,
@@ -131,8 +131,9 @@ describe("toLiveJongroGroup", () => {
               ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
               basis: "provider",
               stopsAway: 2,
-              isLastBus: false,
+              runId: null,
               vehicleId: "100000103",
+              ...{ headsign: null, isFirstRun: null, isLastRun: false, isExpress: null },
               providerText: "3분후[1번째 전]",
             },
             {
@@ -141,8 +142,9 @@ describe("toLiveJongroGroup", () => {
               ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
               basis: "provider",
               stopsAway: null,
-              isLastBus: false,
+              runId: null,
               vehicleId: null,
+              ...{ headsign: null, isFirstRun: null, isLastRun: false, isExpress: null },
               providerText: "출발대기",
             },
           ],
@@ -159,10 +161,10 @@ describe("toLiveJongroGroup", () => {
     const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [unseen] }], positions: [] }), NO_ALIASES);
 
     // Assert
-    expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, seatsLeft: null, isLastBus: true, isLowFloor: null, position: null, trajectory: null }]);
+    expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, seatsLeft: null, isLowFloor: null, position: null, trajectory: null }]);
   });
 
-  it("serves a bus's last-bus flag once: true on the vehicle and on every arrival naming it when any of its rows says so", () => {
+  it("serves a bus's last-run flag on every call naming it when any of its rows says so, and none on the vehicle", () => {
     // Arrange
     // QUIRK(topis): the arriving-soon text never carries the last-bus marker, so a bus's rows can disagree; here the nearest reads false.
     const nextStop = { bus: jongroArrivalBus({ staOrd: 2, sectOrd: 2, traTime: 40, arrmsg: "곧 도착" }), arrival: running({ state: "arriving", stopsAway: 0, message: "곧 도착" }), travelSeconds: 40 };
@@ -176,8 +178,9 @@ describe("toLiveJongroGroup", () => {
     const group = toLiveJongroGroup("jongro07", reading({ rows }), NO_ALIASES);
 
     // Assert
-    expect(group.vehicles.map(({ id, isLastBus }) => [id, isLastBus])).toEqual([["100000103", true]]);
-    expect(group.stations.flatMap(({ arrivals }) => arrivals.map(({ vehicleId, isLastBus }) => [vehicleId, isLastBus]))).toEqual([
+    expect(group.vehicles.map(({ id }) => id)).toEqual(["100000103"]);
+    expect(group.vehicles[0]).not.toHaveProperty("isLastBus");
+    expect(group.stations.flatMap(({ arrivals }) => arrivals.map(({ vehicleId, isLastRun }) => [vehicleId, isLastRun]))).toEqual([
       ["100000103", true],
       ["100000103", true],
     ]);
@@ -213,10 +216,11 @@ describe("toLiveJongroGroup", () => {
       ["arriving", 0, "100000103", null, null],
       ["enRoute", 2, "100000104", null, "3분후[1번째 전]"],
     ]);
-    expect(group.vehicles.map(({ id, isLastBus }) => [id, isLastBus])).toEqual([
+    expect(group.stations[0]?.arrivals.map(({ vehicleId, isLastRun }) => [vehicleId, isLastRun])).toEqual([
       ["100000103", null],
       ["100000104", false],
     ]);
+    expect(group.vehicles.map(({ id }) => id)).toEqual(["100000103", "100000104"]);
   });
 
   it("serves a waiting bus's position with no trajectory", () => {
@@ -410,8 +414,9 @@ describe("toLiveJongroGroup on 7800's captured rows", () => {
       ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
       basis: "provider",
       stopsAway: 1,
-      isLastBus: false,
+      runId: null,
       vehicleId: "200010901",
+      ...{ headsign: null, isFirstRun: null, isLastRun: false, isExpress: null },
       providerText: "2분34초후[0번째 전]",
     });
   });

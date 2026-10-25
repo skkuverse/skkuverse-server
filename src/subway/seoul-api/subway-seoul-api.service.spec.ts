@@ -12,8 +12,8 @@ import { SubwaySeoulApiError } from "./subway-seoul-api.error";
 import type { SubwaySeoulApiClient } from "./subway-seoul-api.client";
 import { SubwaySeoulApiService } from "./subway-seoul-api.service";
 
-const STATION_ID_BY_NAME = new Map([["성균관대", "KR-1-0153"]]);
-const PLATFORM_BY_SUBWAY_ID = new Map([["1001", { platformId: "KR-1-0153", trainNumbers: "timetable" as const }]]);
+const STATION_ID_BY_NAME = new Map([["성균관대", "KR-1-P153"]]);
+const PLATFORM_BY_SUBWAY_ID = new Map([["1001", { platformId: "KR-1-P153", trainNumbers: "timetable" as const }]]);
 
 function setup() {
   const client = new FakeSubwaySeoulApiClient();
@@ -35,7 +35,7 @@ describe("SubwaySeoulApiService.listLineEvents", () => {
     // Assert
     expect(client.calls).toEqual(["realtimePosition 1호선"]);
     expect(events).toEqual([
-      { trainNo: "0493", platformId: "KR-1-0153", state: "arrived", stateChangedAt: new Date("2026-10-16T11:44:10Z"), destination: "서동탄" },
+      { trainNo: "0493", platformId: "KR-1-P153", state: "arrived", stateChangedAt: new Date("2026-10-16T11:44:10Z"), destination: "서동탄" },
     ]);
   });
 
@@ -61,7 +61,7 @@ describe("SubwaySeoulApiService.listStationCountdownRows", () => {
     // Assert
     expect(client.calls).toEqual(["realtimeStationArrival 성균관대"]);
     expect(countdownRows).toEqual([
-      { trainNo: "0493", platformId: "KR-1-0153", generatedAt: new Date("2026-10-16T11:44:10Z"), remainingSec: 120 },
+      { trainNo: "0493", platformId: "KR-1-P153", generatedAt: new Date("2026-10-16T11:44:10Z"), remainingSec: 120 },
     ]);
   });
 });

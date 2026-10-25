@@ -229,6 +229,8 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       INTERNAL_DISPATCH_TOKEN: "api",
       MINIAPP_PUSH_TOKEN: "api",
       AI_API_URL: "api",
+      APP_IOS_MIN_OS_VERSION: "api",
+      APP_ANDROID_MIN_OS_VERSION: "api",
       NAVER_API_KEY_ID: "poller",
       NAVER_API_KEY: "poller",
       TMAP_APP_KEY: "poller",
@@ -366,5 +368,61 @@ describe("listMalformedRequired SEOUL_BUS_SERVICE_KEY", () => {
   it("lets a ROLE=api boot with a malformed key, which only the pollers read", () => {
     // Act & Assert
     expect(() => validateEnv(envWithKey("api", "ABC+DEF="))).not.toThrow();
+  });
+});
+
+describe("listMalformedRequired APP_IOS_MIN_OS_VERSION and APP_ANDROID_MIN_OS_VERSION", () => {
+  // The app compares these against the device's OS: a value it cannot parse would gate on garbage.
+  const envWith = (role: string | undefined, name: string, value: string | undefined): NodeJS.ProcessEnv => {
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    if (value === undefined) delete env[name];
+    else env[name] = value;
+    return env;
+  };
+  const malformedIn = (role: string | undefined, name: string, value: string): string[] =>
+    listMalformedRequired(envWith(role, name, value)).map((v) => v.env);
+
+  it.each(["16", "16.4", "16.4.1", "15.1"])("accepts the iOS version %j", (value) => {
+    // Act & Assert
+    expect(malformedIn("api", "APP_IOS_MIN_OS_VERSION", value)).toEqual([]);
+  });
+
+  it.each(["16.4.1.0", "v16.4", "16.", ".4", "16,4", "16.4 ", "iOS 16.4", "sixteen"])("reports the iOS version %j", (value) => {
+    // Act & Assert
+    expect(malformedIn("api", "APP_IOS_MIN_OS_VERSION", value)).toEqual(["APP_IOS_MIN_OS_VERSION"]);
+  });
+
+  it.each(["24", "21", "35"])("accepts the Android API level %j", (value) => {
+    // Act & Assert
+    expect(malformedIn("api", "APP_ANDROID_MIN_OS_VERSION", value)).toEqual([]);
+  });
+
+  it.each(["7.0", "API 24", "24 ", "-24", "android24"])("reports the Android API level %j", (value) => {
+    // Act & Assert
+    expect(malformedIn("api", "APP_ANDROID_MIN_OS_VERSION", value)).toEqual(["APP_ANDROID_MIN_OS_VERSION"]);
+  });
+
+  it.each([
+    ["api", "APP_IOS_MIN_OS_VERSION", /app\.ios\.minOsVersion \(env: APP_IOS_MIN_OS_VERSION\)/],
+    ["combined", "APP_ANDROID_MIN_OS_VERSION", /app\.android\.minOsVersion \(env: APP_ANDROID_MIN_OS_VERSION\)/],
+  ])("refuses a ROLE=%s boot without %s, naming it", (role, name, message) => {
+    // Act & Assert
+    expect(() => validateEnv(envWith(role, name, undefined))).toThrow(message);
+  });
+
+  it("refuses an api boot with a malformed value, naming it", () => {
+    // Act & Assert
+    expect(() => validateEnv(envWith("api", "APP_IOS_MIN_OS_VERSION", "16.4.x"))).toThrow(
+      /app\.ios\.minOsVersion \(env: APP_IOS_MIN_OS_VERSION\): must be/,
+    );
+  });
+
+  it("lets a poller boot without them, which only serving reads", () => {
+    // Act
+    const env = envWith("poller", "APP_IOS_MIN_OS_VERSION", undefined);
+    delete env.APP_ANDROID_MIN_OS_VERSION;
+
+    // Assert
+    expect(() => validateEnv(env)).not.toThrow();
   });
 });

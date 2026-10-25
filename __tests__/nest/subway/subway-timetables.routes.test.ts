@@ -26,6 +26,7 @@ import request from "supertest";
 import { CalendarModule } from "../../../src/calendar/calendar.module";
 import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
+import { toKstInstant } from "../../../src/shared/kst-date.util";
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import { DATASET_CACHE_TTL_MS } from "../../../src/shared/dataset.constants";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
@@ -185,7 +186,7 @@ describe("GET /subway/stations/:stationId/arrivals with the stored timetables", 
     // Assert
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("private, max-age=5");
-    expect(res.body.data.lines[0].generatedAt).toBe(seeded.docs.find((doc) => doc._id === "S1-4-420")?.generatedAt);
+    expect(res.body.data.lines[0].generatedAt).toBe(toKstInstant(Date.parse(seeded.docs.find((doc) => doc._id === "S1-4-420")!.generatedAt)));
   });
 
   it("Night request: reads S1-4-weekday once for three answers of 혜화 at 02:00 on a Tuesday", async () => {
@@ -245,9 +246,9 @@ describe("GET /subway/stations/:stationId/arrivals with the stored timetables", 
     const after = await arrivalsOf(app, "hyehwa");
 
     // Assert
-    const arrivalOf = (res: request.Response) => res.body.data.lines[0].directions[1].trains.find((train: { trainNo: string }) => train.trainNo === firstDown.trainNo)?.arrivalAt;
-    expect(arrivalOf(withinTtl)).toBe(firstDown.arrivalAt);
-    expect(arrivalOf(after)).toBe(new Date(Date.parse(firstDown.arrivalAt) + 120_000).toISOString());
+    const arrivalOf = (res: request.Response) => res.body.data.lines[0].directions[1].trains.find((train: { trainNo: string }) => train.trainNo === firstDown.trainNo)?.scheduledArrivalAt;
+    expect(arrivalOf(withinTtl)).toBe(firstDown.scheduledArrivalAt);
+    expect(arrivalOf(after)).toBe(toKstInstant(Date.parse(firstDown.scheduledArrivalAt) + 120_000));
   });
 });
 
@@ -264,7 +265,7 @@ describe("the Seoul pollers with the stored timetables", () => {
 
     // Assert
     expect(failure).toMatchObject({ code: UNAVAILABLE_CODE, httpStatus: 503, keys: ["KR-1-weekday"] });
-    const others = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)).filter((id) => id !== "KR-1-0153");
+    const others = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)).filter((id) => !["KR-1-P153", "KR-1-P149", "S1-1-154"].includes(id));
     expect([...stores.state.docs.keys()]).toEqual(others);
   });
 });

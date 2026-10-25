@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written pin, not captured from production: what GET /bus/live/jongro02, jongro07 and jongro08 and the stop pages of seoul-01619, seoul-01525, seoul-01618 and seoul-01520 (now 100000424, 100900045, 100900221 and 100900021) answered in ko, en and zh at commit 64062a50 (2026-10-24), before the TOPIS route list gave each route an explicit code and capabilities, over the bus_cache rows jongro-attributes-characterization.routes.test.ts seeds. `<cacheWrittenAt>` stands for the seeded rows' write time, which that test sets from the wall clock. Changed on purpose three times since: every vehicle gained seatsLeft (ADR 0019, D17), null on these routes, right after occupancy; then each stop page's stop gained stopAreaId (ADR 0022, D4), null here since no stop area is stored, after its other fields; then every pole's stop id, each live station's stopId and each stop page's stop.id and key, became its national station id instead of seoul-<ARS> (owner, 2026-10-25; ADR 0019, D5); nothing else changed.",
+  "_about": "Hand-written pin, not captured from production: what GET /bus/live/jongro02, jongro07 and jongro08 and the stop pages of seoul-01619, seoul-01525, seoul-01618 and seoul-01520 (now 100000424, 100900045, 100900221 and 100900021) answered in ko, en and zh at commit 64062a50 (2026-10-24), before the TOPIS route list gave each route an explicit code and capabilities, over the bus_cache rows jongro-attributes-characterization.routes.test.ts seeds. `<cacheWrittenAt>` stands for the seeded rows' write time, which that test sets from the wall clock. Changed on purpose three times since: every vehicle gained seatsLeft (ADR 0019, D17), null on these routes, right after occupancy; then each stop page's stop gained stopAreaId (ADR 0022, D4), null here since no stop area is stored, after its other fields; then every pole's stop id, each live station's stopId and each stop page's stop.id and key, became its national station id instead of seoul-<ARS> (owner, 2026-10-25; ADR 0019, D5); nothing else changed. Changed on purpose again (ADR 0022, D2, D3): every arrival became the call, in the call's key order, gaining runId, headsign (null here, since no route line is stored), isFirstRun and isExpress, all null, and taking isLastRun in place of isLastBus; every vehicle lost isLastBus; nothing else changed.",
   "live": {
     "ko": {
       "jongro02": {
@@ -21,7 +21,6 @@
                 "passengerCount": 18
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 1,
@@ -67,8 +66,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 },
                 {
@@ -79,8 +82,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -99,8 +106,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "2분10초후[1번째 전]"
                 },
                 {
@@ -111,8 +122,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -131,8 +146,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "4분10초후[2번째 전]"
                 },
                 {
@@ -143,8 +162,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -171,7 +194,6 @@
                 "passengerCount": 27
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 0,
@@ -217,8 +239,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "1분35초후[1번째 전]"
                 },
                 {
@@ -229,8 +255,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -249,8 +279,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "3분20초후[2번째 전]"
                 },
                 {
@@ -261,8 +295,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -289,7 +327,6 @@
                 "passengerCount": 0
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 0,
@@ -323,7 +360,6 @@
                 "passengerCount": null
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 2,
@@ -365,8 +401,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000208",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "곧 도착"
                 },
                 {
@@ -377,8 +417,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -397,8 +441,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000209",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "5분후[1번째 전]"
                 },
                 {
@@ -409,8 +457,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -439,7 +491,6 @@
                 "passengerCount": 18
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 1,
@@ -485,8 +536,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 },
                 {
@@ -497,8 +552,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -517,8 +576,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "2분10초후[1번째 전]"
                 },
                 {
@@ -529,8 +592,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -549,8 +616,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "4분10초후[2번째 전]"
                 },
                 {
@@ -561,8 +632,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -589,7 +664,6 @@
                 "passengerCount": 27
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 0,
@@ -635,8 +709,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "1분35초후[1번째 전]"
                 },
                 {
@@ -647,8 +725,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -667,8 +749,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "3분20초후[2번째 전]"
                 },
                 {
@@ -679,8 +765,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -707,7 +797,6 @@
                 "passengerCount": 0
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 0,
@@ -741,7 +830,6 @@
                 "passengerCount": null
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 2,
@@ -783,8 +871,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000208",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "곧 도착"
                 },
                 {
@@ -795,8 +887,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -815,8 +911,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000209",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "5분후[1번째 전]"
                 },
                 {
@@ -827,8 +927,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -857,7 +961,6 @@
                 "passengerCount": 18
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 1,
@@ -903,8 +1006,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 },
                 {
@@ -915,8 +1022,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -935,8 +1046,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "2분10초후[1번째 전]"
                 },
                 {
@@ -947,8 +1062,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -967,8 +1086,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "4분10초후[2번째 전]"
                 },
                 {
@@ -979,8 +1102,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1007,7 +1134,6 @@
                 "passengerCount": 27
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 0,
@@ -1053,8 +1179,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "1분35초후[1번째 전]"
                 },
                 {
@@ -1065,8 +1195,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1085,8 +1219,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "3분20초후[2번째 전]"
                 },
                 {
@@ -1097,8 +1235,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1125,7 +1267,6 @@
                 "passengerCount": 0
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 0,
@@ -1159,7 +1300,6 @@
                 "passengerCount": null
               },
               "seatsLeft": null,
-              "isLastBus": false,
               "isLowFloor": null,
               "position": {
                 "stationIndex": 2,
@@ -1201,8 +1341,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000208",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "곧 도착"
                 },
                 {
@@ -1213,8 +1357,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1233,8 +1381,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000209",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "5분후[1번째 전]"
                 },
                 {
@@ -1245,8 +1397,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1293,7 +1449,6 @@
                     "passengerCount": 27
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 0,
@@ -1333,8 +1488,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "3분20초후[2번째 전]"
                 },
                 {
@@ -1345,8 +1504,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1421,7 +1584,6 @@
                     "passengerCount": 18
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 1,
@@ -1461,8 +1623,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "2분10초후[1번째 전]"
                 },
                 {
@@ -1473,8 +1639,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1517,7 +1687,6 @@
                     "passengerCount": 27
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 0,
@@ -1557,8 +1726,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "1분35초후[1번째 전]"
                 },
                 {
@@ -1569,8 +1742,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1615,7 +1792,6 @@
                     "passengerCount": 27
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 0,
@@ -1655,8 +1831,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "3분20초후[2번째 전]"
                 },
                 {
@@ -1667,8 +1847,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1743,7 +1927,6 @@
                     "passengerCount": 18
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 1,
@@ -1783,8 +1966,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "2분10초후[1번째 전]"
                 },
                 {
@@ -1795,8 +1982,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1839,7 +2030,6 @@
                     "passengerCount": 27
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 0,
@@ -1879,8 +2069,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "1분35초후[1번째 전]"
                 },
                 {
@@ -1891,8 +2085,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -1937,7 +2135,6 @@
                     "passengerCount": 27
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 0,
@@ -1977,8 +2174,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 4,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "3분20초후[2번째 전]"
                 },
                 {
@@ -1989,8 +2190,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -2065,7 +2270,6 @@
                     "passengerCount": 18
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 1,
@@ -2105,8 +2309,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000201",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "2분10초후[1번째 전]"
                 },
                 {
@@ -2117,8 +2325,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]
@@ -2161,7 +2373,6 @@
                     "passengerCount": 27
                   },
                   "seatsLeft": null,
-                  "isLastBus": false,
                   "isLowFloor": null,
                   "position": {
                     "stationIndex": 0,
@@ -2201,8 +2412,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": 3,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": "100000207",
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "1분35초후[1번째 전]"
                 },
                 {
@@ -2213,8 +2428,12 @@
                   "scheduledDepartureAt": null,
                   "basis": "provider",
                   "stopsAway": null,
-                  "isLastBus": false,
+                  "runId": null,
                   "vehicleId": null,
+                  "headsign": null,
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
                   "providerText": "출발대기"
                 }
               ]

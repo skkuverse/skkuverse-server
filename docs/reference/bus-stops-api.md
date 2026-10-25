@@ -18,7 +18,7 @@ audience: internal
 | Route | `GET /bus/stops/:stopId/arrivals`; the stop list, `GET /bus/stops`, has [its own summary](#get-busstops) |
 | Auth | none |
 | Rate limit | `GeneralRateLimitMiddleware`, bound to `bus/stops` in `BusModule.configure` (`src/bus/bus.module.ts`) |
-| Wire type | `busStopArrivals` and `busStopArrivalsMeta` in `src/bus/stop-arrivals/bus-stop-arrivals.wire.ts`, published as `contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`; its arrivals and vehicles are `bus.arrival` and `bus.vehicle`, as on the live route ([bus-live-api.md](bus-live-api.md)) |
+| Wire type | `busStopArrivals` and `busStopArrivalsMeta` in `src/bus/stop-arrivals/bus-stop-arrivals.wire.ts`, published as `contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`; its arrivals and vehicles are `call.call` and `bus.vehicle`, as on the live route ([bus-live-api.md](bus-live-api.md)) |
 | Controller | `src/bus/stop-arrivals/bus-stop-arrivals.controller.ts` |
 | Sources | the `bus-stops` dataset, the stored Jongno registry (`jongro_routes`) and route lines (`jongro_route_paths`), `bus_cache`, `jongro-route-attributes`, the stored timetables and `shuttle_eta`; no upstream call |
 | Envelope | `{ meta: { lang, serverNow }, data }` through the global `ResponseInterceptor` |
@@ -149,11 +149,12 @@ Every read goes through the caches the stop page already uses (the `bus-stops` d
       {
         "kind": "live", "groupId": "jongro07", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "direction": { "id": "100900220", "label": "성균관대운동장 방면" }, "action": "board",
         "stationsVersion": "0346768f2b776f45", "updatedAt": "2026-10-20T14:09:55+09:00", "operation": "running",
-        "vehicles": [{ "id": "100000203", "plateNumber": "서울74사2703", "occupancy": { "level": "relaxed", "passengerCount": 9 }, "seatsLeft": null, "isLastBus": false, "position": { "...": "..." }, "trajectory": [] }],
+        "vehicles": [{ "id": "100000203", "plateNumber": "서울74사2703", "occupancy": { "level": "relaxed", "passengerCount": 9 }, "seatsLeft": null, "isLowFloor": false, "position": { "...": "..." }, "trajectory": [] }],
         "arrivals": [{
           "status": "enRoute", "expectedArrivalAt": "2026-10-20T14:13:50+09:00", "expectedDepartureAt": null,
           "scheduledArrivalAt": null, "scheduledDepartureAt": null, "basis": "provider",
-          "stopsAway": 2, "isLastBus": false, "vehicleId": "100000203", "providerText": "4분10초후[2번째 전]"
+          "stopsAway": 2, "runId": null, "vehicleId": "100000203", "headsign": "성균관대운동장 방면",
+          "isFirstRun": null, "isLastRun": false, "isExpress": null, "providerText": "4분10초후[2번째 전]"
         }]
       },
       { "kind": "live", "groupId": "jongro08", "label": "종로 08", "stationIndex": 22, "towards": "혜화동로터리", "direction": { "id": "100900040", "label": "명륜3가 방면" }, "action": "board", "stationsVersion": "52e82cc449046288", "updatedAt": null, "operation": "noData", "vehicles": [], "arrivals": [] }
@@ -200,15 +201,17 @@ A live entry's `towards` is the next station with a stop, so a client tells a li
 
 A live entry's `direction` is the line's 방면 the station lies on, `{ id, label }` exactly as the group's `/bus/config` station names it (`directionId`) with that direction's `label` in the request language ([bus-live-api.md](bus-live-api.md#directions), [ADR 0019, D16](../decisions/0019-bus-live-api.md)): at `100900075` 종로07 heads to `성균관대운동장 방면` and 종로08 to `명륜3가 방면`; at `hssc-olympic-hall` the HSSC line is `하교`. It is `null` where the station has none: a Jongno route with no stored route line or one not yet synced with directions, a config placed by another stations version than the page's entry, or a group config that cannot be built (another route's registry missing), while the entry and the rest of the page still serve. `towards` is the next stop and `direction` the terminal side of the line; a client shows both, or `direction` alone as the tab name.
 
-A timetable entry lists up to three runs, each an arrival ([bus-live-api.md](bus-live-api.md)) with `status: "scheduled"`, `stopsAway`, `vehicleId` and `providerText` null, and one more field:
+A timetable entry lists up to three runs, each an arrival, ADR 0022's call ([bus-live-api.md](bus-live-api.md#arrivals)), with `status: "scheduled"`, `stopsAway`, `vehicleId`, `isExpress` and `providerText` null, and one more field:
 
 | Field | Meaning |
 | --- | --- |
 | `runDepartureAt` | The run's departure from its first stop: its identity, so a run with no time at this stop still sorts and labels |
-| `scheduledDepartureAt`, `expectedDepartureAt` | At a boarding stop: the timetable's time here, or the smart schedule's estimate when one was applied at an estimated stop. Timetable data, so a run keeps them; a live arrival's are always null |
+| `scheduledDepartureAt`, `expectedDepartureAt` | At a boarding stop: the timetable's time here, and the smart schedule's estimate beside it when one was applied at an estimated stop (the scheduled one null where the timetable stores no time here). Timetable data, so a run keeps them; a live arrival's are always null |
 | `scheduledArrivalAt`, `expectedArrivalAt` | The same at an alighting stop |
 | `basis` | `estimate` when the time here is an estimate, else `timetable` |
-| `isLastBus` | `true` for the day's last run of the route type |
+| `runId` | The run's id, opaque: stable within one service day and one revision of its timetable ([ADR 0022, D2](../decisions/0022-journey-and-call-spec.md)) |
+| `headsign` | Which way the run goes: an `up` run `등교` and a `down` run `하교` (commute services; `To campus`/`From campus`, `上学`/`放学`), as the HSSC line's live calls read; any other route type the entry's `label`, the service's |
+| `isFirstRun`, `isLastRun` | `true` for the day's first, and last, run of the route type |
 
 A run is listed while its time at this stop is not before the current minute in Asia/Seoul, and runs are ordered by that same time: the timetable's time where one is shown; otherwise (an alighting stop, whose timetable stores no time) the later of the arrival of its most recently fetched estimate, even one too old to be shown, and the expected time shown, or its departure when it has neither. The fields above still carry only the served estimate, so a run can be listed with no time at this stop. A time before the departure is the next day's. When the smart schedule's week holds fewer than three, the runs continue into the following week, as the smart schedule would show it: a Friday evening after the last run lists the next Monday's, and a day of no service or inside a suspension lists none. Boarding and drop-off stops are both served.
 

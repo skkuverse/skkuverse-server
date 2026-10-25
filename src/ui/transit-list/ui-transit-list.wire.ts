@@ -15,7 +15,10 @@ const busGroupCard = z.object({
   }),
 });
 
-/** CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/bus/parser.ts for the transit tab. */
+/**
+ * CONTRACT(skkuverse-app): parsed for the transit tab by installed builds, from skkuverse-app/packages/shared/src/bus/parser.ts
+ * on app main; app dev reads /ui/home/transit instead and keeps this route frozen (packages/shared/src/api/endpoints.ts).
+ */
 export const transitList = z.array(busGroupCard);
 
 export const transitListMeta = z.object({ busListCount: z.int() });

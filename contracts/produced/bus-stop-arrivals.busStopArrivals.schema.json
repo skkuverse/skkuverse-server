@@ -161,12 +161,6 @@
                     "id": {
                       "type": "string"
                     },
-                    "plateNumber": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
                     "occupancy": {
                       "anyOf": [
                         {
@@ -215,15 +209,15 @@
                         }
                       ]
                     },
-                    "isLastBus": {
+                    "isLowFloor": {
                       "type": [
                         "boolean",
                         "null"
                       ]
                     },
-                    "isLowFloor": {
+                    "plateNumber": {
                       "type": [
-                        "boolean",
+                        "string",
                         "null"
                       ]
                     },
@@ -362,11 +356,10 @@
                   },
                   "required": [
                     "id",
-                    "plateNumber",
                     "occupancy",
                     "seatsLeft",
-                    "isLastBus",
                     "isLowFloor",
+                    "plateNumber",
                     "position",
                     "trajectory"
                   ]
@@ -447,7 +440,7 @@
                       "anyOf": [
                         {
                           "type": "integer",
-                          "minimum": -9007199254740991,
+                          "minimum": 0,
                           "maximum": 9007199254740991
                         },
                         {
@@ -455,15 +448,39 @@
                         }
                       ]
                     },
-                    "isLastBus": {
+                    "runId": {
                       "type": [
-                        "boolean",
+                        "string",
                         "null"
                       ]
                     },
                     "vehicleId": {
                       "type": [
                         "string",
+                        "null"
+                      ]
+                    },
+                    "headsign": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isFirstRun": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "isLastRun": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "isExpress": {
+                      "type": [
+                        "boolean",
                         "null"
                       ]
                     },
@@ -482,8 +499,12 @@
                     "scheduledDepartureAt",
                     "basis",
                     "stopsAway",
-                    "isLastBus",
+                    "runId",
                     "vehicleId",
+                    "headsign",
+                    "isFirstRun",
+                    "isLastRun",
+                    "isExpress",
                     "providerText"
                   ]
                 }
@@ -548,12 +569,6 @@
                     "id": {
                       "type": "string"
                     },
-                    "plateNumber": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
                     "occupancy": {
                       "anyOf": [
                         {
@@ -602,15 +617,15 @@
                         }
                       ]
                     },
-                    "isLastBus": {
+                    "isLowFloor": {
                       "type": [
                         "boolean",
                         "null"
                       ]
                     },
-                    "isLowFloor": {
+                    "plateNumber": {
                       "type": [
-                        "boolean",
+                        "string",
                         "null"
                       ]
                     },
@@ -749,11 +764,10 @@
                   },
                   "required": [
                     "id",
-                    "plateNumber",
                     "occupancy",
                     "seatsLeft",
-                    "isLastBus",
                     "isLowFloor",
+                    "plateNumber",
                     "position",
                     "trajectory"
                   ]
@@ -834,7 +848,7 @@
                       "anyOf": [
                         {
                           "type": "integer",
-                          "minimum": -9007199254740991,
+                          "minimum": 0,
                           "maximum": 9007199254740991
                         },
                         {
@@ -842,15 +856,39 @@
                         }
                       ]
                     },
-                    "isLastBus": {
+                    "runId": {
                       "type": [
-                        "boolean",
+                        "string",
                         "null"
                       ]
                     },
                     "vehicleId": {
                       "type": [
                         "string",
+                        "null"
+                      ]
+                    },
+                    "headsign": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isFirstRun": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "isLastRun": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "isExpress": {
+                      "type": [
+                        "boolean",
                         "null"
                       ]
                     },
@@ -874,8 +912,12 @@
                     "scheduledDepartureAt",
                     "basis",
                     "stopsAway",
-                    "isLastBus",
+                    "runId",
                     "vehicleId",
+                    "headsign",
+                    "isFirstRun",
+                    "isLastRun",
+                    "isExpress",
                     "providerText",
                     "runDepartureAt"
                   ]

@@ -1,6 +1,7 @@
 import { z } from "zod";
-
-const latLng = z.object({ lat: z.number(), lng: z.number() });
+import { instant } from "../shared/instant.wire";
+import { latLng } from "../shared/lat-lng.wire";
+import { vehicle as modeVehicle } from "../shared/vehicle.wire";
 
 /** WHY: a stop of a run as a schedule service's `stopSequences` serves it, named in the request language. */
 export const servedSequenceStop = z.object({
@@ -49,27 +50,6 @@ export const realtimeArrival = z.object({
   message: z.string(),
 });
 
-// SEE: docs/reference/bus-live-api.md ("Open enums"): a client skips, or renders the providerText of, a value it does not know.
-const instant = z.iso.datetime({ offset: true });
-
-// WHY: one bus or run at one station, every key present, null when unknown (ADR 0019, D1, D3, D4). A bus standing at the station
-// is arriving, and atStop is gone (D14): clients parse status as an open enum (D3), so dropping a value breaks none.
-export const arrival = z.object({
-  status: z.enum(["arriving", "enRoute", "waitingToDepart", "scheduled", "unknown"]),
-  expectedArrivalAt: instant.nullable(),
-  expectedDepartureAt: instant.nullable(),
-  scheduledArrivalAt: instant.nullable(),
-  scheduledDepartureAt: instant.nullable(),
-  basis: z.enum(["provider", "estimate", "timetable"]),
-  /** WHY: the stops the bus reaches first, plus one: 1 its next stop, 0 standing here; null for a timetable run. */
-  stopsAway: z.int().nullable(),
-  isLastBus: z.boolean().nullable(),
-  /** WHY: a key of the response's vehicles; null for a run with no vehicle. */
-  vehicleId: z.string().nullable(),
-  /** QUIRK(topis): the upstream's own text as received (arrmsg, Korean). */
-  providerText: z.string().nullable(),
-});
-
 /** WHY: where a vehicle is: positionAt is when the source saw it there, checkedAt when this server last fetched (ADR 0019, D6). */
 export const vehiclePosition = z.object({
   stationIndex: z.int().min(0),
@@ -85,16 +65,9 @@ export const vehiclePosition = z.object({
 /** WHY: s is stationIndex plus the section's fraction; on a loop it may pass the last index, read mod the station count (ADR 0019, D7). */
 const trajectoryKnot = z.object({ at: instant, s: z.number().min(0) });
 
-/** WHY: each vehicle a response mentions, once (ADR 0019, D6); trajectory null when it is not moving or has no position. */
-export const vehicle = z.object({
-  id: z.string(),
+/** WHY: each vehicle a response mentions, once (ADR 0019, D6), its last-run flag on the call (ADR 0022, D2); trajectory null when it is not moving or has no position. */
+export const vehicle = modeVehicle.extend({
   plateNumber: z.string().nullable(),
-  occupancy: z.object({ level: crowding, passengerCount: z.int().nullable() }).nullable(),
-  /** WHY: seats still free, 0 when none; null when the source never reports seats or has no fresh answer (ADR 0019, D17). */
-  seatsLeft: z.int().min(0).nullable(),
-  isLastBus: z.boolean().nullable(),
-  /** WHY: the vehicle's own, from its position row, else the arrival row naming it, never both (ADR 0019, D13); null when unsaid. */
-  isLowFloor: z.boolean().nullable(),
   position: vehiclePosition.nullable(),
   trajectory: z.array(trajectoryKnot).min(1).nullable(),
 });
@@ -105,7 +78,6 @@ export const operation = z.enum(["running", "ended", "suspended", "noData"]);
 export type ServedSequenceStop = z.input<typeof servedSequenceStop>;
 export type StopMap = z.input<typeof stopMap>;
 export type ServedStop = z.input<typeof servedStop>;
-export type Arrival = z.input<typeof arrival>;
 export type Vehicle = z.input<typeof vehicle>;
 export type VehiclePosition = z.input<typeof vehiclePosition>;
 export type Operation = z.input<typeof operation>;

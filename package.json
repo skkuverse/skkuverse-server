@@ -34,6 +34,7 @@
     "schedule": "NODE_OPTIONS=--dns-result-order=ipv4first node scripts/set-campus-schedule.js",
     "data": "npm run build --silent && NODE_OPTIONS=--dns-result-order=ipv4first node scripts/data.js",
     "contracts:export": "node scripts/export-contracts.js",
+    "app-gate:check": "node scripts/app-gate-check.js",
     "env:pull": "python3 scripts/render_env.py --keys config/env.dev.keys --out .env --local -p backend -c dev_server"
   },
   "author": "",

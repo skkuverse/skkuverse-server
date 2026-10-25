@@ -10,7 +10,7 @@ import { stationCoordsFixture, storedStationCoordsRepository, storedStationCoord
 import { SubwayStationsService } from "../stations/subway-stations.service";
 import { SubwayStationListService } from "./subway-station-list.service";
 
-const SERVED_ORDER = ["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae", "gwanggyo-jungang"];
+const SERVED_ORDER = ["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae", "gwanggyo-jungang", "sadang", "geumjeong", "jongno-5-ga"];
 
 const serviceOver = (coordsRepository = storedStationCoordsRepository()) => new SubwayStationListService(new SubwayStationsService(), storedStationCoordsService(coordsRepository));
 

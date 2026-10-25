@@ -19,7 +19,11 @@ export class UiTransitTabService {
 
   async getTransitLayout(lang: SupportedLang): Promise<TransitLayout> {
     const servedStations = this.stations.listStations();
-    const layout = await this.layouts.getStoredLayout({ busGroupIds: this.busConfig.listGroupIds(), stationIds: servedStations.map((station) => station.id) });
+    const layout = await this.layouts.getStoredLayout({
+      busGroupIds: this.busConfig.listGroupIds(),
+      stationIds: servedStations.map((station) => station.id),
+      campuslessStationIds: servedStations.filter((station) => station.campus === null).map((station) => station.id),
+    });
     const now = this.clock.now();
     const visibleGroups = (await this.busConfig.getBusGroups(lang)).filter((group) => isBusGroupVisible(group.visibility, now));
     const context = {

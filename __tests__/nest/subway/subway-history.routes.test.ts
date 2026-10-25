@@ -70,7 +70,7 @@ afterAll(async () => {
 function prediction(overrides: Partial<SubwayPredictionDoc> & Pick<SubwayPredictionDoc, "trainNo" | "predictedAt">): SubwayPredictionDoc {
   return {
     serviceDate: "2026-10-16",
-    stationId: "KR-1-0153",
+    stationId: "KR-1-P153",
     horizonMin: 3,
     direction: "up",
     source: "estimated",
@@ -151,9 +151,9 @@ describe("GET /internal/subway/accuracy", () => {
       from: "2026-10-10",
       to: "2026-10-16",
       groups: [
-        { stationId: "KR-1-0153", direction: "up", horizonMin: 5, source: "estimated", count: 1, medianErrorSec: 30, medianAbsErrorSec: 30, p90AbsErrorSec: 30, unresolvedCount: 0 },
-        { stationId: "KR-1-0153", direction: "up", horizonMin: 3, source: "estimated", count: 4, medianErrorSec: -20, medianAbsErrorSec: 20, p90AbsErrorSec: 90, unresolvedCount: 1 },
-        { stationId: "KR-1-0153", direction: "up", horizonMin: 3, source: "scheduled", count: 1, medianErrorSec: 60, medianAbsErrorSec: 60, p90AbsErrorSec: 60, unresolvedCount: 0 },
+        { stationId: "KR-1-P153", direction: "up", horizonMin: 5, source: "estimated", count: 1, medianErrorSec: 30, medianAbsErrorSec: 30, p90AbsErrorSec: 30, unresolvedCount: 0 },
+        { stationId: "KR-1-P153", direction: "up", horizonMin: 3, source: "estimated", count: 4, medianErrorSec: -20, medianAbsErrorSec: 20, p90AbsErrorSec: 90, unresolvedCount: 1 },
+        { stationId: "KR-1-P153", direction: "up", horizonMin: 3, source: "scheduled", count: 1, medianErrorSec: 60, medianAbsErrorSec: 60, p90AbsErrorSec: 60, unresolvedCount: 0 },
         { stationId: "S1-4-420", direction: "down", horizonMin: 1, source: "live", count: 0, medianErrorSec: null, medianAbsErrorSec: null, p90AbsErrorSec: null, unresolvedCount: 2 },
       ],
     });
@@ -162,7 +162,7 @@ describe("GET /internal/subway/accuracy", () => {
 
 describe("SubwayHistoryRepository.updateObservedArrival on mongod", () => {
   const serviceDate = "2026-10-01";
-  const keyOf = { serviceDate, stationId: "KR-1-0153" };
+  const keyOf = { serviceDate, stationId: "KR-1-P153" };
   const records = [
     prediction({ ...keyOf, trainNo: "0692", horizonMin: 3, madeAt: at("2026-10-01T20:28:40"), predictedAt: at("2026-10-01T20:31:30") }),
     prediction({ ...keyOf, trainNo: "0692", horizonMin: 1, madeAt: at("2026-10-01T20:31:25"), predictedAt: at("2026-10-01T20:31:50") }),
@@ -180,7 +180,7 @@ describe("SubwayHistoryRepository.updateObservedArrival on mongod", () => {
   it("resolves by an approaching row only the records made before the tick that saw it, then by the arrived row the rest within 30 minutes", async () => {
     // Arrange
     const repository = app.get<SubwayHistoryRepository>(SubwayHistoryRepositoryClass);
-    const arrival = { serviceDate, trainNo: "0692", platformId: "KR-1-0153" };
+    const arrival = { serviceDate, trainNo: "0692", platformId: "KR-1-P153" };
     await repository.upsertPredictions(records);
 
     // Act

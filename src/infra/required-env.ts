@@ -95,8 +95,30 @@ const URL_ENCODED_KEY: RequiredFormat = {
     "must be URL-encoded (allowed chars: [A-Za-z0-9_%-]). Re-encode the raw key with encodeURIComponent() before storing in .env.",
 };
 
+// CONTRACT(skkuverse-app): its force-update gate compares these against the device's OS
+// (skkuverse-app/packages/shared/src/schema/app-config.schema.ts), which reads a malformed one as absent.
+const IOS_VERSION: RequiredFormat = {
+  pattern: /^\d+(\.\d+){0,2}$/,
+  message: "must be an iOS version: one to three dot-separated numbers, such as 16.4.",
+};
+const ANDROID_API_LEVEL: RequiredFormat = {
+  pattern: /^\d+$/,
+  message: "must be an Android API level: digits only, such as 24.",
+};
+
 export function isRequiredIn(scope: RequiredScope, role: Role): boolean {
   return scope === "all" || role === "combined" || scope === role;
+}
+
+function hsscNewValue(mode: EnvMode, env: NodeJS.ProcessEnv): RequiredValue {
+  return { name: "api.hsscNew", env: "API_HSSC_NEW_PROD", value: apiUrl(mode, env, { prod: "API_HSSC_NEW_PROD", dev: "API_HSSC_NEW_DEV" }), scope: "poller" };
+}
+
+function minOsVersionValues(env: NodeJS.ProcessEnv): RequiredValue[] {
+  return [
+    { name: "app.ios.minOsVersion", env: "APP_IOS_MIN_OS_VERSION", value: env.APP_IOS_MIN_OS_VERSION, scope: "api", format: IOS_VERSION },
+    { name: "app.android.minOsVersion", env: "APP_ANDROID_MIN_OS_VERSION", value: env.APP_ANDROID_MIN_OS_VERSION, scope: "api", format: ANDROID_API_LEVEL },
+  ];
 }
 
 export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
@@ -106,12 +128,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
   return [
     raw("mongo.url", "MONGO_URL", "all"),
     db("mongo.dbName", "MONGO_DB_NAME_BUS_CAMPUS"),
-    {
-      name: "api.hsscNew",
-      env: "API_HSSC_NEW_PROD",
-      value: apiUrl(mode, env, { prod: "API_HSSC_NEW_PROD", dev: "API_HSSC_NEW_DEV" }),
-      scope: "poller",
-    },
+    hsscNewValue(mode, env),
     { ...raw("api.seoulBusServiceKey", "SEOUL_BUS_SERVICE_KEY", "poller"), format: URL_ENCODED_KEY },
     raw("naver.styleId", "NAVER_MAP_STYLE_ID", "api"),
     db("building.dbName", "MONGO_BUILDING_DB_NAME"),
@@ -126,6 +143,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
     raw("notices.dispatch.internalToken", "INTERNAL_DISPATCH_TOKEN", "api"),
     raw("miniapps.pushToken", "MINIAPP_PUSH_TOKEN", "api"),
     raw("notices.overview.aiApiUrl", "AI_API_URL", "api"),
+    ...minOsVersionValues(env),
     raw("shuttleEta.naver.keyId", "NAVER_API_KEY_ID", "poller"),
     raw("shuttleEta.naver.key", "NAVER_API_KEY", "poller"),
     raw("shuttleEta.tmapAppKey", "TMAP_APP_KEY", "poller"),

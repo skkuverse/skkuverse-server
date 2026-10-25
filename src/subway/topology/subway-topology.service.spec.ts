@@ -122,7 +122,7 @@ describe("SubwayTopologyService.current", () => {
     // Arrange
     const { repository, topology, advanceTo } = setup();
     const ahead = subwayTopologyFixture();
-    ahead.platforms["KR-1-P154"] = ahead.platforms["KR-1-0153"]!;
+    ahead.platforms["KR-1-P154"] = ahead.platforms["KR-1-P153"]!;
     delete ahead.neighbors["KR-1-P154"];
     repository.storeTopology(ahead);
 

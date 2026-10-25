@@ -13,7 +13,7 @@
  * source": a train map that cannot be parsed fails its own
  * job while the API's arrivals keep being served; a failing API leaves the
  * train map's arrivals served; and with neither upstream answering for 3
- * minutes every listed train is `scheduled`.
+ * minutes every listed train is on the `timetable` basis.
  */
 import fs from "fs";
 import path from "path";
@@ -23,6 +23,7 @@ import request from "supertest";
 import { CalendarModule } from "../../../src/calendar/calendar.module";
 import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
+import { toKstInstant } from "../../../src/shared/kst-date.util";
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
@@ -145,7 +146,7 @@ function getAt(kst: string, stationId: string): request.Test {
   return request(httpServer).get(`/subway/stations/${stationId}/arrivals`);
 }
 
-type WireTrain = { trainNo: string; source: string; stopsAway: number | null };
+type WireTrain = { trainNo: string; basis: string; stopsAway: number | null };
 const trainsOf = (body: { data: { lines: { directions: { trains: WireTrain[] }[] }[] } }): WireTrain[] =>
   body.data.lines.flatMap((line) => line.directions.flatMap((d) => d.trains));
 
@@ -162,8 +163,8 @@ describe("Serving survives a failing source", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.lines[0].generatedAt).toBe(at("22:27:31").toISOString());
-    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
+    expect(res.body.data.lines[0].generatedAt).toBe(toKstInstant(at("22:27:31").getTime()));
+    const observed = trainsOf(res.body).filter((train) => train.basis === "estimate" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
 
@@ -178,12 +179,12 @@ describe("Serving survives a failing source", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.lines[0].generatedAt).toBe(at("22:27:31").toISOString());
-    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
+    expect(res.body.data.lines[0].generatedAt).toBe(toKstInstant(at("22:27:31").getTime()));
+    const observed = trainsOf(res.body).filter((train) => train.basis === "estimate" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
 
-  it("Both down: with neither upstream answering for 3 minutes, every listed train has source scheduled", async () => {
+  it("Both down: with neither upstream answering for 3 minutes, every listed train has basis timetable", async () => {
     // Arrange
     await tickAt("22:27:30", "subway-seoul");
     await tickAt("22:27:31", "subway-trainmap");
@@ -201,11 +202,11 @@ describe("Serving survives a failing source", () => {
 
     // Assert
     expect(outcomes.every((outcome) => outcome instanceof Error)).toBe(true);
-    expect(trainsOf(oneMinuteIn.body).some((train) => train.source !== "scheduled")).toBe(true);
+    expect(trainsOf(oneMinuteIn.body).some((train) => train.basis !== "timetable")).toBe(true);
     expect(threeMinutesIn.status).toBe(200);
     const trains = trainsOf(threeMinutesIn.body);
     expect(trains.length).toBeGreaterThan(0);
-    expect(trains.every((train) => train.source === "scheduled" && train.stopsAway === null)).toBe(true);
+    expect(trains.every((train) => train.basis === "timetable" && train.stopsAway === null)).toBe(true);
   });
 });
 

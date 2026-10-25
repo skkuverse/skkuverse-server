@@ -56,6 +56,8 @@ Agreed with the session that owns the stop catalog, 2026-10-22; the TOPIS alias 
 
 A response lists each vehicle it mentions once and arrivals point at it by `vehicleId`: TOPIS counts passengers per station row, so copies of one bus inside each arrival would disagree. 막차 is the bus's: TOPIS flags it per row and one bus's rows can disagree (a 곧 도착 row carries no [막차] text), so a vehicle is the last bus when any row naming it says so, and every arrival naming it carries the vehicle's value. A vehicle an arrival names without a position row is served with `position: null`.
 
+Changed 2026-10-25 ([ADR 0022](0022-journey-and-call-spec.md), D2): `isLastBus` moved to the call's `isLastRun`, which every arrival naming the bus carries; the vehicle no longer has the flag.
+
 A position carries `positionAt`, when the source saw the bus there, and `checkedAt`, when this server last fetched that answer. A stop-event source repeats its last event until the next stop, so its `positionAt` is minutes old while the bus is fine; a dead feed shows in `checkedAt`. A client dims and freezes a marker on `checkedAt`'s age and extrapolates along the trajectory from `positionAt`. Each group carries `updatedAt`, its poller's last write (the staler key for Jongno), so "no buses" and "the poller stopped" differ.
 
 ### D7. Loops wrap

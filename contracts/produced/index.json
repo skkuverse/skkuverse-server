@@ -136,11 +136,6 @@
       "GET bus/stops"
     ]
   },
-  "bus.arrival": {
-    "source": "src/bus/bus.wire.ts",
-    "export": "arrival",
-    "routes": []
-  },
   "bus.operation": {
     "source": "src/bus/bus.wire.ts",
     "export": "operation",
@@ -176,6 +171,11 @@
     "export": "vehiclePosition",
     "routes": []
   },
+  "call.call": {
+    "source": "src/shared/call.wire.ts",
+    "export": "call",
+    "routes": []
+  },
   "campus.campus": {
     "source": "src/shared/campus.wire.ts",
     "export": "campus",
@@ -209,6 +209,16 @@
     "routes": [
       "GET games"
     ]
+  },
+  "instant.instant": {
+    "source": "src/shared/instant.wire.ts",
+    "export": "instant",
+    "routes": []
+  },
+  "lat-lng.latLng": {
+    "source": "src/shared/lat-lng.wire.ts",
+    "export": "latLng",
+    "routes": []
   },
   "link-action.linkActionType": {
     "source": "src/shared/link-action.wire.ts",
@@ -412,6 +422,11 @@
   "ui.bannerCarousel": {
     "source": "src/ui/ui.wire.ts",
     "export": "bannerCarousel",
+    "routes": []
+  },
+  "vehicle.vehicle": {
+    "source": "src/shared/vehicle.wire.ts",
+    "export": "vehicle",
     "routes": []
   }
 }
