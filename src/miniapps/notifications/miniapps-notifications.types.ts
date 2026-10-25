@@ -1,9 +1,10 @@
 import type { LinkActionType } from "../../shared/link-action.wire";
 import type { DeliveryCounts, DeliveryError } from "../miniapps.document";
+import type { MiniAppPushQuota } from "../../perimeter/perimeter.ports";
 import type { MiniAppRegistry } from "../miniapps.types";
 
 /** WHY: the snapshot the sender was authorized against, so its link is checked against the same revision. */
-export type PushSender = { miniAppId: string; registry: Pick<MiniAppRegistry, "isKnownMiniAppTarget"> };
+export type PushSender = { miniAppId: string; registry: Pick<MiniAppRegistry, "isKnownMiniAppTarget">; quota: Pick<MiniAppPushQuota, "take"> };
 
 /** WHY: what a send's own call came back as; a stored row with both fields null is still running, or never saved. */
 export type DeliveryStatus = "delivered" | DeliveryError["outcome"];

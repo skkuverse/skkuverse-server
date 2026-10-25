@@ -1,6 +1,7 @@
 import type { NestApplicationOptions } from "@nestjs/common";
 import { ExpressAdapter, type NestExpressApplication } from "@nestjs/platform-express";
-import express from "express";
+import express, { type Request } from "express";
+import type { IncomingMessage } from "node:http";
 import helmet from "helmet";
 import config from "../infra/config";
 import { mountRequestLogging } from "../infra/http-logging";
@@ -13,6 +14,13 @@ import { localDevRequestFilter } from "./local-dev-request.middleware";
 import { noStoreMiddleware } from "./no-store.middleware";
 import { ResponseInterceptor } from "./response.interceptor";
 
+// SEE: docs/decisions/0023-perimeter-ports.md ("D6. Signed calls") — the one path whose raw body is kept.
+const RAW_BODY_PATH_RE = /^\/internal\/miniapps\/[^/?]+\/notifications(?:\?|$)/;
+
+function keepRawBody(req: IncomingMessage, _res: unknown, body: Buffer): void {
+  if (RAW_BODY_PATH_RE.test(req.url ?? "")) (req as Request).rawBody = body;
+}
+
 type CreateApp = (adapter: ExpressAdapter, options: NestApplicationOptions) => NestExpressApplication | Promise<NestExpressApplication>;
 
 /** WHY: main.ts and the route tests create the app differently, so the caller passes `create` and both get this pipeline. */
@@ -22,7 +30,7 @@ export async function bootstrapHttpApp(create: CreateApp): Promise<NestExpressAp
   if (config.perimeter.mode === "local-dev") expressInstance.use(localDevRequestFilter);
   expressInstance.use(helmet());
   mountRequestLogging(expressInstance);
-  expressInstance.use(express.json({ limit: "100kb" }));
+  expressInstance.use(express.json({ limit: "100kb", verify: keepRawBody }));
 
   // QUIRK(nestjs): forRoutes("*") never fires against a pre-built ExpressAdapter, so LangMiddleware
   // is mounted here as raw Express middleware, before any handler.
