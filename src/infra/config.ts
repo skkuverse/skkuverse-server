@@ -1,5 +1,6 @@
 import "./env-file";
 import { perimeterModeErrors } from "../perimeter/perimeter-mode.rules";
+import { perimeterSettingsOf } from "../perimeter/perimeter-overlay.rules";
 import type { PerimeterMode } from "../perimeter/perimeter.ports";
 import logger from "./logger";
 import * as requiredEnv from "./required-env";
@@ -52,8 +53,7 @@ const config = {
 
   perimeter: {
     mode: process.env.PERIMETER_MODE as PerimeterMode,
-    settings: process.env.PERIMETER_SETTINGS || undefined,
-    quotas: process.env.PERIMETER_QUOTAS || undefined,
+    settings: perimeterSettingsOf(process.env),
   },
 
   mongo: {

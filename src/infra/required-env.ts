@@ -136,9 +136,9 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
     raw("gbis.serviceKey", "DATA_GO_KR_SERVICE_KEY", "poller"),
     // WHY: production must report errors somewhere; elsewhere Sentry is opt-in.
     ...(mode.isProduction ? [raw("sentry.dsn", "SENTRY_DSN", "all")] : []),
-    // WHY: the overlay's limits and quotas, which every role's classes read at construction (ADR 0023, D4); no other
-    // mode has them.
-    ...(env.PERIMETER_MODE === "overlay" ? [raw("perimeter.settings", "PERIMETER_SETTINGS", "all"), raw("perimeter.quotas", "PERIMETER_QUOTAS", "all")] : []),
+    // WHY: each settings section the overlay reads, named one by one so render_env.py's list stays exact; every role's
+    // classes read them at construction (ADR 0023, D4), and no other mode has them.
+    ...(env.PERIMETER_MODE === "overlay" ? [raw("perimeter.settings", "PERIMETER_SETTINGS", "all"), raw("perimeter.settings.quotas", "PERIMETER_SETTINGS_QUOTAS", "all")] : []),
   ];
 }
 

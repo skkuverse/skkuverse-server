@@ -101,6 +101,15 @@ describe("config/env.*.keys — the names render_env.py writes", () => {
     expect(missingWithOnly(withoutSettings, "production", role, "overlay")).toEqual(["  perimeter.settings (env: PERIMETER_SETTINGS)"]);
   });
 
+  // WHY: each settings section the overlay reads is a name of its own in the prd list, so render_env.py renders it.
+  it.each(["api", "poller"])("a .env with only the prd names fails in overlay mode, ROLE=%s, without PERIMETER_SETTINGS_QUOTAS", (role) => {
+    // Arrange
+    const withoutQuotas = PRD.filter((n) => n !== "PERIMETER_SETTINGS_QUOTAS");
+
+    // Act & Assert
+    expect(missingWithOnly(withoutQuotas, "production", role, "overlay")).toEqual(["  perimeter.settings.quotas (env: PERIMETER_SETTINGS_QUOTAS)"]);
+  });
+
   it("the validation really fails when a listed required name is absent", () => {
     // Arrange
     const withoutMongo = PRD.filter((n) => n !== "MONGO_URL");

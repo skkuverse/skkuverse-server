@@ -67,7 +67,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
    npm run build && NODE_ENV=development PERIMETER_MODE=overlay HOST=0.0.0.0 CACHE=on npm run dev:watch
    ```
 
-   The `overlay` mode reads its settings, the rate limits among them, from `PERIMETER_SETTINGS`, and the push quotas from `PERIMETER_QUOTAS`, which `npm run env:pull` renders from the dev Doppler config. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
+   The `overlay` mode reads its settings, the rate limits among them, from `PERIMETER_SETTINGS`, and the push quotas from `PERIMETER_SETTINGS_QUOTAS`, which `npm run env:pull` renders from the dev Doppler config. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
 
 3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing (`skkuverse-app/LESSONS.md`). Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
 

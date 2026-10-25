@@ -1,7 +1,17 @@
 // SEE: docs/decisions/0023-perimeter-ports.md ("D4. One opaque overlay entry")
 // WHY: imports nothing from src/infra/: config.ts resolves the entry while it is itself loading.
 import path from "node:path";
-import { PERIMETER_PORTS_VERSION, PORT_LABELS, PORT_NAMES, PORT_TOKENS, type PerimeterClasses, type PerimeterOverlay, type PortName } from "./perimeter.ports";
+import {
+  PERIMETER_PORTS_VERSION,
+  PERIMETER_SETTINGS_RE,
+  PORT_LABELS,
+  PORT_NAMES,
+  PORT_TOKENS,
+  type PerimeterClasses,
+  type PerimeterOverlay,
+  type PerimeterDeps,
+  type PortName,
+} from "./perimeter.ports";
 
 // WHY: no extension: Node resolves the compiled `.js` under dist/, Jest the `.ts` under src/.
 export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");
@@ -33,32 +43,33 @@ function isPerimeterClasses(classes: Record<string, unknown>): classes is Perime
   return classErrors(classes).length === 0;
 }
 
-function isSettingsCheck(value: unknown): value is PerimeterOverlay["settingsErrors"] {
+function isOverlayCheck(value: unknown): value is PerimeterOverlay["settingsErrors"] {
   return typeof value === "function";
 }
 
 function parseOverlayEntry(entry: unknown): ParsedOverlay {
   if (!isRecordValue(entry)) return { errors: ["the overlay entry exports no object"] };
-  const { portsVersion, classes, settingsErrors, quotasErrors } = entry;
+  const { portsVersion, classes, settingsErrors } = entry;
   if (portsVersion !== PERIMETER_PORTS_VERSION) {
     return { errors: [`the overlay entry is built against ports version ${String(portsVersion)}, this build is ${PERIMETER_PORTS_VERSION}`] };
   }
   if (!isRecordValue(classes)) return { errors: ["the overlay entry exports no classes record"] };
-  if (!isSettingsCheck(settingsErrors)) return { errors: ["the overlay entry exports no settingsErrors function"] };
-  if (!isSettingsCheck(quotasErrors)) return { errors: ["the overlay entry exports no quotasErrors function"] };
+  if (!isOverlayCheck(settingsErrors)) return { errors: ["the overlay entry exports no settingsErrors function"] };
   if (!isPerimeterClasses(classes)) return { errors: classErrors(classes) };
-  return { overlay: { portsVersion, classes, settingsErrors, quotasErrors } };
+  return { overlay: { portsVersion, classes, settingsErrors } };
 }
 
-function namedMessages(variable: string, problems: unknown): string[] {
-  if (!Array.isArray(problems)) return [`${variable}: the entry's check returned no list`];
-  return problems.map((problem) => `${variable}: ${String(problem)}`);
+export function perimeterSettingsOf(env: NodeJS.ProcessEnv): PerimeterDeps["settings"] {
+  const sections = Object.entries(env).filter((entry): entry is [string, string] => PERIMETER_SETTINGS_RE.test(entry[0]) && Boolean(entry[1]));
+  return Object.freeze(Object.fromEntries(sections));
 }
 
-export function overlayEntryErrors(entry: unknown, settings: string | undefined, quotas: string | undefined): string[] {
+export function overlayEntryErrors(entry: unknown, settings: PerimeterDeps["settings"]): string[] {
   const parsed = parseOverlayEntry(entry);
   if ("errors" in parsed) return parsed.errors;
-  return [...namedMessages("PERIMETER_SETTINGS", parsed.overlay.settingsErrors(settings)), ...namedMessages("PERIMETER_QUOTAS", parsed.overlay.quotasErrors(quotas))];
+  const problems: unknown = parsed.overlay.settingsErrors(settings);
+  if (!Array.isArray(problems)) return ["the entry's settingsErrors returned no list"];
+  return problems.map(String);
 }
 
 function requireOverlayEntry(): unknown {
@@ -75,7 +86,7 @@ export function loadOverlayEntry(): PerimeterOverlay {
 export function perimeterOverlayErrors(env: NodeJS.ProcessEnv): string[] {
   if (env.PERIMETER_MODE !== "overlay") return [];
   try {
-    return overlayEntryErrors(requireOverlayEntry(), env.PERIMETER_SETTINGS, env.PERIMETER_QUOTAS);
+    return overlayEntryErrors(requireOverlayEntry(), perimeterSettingsOf(env));
   } catch (err: unknown) {
     return [`the overlay entry failed to load: ${err instanceof Error ? err.message : String(err)}`];
   }
