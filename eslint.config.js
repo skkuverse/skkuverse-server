@@ -378,7 +378,8 @@ const PERIMETER_IMPLEMENTATION_PATTERNS = [
   },
 ];
 
-// (A perimeter detail is left out of the public history.)
+// The src/shared/ modules an implementation may import: the overlay is built against the ports file and these
+// alone (ADR 0023, D4).
 const PERIMETER_SHARED_MODULES = [
   "guarded-lookup.util",
   "ip-address.util",
