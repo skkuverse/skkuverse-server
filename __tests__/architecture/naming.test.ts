@@ -3,15 +3,16 @@
  *
  *   - suffix: `<name>.<role>.ts` with a role from the closed vocabulary below.
  *     `.spec` and `.generated` wrap a valid name (`foo.service.spec.ts`).
- *     `.util` is allowed only in src/shared/. Files in src/infra/ are named by
+ *     `.util` is allowed only in src/shared/, `.ports` only for
+ *     src/perimeter/perimeter.ports.ts. Files in src/infra/ are named by
  *     the resource they wrap (`db.ts`, `logger.ts`) and need no role.
  *   - kebab-case: every dot-separated part of the name.
  *   - class name: an exported class in a file whose role is a class role is
  *     PascalCase(name) + PascalCase(role): `notice-dispatch.repository.ts`
  *     exports `NoticeDispatchRepository`. A `.error.ts` file may export several
  *     classes; each starts with PascalCase(name) and ends with `Error`.
- *   - exported types: only a `.types`, `.document`, `.schema` or `.wire` file
- *     exports an interface or type alias; a type used inside one file stays
+ *   - exported types: only a `.types`, `.document`, `.schema`, `.wire` or
+ *     `.ports` file exports an interface or type alias; a type used inside one file stays
  *     there, unexported. src/infra/ files, named by resource, are not checked.
  *   - main export: a class-role, `.decorator` or `.bootstrap` file exports
  *     something named after the file, so either can be found from the other:
@@ -42,6 +43,8 @@ const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const inInfra = (dir: string) => dir === "src/infra" || dir.startsWith("src/infra/");
 const inShared = (dir: string) => dir === "src/shared" || dir.startsWith("src/shared/");
+// WHY: the role exists for one file, the perimeter port declarations (docs/decisions/0023-perimeter-ports.md).
+const PORTS_FILE = "src/perimeter/perimeter.ports.ts";
 
 export function suffixViolation(file: string): boolean {
   if (EXEMPT.has(file)) return false;
@@ -50,6 +53,7 @@ export function suffixViolation(file: string): boolean {
   if (parts.length !== 2) return true;
   const role = parts[1]!;
   if (!ROLES.has(role)) return true;
+  if (role === "ports") return `${dir}/${parts.join(".")}.ts` !== PORTS_FILE;
   return role === "util" && !inShared(dir);
 }
 
@@ -92,7 +96,7 @@ function exportedTypes(source: string): string[] {
     .map((b) => b.exported);
 }
 
-const TYPE_ROLES = new Set(["types", "document", "schema", "wire"]);
+const TYPE_ROLES = new Set(["types", "document", "schema", "wire", "ports"]);
 
 /** `<file>: <type>` for each type a role file other than `.types`, `.document`, `.schema` or `.wire` exports. */
 export function exportedTypeViolations(file: string, source: string): string[] {
@@ -260,6 +264,7 @@ describe("naming rules apply as specified", () => {
     "src/infra/nest-logger.ts",
     "src/main.ts",
     "src/notices/notices.topics.ts",
+    "src/perimeter/perimeter.ports.ts",
   ])("accepts the suffix of %s", (file) => {
     expect(suffixViolation(file)).toBe(false);
   });
@@ -272,6 +277,8 @@ describe("naming rules apply as specified", () => {
     "src/building/foo.util.ts",
     "src/building/a.b.service.ts",
     "src/infra/foo.bar.ts",
+    "src/perimeter/local-dev/local-dev.ports.ts",
+    "src/building/building.ports.ts",
   ])("rejects the suffix of %s", (file) => {
     expect(suffixViolation(file)).toBe(true);
   });

@@ -368,3 +368,24 @@ describe("listMalformedRequired SEOUL_BUS_SERVICE_KEY", () => {
     expect(() => validateEnv(envWithKey("api", "ABC+DEF="))).not.toThrow();
   });
 });
+
+describe("validateEnv refuses an invalid perimeter mode or host", () => {
+  it("throws in development without PERIMETER_MODE, and with local-dev on every interface", () => {
+    // Arrange
+    const development = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev", HOST: "127.0.0.1" };
+
+    // Act & Assert
+    expect(() => validateEnv({ ...development, PERIMETER_MODE: undefined })).toThrow(/Invalid perimeter[\s\S]*PERIMETER_MODE is required/);
+    expect(() => validateEnv({ ...development, HOST: "0.0.0.0" })).toThrow(/Invalid perimeter[\s\S]*local-dev needs a loopback HOST/);
+    expect(() => validateEnv(development)).not.toThrow();
+  });
+
+  it("throws under NODE_ENV=test too, where missing values pass", () => {
+    // Arrange
+    const test = { ...process.env, NODE_ENV: "test", PERIMETER_MODE: "test", HOST: "127.0.0.1" };
+
+    // Act & Assert
+    expect(() => validateEnv({ ...test, PERIMETER_MODE: "staging" })).toThrow(/Invalid perimeter[\s\S]*PERIMETER_MODE must be one of/);
+    expect(() => validateEnv({ ...test, MONGO_URL: undefined })).not.toThrow();
+  });
+});

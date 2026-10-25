@@ -1,4 +1,6 @@
 import "./env-file";
+import { perimeterModeErrors } from "../perimeter/perimeter-mode.rules";
+import type { PerimeterMode } from "../perimeter/perimeter.ports";
 import logger from "./logger";
 import * as requiredEnv from "./required-env";
 import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
@@ -39,6 +41,18 @@ const config = {
   isTest,
   useProdApi: USE_PROD_API,
   port: process.env.PORT || 3000,
+
+  // WHY: read per call, like role(): only a listening role needs it, and the check at the end of this file
+  // refuses a listening boot without one.
+  get host(): string {
+    const host = process.env.HOST;
+    if (!host) throw new Error("HOST is required where the server listens (src/perimeter/perimeter-mode.rules.ts)");
+    return host;
+  },
+
+  perimeter: {
+    mode: process.env.PERIMETER_MODE as PerimeterMode,
+  },
 
   mongo: {
     url: asRequired(process.env.MONGO_URL),
@@ -347,6 +361,19 @@ if (invalidRole.length > 0) {
   if (!isTest) {
     process.exit(1);
   }
+}
+
+const invalidPerimeter = perimeterModeErrors(process.env);
+if (invalidPerimeter.length > 0) {
+  logger.fatal(
+    { event: "config.invalid_perimeter", errors: invalidPerimeter },
+    "Invalid PERIMETER_MODE or HOST — set them per execution context as `errors` says",
+  );
+  // WHY: jest.setup.ts sets both, so a test that changes one did it on purpose and fails as the boot does.
+  if (isTest) {
+    throw new Error(`FATAL: Invalid perimeter:\n  ${invalidPerimeter.join("\n  ")}`);
+  }
+  process.exit(1);
 }
 
 export = config;
