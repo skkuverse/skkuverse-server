@@ -94,6 +94,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
 import { SubwayTimetableDeparturesModule } from "./subway/timetable/departures/subway-timetable-departures.module";
 import { BusDeparturesModule } from "./bus/departures/bus-departures.module";
 import { BusDeparturesTimetableModule } from "./bus/departures/timetable/bus-departures-timetable.module";
+import { BusDeparturesTopisModule } from "./bus/departures/topis/bus-departures-topis.module";
 import { JourneyModule } from "./journey/journey.module";
 import { JourneyDeparturesModule } from "./journey/departures/journey-departures.module";
 import { JourneyPlacesModule } from "./journey/places/journey-places.module";
@@ -201,6 +202,7 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     SubwayTimetableDeparturesModule,
     BusDeparturesModule,
     BusDeparturesTimetableModule,
+    BusDeparturesTopisModule,
     JourneyModule,
     JourneyDeparturesModule,
     JourneyPlacesModule,

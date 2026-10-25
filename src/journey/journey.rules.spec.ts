@@ -2,11 +2,13 @@
  * What the journey dataset decides whatever its places resolve to (ADR 0022, D4 and D5): a place ref read apart into
  * its kind and the catalog's id, a leg's two ends, every cited place with its role, the cited stops as bus-stops
  * references, and the push issues of ids used twice, legs that do not chain from the route's from to its to, a ride on
- * no line, a timetabled ride whose stops no sequence boards and alights in that order, and a subway ride the stored
- * timetables refuse, asked of the catalog by line and platforms, a warning when none is stored.
+ * no line, a timetabled ride whose stops no sequence boards and alights in that order, a subway ride the stored
+ * timetables refuse, asked of the catalog by line and platforms, and a TOPIS ride the stored registry refuses, asked
+ * by route and stop ids; each a warning when its source is not stored.
  */
 import { journeyRoutesFixture } from "../../__tests__/helpers/journey/journey-routes";
 import revision2 from "../../__tests__/nest/journey/fixtures/journey-routes-revision-2.dataset.json";
+import revision3 from "../../__tests__/nest/journey/fixtures/journey-routes-revision-3.dataset.json";
 import type { JourneyRoutesData } from "./journey.document";
 import { journeyRoutesReferences, toCitedPlaces, toJourneyRoutesIssues, toLegEnds, toPlaceRef } from "./journey.rules";
 import type { JourneyCatalog } from "./journey.types";
@@ -23,6 +25,7 @@ const CATALOG: JourneyCatalog = {
   platformIdsByStation: new Map(),
   sequencesByService: { "campus-inja": { regular: sequence("hssc-bus-lot", "nsc-n-center") }, "campus-jain": { regular: sequence("nsc-opposite", "hssc-600th") } },
   subwayRideIssueOf: () => null,
+  topisRideIssueOf: () => null,
 };
 const messages = (data: JourneyRoutesData, catalog = CATALOG) => toJourneyRoutesIssues(data, catalog).map((issue) => `${issue.path.join(".")}: ${issue.message}`);
 
@@ -157,6 +160,43 @@ describe("toJourneyRoutesIssues", () => {
       ["routes.0.options.1.legs.3.line", true],
       ["routes.1.options.1.legs.1.line", true],
       ["routes.1.options.1.legs.3.line", true],
+    ]);
+  });
+});
+
+describe("toJourneyRoutesIssues over TOPIS rides", () => {
+  const data = (): JourneyRoutesData => {
+    const { _about: note, ...rest } = structuredClone(revision3);
+    void note;
+    return rest as JourneyRoutesData;
+  };
+
+  it("asks the stored registry of each TOPIS ride by its route and stop ids, and refuses at the ride what it refuses", () => {
+    // Arrange
+    const rides: string[] = [];
+    const topisRideIssueOf = ({ lineId, boardStopId, alightStopId }: { lineId: string; boardStopId: string; alightStopId: string }) => {
+      rides.push(`${lineId} ${boardStopId}>${alightStopId}`);
+      return lineId === "gyeonggi7800" && boardStopId === "119000302" ? "gyeonggi7800 does not call at 119000302" : null;
+    };
+
+    // Act
+    const lines = messages(data(), { ...CATALOG, topisRideIssueOf });
+
+    // Assert
+    expect(lines).toEqual(["routes.0.options.3.legs.3: gyeonggi7800 does not call at 119000302"]);
+    expect(rides).toEqual(["jongro08 100900046>100900191", "gyeonggi7800 119000302>200000159", "jongro08 100900107>100900004", "gyeonggi7800 200000162>121001315"]);
+  });
+
+  it("warns at a TOPIS ride's line, refusing nothing, when the registry is not stored", () => {
+    // Act
+    const issues = toJourneyRoutesIssues(data(), { ...CATALOG, topisRideIssueOf: null });
+
+    // Assert
+    expect(issues.map((issue) => [issue.path.join("."), issue.warning])).toEqual([
+      ["routes.0.options.2.legs.1.line", true],
+      ["routes.0.options.3.legs.3.line", true],
+      ["routes.1.options.2.legs.3.line", true],
+      ["routes.1.options.3.legs.1.line", true],
     ]);
   });
 });

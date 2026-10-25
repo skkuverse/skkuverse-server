@@ -6,7 +6,9 @@
  * two observations (under 10 m), and whether it idles at its origin (at
  * index 0 with lastStTm 0, and not moved 10 m since the previous observation),
  * and since when a vehicle has stood at its current stop, and which vehicle
- * type TOPIS's busType code names (only 0, 1 and 2; anything else says nothing).
+ * type TOPIS's busType code names (only 0, 1 and 2; anything else says nothing),
+ * and a row's service hours: a headway of at least one minute, and first and last
+ * runs that are 14-digit times, each left out otherwise.
  */
 import {
   isIdlingAtOrigin,
@@ -19,6 +21,7 @@ import {
   toDwell,
   toObservedAt,
   toPositionsKey,
+  toServiceHours,
   toTopisDecimal,
   toTopisInteger,
 } from "./bus-realtime-jongro.rules";
@@ -271,5 +274,23 @@ describe("toBusType", () => {
   ])("%j → %j", (text, expected) => {
     // Act & Assert
     expect(toBusType(text)).toBe(expected);
+  });
+});
+
+describe("toServiceHours", () => {
+  it.each([
+    ["no headway", "0", {}],
+    ["a one-minute headway", "1", { term: 1 }],
+    ["a ten-minute headway", "10", { term: 10 }],
+    ["a blank headway", "", {}],
+  ])("keeps %s only when it is at least one minute", (_case, term, expected) => {
+    // Act & Assert
+    expect(toServiceHours({ term })).toEqual(expected);
+  });
+
+  it("keeps 14-digit first and last runs at +09:00 and leaves out TOPIS's ten-digit 2026102500", () => {
+    // Act & Assert
+    expect(toServiceHours({ firstTm: "20261025055200", lastTm: "20261026002300" })).toEqual({ firstTm: "2026-10-25T05:52:00+09:00", lastTm: "2026-10-26T00:23:00+09:00" });
+    expect(toServiceHours({ firstTm: "2026102500", lastTm: "2026102500" })).toEqual({});
   });
 });

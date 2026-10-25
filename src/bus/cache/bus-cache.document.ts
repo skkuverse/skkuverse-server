@@ -56,6 +56,11 @@ export interface JongroArrivalDoc {
   eta: string;
   /** WHY: the row's first bus, then its second. */
   buses: JongroArrivalBus[];
+  /** QUIRK(topis): the route's headway in minutes, the same on every row. Optional on read, as the next two are (ADR 0012, D3). */
+  term?: number;
+  /** QUIRK(topis): the station's first and last run of the service day at +09:00; a last run after midnight is the next day's. */
+  firstTm?: string;
+  lastTm?: string;
 }
 
 export interface JongroBusPositionDoc {
