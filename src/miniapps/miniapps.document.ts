@@ -1,18 +1,17 @@
 import type { LinkActionType } from "../shared/link-action.wire";
+import type { DELIVERY_COUNTS, DELIVERY_OUTCOMES } from "./miniapps.constants";
 import type { RegistryFile } from "./miniapps.schema";
 
-export interface DeliveryCounts {
-  sent: number;
-  failed: number;
-  cleanedUp: number;
-}
+export type DeliveryCounts = Record<(typeof DELIVERY_COUNTS)[number], number>;
+
+export type DeliveryOutcome = (typeof DELIVERY_OUTCOMES)[number];
 
 /**
  * WHY: `not_sent` is a refusal before any send, safe to retry; `unknown` (a timeout, a network error, a
  * 5xx) may have reached devices, so it is never resent until the Cloud Function log says otherwise.
  */
 export interface DeliveryError {
-  outcome: "not_sent" | "unknown";
+  outcome: Exclude<DeliveryOutcome, "delivered">;
   error: string;
 }
 

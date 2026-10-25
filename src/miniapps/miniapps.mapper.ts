@@ -7,8 +7,13 @@ import type { MiniAppDetailRaw, MiniAppIndexEntryRaw, MiniAppLogoRaw, RegistryFi
 import type { MiniAppRegistry } from "./miniapps.types";
 import type { MiniAppIndexEntry, MiniAppLogo, ShellConfig } from "./miniapps.wire";
 
-// WHY: the registry holds no sender status, scopes or keys until 2A-3 adds them, so every registered sender is pending.
-const PENDING_SENDER: SenderCredentials = Object.freeze({ status: "pending", scopes: Object.freeze([]), signingKeys: Object.freeze([]) });
+const NOT_A_SENDER: SenderCredentials = Object.freeze({ status: "pending", scopes: Object.freeze([]), signingKeys: Object.freeze([]) });
+
+// WHY: an entry without a `sender` is pending, with no scopes and no keys.
+function toSenderCredentials({ sender }: Readonly<MiniAppDetailRaw>): SenderCredentials {
+  if (sender === undefined) return NOT_A_SENDER;
+  return Object.freeze({ status: sender.status, scopes: Object.freeze([...sender.scopes]), signingKeys: Object.freeze([...sender.signingKeys]) });
+}
 
 const pick = <T extends string>(value: unknown, allowed: readonly T[]): T | undefined => allowed.find((option) => option === value);
 
@@ -56,6 +61,7 @@ export function parseShellFields(value: unknown): Partial<ShellConfig> {
 
 export function toMiniAppRegistry({ index, details }: RegistryFile, revision: number, webOrigin: string): MiniAppRegistry {
   const detailsById: ReadonlyMap<string, Readonly<MiniAppDetailRaw>> = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
+  const credentialsById = new Map([...detailsById].map(([id, detail]) => [id, toSenderCredentials(detail)]));
   const indexEntries = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, webOrigin));
   return Object.freeze({
     revision,
@@ -64,7 +70,7 @@ export function toMiniAppRegistry({ index, details }: RegistryFile, revision: nu
     detailsById,
     isRegistered: (id: string) => detailsById.has(id),
     detailOf: (id: string) => detailsById.get(id),
-    senderCredentialsOf: (id: string) => (detailsById.has(id) ? PENDING_SENDER : null),
+    senderCredentialsOf: (id: string) => credentialsById.get(id) ?? null,
     isKnownMiniAppTarget: (value: unknown) => isKnownMiniAppTarget(value, detailsById),
     parseTarget: parseMiniAppTarget,
     isSingleEmoji,

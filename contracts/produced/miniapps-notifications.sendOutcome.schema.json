@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "notificationId": {
+      "type": "string"
+    },
+    "delivery": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sent": {
+              "type": "number"
+            },
+            "failed": {
+              "type": "number"
+            },
+            "cleanedUp": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "sent",
+            "failed",
+            "cleanedUp"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "delivered",
+        "not_sent",
+        "unknown"
+      ]
+    },
+    "error": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "notificationId",
+    "delivery",
+    "outcome"
+  ]
+}

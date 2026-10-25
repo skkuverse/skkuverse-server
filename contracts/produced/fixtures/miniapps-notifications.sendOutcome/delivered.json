@@ -1,0 +1,8 @@
+{
+  "_about": "Synthetic, 2026-10-26: a delivered send as docs/reference/miniapps-api.md (5.2) describes it, written by hand when the signed send route made the shape public; no send was captured for it",
+  "data": {
+    "notificationId": "5b0f3f5e-8a8c-4a63-9a43-1f1a4f3c2d10",
+    "delivery": { "sent": 1024, "failed": 3, "cleanedUp": 2 },
+    "outcome": "delivered"
+  }
+}

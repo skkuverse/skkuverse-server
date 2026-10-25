@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { isMediaUrl } from "../infra/media-url";
 import { REGISTRY_ID_RE } from "../shared/registry-id.constants";
-import { SHELL_BACKGROUND_RE } from "./miniapps.constants";
+import { SHELL_BACKGROUND_RE, SIGNING_KEY_MESSAGE } from "./miniapps.constants";
 import type { StoredMiniApps } from "./miniapps.document";
-import { isServableStartUrl, isSingleEmoji, toRegistryCrossReferenceIssues } from "./miniapps.rules";
+import { PUSH_SCOPES, SENDER_STATUSES } from "../perimeter/perimeter.ports";
+import { isIssuedSigningKey, isServableStartUrl, isSingleEmoji, toDuplicateKeyIdIssues, toRegistryCrossReferenceIssues } from "./miniapps.rules";
 import { miniAppDetail } from "./miniapps.wire";
 
 // WHY: site-root-relative, so WEB_ORIGIN stays the one place that host is written.
@@ -35,16 +36,18 @@ const withBothLogos = indexEntryRaw.transform((entry, ctx) => {
   return z.NEVER;
 });
 
+const signingKey = z.strictObject({ keyId: z.string(), publicKey: z.string() }).refine(isIssuedSigningKey, { path: [], error: SIGNING_KEY_MESSAGE });
+const signingKeys = z.array(signingKey).superRefine((keys, ctx) => {
+  for (const { path, message } of toDuplicateKeyIdIssues(keys)) ctx.addIssue({ code: "custom", path, message });
+});
+
 const detailRaw = miniAppDetail
   .extend({
     startUrl: z.string().regex(HTTP_URL_RE).refine(isServableStartUrl),
     relatedLinks: z.array(z.strictObject({ label: z.string().optional(), url: z.string().regex(HTTP_URL_RE) })),
     noticeBanner: miniAppDetail.shape.noticeBanner.unwrap().strict().optional(),
-    shell: miniAppDetail.shape.shell
-      .extend({ background: z.string().regex(SHELL_BACKGROUND_RE) })
-      .partial()
-      .strict()
-      .optional(),
+    shell: miniAppDetail.shape.shell.extend({ background: z.string().regex(SHELL_BACKGROUND_RE) }).partial().strict().optional(),
+    sender: z.strictObject({ status: z.enum(SENDER_STATUSES), scopes: z.array(z.enum(PUSH_SCOPES)), signingKeys }).optional(),
   })
   .strict();
 

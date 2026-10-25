@@ -1,38 +1,16 @@
 import type { LinkActionType } from "../../shared/link-action.wire";
-import type { DeliveryCounts, DeliveryError } from "../miniapps.document";
+import type { SendOutcome } from "./miniapps-notifications.wire";
 
-/** WHY: what a send's own call came back as; a stored row with both fields null is still running, or never saved. */
-export type DeliveryStatus = "delivered" | DeliveryError["outcome"];
-
-export interface SendOutcome {
-  notificationId: string;
-  delivery: DeliveryCounts | null;
-  /** WHY: what the operator may do next: only `not_sent` is safe to resend. */
-  outcome: DeliveryStatus;
-  /** WHY: present when the Cloud Function call failed; the feed entry exists either way. */
-  error?: string;
-}
-
-/** WHY: the operator console's history: the raw Korean pair, and the delivery the public feed hides. */
-export interface MiniAppNotificationHistoryEntry {
-  id: string;
-  title_ko: string;
-  body_ko: string;
-  title_en: string | null;
-  body_en: string | null;
-  actionType?: LinkActionType;
-  actionValue?: string;
-  sentAt: string;
-  delivery: DeliveryCounts | null;
-  deliveryError: DeliveryError | null;
-  idempotencyKey: string | null;
-}
-
+/** WHY: every `miniapps.notify.*` line names the sender and the key that signed, never the signature. */
 export interface SendTrace {
   miniAppId: string;
+  keyId: string | null;
   notificationId: string;
   title: string;
   actionType?: LinkActionType;
   actionValue?: string;
   hasEn: boolean;
 }
+
+/** WHY: what a send answers its route: the draft's problems (400), a spent quota (429), or the outcome. */
+export type SendResult = { problems: string[] } | { retryAfterSeconds: number } | SendOutcome;
