@@ -1,0 +1,13 @@
+{
+  "_about": "(An operations detail is left out of the public history.)",
+  "ios": {
+    "minVersion": "3.5.0",
+    "updateUrl": "https://apps.apple.com/app/id6446813434",
+    "minOsVersion": "16.4"
+  },
+  "android": {
+    "minVersion": "3.5.0",
+    "updateUrl": "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus",
+    "minOsVersion": "24"
+  }
+}
