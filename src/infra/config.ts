@@ -193,6 +193,9 @@ const config = {
     get seoulApiKey(): string {
       return roleScoped("SEOUL_SUBWAY_API_KEY");
     },
+    get accuracyToken(): string {
+      return roleScoped("SUBWAY_ACCURACY_TOKEN");
+    },
     apiDailyCap: 260_000,
     trainMapDailyCap: 10_000,
     collections: {
