@@ -175,7 +175,7 @@ describe("roleErrors", () => {
 describe("validateEnv refuses an unknown ROLE", () => {
   it("throws on ROLE=poler in development, and passes ROLE=api", () => {
     // Arrange
-    const development = { ...process.env, NODE_ENV: "development" };
+    const development = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev" };
 
     // Act & Assert
     expect(() => validateEnv({ ...development, ROLE: "poler" })).toThrow(
@@ -242,7 +242,7 @@ describe("requiredValues scopes each value to the roles that read it", () => {
 
 describe("listMissingRequired checks only the values the role needs", () => {
   const missingIn = (role: string | undefined, without: string): string[] => {
-    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev", ROLE: role };
     delete env[without];
     return listMissingRequired(env).map((v) => v.env);
   };
@@ -307,7 +307,7 @@ describe("requiredValues MONGO_CONTENT_DB_NAME", () => {
 
   it.each(["api", "poller", "combined"])("refuses a ROLE=%s boot without it, naming it", (role) => {
     // Arrange
-    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev", ROLE: role };
     delete env.MONGO_CONTENT_DB_NAME;
 
     // Act & Assert
@@ -319,7 +319,7 @@ describe("listMalformedRequired SEOUL_BUS_SERVICE_KEY", () => {
   // A raw base64 key splits the TOPIS query string, and TOPIS rejects it as if it were down.
   const FIXED_KEY = "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
   const envWithKey = (role: string | undefined, key: string | undefined): NodeJS.ProcessEnv => {
-    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev", ROLE: role };
     if (key === undefined) delete env.SEOUL_BUS_SERVICE_KEY;
     else env.SEOUL_BUS_SERVICE_KEY = key;
     return env;
