@@ -177,9 +177,9 @@ const CLOCK_SYNTAX = [
   },
 ];
 
-// (A perimeter detail is left out of the public history.)
-const FIREBASE_MODULE = "/^firebase-admin$|(?:^\\.|\\/infra)\\/firebase$/";
-const FIREBASE_REEXPORT = "/^firebase-admin(?:$|\\/)|(?:^\\.|\\/infra)\\/firebase$/";
+// firebase-admin, which every file imports directly; a re-export also counts its subpath entry points.
+const FIREBASE_MODULE = "/^firebase-admin$/";
+const FIREBASE_REEXPORT = "/^firebase-admin(?:$|\\/)/";
 
 // no-restricted-syntax replaces rather than merges across blocks, and the role blocks above each
 // set it for their files. The rules below run beside them under their own names: the same core
@@ -926,7 +926,11 @@ module.exports = [
     },
   },
   {
-    // (A perimeter detail is left out of the public history.)
+    // The server holds no Firebase service-account key: verifyIdToken without checkRevoked needs only the
+    // project id (the REQUEST_AUTHENTICATOR implementations, ADR 0023 D2). Every call that needs a credential is
+    // refused, so adding one is a decision to hold a key again, not a lint-free edit. The import is pinned to
+    // `admin`, which the member selectors read, and `admin` is never aliased or exported, so no use hides under
+    // another name.
     name: "firebase/no-credential",
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
@@ -936,7 +940,7 @@ module.exports = [
         "error",
         {
           selector: "ImportDeclaration[source.value=/^firebase-admin\\//]",
-          message: "Use the firebase-admin namespace through src/perimeter/current/private-file: its subpath entry points reach services that need a credential.",
+          message: "Import the firebase-admin namespace, not a subpath: its subpath entry points reach services that need a credential.",
         },
         {
           selector: `:matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=${FIREBASE_REEXPORT}]`,
@@ -976,12 +980,11 @@ module.exports = [
           selector: [
             "Identifier[name='admin']:not(:matches(ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier) > Identifier)",
             ":not(MemberExpression > Identifier.object)",
-            ":not(TSExportAssignment > Identifier.expression)",
             // A property or member named `admin` (`user.admin`, `{ admin: true }`) is not the binding.
             ":not(MemberExpression[computed=false] > Identifier.property)",
             ":not(:matches(Property, PropertyDefinition, MethodDefinition, TSPropertySignature, TSMethodSignature)[computed=false] > Identifier.key)",
           ].join(""),
-          message: "Use `admin` only as `admin.auth()` or `admin.initializeApp()`: an alias, a destructuring or an argument escapes these checks.",
+          message: "Use `admin` only as `admin.auth()` or `admin.initializeApp()`: an alias, a destructuring, an argument or an export escapes these checks.",
         },
         {
           selector: [
