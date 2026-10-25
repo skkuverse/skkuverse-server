@@ -2,6 +2,7 @@
  * (An operations detail is left out of the public history.)
  *
  *
+ *
  */
 import fs from "fs";
 import path from "path";
@@ -30,7 +31,6 @@ describe("resolveRuntimeSwitches defaults", () => {
     expect(resolveRuntimeSwitches({}, "production")).toEqual({
       switches: {
         pushDelivery: "live",
-        rateLimitEnabled: true,
         cacheEnabled: true,
         shuttleEtaEnabled: true,
         subwayEnabled: true,
@@ -43,12 +43,11 @@ describe("resolveRuntimeSwitches defaults", () => {
     });
   });
 
-  it("development turns every outbound side effect, the limiter and the caches off, and keeps the notice overview on", () => {
+  it("development turns every outbound side effect and the caches off, and keeps the notice overview on", () => {
     // Act & Assert
     expect(resolveRuntimeSwitches({}, "development")).toEqual({
       switches: {
         pushDelivery: "suppressed",
-        rateLimitEnabled: false,
         cacheEnabled: false,
         shuttleEtaEnabled: false,
         subwayEnabled: false,
@@ -71,7 +70,7 @@ describe("resolveRuntimeSwitches defaults", () => {
   it("treats an empty value as unset", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches(
-      { PUSH_DELIVERY: "", RATE_LIMIT: "", CACHE: "" },
+      { PUSH_DELIVERY: "", CACHE: "" },
       "development",
     );
 
@@ -82,14 +81,23 @@ describe("resolveRuntimeSwitches defaults", () => {
 });
 
 describe("resolveRuntimeSwitches overrides", () => {
-  it("development may turn the limiter and the caches on", () => {
+  it("development may turn the caches on", () => {
     // Act
-    const { switches, errors } = resolveRuntimeSwitches({ RATE_LIMIT: "on", CACHE: "on" }, "development");
+    const { switches, errors } = resolveRuntimeSwitches({ CACHE: "on" }, "development");
 
     // Assert
     expect(errors).toEqual([]);
-    expect(switches.rateLimitEnabled).toBe(true);
     expect(switches.cacheEnabled).toBe(true);
+  });
+
+  it("reads no RATE_LIMIT, in any mode, so no value of it switches a limiter off or refuses a boot", () => {
+    // Act
+    const resolved = (["production", "development", "test"] as const).flatMap((mode) => ["off", "on", "true"].map((value) => resolveRuntimeSwitches({ RATE_LIMIT: value }, mode)));
+
+    // Assert
+    expect(RUNTIME_SWITCH_NAMES).not.toContain("RATE_LIMIT");
+    expect(resolved.map(({ errors }) => errors)).toEqual(resolved.map(() => []));
+    expect(resolved.map(({ switches }) => Object.keys(switches).filter((key) => /rate/i.test(key)))).toEqual(resolved.map(() => []));
   });
 
   it("development may turn the shuttle estimates on, and production may turn them off", () => {
@@ -171,15 +179,6 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(switches.pushDelivery).toBe("suppressed");
   });
 
-  it("refuses RATE_LIMIT=off in production, and keeps the limiter on", () => {
-    // Act
-    const { switches, errors } = resolveRuntimeSwitches({ RATE_LIMIT: "off" }, "production");
-
-    // Assert
-    expect(errors).toEqual(["RATE_LIMIT=off is refused in production"]);
-    expect(switches.rateLimitEnabled).toBe(true);
-  });
-
   it("refuses CACHE=off in production, and keeps the caches on", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches({ CACHE: "off" }, "production");
@@ -191,7 +190,6 @@ describe("resolveRuntimeSwitches overrides", () => {
 
   it.each([
     ["PUSH_DELIVERY", "dry-run"],
-    ["RATE_LIMIT", "true"],
     ["CACHE", "no-store"],
     ["SHUTTLE_ETA", "true"],
     ["SUBWAY", "yes"],
@@ -235,13 +233,6 @@ describe("validateEnv refuses an invalid switch", () => {
     expect(validateWith({ NODE_ENV: "development", PUSH_DELIVERY: "live" })).toThrow(
       /Invalid runtime switch[\s\S]*PUSH_DELIVERY=live is refused/,
     );
-  });
-
-  it("throws on RATE_LIMIT=off in production", () => {
-    // Act & Assert
-    expect(
-      validateWith({ NODE_ENV: "production", RATE_LIMIT: "off", SENTRY_DSN: "disabled" }),
-    ).toThrow(/RATE_LIMIT=off is refused in production/);
   });
 
   it("throws on CACHE=off in production", () => {

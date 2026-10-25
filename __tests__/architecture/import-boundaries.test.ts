@@ -160,6 +160,37 @@ describe("import boundary blocks apply as specified", () => {
     expect(okCounts).toEqual([0, 0, 0, 0, 0]);
   });
 
+  // WHY: an implementation leaves for the overlay (ADR 0023, D4), so it may take only what the overlay build has.
+  it("perimeter implementations import only the ports file, the listed shared modules, their own folder and packages", () => {
+    // Arrange
+    const rules = block("boundaries/perimeter-implementations").rules!;
+    const bad = [
+      ["src/perimeter/current/x.ts", 'import config from "../../infra/config";'],
+      ["src/perimeter/current/x.ts", 'import { setResponseTime } from "../../infra/response-time";'],
+      ["src/perimeter/local-dev/x.ts", 'import { toPerimeterRequest } from "../../http/perimeter-request.mapper";'],
+      ["src/perimeter/current/x.ts", 'import { perimeterProviders } from "../perimeter.config";'],
+      ["src/perimeter/local-dev/x.ts", 'import { LOCAL_DEV_CLASSES } from "../local-dev/perimeter-classes";'],
+      ["src/perimeter/current/x.ts", 'import { distanceMeters } from "../../shared/distance.util";'],
+      ["src/perimeter/current/x.ts", 'import type { NoticeDoc } from "../../notices/notices.document";'],
+    ];
+    const ok = [
+      ["src/perimeter/current/x.ts", 'import { RateLimitPolicy } from "../perimeter.ports";'],
+      ["src/perimeter/current/x.ts", 'import { byIp } from "./rate-limit-keys";'],
+      ["src/perimeter/local-dev/x.ts", 'import { isLoopbackAddress } from "../../shared/ip-address.util";'],
+      ["src/perimeter/current/x.ts", 'import { createLogThrottle } from "../../shared/log-throttle.util";'],
+      ["src/perimeter/current/x.ts", 'import { rateLimit } from "express-rate-limit";'],
+    ];
+
+    // Act
+    const badCounts = bad.map(([file, source]) => lint(rules, file!, source!).length);
+    const okCounts = ok.map(([file, source]) => lint(rules, file!, source!).length);
+
+    // Assert
+    expect(badCounts).toEqual(bad.map(() => 1));
+    expect(okCounts).toEqual(ok.map(() => 0));
+    expect(block("boundaries/perimeter-implementations").files).toEqual(["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"]);
+  });
+
   it("a .rules or .mapper file does no IO, speaks no Mongo and does not read the clock", () => {
     const rules = block("boundaries/pure").rules!;
     const file = "src/building/x.rules.ts";

@@ -7,7 +7,6 @@ export type PushDelivery = "live" | "suppressed";
 
 export interface RuntimeSwitches {
   pushDelivery: PushDelivery;
-  rateLimitEnabled: boolean;
   cacheEnabled: boolean;
   shuttleEtaEnabled: boolean;
   subwayEnabled: boolean;
@@ -19,7 +18,6 @@ export interface RuntimeSwitches {
 
 export const RUNTIME_SWITCH_NAMES = [
   "PUSH_DELIVERY",
-  "RATE_LIMIT",
   "CACHE",
   "SHUTTLE_ETA",
   "SUBWAY",
@@ -71,7 +69,7 @@ function pushDelivery(resolution: Resolution): PushDelivery {
 
 function isOn(
   resolution: Resolution,
-  name: "RATE_LIMIT" | "CACHE" | "SHUTTLE_ETA" | "SUBWAY" | "SHUTTLE" | "REGIONAL_BUS" | "GBIS",
+  name: "CACHE" | "SHUTTLE_ETA" | "SUBWAY" | "SHUTTLE" | "REGIONAL_BUS" | "GBIS",
 ): boolean {
   return (resolution.read(name, ON_OFF) ?? (resolution.mode === "development" ? "off" : "on")) === "on";
 }
@@ -83,7 +81,7 @@ function isNoticeOverviewOn(resolution: Resolution): boolean {
 }
 
 // WHY: a production override may only reduce outbound effects, never remove a guard.
-function isGuardOn(resolution: Resolution, name: "RATE_LIMIT" | "CACHE"): boolean {
+function isGuardOn(resolution: Resolution, name: "CACHE"): boolean {
   const on = isOn(resolution, name);
   if (resolution.mode === "production" && !on) {
     resolution.errors.push(`${name}=off is refused in production`);
@@ -101,7 +99,6 @@ export function resolveRuntimeSwitches(
   return {
     switches: {
       pushDelivery: pushDelivery(resolution),
-      rateLimitEnabled: isGuardOn(resolution, "RATE_LIMIT"),
       cacheEnabled: isGuardOn(resolution, "CACHE"),
       shuttleEtaEnabled: isOn(resolution, "SHUTTLE_ETA"),
       subwayEnabled: isOn(resolution, "SUBWAY"),
