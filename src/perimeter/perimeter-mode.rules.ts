@@ -1,19 +1,12 @@
 // SEE: docs/decisions/0023-perimeter-ports.md ("D3. The mode check")
 // WHY: imports nothing from src/infra/: config.ts runs this while it is itself loading.
 import net from "node:net";
+import { isLoopbackAddress } from "../shared/ip-address.util";
+import { overlayResolveErrors } from "./perimeter-overlay.rules";
 import { PERIMETER_MODES, type PerimeterMode } from "./perimeter.ports";
-
-const LOOPBACK = new net.BlockList();
-LOOPBACK.addSubnet("127.0.0.0", 8, "ipv4");
-LOOPBACK.addAddress("::1", "ipv6");
 
 function isPerimeterMode(value: string): value is PerimeterMode {
   return (PERIMETER_MODES as readonly string[]).includes(value);
-}
-
-function isLoopbackAddress(address: string): boolean {
-  const family = net.isIP(address);
-  return family !== 0 && LOOPBACK.check(address, family === 4 ? "ipv4" : "ipv6");
 }
 
 function modeErrors(env: NodeJS.ProcessEnv): string[] {
@@ -24,7 +17,7 @@ function modeErrors(env: NodeJS.ProcessEnv): string[] {
   if (mode === "local-dev" && env.NODE_ENV !== "development") {
     return [`PERIMETER_MODE=local-dev needs NODE_ENV=development set explicitly (got "${env.NODE_ENV ?? ""}")`];
   }
-  if (mode === "test" && env.NODE_ENV === "production") return ["PERIMETER_MODE=test is refused in production"];
+  if (mode === "test" && env.NODE_ENV !== "test") return [`PERIMETER_MODE=test needs NODE_ENV=test (got "${env.NODE_ENV ?? ""}")`];
   return [];
 }
 
@@ -37,6 +30,9 @@ function hostErrors(env: NodeJS.ProcessEnv): string[] {
   return [];
 }
 
+// WHY: resolves the entry without loading it: config.ts runs this before the error reporter starts.
 export function perimeterModeErrors(env: NodeJS.ProcessEnv): string[] {
-  return [...modeErrors(env), ...hostErrors(env)];
+  const errors = [...modeErrors(env), ...hostErrors(env)];
+  if (errors.length > 0 || env.PERIMETER_MODE !== "overlay") return errors;
+  return overlayResolveErrors();
 }

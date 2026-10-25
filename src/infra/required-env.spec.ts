@@ -175,7 +175,7 @@ describe("roleErrors", () => {
 describe("validateEnv refuses an unknown ROLE", () => {
   it("throws on ROLE=poler in development, and passes ROLE=api", () => {
     // Arrange
-    const development = { ...process.env, NODE_ENV: "development" };
+    const development = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev" };
 
     // Act & Assert
     expect(() => validateEnv({ ...development, ROLE: "poler" })).toThrow(
@@ -242,7 +242,7 @@ describe("requiredValues scopes each value to the roles that read it", () => {
 
 describe("listMissingRequired checks only the values the role needs", () => {
   const missingIn = (role: string | undefined, without: string): string[] => {
-    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev", ROLE: role };
     delete env[without];
     return listMissingRequired(env).map((v) => v.env);
   };
@@ -307,7 +307,7 @@ describe("requiredValues MONGO_CONTENT_DB_NAME", () => {
 
   it.each(["api", "poller", "combined"])("refuses a ROLE=%s boot without it, naming it", (role) => {
     // Arrange
-    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev", ROLE: role };
     delete env.MONGO_CONTENT_DB_NAME;
 
     // Act & Assert
@@ -319,7 +319,7 @@ describe("listMalformedRequired SEOUL_BUS_SERVICE_KEY", () => {
   // A raw base64 key splits the TOPIS query string, and TOPIS rejects it as if it were down.
   const FIXED_KEY = "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
   const envWithKey = (role: string | undefined, key: string | undefined): NodeJS.ProcessEnv => {
-    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", PERIMETER_MODE: "local-dev", ROLE: role };
     if (key === undefined) delete env.SEOUL_BUS_SERVICE_KEY;
     else env.SEOUL_BUS_SERVICE_KEY = key;
     return env;
@@ -387,5 +387,50 @@ describe("validateEnv refuses an invalid perimeter mode or host", () => {
     // Act & Assert
     expect(() => validateEnv({ ...test, PERIMETER_MODE: "staging" })).toThrow(/Invalid perimeter[\s\S]*PERIMETER_MODE must be one of/);
     expect(() => validateEnv({ ...test, MONGO_URL: undefined })).not.toThrow();
+  });
+});
+
+describe("validateEnv loads the overlay entry in overlay mode", () => {
+  const OVERLAY_ENTRY_MODULE = "../perimeter/current/perimeter.overlay";
+  const overlayTest = { ...process.env, NODE_ENV: "test", PERIMETER_MODE: "overlay", HOST: "127.0.0.1" };
+
+  // WHY: one object for every case: Jest keeps the first export a mock factory returned, so each case refills it.
+  const mockedEntry: Record<string, unknown> = {};
+
+  /** validateEnv from a fresh module registry whose overlay entry is the real one with `overrides`. */
+  function validateWithEntry(overrides: Record<string, unknown>, env: NodeJS.ProcessEnv): void {
+    let validate: typeof validateEnv | undefined;
+    for (const key of Object.keys(mockedEntry)) delete mockedEntry[key];
+    jest.isolateModules(() => {
+      jest.doMock(OVERLAY_ENTRY_MODULE, () => mockedEntry);
+      // WHY: the real entry from the same registry, so its classes extend the ports validateEnv checks against.
+      Object.assign(mockedEntry, jest.requireActual(OVERLAY_ENTRY_MODULE), overrides);
+      validate = (require("./required-env") as typeof import("./required-env")).validateEnv;
+    });
+    try {
+      validate!(env);
+    } finally {
+      jest.dontMock(OVERLAY_ENTRY_MODULE);
+    }
+  }
+
+  it("accepts the entry this build carries, under NODE_ENV=test too", () => {
+    // Act & Assert
+    expect(() => validateEnv(overlayTest)).not.toThrow();
+  });
+
+  it("refuses an entry built against other ports, before the early return for a test", () => {
+    // Act & Assert
+    expect(() => validateWithEntry({ portsVersion: 0 }, overlayTest)).toThrow(/Invalid perimeter[\s\S]*built against ports version 0/);
+  });
+
+  it("refuses settings the entry's own check refuses, naming PERIMETER_SETTINGS", () => {
+    // Arrange
+    const settingsErrors = (settings: string | undefined) => (settings === "bad" ? ["not base64url JSON"] : []);
+
+    // Act & Assert
+    expect(() => validateWithEntry({ settingsErrors }, { ...overlayTest, PERIMETER_SETTINGS: "bad" })).toThrow(
+      /Invalid perimeter[\s\S]*PERIMETER_SETTINGS: not base64url JSON/,
+    );
   });
 });

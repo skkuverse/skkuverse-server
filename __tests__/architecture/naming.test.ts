@@ -5,7 +5,9 @@
  *     `.spec` and `.generated` wrap a valid name (`foo.service.spec.ts`).
  *     `.util` is allowed only in src/shared/, `.ports` only for
  *     src/perimeter/perimeter.ports.ts. Files in src/infra/ are named by
- *     the resource they wrap (`db.ts`, `logger.ts`) and need no role.
+ *     the resource they wrap (`db.ts`, `logger.ts`) and need no role, as
+ *     are the perimeter implementations in src/perimeter/local-dev/ and
+ *     src/perimeter/current/ by the port they implement.
  *   - kebab-case: every dot-separated part of the name.
  *   - class name: an exported class in a file whose role is a class role is
  *     PascalCase(name) + PascalCase(role): `notice-dispatch.repository.ts`
@@ -43,13 +45,15 @@ const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const inInfra = (dir: string) => dir === "src/infra" || dir.startsWith("src/infra/");
 const inShared = (dir: string) => dir === "src/shared" || dir.startsWith("src/shared/");
+// WHY: a perimeter implementation is named by the port it implements (docs/decisions/0023-perimeter-ports.md).
+const inPerimeterImplementations = (dir: string) => dir === "src/perimeter/local-dev" || dir === "src/perimeter/current";
 // WHY: the role exists for one file, the perimeter port declarations (docs/decisions/0023-perimeter-ports.md).
 const PORTS_FILE = "src/perimeter/perimeter.ports.ts";
 
 export function suffixViolation(file: string): boolean {
-  if (EXEMPT.has(file)) return false;
+  if (EXEMPT.has(file) || EXEMPT.has(file.replace(/\.spec\.ts$/, ".ts"))) return false;
   const { parts, dir } = parse(file);
-  if (inInfra(dir) && parts.length === 1) return false;
+  if ((inInfra(dir) || inPerimeterImplementations(dir)) && parts.length === 1) return false;
   if (parts.length !== 2) return true;
   const role = parts[1]!;
   if (!ROLES.has(role)) return true;
@@ -281,6 +285,21 @@ describe("naming rules apply as specified", () => {
     "src/building/building.ports.ts",
   ])("rejects the suffix of %s", (file) => {
     expect(suffixViolation(file)).toBe(true);
+  });
+
+  // WHY: a perimeter implementation is named by the port it implements, as an infra file is by its resource.
+  it.each([
+    ["src/perimeter/local-dev/request-authenticator.ts", false],
+    ["src/perimeter/local-dev/perimeter-classes.spec.ts", false],
+    ["src/perimeter/current/origin-trust.ts", false],
+    ["src/perimeter/current/perimeter.overlay.ts", false],
+    ["src/perimeter/current/private-file", false],
+    ["src/perimeter/current/origin.trust.ts", true],
+    ["src/perimeter/perimeter-registry.ts", true],
+    ["src/perimeter/local-dev/local-dev.overlay.ts", true],
+  ])("names a perimeter implementation %s by its port, violating: %s", (file, violates) => {
+    // Act & Assert
+    expect(suffixViolation(file)).toBe(violates);
   });
 
   it.each([

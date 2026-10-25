@@ -1,7 +1,7 @@
 /**
  * The execution-context check behind PERIMETER_MODE and HOST (ADR 0023, D3): a process with no mode, an
  * unknown mode, a local-dev mode outside an explicit development environment or off loopback, a test mode
- * in production, or a listening role without a host must be refused before it serves anything.
+ * outside NODE_ENV=test, or a listening role without a host must be refused before it serves anything.
  */
 import { perimeterModeErrors } from "./perimeter-mode.rules";
 
@@ -16,7 +16,6 @@ describe("perimeterModeErrors", () => {
     ["local-dev on another 127/8 address", { ...LOCAL_DEV, HOST: "127.0.0.2" }],
     ["local-dev on ::1", { ...LOCAL_DEV, HOST: "::1" }],
     ["test under NODE_ENV=test", { NODE_ENV: "test", PERIMETER_MODE: "test", HOST: "127.0.0.1" }],
-    ["test under development", { NODE_ENV: "development", PERIMETER_MODE: "test", HOST: "127.0.0.1" }],
   ])("accepts %s", (_label, env) => {
     // Act & Assert
     expect(perimeterModeErrors(env)).toEqual([]);
@@ -30,7 +29,9 @@ describe("perimeterModeErrors", () => {
     ["local-dev in production", { ...LOCAL_DEV, NODE_ENV: "production" }, /local-dev needs NODE_ENV=development set explicitly \(got "production"\)/],
     ["local-dev on every interface", { ...LOCAL_DEV, HOST: "0.0.0.0" }, /local-dev needs a loopback HOST \(got "0.0.0.0"\)/],
     ["local-dev on a LAN address", { ...LOCAL_DEV, HOST: "192.168.0.10" }, /local-dev needs a loopback HOST/],
-    ["test in production", { ...OVERLAY, PERIMETER_MODE: "test" }, /PERIMETER_MODE=test is refused in production/],
+    ["test in production", { ...OVERLAY, PERIMETER_MODE: "test" }, /PERIMETER_MODE=test needs NODE_ENV=test \(got "production"\)/],
+    ["test under development", { ...LOCAL_DEV, PERIMETER_MODE: "test" }, /PERIMETER_MODE=test needs NODE_ENV=test \(got "development"\)/],
+    ["test with NODE_ENV unset", { PERIMETER_MODE: "test", HOST: "127.0.0.1" }, /PERIMETER_MODE=test needs NODE_ENV=test \(got ""\)/],
     ["no host on an api replica", { NODE_ENV: "production", PERIMETER_MODE: "overlay", ROLE: "api" }, /HOST is required where the server listens/],
     ["no host in the combined role", { ...LOCAL_DEV, HOST: undefined }, /HOST is required where the server listens/],
     ["a host name instead of an address", { ...OVERLAY, HOST: "localhost" }, /HOST must be an IP address \(got "localhost"\)/],

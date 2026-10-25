@@ -222,7 +222,7 @@ describe("resolveRuntimeSwitches overrides", () => {
 });
 
 describe("validateEnv refuses an invalid switch", () => {
-  const touched = ["NODE_ENV", "SENTRY_DSN", ...RUNTIME_SWITCH_NAMES];
+  const touched = ["NODE_ENV", "PERIMETER_MODE", "SENTRY_DSN", ...RUNTIME_SWITCH_NAMES];
 
   /** validateEnv() under exactly `env` (NODE_ENV is read at module load). */
   function validateWith(env: Record<string, string>): () => void {
@@ -266,7 +266,7 @@ describe("validateEnv refuses an invalid switch", () => {
 
   it("passes on the development defaults", () => {
     // Act & Assert
-    expect(validateWith({ NODE_ENV: "development" })).not.toThrow();
+    expect(validateWith({ NODE_ENV: "development", PERIMETER_MODE: "local-dev" })).not.toThrow();
   });
 });
 

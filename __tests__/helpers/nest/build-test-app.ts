@@ -13,6 +13,9 @@ import type { ModuleMetadata } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { bootstrapHttpApp } from "../../../src/http/http-app.bootstrap";
+import { PerimeterModule } from "../../../src/perimeter/perimeter.module";
+import { toTestStub } from "../../../src/perimeter/perimeter-registry.rules";
+import { OriginTrust } from "../../../src/perimeter/perimeter.ports";
 
 export interface OverrideSpec {
   provide: unknown;
@@ -27,13 +30,31 @@ export interface TestAppOptions {
   role?: "api" | "poller" | "combined";
 }
 
+/**
+ * ORIGIN_TRUST's test-mode stub, remembering what it was asked. CORS refuses an origin whose port throws (ADR 0023,
+ * D5), so a route test that sends an Origin without FakeOriginTrust would see a refusal, not the stub's error; the
+ * app's close fails instead, naming the fake.
+ */
+class UnfakedOriginTrust extends OriginTrust {
+  readonly askedOrigins: string[] = [];
+  private readonly stub = toTestStub("originTrust");
+
+  isCorsOrigin(origin: string): boolean {
+    this.askedOrigins.push(origin);
+    return this.stub.isCorsOrigin(origin);
+  }
+}
+
 export async function buildTestApp({ imports, overrides = [], role }: TestAppOptions): Promise<NestExpressApplication> {
   const restoreRole = role === undefined ? () => undefined : setRole(role);
 
-  const builder = Test.createTestingModule({ imports });
+  // The perimeter ports every route reaches, test-mode stubs unless overridden with a fake (ADR 0023, D7).
+  const builder = Test.createTestingModule({ imports: [PerimeterModule, ...imports] });
   for (const o of overrides) {
     builder.overrideProvider(o.provide as never).useValue(o.useValue);
   }
+  const unfakedOriginTrust = overrides.some((o) => o.provide === OriginTrust) ? undefined : new UnfakedOriginTrust();
+  if (unfakedOriginTrust) builder.overrideProvider(OriginTrust).useValue(unfakedOriginTrust);
   const moduleRef = await builder.compile();
 
   const app = await bootstrapHttpApp((adapter, options) =>
@@ -45,6 +66,10 @@ export async function buildTestApp({ imports, overrides = [], role }: TestAppOpt
       await close();
     } finally {
       restoreRole();
+    }
+    if (unfakedOriginTrust && unfakedOriginTrust.askedOrigins.length > 0) {
+      const asked = unfakedOriginTrust.askedOrigins.join(", ");
+      throw new Error(`ORIGIN_TRUST was asked about ${asked} with no fake, so CORS refused it silently: pass FakeOriginTrust in buildTestApp's overrides`);
     }
   };
 

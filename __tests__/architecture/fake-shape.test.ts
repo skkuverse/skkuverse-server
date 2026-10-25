@@ -15,6 +15,8 @@ import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tre
 const FAKES_DIR = "__tests__/helpers/fakes";
 const PUBLIC_OF = `${FAKES_DIR}/public-of.ts`;
 const FAKE_PATH = /^__tests__\/helpers\/fakes\/([a-z0-9-]+)\/([a-z0-9]+(?:-[a-z0-9]+)*)\.([a-z]+)\.fake\.ts$/;
+const PORT_FAKE_PATH = /^__tests__\/helpers\/fakes\/perimeter\/([a-z0-9]+(?:-[a-z0-9]+)*)\.fake\.ts$/;
+const PORTS_FILE = "src/perimeter/perimeter.ports.ts";
 
 /** The src/ files a fake may follow, and their text. */
 export interface SrcTree {
@@ -56,9 +58,22 @@ function implementsPublicOf(fake: ts.ClassDeclaration, real: string): boolean {
     });
 }
 
+/** A perimeter port's fake: `perimeter/<port>.fake.ts` follows the class `<Port>` of the ports file. */
+function portFakeViolations(file: string, source: string, src: SrcTree, port: string): string[] {
+  const className = pascal(port);
+  if (!src.files.includes(PORTS_FILE) || !exportedClass(PORTS_FILE, src.read(PORTS_FILE), className)) {
+    return [`${file}: ${PORTS_FILE} exports no class ${className}`];
+  }
+  const fake = exportedClass(file, source, `Fake${className}`);
+  if (!fake) return [`${file}: exports no class Fake${className}`];
+  return implementsPublicOf(fake, className) ? [] : [`${file}: Fake${className} does not implement PublicOf<${className}>`];
+}
+
 /** `<fake file>: <reason>` for the first way the fake breaks the rule, or nothing. */
 export function fakeShapeViolations(file: string, source: string, src: SrcTree): string[] {
   if (file === PUBLIC_OF) return [];
+  const port = file.match(PORT_FAKE_PATH)?.[1];
+  if (port !== undefined) return portFakeViolations(file, source, src, port);
   const match = file.match(FAKE_PATH);
   if (!match) return [`${file}: not named <module>/<name>.<role>.fake.ts`];
   const [, module, name, role] = match as unknown as [string, string, string, string];
@@ -173,6 +188,26 @@ describe("fake shape rule applies as specified", () => {
   ])("%s", (_case, file, source, sources, expected) => {
     // Act & Assert
     expect(fakeShapeViolations(file, source, tree(sources))).toEqual(expected);
+  });
+});
+
+// WHY: a perimeter port is a class of the ports file, not a role file, so its fake is named by the port alone.
+describe("fake shape rule applies to perimeter port fakes", () => {
+  const PORTS = "src/perimeter/perimeter.ports.ts";
+  const PORTS_SOURCE = "export abstract class OriginTrust {}\nexport abstract class OutboundPolicy {}";
+  const FAKE = "__tests__/helpers/fakes/perimeter/origin-trust.fake.ts";
+  const tree = (sources: Record<string, string>): SrcTree => ({ files: Object.keys(sources), read: (f) => sources[f]! });
+
+  it.each([
+    ["a fake of a port", FAKE, "export class FakeOriginTrust implements PublicOf<OriginTrust> {}", []],
+    ["a fake of no port", "__tests__/helpers/fakes/perimeter/door-bell.fake.ts", "export class FakeDoorBell implements PublicOf<DoorBell> {}", [
+      "__tests__/helpers/fakes/perimeter/door-bell.fake.ts: src/perimeter/perimeter.ports.ts exports no class DoorBell",
+    ]],
+    ["a wrong class name", FAKE, "export class FakeOrigins implements PublicOf<OriginTrust> {}", [`${FAKE}: exports no class FakeOriginTrust`]],
+    ["no PublicOf", FAKE, "export class FakeOriginTrust extends OriginTrust {}", [`${FAKE}: FakeOriginTrust does not implement PublicOf<OriginTrust>`]],
+  ])("%s", (_case, file, source, expected) => {
+    // Act & Assert
+    expect(fakeShapeViolations(file, source, tree({ [PORTS]: PORTS_SOURCE }))).toEqual(expected);
   });
 });
 

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "./config/config.module";
+import { PerimeterModule } from "./perimeter/perimeter.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
 import { CalendarModule } from "./calendar/calendar.module";
@@ -100,10 +101,11 @@ import { JourneyDeparturesModule } from "./journey/departures/journey-departures
 import { JourneyPlacesModule } from "./journey/places/journey-places.module";
 import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
 
-// WHY: imports in boot order: config (fails loud on a missing value), the poller registry, then health.
+// WHY: imports in boot order: the perimeter ports, config (fails loud on a missing value), the poller registry, then health.
 // LangMiddleware is not bound here but in bootstrapHttpApp (src/http/http-app.bootstrap.ts); its QUIRK says why.
 @Module({
   imports: [
+    PerimeterModule,
     ConfigModule,
     SchedulingModule,
     HealthModule,

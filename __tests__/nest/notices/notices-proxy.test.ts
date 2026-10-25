@@ -1,5 +1,12 @@
 /**
- * (A perimeter detail is left out of the public history.)
+ * Route coverage for GET /notices/proxy/attachment (security fix): a `url`
+ * or `referer` the outbound policy refuses never leaves the process, every
+ * outbound call carries the policy's request config, a refusal while fetching
+ * surfaces as 403, the size cap (declared and mid-stream), the idle and overall
+ * transfer timers, and the sandbox CSP for script-capable content types. axios
+ * is mocked under the real attachment client and OUTBOUND_POLICY is
+ * FakeOutboundPolicy (ADR 0023, D7); which hosts the production policy allows,
+ * and its socket checks, are tested beside it in src/perimeter/current/.
  */
 
 jest.mock("axios", () => ({ get: jest.fn() }));
@@ -11,16 +18,38 @@ import axios from "axios";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { OutboundBlockedError } from "../../../src/infra/outbound-guard";
 import * as attachmentConstants from "../../../src/notices/attachment/notices-attachment.constants";
 import { NoticesAttachmentModule } from "../../../src/notices/attachment/notices-attachment.module";
 import { NoticesModule } from "../../../src/notices/notices.module";
 import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
+import { OutboundPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeOutboundPolicy, FakeOutboundRefusal } from "../../helpers/fakes/perimeter/outbound-policy.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const mockedGet = axios.get as unknown as jest.Mock;
 
 const fakeClock: Clock = { now: () => new Date("2026-10-14T00:00:00Z") };
+
+const REFUSED_URLS = [
+  "https://evilskku.edu/a.pdf",
+  "https://skku.edu.evil.com/a.pdf",
+  "http://127.0.0.1:3000/",
+  "http://api-2:3000/robots.txt",
+  "https://www.skku.edu:8080/a.pdf",
+  "file:///etc/passwd",
+];
+const REFUSED_REFERERS = [
+  "http://127.0.0.1:3000/",
+  "http://api-2:3000/notices/proxy/attachment",
+  "https://attacker.example/callback",
+  "https://evilskku.edu/",
+  "http://169.254.169.254/opc/v1/instance/",
+];
+// WHY: the shape of the production request config, so the assertions below read what the client hands axios.
+const POLICY_CONFIG = { proxy: false as const, maxRedirects: 5, httpAgent: {}, httpsAgent: {}, beforeRedirect: () => undefined };
+const outbound = new FakeOutboundPolicy();
+outbound.config = POLICY_CONFIG;
+for (const url of [...REFUSED_URLS, ...REFUSED_REFERERS]) outbound.refused.add(url);
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -34,7 +63,10 @@ function upstream(body: string, headers: Record<string, string> = {}) {
 beforeAll(async () => {
   app = await buildTestApp({
     imports: [NoticesModule, NoticesTabsModule, NoticesAttachmentModule],
-    overrides: [{ provide: Clock, useValue: fakeClock }],
+    overrides: [
+      { provide: Clock, useValue: fakeClock },
+      { provide: OutboundPolicy, useValue: outbound },
+    ],
     role: "api",
   });
   httpServer = app.getHttpServer();
@@ -60,14 +92,7 @@ beforeEach(() => {
 const PROXY = "/notices/proxy/attachment";
 
 describe("url policy", () => {
-  it.each([
-    "https://evilskku.edu/a.pdf",
-    "https://skku.edu.evil.com/a.pdf",
-    "http://127.0.0.1:3000/",
-    "http://api-2:3000/robots.txt",
-    "https://www.skku.edu:8080/a.pdf",
-    "file:///etc/passwd",
-  ])("403 without any outbound request for %s", async (url) => {
+  it.each(REFUSED_URLS)("403 without any outbound request for %s", async (url) => {
     // Act
     const res = await request(httpServer).get(PROXY).query({ url });
 
@@ -75,6 +100,24 @@ describe("url policy", () => {
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("FORBIDDEN");
     expect(mockedGet).not.toHaveBeenCalled();
+  });
+
+  it("403 for a url on a school host once the policy refuses it, and asks the policy with the attachment purpose", async () => {
+    // Arrange
+    const url = "https://www.skku.edu/_attach/withdrawn.pdf";
+    outbound.refused.add(url);
+
+    try {
+      // Act
+      const res = await request(httpServer).get(PROXY).query({ url });
+
+      // Assert
+      expect(res.status).toBe(403);
+      expect(mockedGet).not.toHaveBeenCalled();
+      expect(outbound.asked).toContainEqual({ purpose: "notice-attachment", url });
+    } finally {
+      outbound.refused.delete(url);
+    }
   });
 
   it("400 for a malformed url", async () => {
@@ -87,13 +130,7 @@ describe("url policy", () => {
 });
 
 describe("referer policy", () => {
-  it.each([
-    "http://127.0.0.1:3000/",
-    "http://api-2:3000/notices/proxy/attachment",
-    "https://attacker.example/callback",
-    "https://evilskku.edu/",
-    "http://169.254.169.254/opc/v1/instance/",
-  ])("400 without any outbound request for referer %s", async (referer) => {
+  it.each(REFUSED_REFERERS)("400 without any outbound request for referer %s", async (referer) => {
     // Act
     const res = await request(httpServer)
       .get(PROXY)
@@ -107,7 +144,7 @@ describe("referer policy", () => {
 });
 
 describe("allowed request", () => {
-  it("primes the session from the referer, then streams the file, both through the guarded config", async () => {
+  it("primes the session from the referer, then streams the file, both through the policy's request config", async () => {
     // Arrange
     mockedGet
       .mockResolvedValueOnce({
@@ -139,10 +176,7 @@ describe("allowed request", () => {
 
   it("maps a policy rejection during the fetch (DNS or redirect) to 403", async () => {
     // Arrange
-    const wrapped = Object.assign(new Error("Redirected request failed"), {
-      cause: new OutboundBlockedError("redirect to http://127.0.0.1/ is not allowed"),
-    });
-    mockedGet.mockRejectedValueOnce(wrapped);
+    mockedGet.mockRejectedValueOnce(new FakeOutboundRefusal("redirect to http://127.0.0.1/ is not allowed"));
 
     // Act
     const res = await request(httpServer)

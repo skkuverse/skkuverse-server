@@ -29,9 +29,12 @@ import { Test } from "@nestjs/testing";
 import express from "express";
 import request from "supertest";
 import { LangMiddleware } from "../../src/http/lang.middleware";
+import { CORS_METHODS } from "../../src/http/cors.config";
 import config from "../../src/infra/config";
 import logger from "../../src/infra/logger";
-import { CORS_METHODS, WEBVIEW_ORIGIN } from "../../src/infra/origins";
+import { WEBVIEW_ORIGIN } from "../../src/infra/origins";
+import { OriginTrust } from "../../src/perimeter/perimeter.ports";
+import { FakeOriginTrust } from "../helpers/fakes/perimeter/origin-trust.fake";
 import { buildTestApp } from "../helpers/nest/build-test-app";
 
 @Controller("ping")
@@ -123,14 +126,19 @@ describe("main.ts bootstrap wiring (regression pins)", () => {
  * server-side, because the request either never arrived or arrived and answered
  * fine while the browser discarded it.
  *
- * These pin the policy, not the plumbing: which origin, which methods, and that
- * credentials stay off.
+ * These pin the binding: an origin ORIGIN_TRUST trusts is granted, which
+ * methods, that credentials stay off, and the headers a refused or absent origin
+ * gets. Which origins production trusts is ORIGIN_TRUST's (ADR 0023, D5), tested
+ * beside its implementations in src/perimeter/; here the port is FakeOriginTrust,
+ * trusting the webview origin alone.
  */
 describe("CORS policy", () => {
   let app: NestExpressApplication;
+  const originTrust = new FakeOriginTrust();
+  originTrust.trusted.add(WEBVIEW_ORIGIN);
 
   beforeAll(async () => {
-    app = await buildTestApp({ imports: [MiniModule] });
+    app = await buildTestApp({ imports: [MiniModule], overrides: [{ provide: OriginTrust, useValue: originTrust }] });
   });
 
   afterAll(async () => {
@@ -219,7 +227,45 @@ describe("CORS policy", () => {
     expect(res.headers["access-control-expose-headers"]).toContain("ETag");
   });
 
-  it("grants nothing to a loopback origin outside development", async () => {
+  // WHY: a cache in front keys a response on Origin only when Vary says so, for refused and absent origins too.
+  it("varies on Origin for a trusted, a refused and an absent origin, and grants only the trusted one", async () => {
+    // Act
+    const trusted = await request(app.getHttpServer()).get("/ping").set("Origin", WEBVIEW_ORIGIN);
+    const refused = await request(app.getHttpServer()).get("/ping").set("Origin", "https://evil.test");
+    const absent = await request(app.getHttpServer()).get("/ping");
+
+    // Assert
+    expect(trusted.headers["access-control-allow-origin"]).toBe(WEBVIEW_ORIGIN);
+    for (const res of [trusted, refused, absent]) expect(res.headers["vary"]).toMatch(/\bOrigin\b/);
+    expect(refused.headers["access-control-allow-origin"]).toBeUndefined();
+    expect(absent.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
+  it("answers a refused preflight 204, with no grant and Vary: Origin", async () => {
+    // Act
+    const res = await request(app.getHttpServer())
+      .options("/ping")
+      .set("Origin", "https://evil.test")
+      .set("Access-Control-Request-Method", "GET");
+
+    // Assert
+    expect(res.status).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+    expect(res.headers["vary"]).toMatch(/\bOrigin\b/);
+  });
+
+  it("never asks the port about a request without an Origin header", async () => {
+    // Arrange
+    const asked = originTrust.asked.length;
+
+    // Act
+    await request(app.getHttpServer()).get("/ping");
+
+    // Assert
+    expect(originTrust.asked).toHaveLength(asked);
+  });
+
+  it("grants nothing to an origin the port does not trust, a loopback one included", async () => {
     const res = await request(app.getHttpServer())
       .get("/ping")
       .set("Origin", "http://localhost:5173");
@@ -228,44 +274,40 @@ describe("CORS policy", () => {
 });
 
 /**
- * Development adds loopback origins, so a web dev server on this machine (the
- * webview SPA's vite) can read a local API. Nothing broader: not a LAN address,
- * not a host that merely starts with "localhost".
+ * A port that throws refuses the origin, as an untrusted one is refused, and the failure is logged (ADR 0023, D5).
  */
-describe("CORS policy in development", () => {
+describe("CORS policy when ORIGIN_TRUST throws", () => {
   let app: NestExpressApplication;
-  let isDevelopment: jest.ReplaceProperty<boolean>;
+  const failing = new FakeOriginTrust();
+  failing.failure = new Error("origin trust unavailable");
 
   beforeAll(async () => {
-    // WHY: bootstrapHttpApp reads config.isDevelopment when it builds the app, as main.ts does.
-    isDevelopment = jest.replaceProperty(config, "isDevelopment", true);
-    app = await buildTestApp({ imports: [MiniModule] });
+    app = await buildTestApp({ imports: [MiniModule], overrides: [{ provide: OriginTrust, useValue: failing }] });
   });
 
   afterAll(async () => {
     await app.close();
-    isDevelopment.restore();
   });
 
-  it.each(["http://localhost:5173", "http://127.0.0.1:8081", "http://localhost"])(
-    "allows %s",
-    async (origin) => {
-      const res = await request(app.getHttpServer()).get("/ping").set("Origin", origin);
-      expect(res.headers["access-control-allow-origin"]).toBe(origin);
-    },
-  );
+  it("refuses the origin with Vary: Origin, a preflight still 204, and logs the failure", async () => {
+    // Arrange
+    const errorLog = jest.spyOn(logger, "error");
 
-  it.each(["http://192.168.0.5:5173", "http://localhost.evil.test", "https://localhost:5173"])(
-    "grants nothing to %s",
-    async (origin) => {
-      const res = await request(app.getHttpServer()).get("/ping").set("Origin", origin);
-      expect(res.headers["access-control-allow-origin"]).toBeUndefined();
-    },
-  );
+    try {
+      // Act
+      const get = await request(app.getHttpServer()).get("/ping").set("Origin", WEBVIEW_ORIGIN);
+      const preflight = await request(app.getHttpServer()).options("/ping").set("Origin", WEBVIEW_ORIGIN).set("Access-Control-Request-Method", "GET");
 
-  it("still allows the webview origin", async () => {
-    const res = await request(app.getHttpServer()).get("/ping").set("Origin", WEBVIEW_ORIGIN);
-    expect(res.headers["access-control-allow-origin"]).toBe(WEBVIEW_ORIGIN);
+      // Assert
+      expect(get.status).toBe(200);
+      expect(get.headers["access-control-allow-origin"]).toBeUndefined();
+      expect(get.headers["vary"]).toMatch(/\bOrigin\b/);
+      expect(preflight.status).toBe(204);
+      expect(preflight.headers["access-control-allow-origin"]).toBeUndefined();
+      expect(errorLog).toHaveBeenCalledWith(expect.objectContaining({ event: "http.cors.origin_trust_failed", err: failing.failure }), expect.any(String));
+    } finally {
+      errorLog.mockRestore();
+    }
   });
 });
 
@@ -432,6 +474,47 @@ describe("bootstrapHttpApp pipeline", () => {
     // Assert
     expect(layerNames(app)).not.toContain("noStoreMiddleware");
     expect(res.headers["cache-control"]).toBeUndefined();
+  });
+});
+
+/**
+ * A local-dev server refuses, before helmet or any route, a request that came through a proxy or a tunnel or names
+ * a host other than loopback (ADR 0023, D2); the other perimeter modes mount no such filter.
+ */
+describe("bootstrapHttpApp pipeline with PERIMETER_MODE=local-dev", () => {
+  let app: NestExpressApplication;
+  let mode: jest.ReplaceProperty<typeof config.perimeter.mode>;
+
+  beforeAll(async () => {
+    // WHY: bootstrapHttpApp reads config.perimeter.mode when it builds the app, as main.ts does.
+    mode = jest.replaceProperty(config.perimeter, "mode", "local-dev");
+    app = await buildTestApp({ imports: [PipelineModule] });
+  });
+
+  afterAll(async () => {
+    await app.close();
+    mode.restore();
+  });
+
+  it("mounts the local-dev request filter first, before helmet", () => {
+    // Act
+    const layers = pipelineLayers(app, 2);
+
+    // Assert
+    expect(layers).toEqual(["localDevRequestFilter", "helmetMiddleware"]);
+  });
+
+  it("answers a loopback request and refuses a forwarded one or one for another host", async () => {
+    // Act
+    const direct = await request(app.getHttpServer()).get("/pipeline");
+    const forwarded = await request(app.getHttpServer()).get("/pipeline").set("X-Forwarded-For", "203.0.113.1");
+    const rebound = await request(app.getHttpServer()).get("/pipeline").set("Host", "rebind.example:3000");
+
+    // Assert
+    expect(direct.status).toBe(200);
+    expect(forwarded.status).toBe(403);
+    expect(forwarded.body).toEqual({ error: { code: "LOCAL_DEV_ONLY", message: "A local-development server answers requests from this machine only" } });
+    expect(rebound.status).toBe(403);
   });
 });
 
