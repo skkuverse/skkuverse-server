@@ -5,7 +5,7 @@
  * guards: every captured body and row passes; a body or row missing any field
  * of its shape fails at that field's path; the bare status body of a failure
  * passes as a status; a train number is one to four digits (the Shinbundang
- * line numbers its trainsets from 1), an arrival row names its line by `subwayId`, `trainSttus` is 0 to 3
+ * line numbers its trainsets from 1), an arrival row names its line by `subwayId`, every row its station by a ten-digit `statnId`, `trainSttus` is 0 to 3
  * and `recptnDt` a KST date and time. How the client turns a failed parse into
  * an error is subway-seoul-api.client.spec.ts's.
  */
@@ -152,5 +152,17 @@ describe("seoulArrivalRow", () => {
 
     // Assert
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("seoulPositionRow and seoulArrivalRow statnId", () => {
+  it.each([
+    ["a position row", seoulPositionRow, POSITION, "1001"],
+    ["a position row", seoulPositionRow, POSITION, "10010801531"],
+    ["an arrival row", seoulArrivalRow, ARRIVAL, "1004"],
+    ["an arrival row", seoulArrivalRow, ARRIVAL, "S1-4-420"],
+  ] as const)("fails %s whose statnId is %j, not the API's ten digits", (_label, schema, captured, statnId) => {
+    // Act & Assert
+    expect(schema.safeParse({ ...captured, statnId }).success).toBe(false);
   });
 });

@@ -1,9 +1,10 @@
 /**
  * The Seoul API rows as the tracker takes them: each position row at a
- * covered station becomes a train event at its platform id, its state from
+ * covered station (a served platform by its `statnId`, a neighbor by its name)
+ * becomes a train event at its platform id, its state from
  * `trainSttus`, its time from `recptnDt` read in KST and its number per the
  * line's numbering; each arrival row with a positive `barvlDt` becomes a
- * countdown row at the platform of its own `subwayId` at the called station,
+ * countdown row at the platform of its own `statnId` at the called station,
  * while its `recptnDt` is within the arrival-row window of the fetch. Rows at
  * other stations or of unserved lines, `전역출발` rows, zero countdowns and
  * numbers the line's numbering refuses are left out; duplicates are kept for
@@ -17,7 +18,7 @@ import fs from "fs";
 import path from "path";
 import type { SeoulArrivalRow, SeoulPositionRow } from "./subway-seoul-api.schema";
 import { toCountdownRows, toTrainEvents } from "./subway-seoul-api.mapper";
-import type { CountdownPlatform } from "./subway-seoul-api.types";
+import type { CountdownPlatform, PositionPlatformIds } from "./subway-seoul-api.types";
 
 const fixture = <T>(name: string, list: string): T[] =>
   JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/subway/fixtures", name), "utf8"))[list];
@@ -31,55 +32,66 @@ const ARRIVALS_JAMSIL = fixture<SeoulArrivalRow>("realtime-arrival-jamsil.json",
 const FETCHED_2026_10_09 = new Date("2026-10-09T13:45:00Z");
 const FETCHED_2026_10_17 = new Date("2026-10-17T12:07:00Z");
 
-const SUNGKYUNKWAN_PLATFORMS = new Map([["1001", { platformId: "KR-1-P153", trainNumbers: "timetable" as const }]]);
-const HYEHWA_PLATFORMS = new Map([["1004", { platformId: "S1-4-420", trainNumbers: "timetable" as const }]]);
+const SUNGKYUNKWAN_PLATFORMS = new Map([["1001080153", { platformId: "KR-1-P153", trainNumbers: "timetable" as const }]]);
+const HYEHWA_PLATFORMS = new Map([["1004000420", { platformId: "S1-4-420", trainNumbers: "timetable" as const }]]);
 // WHY: line 2's rows are read as a timetable line here, so the raw numbers show which platform each row's countdown
 // goes to; its own numbering is pinned on the Jamsil capture below.
-const GANGNAM_LINE_2: [string, CountdownPlatform] = ["1002", { platformId: "S1-2-222", trainNumbers: "timetable" }];
-const GANGNAM_SHINBUNDANG: [string, CountdownPlatform] = ["1077", { platformId: "DX-D1-4307", trainNumbers: "trainset" }];
+const GANGNAM_LINE_2: [string, CountdownPlatform] = ["1002000222", { platformId: "S1-2-222", trainNumbers: "timetable" }];
+const GANGNAM_SHINBUNDANG: [string, CountdownPlatform] = ["1077000687", { platformId: "DX-D1-4307", trainNumbers: "trainset" }];
 const JAMSIL_PLATFORMS = new Map<string, CountdownPlatform>([
-  ["1002", { platformId: "S1-2-216", trainNumbers: "circle" }],
-  ["1008", { platformId: "S1-8-2815", trainNumbers: "timetable" }],
+  ["1002000216", { platformId: "S1-2-216", trainNumbers: "circle" }],
+  ["1008000814", { platformId: "S1-8-2815", trainNumbers: "timetable" }],
 ]);
 
-const LINE_1 = new Map([
-  ["군포", "KR-1-P150"],
-  ["당정", "KR-1-P151"],
-  ["의왕", "KR-1-P152"],
-  ["성균관대", "KR-1-P153"],
-  ["화서", "KR-1-P154"],
-  ["수원", "KR-1-P155"],
-  ["세류", "KR-1-1715"],
-]);
-const LINE_4 = new Map([
-  ["길음", "S1-4-417"],
-  ["성신여대입구", "S1-4-418"],
-  ["한성대입구", "S1-4-419"],
-  ["혜화", "S1-4-420"],
-  ["동대문", "S1-4-421"],
-  ["동대문역사문화공원", "S1-4-422"],
-  ["충무로", "S1-4-423"],
-]);
+// WHY: as toSeoulLines builds them: a served platform by its statnId, a neighbor by its name.
+const LINE_1: PositionPlatformIds = {
+  platformIdByStatnId: new Map([["1001080153", "KR-1-P153"]]),
+  platformIdByName: new Map([
+    ["군포", "KR-1-P150"],
+    ["당정", "KR-1-P151"],
+    ["의왕", "KR-1-P152"],
+    ["화서", "KR-1-P154"],
+    ["수원", "KR-1-P155"],
+    ["세류", "KR-1-1715"],
+  ]),
+};
+const LINE_4: PositionPlatformIds = {
+  platformIdByStatnId: new Map([["1004000420", "S1-4-420"]]),
+  platformIdByName: new Map([
+    ["길음", "S1-4-417"],
+    ["성신여대입구", "S1-4-418"],
+    ["한성대입구", "S1-4-419"],
+    ["동대문", "S1-4-421"],
+    ["동대문역사문화공원", "S1-4-422"],
+    ["충무로", "S1-4-423"],
+  ]),
+};
+const byName = (platformIdByName: ReadonlyMap<string, string>): PositionPlatformIds => ({ platformIdByStatnId: new Map(), platformIdByName });
 
-const LINE_2 = new Map([
-  ["구의", "S1-2-213"],
-  ["강변", "S1-2-214"],
-  ["잠실나루", "S1-2-215"],
-  ["잠실", "S1-2-216"],
-  ["잠실새내", "S1-2-217"],
-  ["종합운동장", "S1-2-218"],
-  ["삼성", "S1-2-219"],
-  ["선릉", "S1-2-220"],
-  ["역삼", "S1-2-221"],
-  ["강남", "S1-2-222"],
-  ["교대", "S1-2-223"],
-  ["서초", "S1-2-224"],
-  ["방배", "S1-2-225"],
-  ["신도림", "S1-2-234"],
-]);
+const LINE_2: PositionPlatformIds = {
+  platformIdByStatnId: new Map([
+    ["1002000216", "S1-2-216"],
+    ["1002000222", "S1-2-222"],
+  ]),
+  platformIdByName: new Map([
+    ["구의", "S1-2-213"],
+    ["강변", "S1-2-214"],
+    ["잠실나루", "S1-2-215"],
+    ["잠실새내", "S1-2-217"],
+    ["종합운동장", "S1-2-218"],
+    ["삼성", "S1-2-219"],
+    ["선릉", "S1-2-220"],
+    ["역삼", "S1-2-221"],
+    ["교대", "S1-2-223"],
+    ["서초", "S1-2-224"],
+    ["방배", "S1-2-225"],
+    ["신도림", "S1-2-234"],
+  ]),
+};
 
 const row = (fields: Partial<SeoulPositionRow>): SeoulPositionRow => ({
   trainNo: "0493",
+  statnId: "1001080153",
   statnNm: "성균관대",
   statnTnm: "서동탄",
   updnLine: "1",
@@ -131,7 +143,7 @@ describe("toTrainEvents", () => {
     ]);
 
     // Act
-    const events = toTrainEvents(positions, shinbundang, "trainset");
+    const events = toTrainEvents(positions, byName(shinbundang), "trainset");
 
     // Assert
     expect(events.map((e) => e.trainNo)).toEqual(["2", "3", "8", "6", "12", "14", "18", "20", "19", "13", "23", "22"]);
@@ -153,7 +165,7 @@ describe("toTrainEvents", () => {
     ]);
 
     // Act
-    const events = toTrainEvents(positions, shinbundang, "trainset");
+    const events = toTrainEvents(positions, byName(shinbundang), "trainset");
 
     // Assert
     expect(events.map((e) => [e.trainNo, e.destination, e.reportedDirection])).toEqual([
@@ -222,7 +234,7 @@ describe("toTrainEvents", () => {
 
   it("leaves out a row at a station the table does not hold", () => {
     // Act
-    const events = toTrainEvents([row({ statnNm: "동대문" })], LINE_1, "timetable");
+    const events = toTrainEvents([row({ statnId: "1001000128", statnNm: "동대문" })], LINE_1, "timetable");
 
     // Assert
     expect(events).toEqual([]);
@@ -275,7 +287,7 @@ describe("toTrainEvents on 2호선", () => {
     const everyStation = new Map(POSITIONS_LINE_2.map((r) => [r.statnNm, `S1-2-${r.statnNm}`]));
 
     // Act
-    const events = toTrainEvents(POSITIONS_LINE_2, everyStation, "circle");
+    const events = toTrainEvents(POSITIONS_LINE_2, byName(everyStation), "circle");
 
     // Assert
     expect(POSITIONS_LINE_2.map((r) => r.trainNo)).toEqual(expect.arrayContaining(["1675", "1678", "5683", "5684"]));
@@ -351,7 +363,7 @@ describe("toCountdownRows", () => {
   it("Two lines at 강남: a 2호선 row and a 신분당선 row of trains numbered alike count only for their own platform", () => {
     // Arrange
     const [line2Row] = ARRIVALS_GANGNAM.filter((r) => r.subwayId === "1002") as [SeoulArrivalRow];
-    const shinbundangRow = { ...line2Row, subwayId: "1077", btrainNo: "18", barvlDt: "120" };
+    const shinbundangRow = { ...line2Row, subwayId: "1077", statnId: "1077000687", btrainNo: "18", barvlDt: "120" };
     const sameNumberRow = { ...line2Row, btrainNo: "18" };
 
     // Act

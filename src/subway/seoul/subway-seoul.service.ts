@@ -32,9 +32,9 @@ export class SubwaySeoulService {
     const take = <T>(call: () => Promise<T>): Promise<T> => this.withCap(this.apiCap, call);
     const fetchedAt = this.clock.now();
     const [eventResults, countdownResults] = await Promise.all([
-      Promise.allSettled(seoulLines.map((line) => take(() => this.api.listLineEvents(line.lineName, line.platformIdByApiName, line.trainNumbers)))),
+      Promise.allSettled(seoulLines.map((line) => take(() => this.api.listLineEvents(line.lineName, { platformIdByStatnId: line.platformIdByStatnId, platformIdByName: line.platformIdByApiName }, line.trainNumbers)))),
       Promise.allSettled(
-        seoulStations.map((station) => take(() => this.api.listStationCountdownRows(station.seoulName, station.platformBySubwayId, fetchedAt))),
+        seoulStations.map((station) => take(() => this.api.listStationCountdownRows(station.seoulName, station.platformByStatnId, fetchedAt))),
       ),
     ]);
     return toSettledObservations(API_SOURCE, eventResults, countdownResults);

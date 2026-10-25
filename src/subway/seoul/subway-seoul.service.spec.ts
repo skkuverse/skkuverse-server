@@ -24,6 +24,7 @@ import { FakeSubwayTopologyRepository } from "../../../__tests__/helpers/fakes/s
 import { storedSubwayTopologyRepository, storedSubwayTopologyService } from "../../../__tests__/helpers/subway/topology";
 import type { Clock } from "../../infra/clock";
 import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client";
+import type { SeoulArrivalRow, SeoulPositionRow } from "../seoul-api/subway-seoul-api.schema";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
@@ -382,5 +383,66 @@ describe("SubwaySeoulService reads the stored topology", () => {
     // Assert
     expect(summary(observations.events).filter((line) => line.includes("KR-1-P154"))).toEqual([]);
     expect(summary(observations.events)).toContain("0501 KR-1-1715 arrived");
+  });
+});
+
+// WHY: each row below is a captured one with one field changed, as a renamed or a same-named station would write it.
+describe("SubwaySeoulService matches a served platform's rows by statnId", () => {
+  const atSungkyunkwan = rows<SeoulPositionRow>("realtime-position-line1.json", "realtimePositionList").find((row) => row.statnId === "1001080153")!;
+  const SADANG_ROWS = rows<SeoulArrivalRow>("realtime-arrival-sadang.json", "realtimeArrivalList");
+  const SADANG_FETCHED_AT = new Date("2026-10-25T03:23:14Z");
+
+  it("Renamed station: takes a position row carrying 성균관대's statnId under another name as KR-1-P153's", async () => {
+    // Arrange
+    const { service, apiClient } = setup();
+    apiClient.positions.clear();
+    apiClient.positions.set("1호선", [{ ...atSungkyunkwan, statnNm: "성균관대(율전)" }]);
+
+    // Act
+    const observations = await service.observeApi();
+
+    // Assert
+    expect(summary(observations.events)).toEqual(["0702 KR-1-P153 approaching"]);
+  });
+
+  it("Same-named station: takes no event at KR-1-P153 from a row named 성균관대 that carries another station's statnId", async () => {
+    // Arrange
+    const { service, apiClient } = setup();
+    apiClient.positions.clear();
+    apiClient.positions.set("1호선", [{ ...atSungkyunkwan, statnId: "1001080154" }]);
+
+    // Act
+    const observations = await service.observeApi();
+
+    // Assert
+    expect(observations.events).toEqual([]);
+  });
+
+  it("still matches a neighbor's row by its name, since the topology holds no statnId for a neighbor", async () => {
+    // Arrange
+    const { service, apiClient } = setup();
+    apiClient.positions.clear();
+    apiClient.positions.set("1호선", [{ ...atSungkyunkwan, statnId: "1001080154", statnNm: "화서" }]);
+
+    // Act
+    const observations = await service.observeApi();
+
+    // Assert
+    expect(summary(observations.events)).toEqual(["0702 KR-1-P154 approaching"]);
+  });
+
+  it("counts an arrival row for the platform of its statnId and drops a row of a served line that carries another station's", async () => {
+    // Arrange
+    const { service, apiClient } = setup(SADANG_FETCHED_AT);
+    const line2Row = SADANG_ROWS.find((row) => row.btrainNo === "2157")!;
+    apiClient.positions.clear();
+    apiClient.arrivals.clear();
+    apiClient.arrivals.set("사당", [line2Row, { ...line2Row, btrainNo: "2999", statnId: "1002000225" }]);
+
+    // Act
+    const { countdownRows } = await service.observeApi();
+
+    // Assert
+    expect(countdownRows.map((row) => `${row.trainNo} ${row.platformId} ${row.remainingSec}`)).toEqual(["2157 S1-2-226 210"]);
   });
 });
