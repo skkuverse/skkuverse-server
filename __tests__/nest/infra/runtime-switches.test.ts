@@ -1,6 +1,7 @@
 /**
  * (An operations detail is left out of the public history.)
  *
+ *
  */
 import fs from "fs";
 import path from "path";
@@ -24,7 +25,7 @@ describe("runtimeMode", () => {
 });
 
 describe("resolveRuntimeSwitches defaults", () => {
-  it("production keeps every side effect and cache on", () => {
+  it("production keeps every side effect and cache on, and serves no notice overview", () => {
     // Act & Assert
     expect(resolveRuntimeSwitches({}, "production")).toEqual({
       switches: {
@@ -36,12 +37,13 @@ describe("resolveRuntimeSwitches defaults", () => {
         shuttleEnabled: true,
         regionalBusEnabled: true,
         gbisEnabled: true,
+        noticeOverviewEnabled: false,
       },
       errors: [],
     });
   });
 
-  it("development turns every outbound side effect, the limiter and the caches off", () => {
+  it("development turns every outbound side effect, the limiter and the caches off, and keeps the notice overview on", () => {
     // Act & Assert
     expect(resolveRuntimeSwitches({}, "development")).toEqual({
       switches: {
@@ -53,6 +55,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         shuttleEnabled: false,
         regionalBusEnabled: false,
         gbisEnabled: false,
+        noticeOverviewEnabled: true,
       },
       errors: [],
     });
@@ -139,6 +142,16 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(prod).toEqual({ switches: expect.objectContaining({ gbisEnabled: false }), errors: [] });
   });
 
+  it("production may turn the notice overview on, and development may turn it off", () => {
+    // Act
+    const prod = resolveRuntimeSwitches({ NOTICE_OVERVIEW: "on" }, "production");
+    const dev = resolveRuntimeSwitches({ NOTICE_OVERVIEW: "off" }, "development");
+
+    // Assert
+    expect(prod).toEqual({ switches: expect.objectContaining({ noticeOverviewEnabled: true }), errors: [] });
+    expect(dev).toEqual({ switches: expect.objectContaining({ noticeOverviewEnabled: false }), errors: [] });
+  });
+
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches({ PUSH_DELIVERY: "live" }, "development");
@@ -185,6 +198,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["SHUTTLE", "1"],
     ["REGIONAL_BUS", "true"],
     ["GBIS", "yes"],
+    ["NOTICE_OVERVIEW", "true"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
     // Act & Assert
     for (const mode of ["production", "development", "test"] as const) {
@@ -305,6 +319,11 @@ describe("where the switches may be set", () => {
     ])("%s run no GBIS seat poller", (_label, env) => {
       // Assert
       expect(env).toMatch(/- GBIS=off\n/);
+    });
+
+    it("the api replicas call no ai for a notice overview", () => {
+      // Assert
+      expect(apiEnv).toMatch(/- NOTICE_OVERVIEW=off\n/);
     });
   });
 });
