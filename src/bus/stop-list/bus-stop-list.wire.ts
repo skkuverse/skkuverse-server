@@ -37,6 +37,8 @@ const listedStop = z.object({
   /** WHY: the TOPIS ARS numbers of the poles it stands for; null for a local stop that aliases none. */
   arsIds: z.array(z.string()).nullable(),
   campus: campus.nullable(),
+  /** WHY: the stop area a journey planner picks it through (ADR 0022, D4); null in none. Pins and pages stay one per stop. */
+  stopAreaId: z.string().nullable(),
   /** WHY: in /bus/config's group order; `kind` is an open enum, and a client skips a kind it does not know. */
   routes: z.array(z.discriminatedUnion("kind", [liveRoute, timetableRoute])),
 });

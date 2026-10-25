@@ -36,6 +36,18 @@
  *                    check reads through `issuesOf`'s `collectionOf(key)`,
  *                    read from the environment the run targets, or null when
  *                    not read
+ *   recheckTriggers  optional: the other datasets whose content its
+ *                    `issuesOf` depends on beyond their `idsOf`. When one of
+ *                    them is pushed or checked, this dataset's `issuesOf` runs
+ *                    again over its own stored data, `storedOf(<that one>)`
+ *                    being the content checked, with its own `reads` and
+ *                    `collections` read too; its refusing issues refuse that
+ *                    push, reported as this dataset's (checks.js, step 5). A
+ *                    dataset that needs an alias of `bus-stops` to stay, as a
+ *                    journey dataset naming an unlisted route's pole does
+ *                    (ADR 0022, D4), declares `recheckTriggers: ["bus-stops"]`
+ *                    and refuses, in its `issuesOf`, a pole the stored
+ *                    `bus-stops` no longer aliases
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
@@ -72,7 +84,10 @@
  *
  * `busSchedules` is the stored shuttle timetables, which `npm run schedule`
  * writes; `bus-stops` reads it so a sequence and its timetable entries agree
- * (`stopTimesMismatches`, run by both writers).
+ * (`stopTimesMismatches`, run by both writers). `jongroRoutes` and
+ * `jongroRoutePaths` are the TOPIS registry and route lines the poller
+ * stores; `bus-stops` builds the stop index from them, as the server does, to
+ * resolve each stop area member and place it (ADR 0022, D4).
  *
  * A code-held source is an identity list that still lives in code, resolved
  * against the compiled checkout (ADR 0013, D5):
@@ -177,6 +192,10 @@ function loadCatalog(load) {
   const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
   const { busStopsDataset } = load("bus/stops/bus-stops.schema");
   const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
+  const { toBusStopsSnapshot } = load("bus/stops/bus-stops.mapper");
+  const { toRegistryRoute } = load("bus/registry/bus-registry.mapper");
+  const { toPoleArsId, toStopIndex } = load("bus/stop-index/bus-stop-index.rules");
+  const { toPoleCoords } = load("bus/stop-index/bus-stop-index.mapper");
   const { LANE_STRATEGIES } = load("bus/eta/lane/bus-eta-lane.constants");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
@@ -185,7 +204,7 @@ function loadCatalog(load) {
   const { appFeaturesDataset } = load("app-config/app-config.schema");
   const { gameIdsOf, toGameOriginIssues, toTakenIdIssues } = load("games/games.rules");
   const { GAME_ID_BY_FIRST_PARTY_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
-  const { JONGRO_ROUTES, SERVICE_CONFIG } = load("bus/bus.constants");
+  const { JONGRO_ROUTES, SERVICE_CONFIG, TOPIS_ROUTES } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");
   const { SUBWAY_NETWORK, SUBWAY_STATIONS } = load("subway/subway.constants");
@@ -237,6 +256,34 @@ function loadCatalog(load) {
       ? asWarnings([{ path: [], message: "no stored subway-topology, so the tables' routes were not checked against it" }], ["subway-topology"])
       : asWarnings(toRouteIssues(topology, routesOf(tables)), ["subway-topology"]);
 
+  // The stop index a bus-stops push resolves its stop areas' members through, built as the server builds it from the
+  // target's stored registry and route lines: a catalog stop is itself, a `seoul-` pole the stop a listed route serves it as.
+  const stopAreaResolutionOf = (data, registryDocs, routePathDocs) => {
+    const routes = TOPIS_ROUTES.flatMap((route) => registryDocs.filter((doc) => doc._id === route.id).map((doc) => toRegistryRoute(route, doc)));
+    const index = toStopIndex(toBusStopsSnapshot({ revision: 0, data: JSON.parse(JSON.stringify(data)) }), routes);
+    const catalogStops = new Map(data.stops.map((stop) => [stop.id, stop]));
+    const stopIdOf = (memberId) => {
+      const arsId = toPoleArsId(memberId);
+      if (arsId === null) return catalogStops.has(memberId) ? memberId : null;
+      return index.stopIdByArsId.get(arsId) ?? null;
+    };
+    const coordsOf = (stopId) => catalogStops.get(stopId)?.coords ?? toPoleCoords(index.stopById.get(stopId)?.poles ?? [], routePathDocs);
+    return { stopIdOf, coordsOf };
+  };
+  const stopAreasUnread = {
+    path: ["stopAreas"],
+    message: "jongro_routes or jongro_route_paths was not read, so the stop areas' members were not checked",
+    warning: true,
+  };
+  const busStopsIssues = (data, { collectionOf }) => {
+    const [registryDocs, routePathDocs] = [collectionOf("jongroRoutes"), collectionOf("jongroRoutePaths")];
+    const isUnread = registryDocs === null || routePathDocs === null;
+    const stopAreaResolution = isUnread ? undefined : stopAreaResolutionOf(data, registryDocs, routePathDocs);
+    const context = { knownServiceIds: new Set(Object.keys(SERVICE_CONFIG)), optIns: etaOptIns(SERVICE_CONFIG), stationIds: new Set(subwayStations.ids()), laneStrategies: LANE_STRATEGIES };
+    const unread = isUnread && (data.stopAreas ?? []).length > 0 ? [stopAreasUnread] : [];
+    return [...toBusStopsIssues(data, { ...context, stopAreaResolution }), ...timetableIssues(data, collectionOf("busSchedules")), ...unread];
+  };
+
   return {
     collections: {
       busSchedules: {
@@ -248,6 +295,19 @@ function loadCatalog(load) {
         splitExpired,
         applyCommand: (file, prod, { create = false } = {}) =>
           `npm run schedule -- --file ${shellWord(file)}${create ? " --create" : ""}${prod ? " --prod" : ""}`,
+      },
+      // The TOPIS registry and route lines the poller stores, which the stop index is built from.
+      jongroRoutes: {
+        database: "MONGO_DB_NAME_BUS_CAMPUS",
+        name: "jongro_routes",
+        projection: { stations: 1, turnaroundTopisId: 1, stationsVersion: 1 },
+        keyOf: (doc) => doc._id,
+      },
+      jongroRoutePaths: {
+        database: "MONGO_DB_NAME_BUS_CAMPUS",
+        name: "jongro_route_paths",
+        projection: { "stations.topisId": 1, "stations.lat": 1, "stations.lng": 1 },
+        keyOf: (doc) => doc._id,
       },
     },
     sources: {
@@ -347,24 +407,17 @@ function loadCatalog(load) {
         issuesOf: toRouteLineIssues,
         referencesOf: () => [],
       },
-      // The local stops, the shuttle sequences and the HSSC line; the service ids, estimate opt-ins, travel strategies and
-      // HSSC position count stay in code (ADR 0013, D2). Its stop ids are what later datasets may name. Its
-      // sequences are checked against the target's stored timetables, whose stop times follow them.
+      // The local stops, the shuttle sequences, the HSSC line and the stop areas; the service ids, estimate opt-ins, travel
+      // strategies and HSSC position count stay in code (ADR 0013, D2). Its stop and stop area ids are what later datasets
+      // may name. Its sequences are checked against the target's stored timetables, whose stop times follow them, and its
+      // stop areas' members against the stop index built from the target's stored registry and route lines (ADR 0022, D4).
       "bus-stops": {
         owner: "src/bus/stops",
         schema: busStopsDataset,
-        collections: ["busSchedules"],
-        issuesOf: (data, { collectionOf }) => [
-          ...toBusStopsIssues(data, {
-            knownServiceIds: new Set(Object.keys(SERVICE_CONFIG)),
-            optIns: etaOptIns(SERVICE_CONFIG),
-            stationIds: new Set(subwayStations.ids()),
-            laneStrategies: LANE_STRATEGIES,
-          }),
-          ...timetableIssues(data, collectionOf("busSchedules")),
-        ],
+        collections: ["busSchedules", "jongroRoutes", "jongroRoutePaths"],
+        issuesOf: busStopsIssues,
         referencesOf: busStopsReferences,
-        idsOf: ({ stops }) => stops.map((stop) => stop.id),
+        idsOf: ({ stops, stopAreas = [] }) => [...stops.map((stop) => stop.id), ...stopAreas.map((area) => area.id)],
       },
       // Each served platform's directions and the neighbor stops; the lines, stations and platforms stay in code (ADR 0013, D2).
       "subway-topology": {

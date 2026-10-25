@@ -2,7 +2,7 @@
  * BusStopListService over the stop index built from in-memory stores (revision 1 of `bus-stops`, the stored
  * registry and route lines): every stop named in every language as a request in it is served, a public answer
  * cached five minutes, one minute while a registry route is unread, an ETag over the body that moves with a push
- * (a catalog stop's campus),
+ * (a catalog stop's campus, or the stop area that holds a stop),
  * and the stops' 503 when they were never read.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
@@ -99,6 +99,26 @@ describe("BusStopListService.listStops", () => {
     expect(before.data.stops.find((stop) => stop.id === "nsc-n-center")!.campus).toBeNull();
     expect(after.data.stops.find((stop) => stop.id === "nsc-n-center")!.campus).toBe("nsc");
     expect(after.etag).not.toBe(before.etag);
+  });
+
+  it("moves its ETag once a push groups stops into an area, and again when it changes the area's id", async () => {
+    // Arrange
+    const { service, stopsRepository } = setup();
+    const before = await service.listStops();
+    const area = { id: "hyehwa-exit1", name: { ko: "혜화역 1번 출구" }, stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] };
+    stopsRepository.storeStops({ ...busStopsFixture(), stopAreas: [area] });
+    jest.setSystemTime(NOW.getTime() + PAST_DATASET_TTL_MS);
+    const grouped = await service.listStops();
+    stopsRepository.storeStops({ ...busStopsFixture(), stopAreas: [{ ...area, id: "hyehwa" }] });
+    jest.setSystemTime(NOW.getTime() + 2 * PAST_DATASET_TTL_MS);
+
+    // Act
+    const renamed = await service.listStops();
+
+    // Assert
+    const areaOf = (list: typeof before, stopId: string) => list.data.stops.find((stop) => stop.id === stopId)!.stopAreaId;
+    expect([areaOf(before, "seoul-01592"), areaOf(grouped, "seoul-01592"), areaOf(renamed, "hssc-hyehwa-exit1"), areaOf(renamed, "hssc-bus-lot")]).toEqual([null, "hyehwa-exit1", "hyehwa", null]);
+    expect(new Set([before.etag, grouped.etag, renamed.etag]).size).toBe(3);
   });
 
   it("answers the stops' 503 when they were never read", async () => {

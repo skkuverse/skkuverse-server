@@ -7,6 +7,7 @@ const instant = z.iso.datetime({ offset: true });
 const stopBlock = servedStop.omit({ map: true }).extend({
   /** WHY: the TOPIS ARS numbers of the poles it stands for: a pole's own, or those a local stop aliases. */
   arsIds: z.array(z.string()).optional(),
+  stopAreaId: z.string().nullable(),
 });
 
 /** WHY: exactly the live route's station entry at stationIndex for the same stored state (ADR 0019, D12). */

@@ -20,12 +20,12 @@ const found = (extra: Partial<FoundStop>): FoundStop => ({ id: "seoul-01592", lo
 describe("toStopBlock", () => {
   it("serves a TOPIS pole by its Korean name, its coordinates and its ARS number", () => {
     // Act & Assert
-    expect(toStopBlock(found({ coords: { lat: 37.58, lng: 127 } }), null)).toEqual({ id: "seoul-01592", name: "혜화역1번출구", coords: { lat: 37.58, lng: 127 }, arsIds: ["01592"] });
+    expect(toStopBlock(found({ coords: { lat: 37.58, lng: 127 } }), null)).toEqual({ id: "seoul-01592", name: "혜화역1번출구", coords: { lat: 37.58, lng: 127 }, arsIds: ["01592"], stopAreaId: null });
   });
 
   it("leaves out the coordinates of a pole no route line lists", () => {
     // Act & Assert
-    expect(toStopBlock(found({}), null)).toEqual({ id: "seoul-01592", name: "혜화역1번출구", arsIds: ["01592"] });
+    expect(toStopBlock(found({}), null)).toEqual({ id: "seoul-01592", name: "혜화역1번출구", arsIds: ["01592"], stopAreaId: null });
   });
 
   it("serves a local stop as its record, with no arsIds when it aliases none", () => {
@@ -34,7 +34,7 @@ describe("toStopBlock", () => {
     const localStop = { id: "jeongja-exit3", name: { ko: "정자역 3번 출구" }, coords: { lat: 37.36, lng: 127.1 } };
 
     // Act & Assert
-    expect(toStopBlock(found({ id: "jeongja-exit3", localStop, poles: [], coords: localStop.coords }), record)).toEqual(record);
+    expect(toStopBlock(found({ id: "jeongja-exit3", localStop, poles: [], coords: localStop.coords }), record)).toEqual({ ...record, stopAreaId: null });
   });
 
   it("serves an aliased local stop with its aliases and, lacking its own, its pole's coordinates", () => {
@@ -48,12 +48,28 @@ describe("toStopBlock", () => {
       name: "학생회관",
       coords: { lat: 37.587, lng: 126.993 },
       arsIds: ["01618"],
+      stopAreaId: null,
     });
   });
 
   it("refuses a TOPIS stop with no pole, which the index never builds", () => {
     // Act & Assert
     expect(() => toStopBlock(found({ poles: [] }), null)).toThrow("seoul-01592");
+  });
+});
+
+describe("toStopBlock stop area", () => {
+  const record = { id: "hssc-hyehwa-exit1", name: "혜화역 1번출구" };
+  const localStop = { id: "hssc-hyehwa-exit1", name: { ko: "혜화역 1번출구" } };
+
+  it.each([
+    ["a pole in an area", () => toStopBlock(found({ stopAreaId: "hyehwa-exit1" }), null), "hyehwa-exit1"],
+    ["a local stop in an area", () => toStopBlock(found({ id: "hssc-hyehwa-exit1", localStop, poles: [], stopAreaId: "hyehwa-exit1" }), record), "hyehwa-exit1"],
+    ["a pole in no area, as null", () => toStopBlock(found({}), null), null],
+    ["a local stop in no area, as null", () => toStopBlock(found({ id: "hssc-hyehwa-exit1", localStop, poles: [] }), record), null],
+  ])("names the stop area of %s", (_case, block, expected) => {
+    // Act & Assert
+    expect(block().stopAreaId).toBe(expected);
   });
 });
 

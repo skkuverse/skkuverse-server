@@ -23,7 +23,7 @@ describe("toStopCampus", () => {
 });
 
 describe("toStopListEtag", () => {
-  const body = { stops: [{ id: "seoul-01592", name: { ko: "혜화역1번출구", en: "혜화역1번출구", zh: "혜화역1번출구" }, coords: null, arsIds: ["01592"], campus: "hssc" as const, routes: [] }] };
+  const body = { stops: [{ id: "seoul-01592", name: { ko: "혜화역1번출구", en: "혜화역1번출구", zh: "혜화역1번출구" }, coords: null, arsIds: ["01592"], campus: "hssc" as const, stopAreaId: null, routes: [] }] };
 
   it("is a quoted tag that stays while the body stays", () => {
     // Act

@@ -5,17 +5,18 @@ import type { LiveGroup } from "../live/bus-live.wire";
 import type { FoundStop, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
 import type { LiveEntry, RunCall, StopBlock, TimetableArrival, TimetableEntry } from "./bus-stop-arrivals.types";
 
-function toPoleBlock({ id, poles, coords }: FoundStop): StopBlock {
+function toPoleBlock(stop: FoundStop): StopBlock {
+  const { id, poles, coords } = stop;
   const [pole] = poles;
   if (!pole) throw new Error(`bus-stops: stop ${id} is neither a local stop nor a pole, which the stop index never builds`);
-  return { id, name: pole.stationName, ...(coords && { coords }), arsIds: poles.flatMap((each) => each.arsId ?? []) };
+  return { id, name: pole.stationName, ...(coords && { coords }), arsIds: poles.flatMap((each) => each.arsId ?? []), stopAreaId: stop.stopAreaId ?? null };
 }
 
 /** WHY: a local stop is its config record, drawn at its pole when it has no coordinates; a TOPIS pole is its stored station. */
 export function toStopBlock(stop: FoundStop, record: ServedStop | null): StopBlock {
   if (record === null) return toPoleBlock(stop);
   const arsIds = stop.localStop?.arsIds;
-  return { ...record, ...(record.coords === undefined && stop.coords && { coords: stop.coords }), ...(arsIds && { arsIds: [...arsIds] }) };
+  return { ...record, ...(record.coords === undefined && stop.coords && { coords: stop.coords }), ...(arsIds && { arsIds: [...arsIds] }), stopAreaId: stop.stopAreaId ?? null };
 }
 
 // WHY: the live route lists only the stations its source states something for; any other is no data (ADR 0019, D8).

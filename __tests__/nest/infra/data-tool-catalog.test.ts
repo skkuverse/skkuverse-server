@@ -43,9 +43,13 @@
  * stops schema and `toBusStopsIssues` against the checkout's services, their
  * estimate opt-ins, the served subway stations and the lane strategies; it
  * references the `subwayStations` and `busServices` code-held sources, and
- * others may reference its stop ids. It is the one dataset that declares a
- * collection outside the content database, `busSchedules`: its sequences are refused when a timetable entry's stop times do not
- * fit them, naming the service, the route type and the entry time.
+ * others may reference its stop ids and its stop area ids. It is the one dataset that declares
+ * collections outside the content database: `busSchedules`, whose entries refuse its sequences when their stop times do not
+ * fit them, naming the service, the route type and the entry time; and `jongroRoutes` and `jongroRoutePaths`, the
+ * TOPIS registry and route lines the stop index is built from, through which each stop area member resolves (ADR
+ * 0022, D4): a catalog stop, or a pole a listed TOPIS route serves, which a local stop's ARS or TOPIS alias makes
+ * that stop; one stop in one area once; each member within MAX_STOP_AREA_RADIUS_M of its area's centroid, a pole at
+ * its stored route line's coordinates. With either unread, the areas pass with a warning.
  *
  * The `subway-topology` dataset (ADR 0013, D2) is checked
  * with the server's topology schema and `toTopologyIssues` against the
@@ -85,6 +89,9 @@ import { hsscRouteLineDataset } from "../../../src/bus/hssc-route-line/bus-hssc-
 import { jongroRouteAttributesDataset } from "../../../src/bus/route-attributes/bus-route-attributes.schema";
 import { busStopsDataset } from "../../../src/bus/stops/bus-stops.schema";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import { storedJongroRouteDocuments } from "../../helpers/bus/bus-registry";
+import { storedJongroRoutePathDocuments } from "../../helpers/bus/bus-route-path";
+import { registryDoc7800 } from "../../helpers/bus/topis-7800";
 import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { SUBWAY_STATIONS } from "../../../src/subway/subway.constants";
@@ -1377,7 +1384,7 @@ describe("loadCatalog bus-stops against the target's stored timetables", () => {
     const declaring = Object.entries(catalog.datasets).filter(([, entry]) => (entry as { collections?: string[] }).collections);
 
     // Assert
-    expect(declaring.map(([name, entry]) => [name, (entry as { collections: string[] }).collections])).toEqual([["bus-stops", ["busSchedules"]]]);
+    expect(declaring.map(([name, entry]) => [name, (entry as { collections: string[] }).collections])).toEqual([["bus-stops", ["busSchedules", "jongroRoutes", "jongroRoutePaths"]]]);
     expect(catalog.collections.busSchedules).toMatchObject({ database: "MONGO_DB_NAME_BUS_CAMPUS", name: "bus_schedules" });
   });
 
@@ -1448,5 +1455,91 @@ describe("loadCatalog bus-stops against the target's stored timetables", () => {
     // Act & Assert
     expect(busSchedules.applyCommand("next.json", true, { create: true })).toBe("npm run schedule -- --file next.json --create --prod");
     expect(busSchedules.applyCommand("my timetables/next.json", false)).toBe("npm run schedule -- --file 'my timetables/next.json'");
+  });
+});
+
+describe("loadCatalog bus-stops stop areas against the target's stored TOPIS registry and route lines", () => {
+  const stops = () => datasetFixture("../bus/fixtures/bus-stops.dataset.json") as Record<string, any>;
+  const withAreas = (...stopAreas: Array<{ id: string; stopIds: string[] }>): Record<string, any> => ({ ...stops(), stopAreas: stopAreas.map((area) => ({ name: { ko: "정류장" }, ...area })) });
+  const storedTopis = () => ({ jongroRoutes: [...storedJongroRouteDocuments(), registryDoc7800()], jongroRoutePaths: storedJongroRoutePathDocuments() });
+  const linesOf = (data: unknown, collections: Record<string, unknown> = storedTopis()) => issueLines(checkData(loadCatalog(srcLoader), "bus-stops", data, {}, collections));
+
+  it("declares bus_campus.jongro_routes and jongro_route_paths, read for their stations", () => {
+    // Act
+    const { jongroRoutes, jongroRoutePaths } = loadCatalog(srcLoader).collections;
+
+    // Assert
+    expect(jongroRoutes).toMatchObject({ database: "MONGO_DB_NAME_BUS_CAMPUS", name: "jongro_routes" });
+    expect(jongroRoutePaths).toMatchObject({ database: "MONGO_DB_NAME_BUS_CAMPUS", name: "jongro_route_paths" });
+    expect([jongroRoutes.keyOf({ _id: "jongro07" }), jongroRoutePaths.keyOf({ _id: "jongro07" })]).toEqual(["jongro07", "jongro07"]);
+  });
+
+  it("accepts an area of a catalog stop and the pole beside it, placing the pole at its stored route line's coordinates", () => {
+    // Arrange
+    const data = withAreas({ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] }, { id: "hssc-600th-area", stopIds: ["hssc-600th", "seoul-01618"] });
+
+    // Act & Assert
+    expect(linesOf(data)).toEqual([]);
+  });
+
+  it("refuses a pole no stored listed route serves: an unknown one, and one only the unlisted 7800 serves", () => {
+    // Arrange
+    const only7800 = registryDoc7800().stations.find((station) => /^\d{5}$/.test(station.arsId) && Number(station.arsId) !== 0 && !station.stationName.includes("미정차"))!;
+    const data = withAreas({ id: "far", stopIds: ["hssc-600th", "seoul-99999", `seoul-${only7800.arsId}`] });
+
+    // Act & Assert
+    expect(linesOf(data)).toEqual([
+      'bus-stops: stopAreas.0.stopIds.1: "seoul-99999" is neither a stop of this dataset nor a pole a listed TOPIS route serves',
+      `bus-stops: stopAreas.0.stopIds.2: "seoul-${only7800.arsId}" is neither a stop of this dataset nor a pole a listed TOPIS route serves`,
+    ]);
+  });
+
+  it("resolves a pole a local stop's TOPIS alias claims to that stop, so listing both repeats it", () => {
+    // Arrange
+    const data = withAreas({ id: "hssc-lot", stopIds: ["hssc-bus-lot", "seoul-01618"] });
+    data.stops.find((stop: { id: string }) => stop.id === "hssc-bus-lot").topisIds = ["100900221"];
+
+    // Act & Assert
+    expect(linesOf(data)).toEqual(['bus-stops: stopAreas.0.stopIds.1: "seoul-01618" is the stop hssc-bus-lot, which this area lists already']);
+  });
+
+  it("refuses the members of an area whose pole stands a stop further on, naming each one's distance from the centroid", () => {
+    // Arrange
+    const data = withAreas({ id: "hssc-lot", stopIds: ["hssc-bus-lot", "seoul-01881"] });
+
+    // Act
+    const lines = linesOf(data);
+
+    // Assert
+    expect(lines).toEqual([
+      expect.stringMatching(/^bus-stops: stopAreas\.0\.stopIds\.0: stop hssc-bus-lot is \d+ m from the area's centroid, farther than 150 m$/),
+      expect.stringMatching(/^bus-stops: stopAreas\.0\.stopIds\.1: stop seoul-01881 is \d+ m from the area's centroid, farther than 150 m$/),
+    ]);
+  });
+
+  it("passes the areas with a warning when the registry or the route lines were not read, and says nothing for a revision with none", () => {
+    // Arrange
+    const data = withAreas({ id: "far", stopIds: ["hssc-600th", "seoul-99999"] });
+
+    // Act
+    const unread = checkContent(loadCatalog(srcLoader), "bus-stops", data, {}, { jongroRoutes: storedJongroRouteDocuments() });
+    const without = checkContent(loadCatalog(srcLoader), "bus-stops", stops(), {}, { jongroRoutes: storedJongroRouteDocuments() });
+
+    // Assert
+    expect(unread.issues).toEqual([]);
+    expect(issueLines(unread.warnings)).toContain("bus-stops: stopAreas: jongro_routes or jongro_route_paths was not read, so the stop areas' members were not checked");
+    expect(issueLines(without.warnings).filter((line) => line.includes("stopAreas"))).toEqual([]);
+  });
+
+  it("lists its stop area ids beside its stop ids for others to reference", () => {
+    // Arrange
+    const entry = loadCatalog(srcLoader).datasets["bus-stops"];
+    const parsed = entry.schema.parse(withAreas({ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] }));
+
+    // Act
+    const ids = entry.idsOf(parsed);
+
+    // Assert
+    expect(ids).toEqual([...stops().stops.map((stop: { id: string }) => stop.id), "hyehwa-exit1"]);
   });
 });

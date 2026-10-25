@@ -183,6 +183,7 @@ describe("GET /bus/stops", () => {
       coords: { lat: 37.5834729904, lng: 127.0017632862 },
       arsIds: ["01592"],
       campus: "hssc",
+      stopAreaId: null,
       routes: [
         { kind: "live", groupId: "jongro07", label: { ko: "종로 07", en: "Jongro 07", zh: "钟路 07" }, stationIndex: 16, towards: { ko: "혜화동로터리", en: "혜화동로터리", zh: "혜화동로터리" }, action: "board" },
         { kind: "live", groupId: "jongro08", label: { ko: "종로 08", en: "Jongro 08", zh: "钟路 08" }, stationIndex: 22, towards: { ko: "혜화동로터리", en: "혜화동로터리", zh: "혜화동로터리" }, action: "board" },
@@ -194,6 +195,7 @@ describe("GET /bus/stops", () => {
       coords: null,
       arsIds: null,
       campus: null,
+      stopAreaId: null,
       routes: [
         {
           kind: "live",
@@ -383,6 +385,26 @@ describe("GET /bus/stops and the stop page", () => {
     expect(page.body.data.routes).toEqual([expect.objectContaining({ groupId: "hssc", stationIndex: 3, action: "alight" })]);
     expect(stopIn(res.body, "hssc-olympic-hall")!.routes).toEqual([expect.objectContaining({ groupId: "hssc", stationIndex: 3, action: "alight" })]);
     expect(stopIn(res.body, "hssc-main-gate-out")!.routes).toEqual([expect.objectContaining({ groupId: "hssc", stationIndex: 2, action: "board" })]);
+    expectWire(busStopList, res.body.data);
+  });
+
+  it("Stop area: each member is listed once under its own id with the area's id, as its page names it, and every other stop with null", async () => {
+    // Arrange
+    const data = { ...busStopsFixture(), stopAreas: [{ id: "hyehwa-exit1", name: { ko: "혜화역 1번 출구" }, stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] }] };
+    const server = await bootWithStopPage({ ...freshStores(), stops: storedBusStopsRepository(data) });
+
+    // Act
+    const res = await request(server).get("/bus/stops");
+    const page = await request(server).get("/bus/stops/seoul-01592/arrivals");
+
+    // Assert
+    const grouped = stopsOf(res.body).filter((stop) => stop.stopAreaId !== null);
+    expect(grouped.map((stop) => [stop.id, stop.stopAreaId])).toEqual([
+      ["hssc-hyehwa-exit1", "hyehwa-exit1"],
+      ["seoul-01592", "hyehwa-exit1"],
+    ]);
+    expect(stopsOf(res.body).every((stop) => "stopAreaId" in stop)).toBe(true);
+    expect(page.body.data.stop.stopAreaId).toBe("hyehwa-exit1");
     expectWire(busStopList, res.body.data);
   });
 });
