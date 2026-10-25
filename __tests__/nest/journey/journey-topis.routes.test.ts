@@ -17,7 +17,10 @@
  * - rows a poller older than the stored headway wrote serve with no extrapolation;
  * - past the pole's last run, or once TOPIS says 운행종료 there, the option is not running, ended, with the next
  *   day's first run from the stored firstTm; before the first run, past the plan's window, with today's, and inside
- *   it the ride boards that first run at TOPIS's published time.
+ *   it the ride boards that first run at TOPIS's published time; overnight, with no rows stored, the next first run
+ *   comes from the hours the poller kept on the route;
+ * - an option whose first ride is a subway line after its last train, or whose TOPIS ride after 4호선 has ended, names
+ *   its next service too.
  *
  * Every store is in memory; the pollers never start (ROLE=api), and each clock instant boots its own app.
  */
@@ -384,6 +387,24 @@ describe("GET /journey/routes with the TOPIS options", () => {
       expect(option.status).toBe("running");
       expect(jongro!.board).toMatchObject({ status: "scheduled", scheduledArrivalAt: "2026-10-20T06:00:00+09:00", basis: "timetable", vehicleId: null, isFirstRun: true });
       expect(option.leaveAt).toBe("2026-10-20T05:53:00+09:00");
+    });
+  });
+
+  // WHY: the owner's rule that every option can show 운행종료 and its next service, checked for the sources the TOPIS
+  // options ride beside the TOPIS pole itself (above): the subway timetable as a first ride, and a TOPIS ride after one.
+  describe("No service, from every source a ride reads", () => {
+    it.each([
+      ["the 1호선 timetable, after its last train to 종로5가, later the same date", "nsc-to-hssc", "line1-jongro08", at("01:30:00", "2026-10-21"), "notStarted", "2026-10-21T06:05:30+09:00"],
+      ["the 7800 pole's last run, a ride after 4호선, by the 4호선 boarding that reaches it", "hssc-to-nsc", "line4-7800", at("23:40:00"), "ended", "2026-10-21T05:35:30+09:00"],
+    ])("names the next service for %s", async (_case, routeId, optionId, now, reason, nextServiceAt) => {
+      // Arrange
+      const server = await boot(now);
+
+      // Act
+      const option = await optionOf(server, routeId, optionId);
+
+      // Assert
+      expect(option).toMatchObject({ status: "notRunning", reason, nextServiceAt, legs: [] });
     });
   });
 });
