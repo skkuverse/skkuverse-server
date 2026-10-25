@@ -4,6 +4,7 @@
   "_productCopy": "Korean that IS the product rather than documentation. src/notices/*.json carry label.ko for department and category names; infra/i18n.ts is the server-generated UI string table. Both are data shipped to users.",
   "productCopy": [
     "src/infra/i18n.ts",
+    "src/journey/routes/journey-routes.constants.ts",
     "src/notices/sources.json",
     "src/notices/categories.json",
     "src/notices/exclude-reasons.json"

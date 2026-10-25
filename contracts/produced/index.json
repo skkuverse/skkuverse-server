@@ -215,9 +215,28 @@
     "export": "instant",
     "routes": []
   },
+  "journey-routes.journeyRoutes": {
+    "source": "src/journey/routes/journey-routes.wire.ts",
+    "export": "journeyRoutes",
+    "routes": [
+      "GET journey/routes"
+    ]
+  },
+  "journey-routes.journeyRoutesMeta": {
+    "source": "src/journey/routes/journey-routes.wire.ts",
+    "export": "journeyRoutesMeta",
+    "routes": [
+      "GET journey/routes"
+    ]
+  },
   "lat-lng.latLng": {
     "source": "src/shared/lat-lng.wire.ts",
     "export": "latLng",
+    "routes": []
+  },
+  "link-action.linkAction": {
+    "source": "src/shared/link-action.wire.ts",
+    "export": "linkAction",
     "routes": []
   },
   "link-action.linkActionType": {
@@ -348,6 +367,11 @@
     "routes": [
       "GET notices/tabs"
     ]
+  },
+  "place.place": {
+    "source": "src/shared/place.wire.ts",
+    "export": "place",
+    "routes": []
   },
   "subway-arrivals.subwayStationArrivals": {
     "source": "src/subway/arrivals/subway-arrivals.wire.ts",

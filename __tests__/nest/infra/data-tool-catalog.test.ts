@@ -1377,7 +1377,7 @@ describe("loadCatalog bus-stops against the target's stored timetables", () => {
     buildDocuments(parseTimetableFile(structuredClone(require(path.join(__dirname, "../../../scripts/data", file)))));
   const storedTimetables = () => ({ busSchedules: [...timetable("campus-schedule.json"), ...timetable("commute-schedule.json")] });
 
-  it("declares bus_campus.bus_schedules, and no other dataset declares a collection", () => {
+  it("declares bus_campus.bus_schedules, and only journey-routes declares a collection beside it", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
 
@@ -1385,7 +1385,10 @@ describe("loadCatalog bus-stops against the target's stored timetables", () => {
     const declaring = Object.entries(catalog.datasets).filter(([, entry]) => (entry as { collections?: string[] }).collections);
 
     // Assert
-    expect(declaring.map(([name, entry]) => [name, (entry as { collections: string[] }).collections])).toEqual([["bus-stops", ["busSchedules", "jongroRoutes", "jongroRoutePaths"]]]);
+    expect(declaring.map(([name, entry]) => [name, (entry as { collections: string[] }).collections])).toEqual([
+      ["bus-stops", ["busSchedules", "jongroRoutes", "jongroRoutePaths"]],
+      ["journey-routes", ["buildings", "jongroRoutes", "jongroRoutePaths"]],
+    ]);
     expect(catalog.collections.busSchedules).toMatchObject({ database: "MONGO_DB_NAME_BUS_CAMPUS", name: "bus_schedules" });
   });
 
