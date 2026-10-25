@@ -202,7 +202,9 @@ function loadCatalog(load) {
   const registryParts = { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin: WEB_ORIGIN };
   const busGroups = codeHeldSource("src/bus", toBusGroupIds(JONGRO_ROUTES));
   const jongroRoutes = codeHeldSource("src/bus", JONGRO_ROUTES.map((route) => route.id));
-  const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
+  const servedStations = new SubwayStationsService().listStations();
+  const subwayStations = codeHeldSource("src/subway", servedStations.map((station) => station.id));
+  const campuslessStationIds = servedStations.filter((station) => station.campus === null).map((station) => station.id);
   const servedPlatforms = SUBWAY_STATIONS.flatMap((station) => station.platforms);
   const subwayPlatforms = codeHeldSource("src/subway", servedPlatforms.map((platform) => platform.id));
   // A topology is checked against this checkout's network, which must hold together first; its issues name the constants.
@@ -304,7 +306,7 @@ function loadCatalog(load) {
         owner: "src/ui/transit",
         schema: transitLayoutFile,
         issuesOf: (layout, { storedOf }) =>
-          toTransitLayoutIssues(layout, { busGroupIds: busGroups.ids(), stationIds: subwayStations.ids(), registry: registryOf(storedOf, registryParts) }),
+          toTransitLayoutIssues(layout, { busGroupIds: busGroups.ids(), stationIds: subwayStations.ids(), campuslessStationIds, registry: registryOf(storedOf, registryParts) }),
         referencesOf: (layout) => transitLayoutReferences(layout, grammar),
       },
       // Every layer set's checks run in its schema; an activation in the eventmap database names a set by its id.

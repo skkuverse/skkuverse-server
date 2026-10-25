@@ -80,6 +80,15 @@ describe("subwayRegistryFile", () => {
     expect(messages).toContainEqual(expect.stringMatching(new RegExp(`^${[...path, field].join("\\.")}: `)));
   });
 
+  it("accepts a station with no campus, as ADR 0022 D7 lists 사당, 금정 and 종로5가", () => {
+    // Arrange
+    const raw = copyOf();
+    at(raw, ["stations", 0]).campus = null;
+
+    // Act & Assert
+    expect(messagesOf(raw)).toEqual([]);
+  });
+
   it("accepts a line with no train map and a neighbor with no name or train-map name", () => {
     // Arrange
     const raw = without(["lines", 0, "seoul"], "trainMapLine");

@@ -35,6 +35,14 @@ describe("toListedStation", () => {
     });
   });
 
+  it("lists a station with no campus with a null campus", () => {
+    // Act
+    const listed = toListedStation({ ...JEONGJA, id: "sadang", campus: null }, null, "en");
+
+    // Assert
+    expect(listed.campus).toBeNull();
+  });
+
   it("lists a station without coords with null coords and its lines", () => {
     // Act
     const listed = toListedStation(JEONGJA, null, "ko");

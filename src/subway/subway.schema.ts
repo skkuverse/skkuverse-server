@@ -50,7 +50,8 @@ const networkPlatform = z.strictObject({ id: platformId, line: z.string().min(1)
 
 const subwayPlatformFile = networkPlatform.extend({ directions: z.strictObject({ up: platformDirection, down: platformDirection }) });
 
-const stationFields = { id: z.string().regex(SLUG, { error: "must be a lowercase slug" }), name: localizedName, seoulName: z.string().min(1), campus };
+// WHY: a station a journey boards or alights at with no campus of its own is null (ADR 0022 D7).
+const stationFields = { id: z.string().regex(SLUG, { error: "must be a lowercase slug" }), name: localizedName, seoulName: z.string().min(1), campus: campus.nullable() };
 
 const subwayStationFile = z.strictObject({ ...stationFields, platforms: z.array(subwayPlatformFile).min(1) });
 
