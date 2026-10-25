@@ -3,7 +3,8 @@ import type { SentNotificationDoc } from "../miniapps.document";
 import { LOG_TITLE_CHARS, NO_RECORDED_OUTCOME_ERROR } from "./miniapps-notifications.constants";
 import type { PushMapTarget } from "./miniapps-notifications.schema";
 import type { NotificationContent } from "../../perimeter/perimeter.ports";
-import type { MiniAppNotificationHistoryEntry, SendOutcome, SendTrace } from "./miniapps-notifications.types";
+import type { SendTrace } from "./miniapps-notifications.types";
+import type { MiniAppNotificationHistoryEntry, SendOutcome } from "./miniapps-notifications.wire";
 import type { MiniAppFeedEntry } from "./miniapps-notifications.wire";
 
 interface NewNotification {

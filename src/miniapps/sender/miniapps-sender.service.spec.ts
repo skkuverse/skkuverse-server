@@ -84,6 +84,20 @@ describe("MiniappsSenderService.authorize", () => {
     expect(await refusalOf(senders.authorize({ senderId, scope: "push.send", request: SEND, rawBody: BODY }))).toEqual(answer);
   });
 
+  it.each<[string, PushAuthorization, string | null]>([
+    ["a call signed by a key", { allowed: true, keyId: "key-1" }, "key-1"],
+    ["a call signed by no key", { allowed: true, keyId: null }, null],
+  ])("answers %s with the key that signed it", async (_label, authorization, keyId) => {
+    // Arrange
+    authorizer.authorization = authorization;
+
+    // Act
+    const sender = await senders.authorize({ senderId: "hssc", scope: "push.send", request: SEND, rawBody: BODY });
+
+    // Assert
+    expect(sender.keyId).toBe(keyId);
+  });
+
   it("refuses a decision signed by a key over a body sent with a Content-Encoding, as unauthenticated", async () => {
     // Arrange
     authorizer.authorization = { allowed: true, keyId: "key-1" };
