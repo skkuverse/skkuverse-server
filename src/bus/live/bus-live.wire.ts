@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { arrival, operation, vehicle } from "../bus.wire";
-
-const instant = z.iso.datetime({ offset: true });
+import { call } from "../../shared/call.wire";
+import { instant } from "../../shared/instant.wire";
+import { operation, vehicle } from "../bus.wire";
 
 /** WHY: a station the source states something for (ADR 0019, D8): an arrival, or an operation such as TOPIS's end of service. */
 const liveStation = z.object({
@@ -13,7 +13,7 @@ const liveStation = z.object({
   arsId: z.string().nullable(),
   operation,
   /** WHY: who serves the station first, at most two (ADR 0019, D9). */
-  arrivals: z.array(arrival).max(2),
+  arrivals: z.array(call).max(2),
 });
 
 /** WHY: the live route of one realtime group, which the app's line screen moves to by OTA (ADR 0019, D11). */

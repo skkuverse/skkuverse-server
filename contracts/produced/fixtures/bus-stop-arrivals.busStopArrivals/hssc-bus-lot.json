@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-bus-lot/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a shuttle stop that aliases 종로07's pole 01618, so it lists the 인자셔틀's timetable entries and a 종로07 live entry); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16). Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-bus-lot/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a shuttle stop that aliases 종로07's pole 01618, so it lists the 인자셔틀's timetable entries and a 종로07 live entry); untrimmed. Each live entry's action (board, alight at a drop-off-only HSSC stop) is added by hand after towards, as the server serves it since 2026-10-23. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16). Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus. Reshaped by hand to ADR 0022's call (D2, D3), as the server serves it since: each arrival gains runId, headsign, isFirstRun and isExpress and takes isLastRun in place of isLastBus, in the call's key order (a live call: no run, its entry's direction label as headsign; a timetabled run: its run id, the entry's label as headsign, whether it is the day's first run of its route type), and each vehicle loses isLastBus.",
   "data": {
     "stop": {
       "id": "hssc-bus-lot",
@@ -34,8 +34,12 @@
             "scheduledDepartureAt": "2026-10-20T14:30:00+09:00",
             "basis": "timetable",
             "stopsAway": null,
-            "isLastBus": false,
+            "runId": "campus-inja|regular|2026-10-20|14:30",
             "vehicleId": null,
+            "headsign": "인사캠 → 자과캠",
+            "isFirstRun": false,
+            "isLastRun": false,
+            "isExpress": null,
             "providerText": null,
             "runDepartureAt": "2026-10-20T14:30:00+09:00"
           },
@@ -47,8 +51,12 @@
             "scheduledDepartureAt": "2026-10-20T15:00:00+09:00",
             "basis": "timetable",
             "stopsAway": null,
-            "isLastBus": false,
+            "runId": "campus-inja|regular|2026-10-20|15:00",
             "vehicleId": null,
+            "headsign": "인사캠 → 자과캠",
+            "isFirstRun": false,
+            "isLastRun": false,
+            "isExpress": null,
             "providerText": null,
             "runDepartureAt": "2026-10-20T15:00:00+09:00"
           },
@@ -60,8 +68,12 @@
             "scheduledDepartureAt": "2026-10-20T15:30:00+09:00",
             "basis": "timetable",
             "stopsAway": null,
-            "isLastBus": false,
+            "runId": "campus-inja|regular|2026-10-20|15:30",
             "vehicleId": null,
+            "headsign": "인사캠 → 자과캠",
+            "isFirstRun": false,
+            "isLastRun": false,
+            "isExpress": null,
             "providerText": null,
             "runDepartureAt": "2026-10-20T15:30:00+09:00"
           }
@@ -85,8 +97,12 @@
             "scheduledDepartureAt": "2026-10-23T13:00:00+09:00",
             "basis": "timetable",
             "stopsAway": null,
-            "isLastBus": true,
+            "runId": "campus-inja|hakbu|2026-10-23|13:00",
             "vehicleId": null,
+            "headsign": "인사캠 → 자과캠",
+            "isFirstRun": true,
+            "isLastRun": true,
+            "isExpress": null,
             "providerText": null,
             "runDepartureAt": "2026-10-23T13:00:00+09:00"
           },
@@ -98,8 +114,12 @@
             "scheduledDepartureAt": "2026-10-30T13:00:00+09:00",
             "basis": "timetable",
             "stopsAway": null,
-            "isLastBus": true,
+            "runId": "campus-inja|hakbu|2026-10-30|13:00",
             "vehicleId": null,
+            "headsign": "인사캠 → 자과캠",
+            "isFirstRun": true,
+            "isLastRun": true,
+            "isExpress": null,
             "providerText": null,
             "runDepartureAt": "2026-10-30T13:00:00+09:00"
           }
@@ -128,7 +148,6 @@
               "passengerCount": 9
             },
             "seatsLeft": null,
-            "isLastBus": false,
             "isLowFloor": true,
             "position": {
               "stationIndex": 0,
@@ -164,8 +183,12 @@
             "scheduledDepartureAt": null,
             "basis": "provider",
             "stopsAway": 1,
-            "isLastBus": false,
+            "runId": null,
             "vehicleId": "100000201",
+            "headsign": "이화사거리 방면",
+            "isFirstRun": null,
+            "isLastRun": false,
+            "isExpress": null,
             "providerText": "2분후[1번째 전]"
           }
         ]

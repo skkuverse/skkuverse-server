@@ -93,7 +93,7 @@ export class BusStopArrivalsService {
   }
 
   private groupOf(groupId: string, reads: PageReads): Promise<LiveGroup> {
-    return this.readOnce(reads.groups, groupId, () => this.live.findLiveGroup(groupId));
+    return this.readOnce(reads.groups, groupId, () => this.live.findLiveGroup(groupId, reads.lang));
   }
 
   private readOnce<T>(reads: Map<string, Promise<T>>, key: string, read: () => Promise<T>): Promise<T> {

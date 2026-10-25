@@ -1,0 +1,19 @@
+{
+  "_about": "Synthetic, never captured: taken from bus-live.liveGroup/hssc-running.json: the bus standing at its stop, arriving with no departure instant (ADR 0019, D14), headed by its station's direction (ADR 0022, D2). It replaces bus.arrival/hssc-at-stop.json, which the call replaced.",
+  "data": {
+    "status": "arriving",
+    "expectedArrivalAt": null,
+    "expectedDepartureAt": null,
+    "scheduledArrivalAt": null,
+    "scheduledDepartureAt": null,
+    "basis": "estimate",
+    "stopsAway": 0,
+    "runId": null,
+    "vehicleId": "32150",
+    "headsign": "하교",
+    "isFirstRun": null,
+    "isLastRun": null,
+    "isExpress": null,
+    "providerText": null
+  }
+}

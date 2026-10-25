@@ -204,7 +204,7 @@ describe("toTimetableAt", () => {
 });
 
 describe("isUnderWayAt", () => {
-  const run = { departureAt: new Date("2026-10-22T14:30:00.000Z"), stopTimes: [{ shownAt: null, isEstimated: false, latestEstimateAt: new Date("2026-10-22T15:52:00.000Z") }] };
+  const run = { departureAt: new Date("2026-10-22T14:30:00.000Z"), stopTimes: [{ shownAt: null, isEstimated: false, latestEstimateAt: new Date("2026-10-22T15:52:00.000Z"), timetableAt: null }] };
 
   it.each([
     ["in its last instant's minute", "2026-10-22T15:52:59.000Z", true],

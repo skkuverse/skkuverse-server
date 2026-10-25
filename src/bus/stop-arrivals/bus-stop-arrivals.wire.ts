@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { arrival, operation, servedStop, vehicle } from "../bus.wire";
-
-const instant = z.iso.datetime({ offset: true });
+import { call } from "../../shared/call.wire";
+import { instant } from "../../shared/instant.wire";
+import { operation, servedStop, vehicle } from "../bus.wire";
 
 /** WHY: the stop as /bus/config serves its record, without the map a group's screen draws; arsIds are its TOPIS poles. */
 const stopBlock = servedStop.omit({ map: true }).extend({
@@ -27,11 +27,11 @@ const liveEntry = z.object({
   operation,
   /** WHY: the vehicles its arrivals name, once each. */
   vehicles: z.array(vehicle),
-  arrivals: z.array(arrival),
+  arrivals: z.array(call),
 });
 
 /** WHY: a run keeps its identity, its departure from the origin, so a run with no time at this stop still sorts and labels. */
-const timetableArrival = arrival.extend({ runDepartureAt: instant });
+const timetableArrival = call.extend({ runDepartureAt: instant });
 
 const timetableEntry = z.object({
   kind: z.literal("timetable"),
@@ -47,10 +47,8 @@ const timetableEntry = z.object({
   arrivals: z.array(timetableArrival),
 });
 
-/**
- * WHY: one answer per stop, so the app polls one route; `routes` in /bus/config's order. `kind` names what an entry
- * serves; it is an open enum, and a client skips an entry of a kind it does not know (ADR 0019, D3).
- */
+// WHY: one answer per stop, so the app polls one route; `routes` in /bus/config's order. `kind` names what an entry
+// serves; it is an open enum, and a client skips an entry of a kind it does not know (ADR 0019, D3).
 export const busStopArrivals = z.object({
   stop: stopBlock,
   routes: z.array(z.discriminatedUnion("kind", [liveEntry, timetableEntry])),

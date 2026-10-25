@@ -29,6 +29,7 @@ import { BusLiveGroupModule } from "../../../src/bus/live/group/bus-live-group.m
 import { BusLiveHsscModule } from "../../../src/bus/live/hssc/bus-live-hssc.module";
 import { BusLiveJongroModule } from "../../../src/bus/live/jongro/bus-live-jongro.module";
 import { BusLiveModule } from "../../../src/bus/live/bus-live.module";
+import { liveGroup } from "../../../src/bus/live/bus-live.wire";
 import { BusRealtimeArrivalModule } from "../../../src/bus/realtime/arrival/bus-realtime-arrival.module";
 import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
 import { BusRealtimeGroupModule } from "../../../src/bus/realtime/group/bus-realtime-group.module";
@@ -561,7 +562,8 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
       ...{ expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null },
       scheduledDepartureAt: kst("2026-10-20", time),
       basis: "timetable",
-      ...{ stopsAway: null, isLastBus: false, vehicleId: null, providerText: null },
+      ...{ stopsAway: null, runId: `campus-inja|regular|2026-10-20|${time}`, vehicleId: null, headsign: "인사캠 → 자과캠" },
+      ...{ isFirstRun: false, isLastRun: false, isExpress: null, providerText: null },
       runDepartureAt: kst("2026-10-20", time),
     });
     expect(regular).toEqual({
@@ -579,7 +581,7 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
       [kst("2026-10-23", "13:00"), kst("2026-10-23", "13:00"), "timetable"],
       [kst("2026-10-30", "13:00"), kst("2026-10-30", "13:00"), "timetable"],
     ]);
-    expect((hakbu!.arrivals as Array<{ isLastBus: boolean }>).map((arrival) => arrival.isLastBus)).toEqual([true, true]);
+    expect((hakbu!.arrivals as Array<{ isLastRun: boolean }>).map((arrival) => arrival.isLastRun)).toEqual([true, true]);
     expectWire(busStopArrivals, res.body.data);
   });
 
@@ -787,5 +789,114 @@ describe("GET /bus/stops/:stopId/arrivals: directions", () => {
     expect(routesOf(olympicHall.body)).toEqual([expect.objectContaining({ groupId: "hssc", stationIndex: 3, direction: { id: "fromCampus", label: "하교" } })]);
     expectWire(busStopArrivals, pole.body.data);
     expectWire(busStopArrivals, olympicHall.body.data);
+  });
+});
+
+// WHY: the boards serve ADR 0022's call: a run's identity and flags on the call, the last-run flag only there, and
+// the timetable time kept beside an estimate (D2, D3).
+describe("GET /bus/stops/:stopId/arrivals and GET /bus/live/:groupId serve the call (ADR 0022)", () => {
+  // WHY: 13:50 KST on Tuesday the 20th, before the day's first regular run at 14:00.
+  const AT_13_50_KST = new Date("2026-10-20T04:50:00.000Z");
+
+  it("a timetabled run with an estimate keeps its timetable time in the scheduled pair beside the estimate in the expected pair", async () => {
+    // Arrange
+    const stores = freshStores();
+    stores.timetable.patterns = [
+      { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ ...run(1, "14:30"), stopTimes: ["14:30", "15:15"] }, run(2, "15:00")] },
+    ];
+    stores.estimates.docs.set("campus-inja|regular|2026-10-20|14:30|live", liveEstimate("14:30", [0, 3000]));
+    const server = await boot(stores);
+
+    // Act
+    const res = await request(server).get("/bus/stops/nsc-n-center/arrivals");
+
+    // Assert
+    const regular = routesOf(res.body).find((route) => route.serviceId === "campus-inja" && route.routeType === "regular")!;
+    const estimated = (regular.arrivals as RunArrival[]).find((arrival) => arrival.runDepartureAt === kst("2026-10-20", "14:30"));
+    expect(estimated).toMatchObject({
+      ...{ expectedArrivalAt: kst("2026-10-20", "15:20"), scheduledArrivalAt: kst("2026-10-20", "15:15") },
+      ...{ expectedDepartureAt: null, scheduledDepartureAt: null, basis: "estimate" },
+    });
+    expectWire(busStopArrivals, res.body.data);
+  });
+
+  it("a timetabled run carries its run id, the service's label as headsign, the day's first and last run flags and no express flag", async () => {
+    // Arrange
+    const server = await boot(freshStores(), AT_13_50_KST);
+
+    // Act
+    const res = await request(server).get("/bus/stops/hssc-bus-lot/arrivals");
+
+    // Assert
+    const [regular, hakbu] = routesOf(res.body);
+    const flagsOf = (entry: Route | undefined) =>
+      (entry!.arrivals as Array<Record<string, unknown>>).map(({ runId, headsign, isFirstRun, isLastRun, isExpress }) => [runId, headsign, isFirstRun, isLastRun, isExpress]);
+    expect(flagsOf(regular)).toEqual([
+      ["campus-inja|regular|2026-10-20|14:00", "인사캠 → 자과캠", true, false, null],
+      ["campus-inja|regular|2026-10-20|14:30", "인사캠 → 자과캠", false, false, null],
+      ["campus-inja|regular|2026-10-20|15:00", "인사캠 → 자과캠", false, false, null],
+    ]);
+    expect(flagsOf(hakbu)).toEqual([
+      ["campus-inja|hakbu|2026-10-23|13:00", "인사캠 → 자과캠", true, true, null],
+      ["campus-inja|hakbu|2026-10-30|13:00", "인사캠 → 자과캠", true, true, null],
+    ]);
+    for (const arrival of regular!.arrivals as Array<Record<string, unknown>>) expect(arrival).not.toHaveProperty("isLastBus");
+    expectWire(busStopArrivals, res.body.data);
+  });
+
+  it("a Jongno call carries TOPIS's last-run flag as isLastRun, its station's direction as headsign in the request language and no run; its vehicles no isLastBus", async () => {
+    // Arrange
+    const stores = freshStores();
+    const station = { stationId: "100900075", sequence: "17", stationName: "혜화역1번출구", stationNumber: "01592" };
+    stores.busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({
+        ...station,
+        eventDate: "2026-10-20 14:09:40.0",
+        eta: "4분10초후[2번째 전]",
+        buses: [
+          jongroArrivalBus({ staOrd: 17, sectOrd: 15, traTime: 250, arrmsg: "4분10초후[2번째 전]", vehId: "100000201", plainNo: "서울74사2701", isLast: true }),
+          jongroArrivalBus({ staOrd: 17, sectOrd: 10, traTime: 900, arrmsg: "15분후[7번째 전]", vehId: "100000202", plainNo: "서울74사2702" }),
+        ],
+      }),
+    ]);
+    stores.busCache.values.set("jongro_locations_07", [
+      jongroPositionDoc({ sequence: "15", stationId: "100000123", vehicleId: "100000201", carNumber: "2701", plainNo: "서울74사2701" }),
+      jongroPositionDoc({ sequence: "10", stationId: "100000118", vehicleId: "100000202", carNumber: "2702", plainNo: "서울74사2702" }),
+    ]);
+    const server = await boot(stores);
+
+    // Act
+    const [live, page] = [await request(server).get("/bus/live/jongro07").set("Accept-Language", "en"), await request(server).get("/bus/stops/seoul-01592/arrivals").set("Accept-Language", "en")];
+
+    // Assert
+    const liveStation = live.body.data.stations.find((candidate: { stationIndex: number }) => candidate.stationIndex === 16);
+    const fieldsOf = ({ vehicleId, runId, headsign, isFirstRun, isLastRun, isExpress }: Record<string, unknown>) => [vehicleId, runId, headsign, isFirstRun, isLastRun, isExpress];
+    expect(liveStation.arrivals.map(fieldsOf)).toEqual([
+      ["100000201", null, "To 성균관대운동장", null, true, null],
+      ["100000202", null, "To 성균관대운동장", null, false, null],
+    ]);
+    expect(liveStation.arrivals[0]).not.toHaveProperty("isLastBus");
+    expect(live.body.data.vehicles.map(({ id }: { id: string }) => id)).toEqual(["100000201", "100000202"]);
+    for (const vehicle of live.body.data.vehicles) expect(vehicle).not.toHaveProperty("isLastBus");
+    expect(routesOf(page.body).find((route) => route.groupId === "jongro07")!.arrivals).toEqual(liveStation.arrivals);
+    expectWire(liveGroup, live.body.data);
+    expectWire(busStopArrivals, page.body.data);
+  });
+
+  it("an HSSC call carries its station's 등교 or 하교 label as headsign", async () => {
+    // Arrange
+    const stores = freshStores();
+    stores.busCache.values.set("hssc", [hsscBus("32149", 6, "LEFT", "14:09:30"), hsscBus("32150", 9, "LEFT", "14:09:30")]);
+    const server = await boot(stores);
+
+    // Act
+    const live = await request(server).get("/bus/live/hssc");
+
+    // Assert
+    const headsignsAt = (stationIndex: number) =>
+      live.body.data.stations.find((candidate: { stationIndex: number }) => candidate.stationIndex === stationIndex).arrivals.map(({ headsign }: { headsign: string }) => headsign);
+    expect(headsignsAt(3)).toEqual(["하교", "하교"]);
+    expect(headsignsAt(6)).toEqual(["등교", "등교"]);
+    expectWire(liveGroup, live.body.data);
   });
 });

@@ -3,7 +3,7 @@ title: Bus Live API Reference
 type: reference
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-24
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -18,10 +18,10 @@ audience: internal
 | Route | `GET /bus/live/:groupId`, for a realtime group of `/bus/config` (`hssc`, `jongro02`, `jongro07`, `jongro08`) |
 | Auth | none |
 | Rate limit | `GeneralRateLimitMiddleware`, bound to `bus/live` in `BusModule.configure` (`src/bus/bus.module.ts`) |
-| Wire type | `liveGroup` and `liveGroupMeta` in `src/bus/live/bus-live.wire.ts`, published as `contracts/produced/bus-live.liveGroup.schema.json`; its arrival and vehicle are `bus.arrival` and `bus.vehicle` (`src/bus/bus.wire.ts`) |
+| Wire type | `liveGroup` and `liveGroupMeta` in `src/bus/live/bus-live.wire.ts`, published as `contracts/produced/bus-live.liveGroup.schema.json`; its arrivals are `call.call` (`src/shared/call.wire.ts`, [ADR 0022](../decisions/0022-journey-and-call-spec.md)) and its vehicles `bus.vehicle` (`src/bus/bus.wire.ts`), which extends `vehicle.vehicle` (`src/shared/vehicle.wire.ts`) |
 | Controller | `src/bus/live/group/bus-live-group.controller.ts` |
 | Sources | `bus_cache` (each poller's last answer and when it wrote it), the stored Jongno registry and route attributes, and the `bus-stops` dataset; no upstream call |
-| Envelope | `{ meta: { lang, serverNow }, data }`; `Cache-Control: no-store` |
+| Envelope | `{ meta: { lang, serverNow }, data }`; `Cache-Control: no-store`. Each arrival's `headsign` follows `Accept-Language` (ko, en, zh) |
 | Tests | `__tests__/nest/bus/bus-live.routes.test.ts`, and the specs under `src/bus/live/` |
 
 ## Example
@@ -35,7 +35,7 @@ audience: internal
     "updatedAt": "2026-10-20T09:59:55+09:00",
     "operation": "running",
     "vehicles": [{
-      "id": "32149", "plateNumber": null, "occupancy": null, "seatsLeft": null, "isLastBus": null, "isLowFloor": null,
+      "id": "32149", "plateNumber": null, "occupancy": null, "seatsLeft": null, "isLowFloor": null,
       "position": {
         "stationIndex": 6, "status": "inTransit", "progress": null, "sectionMeters": null, "coords": null,
         "nextStationAt": "2026-10-20T10:00:20+09:00", "positionAt": "2026-10-20T09:59:50+09:00", "checkedAt": "2026-10-20T09:59:55+09:00"
@@ -47,7 +47,8 @@ audience: internal
       "arrivals": [{
         "status": "enRoute", "expectedArrivalAt": "2026-10-20T10:01:42+09:00", "expectedDepartureAt": null,
         "scheduledArrivalAt": null, "scheduledDepartureAt": null, "basis": "estimate",
-        "stopsAway": 1, "isLastBus": null, "vehicleId": "32149", "providerText": null
+        "stopsAway": 1, "runId": null, "vehicleId": "32149", "headsign": "등교",
+        "isFirstRun": null, "isLastRun": null, "isExpress": null, "providerText": null
       }]
     }]
   }
@@ -81,7 +82,7 @@ Every instant is ISO 8601 at `+09:00`, to the second.
 
 ## Arrivals
 
-One bus at one station. Every key is always present; null means unknown.
+One bus at one station, as [ADR 0022](../decisions/0022-journey-and-call-spec.md)'s call (D2), in this key order. Every key is always present; null means unknown.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -91,8 +92,12 @@ One bus at one station. Every key is always present; null means unknown.
 | `scheduledArrivalAt`, `scheduledDepartureAt` | instant \| null | The timetable's; null on a live line |
 | `basis` | enum | `provider` (TOPIS predicted it), `estimate` (this server did, from the HSSC engine) or `timetable` |
 | `stopsAway` | int \| null | The stations with a stop the bus reaches first, plus one: `1` its next stop, `0` standing here. A bus that just left is a lap away on a loop. On Jongno it is one more than TOPIS's own count (the `N` of `[N번째 전]` in `providerText`, so 곧 도착 is `1`), and `0` for a bus its position shows standing at the station, which is served there first even though TOPIS drops a standing bus from its station's row. Null when TOPIS names no vehicle |
-| `isLastBus` | boolean \| null | The named vehicle's own `isLastBus`, the same on every arrival naming it; for a slot that names no vehicle, that slot's flag. Null on the HSSC line |
+| `runId` | string \| null | Opaque: compare it, never parse it. Null on a live line; a stop page's timetable run carries its run's id |
 | `vehicleId` | string \| null | A key of `vehicles`; null when the source names no vehicle (TOPIS's 출발대기 slot) |
+| `headsign` | string \| null | Where the bus is going: the direction its station lies on, as `/bus/config` labels it in the request language ([Directions](#directions): `성균관대운동장 방면`, the HSSC line's `하교` or `등교`). Null where the station has none |
+| `isFirstRun` | boolean \| null | Null on a live line; on a stop page's timetable run, whether it is the day's first run of its route type |
+| `isLastRun` | boolean \| null | 막차. True when any TOPIS row naming the bus says so (TOPIS flags it per row, and a 곧 도착 row carries no [막차] text), the same on every arrival naming it; for a slot that names no vehicle, that slot's flag. Null on the HSSC line. It replaced the arrival's and the vehicle's `isLastBus` on 2026-10-25 |
+| `isExpress` | boolean \| null | Always null for a bus |
 | `providerText` | string \| null | The upstream's own text as received (TOPIS `arrmsg`, Korean); null on the HSSC line |
 
 | `status` | Meaning | Instants |
@@ -111,6 +116,8 @@ A standing bus has no departure instant (ADR 0019, D14): an HSSC dwell estimate 
 
 The arrival `status` lost `atStop` on 2026-10-23: a standing bus is `arriving`. A client that still knows `atStop` never receives it.
 
+The arrival took ADR 0022's call shape on 2026-10-25, with the matching app OTA: it gained `runId`, `headsign`, `isFirstRun` and `isExpress`, `isLastBus` became `isLastRun`, and the vehicle lost `isLastBus`. A bundle that has not applied the OTA shows no 막차 badge until it does.
+
 ## Vehicles
 
 | Field | Type | Meaning |
@@ -119,7 +126,6 @@ The arrival `status` lost `atStop` on 2026-10-23: a standing bus is `arriving`. 
 | `plateNumber` | string \| null | The full plate (`서울74사5537`); shorten it on the client if the design wants the last four digits |
 | `occupancy` | object \| null | `{ level: "relaxed" \| "normal" \| "crowded", passengerCount: int \| null }`, from the TOPIS row nearest ahead of the bus |
 | `seatsLeft` | int \| null | Seats still free on the bus, `0` when none ([ADR 0019, D17](../decisions/0019-bus-live-api.md)). Only 7800 has a source, GBIS's `remainSeatCnt` for the same `vehId`, from an answer this server fetched at most 200 s ago; null on every Jongno and HSSC bus, on a 7800 bus GBIS did not name or said it does not know, and on every 7800 bus while GBIS is down, over its quota or outside 04:50–02:30 KST, and whenever `bus_seats` cannot be read |
-| `isLastBus` | boolean \| null | True when any TOPIS row naming the bus says 막차 (TOPIS flags it per row, and a 곧 도착 row carries no [막차] text); every arrival naming the bus carries this value. Null when no row names the bus |
 | `isLowFloor` | boolean \| null | True for a low-floor bus (저상버스), false for a general one, from TOPIS's bus type: its position row's when it has a position, else the arrival row its plate comes from, never a mix ([ADR 0019, D13](../decisions/0019-bus-live-api.md)). Null when that row names no type (an articulated bus, a row written before the field shipped) and always on the HSSC line |
 | `position` | object \| null | Null for a bus an arrival names but no position row has |
 | `trajectory` | array \| null | Knots `{ at, s }`, ascending; null when the bus is not moving or has no position |
@@ -161,7 +167,7 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 | A station or line | `running`, `ended`, `noData` | The arrivals; 운행종료; no information | station and group `operation` |
 | A station | 미정차 | The line passes it without stopping | `/bus/config` station `isPassThrough` |
 | A station | 하차전용 | Riders only get off there: show it as drop-off only, never as a boarding stop | `/bus/config` station `isAlightOnly`; on a stop page, the live entry's `action: "alight"` |
-| A bus | 막차 | Last-bus badge | `isLastBus` on the vehicle and every arrival naming it |
+| A bus | 막차 | Last-bus badge | `isLastRun` on every arrival naming it |
 | A bus | 저상 | Low-floor badge | the vehicle's `isLowFloor` when `true` (see Low floor below) |
 | A line | 방면 tabs | One tab per direction, its stations listed under it | `/bus/config` `screen.directions` and each station's `directionId` ([Directions](#directions)) |
 
