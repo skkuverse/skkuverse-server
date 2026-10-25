@@ -11,6 +11,6 @@ export interface ServedLine {
 export interface ServedStation {
   id: string;
   title: LocalizedName;
-  campus: Campus;
+  campus: Campus | null;
   lines: readonly ServedLine[];
 }

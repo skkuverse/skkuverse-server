@@ -10,6 +10,10 @@ export const TIMETABLE_DAY_TYPES: Readonly<Record<TimetableSource, readonly DayT
   shinbundang: ["weekday", "holiday"],
 };
 
+// WHY: a source's tables carry the operator that publishes them, whose section a platform need not be in: Korail's xlsx
+// times 종로5가 on Seoul Metro's section and the Seoul timetable 금정 on Korail's (ADR 0022 D4).
+export const TIMETABLE_OPERATOR_BY_SOURCE: Readonly<Record<TimetableSource, string>> = { korail: "KR", "seoul-station": "S1", shinbundang: "DX" };
+
 const HOUR_SEC = 3600;
 const MINUTE_SEC = 60;
 
@@ -40,11 +44,15 @@ export const MAX_UNOBSERVED_RUN_SEC = 510;
 // there too under the number it reaches Jamsil with.
 export const RUN_START_PLATFORM_IDS: readonly string[] = ["DX-D1-D04", "DX-D1-4319", "DX-D1-4311", "DX-D1-4312", "S1-2-212"];
 
-// WHY: adjacent stations whose codes are not consecutive: an id frozen at first use and the codes the 2026-05-11 KRIC
-// list skips.
+// WHY: adjacent stations whose codes are not consecutive: an id frozen at first use, the codes the 2026-05-11 KRIC
+// list skips, and line 1 where Seoul Metro's section (S1-1-150 to S1-1-159, 동묘앞 added last) meets Korail's.
 export const ADJACENT_PLATFORM_ID_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["KR-1-P157", "KR-1-1715"],
   ["KR-1-1715", "KR-1-P155"],
+  ["KR-1-134", "S1-1-150"],
+  ["S1-1-155", "S1-1-159"],
+  ["S1-1-159", "S1-1-156"],
+  ["S1-1-158", "KR-1-123"],
   ["S1-8-2809", "S1-8-2811"],
   ["S1-8-2821", "S1-8-2828"],
 ];
