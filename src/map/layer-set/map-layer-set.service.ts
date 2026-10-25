@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import { BASE_LAYERS, EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
 import { MapRepository } from "../map.repository";

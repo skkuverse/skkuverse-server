@@ -1,4 +1,4 @@
-import { toWebviewUrl } from "../../infra/webview-url";
+import { toWebviewUrl } from "../../shared/webview-url.util";
 import { isBrokenLinkAction } from "../../shared/link-action.util";
 import { BASE_LAYERS } from "../map.constants";
 import type { LayerSpec, MapChipActionSpec } from "../map.types";

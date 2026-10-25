@@ -4,7 +4,7 @@ import type { WithMeta } from "../../http/response.types";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import type { DepartureBoard } from "../../shared/departure.types";

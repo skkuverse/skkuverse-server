@@ -7,7 +7,7 @@ import type { WithEtag } from "../../http/response.types";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import { serviceConfigOf } from "../bus.rules";
 import { BusScheduleContentService } from "../schedule-content/bus-schedule-content.service";

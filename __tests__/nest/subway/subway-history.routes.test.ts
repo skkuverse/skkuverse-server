@@ -4,8 +4,9 @@
  * ROLE=api, so no poller starts, and only `Clock` overridden. The known
  * records are written through the real SubwayHistoryRepository (its upsert,
  * its observed-arrival update and its unresolved sweep), so the errors the
- * report reads are the ones Mongo computed. What it guards: without the
- * internal token, or with a wrong one, the answer is 401 with no data; a
+ * report reads are the ones Mongo computed. What it guards: when
+ * INTERNAL_AUTHORIZER (FakeInternalAuthorizer) refuses the call under
+ * subway.accuracy, the answer is 401 with no data, before the range is read; a
  * malformed range is a 400; and the report groups the range's records by
  * station, direction, horizon and source, each with its count, nearest-rank
  * median error, median and p90 absolute error and unresolved count, leaving
@@ -19,10 +20,12 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
+import { InternalAuthorizer } from "../../../src/perimeter/perimeter.ports";
 import type { SubwayPredictionDoc } from "../../../src/subway/history/subway-history.document";
 import type { SubwayHistoryRepository } from "../../../src/subway/history/subway-history.repository";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
+import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
@@ -34,6 +37,7 @@ const at = (iso: string): Date => new Date(`${iso}+09:00`);
 const CLOCK = { now: (): Date => at("2026-10-17T10:00:00") };
 const TOKEN = "test-internal-dispatch-token";
 const WEEK = "/internal/subway/accuracy?from=2026-10-10&to=2026-10-16";
+const internalAuthorizer = new FakeInternalAuthorizer();
 
 let mongod: TestMongod;
 let db: Db;
@@ -53,10 +57,18 @@ beforeAll(async () => {
   await clearCollections(db.getClient().db(config.mongo.dbName));
   app = await buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/calendar/", "src/subway/"),
-    overrides: [{ provide: Clock, useValue: CLOCK }],
+    overrides: [
+      { provide: Clock, useValue: CLOCK },
+      { provide: InternalAuthorizer, useValue: internalAuthorizer },
+    ],
     role: "api",
   });
 }, MONGOD_START_TIMEOUT_MS + APP_BOOT_TIMEOUT_MS);
+
+beforeEach(() => {
+  internalAuthorizer.allowed = true;
+  internalAuthorizer.calls.length = 0;
+});
 
 afterAll(async () => {
   try {
@@ -111,21 +123,40 @@ async function writeKnownRecords(repository: SubwayHistoryRepository): Promise<v
 
 describe("GET /internal/subway/accuracy", () => {
   it("answers 401 with no data without the internal token", async () => {
+    // Arrange
+    internalAuthorizer.allowed = false;
+
     // Act
     const res = await request(app.getHttpServer()).get(WEEK);
 
     // Assert
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: { code: "UNAUTHORIZED", message: expect.any(String) } });
+    expect(internalAuthorizer.calls.map(({ scope, request: asked }) => [scope, asked.target])).toEqual([["subway.accuracy", WEEK]]);
   });
 
   it("answers 401 with no data for a wrong token", async () => {
+    // Arrange
+    internalAuthorizer.allowed = false;
+
     // Act
     const res = await request(app.getHttpServer()).get(WEEK).set("X-Internal-Token", "not-the-token");
 
     // Assert
     expect(res.status).toBe(401);
     expect(res.body.data).toBeUndefined();
+  });
+
+  it("answers 401, not 400, for a malformed range the authorizer refuses: a caller without the token learns nothing", async () => {
+    // Arrange
+    internalAuthorizer.allowed = false;
+
+    // Act
+    const res = await request(app.getHttpServer()).get("/internal/subway/accuracy?from=2026-10-16&to=2026-10-10");
+
+    // Assert
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
   });
 
   it("answers 400 INVALID_ACCURACY_RANGE for a range whose end is before its start", async () => {

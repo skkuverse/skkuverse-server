@@ -6,7 +6,7 @@
  */
 import { z } from "zod";
 import { hasAnyText } from "../../infra/i18n";
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { WEBVIEW_ORIGIN } from "../../shared/webview-origin.constants";
 import type { I18n } from "../../infra/types";
 import { isDrawableGeometry } from "../../shared/geojson.util";
 import type { MapPlaceDoc, OverlayPlaceDoc } from "../map.document";

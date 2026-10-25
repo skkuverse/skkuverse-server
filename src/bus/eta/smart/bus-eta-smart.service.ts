@@ -6,7 +6,7 @@ import type { WithEtag } from "../../../http/response.types";
 import { createCachedLoader } from "../../../infra/cached-loader";
 import { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
-import { createLogThrottle } from "../../../infra/log-throttle";
+import { createLogThrottle } from "../../../shared/log-throttle.util";
 import type { SupportedLang } from "../../../infra/types";
 import { ESTIMATES_MAX_AGE_S } from "../../bus.constants";
 import { serviceConfigOf } from "../../bus.rules";

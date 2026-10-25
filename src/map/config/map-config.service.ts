@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import config from "../../infra/config";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import type { LayerSet } from "../layer-set/map-layer-set.schema";

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import type { BuildingDoc } from "../building.document";
 import { BuildingRepository } from "../building.repository";

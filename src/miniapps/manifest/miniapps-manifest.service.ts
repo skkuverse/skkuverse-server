@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import { FIRST_PARTY_MINIAPP_ORIGINS } from "../../infra/origins";
 import { parseShellFields } from "../miniapps.mapper";

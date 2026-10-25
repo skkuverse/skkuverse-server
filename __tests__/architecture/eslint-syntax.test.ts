@@ -229,7 +229,7 @@ describe("boundaries/pure-schema", () => {
     const sources = [
       'import type { BannerImageRaw } from "./ui.schema";',
       'import { type A, type B } from "../map.schema";',
-      'import { toWebviewUrl } from "../../infra/webview-url";',
+      'import { toWebviewUrl } from "../../shared/webview-url.util";',
       'import { LOST_AND_FOUND_PATH } from "../map.constants";',
     ];
 

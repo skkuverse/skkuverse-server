@@ -2,14 +2,17 @@ import { Injectable } from "@nestjs/common";
 import { Clock } from "../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../infra/dataset-loader";
 import logger from "../infra/logger";
-import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import type { MiniAppTarget } from "../shared/miniapp-target.types";
+import { parseMiniAppTarget } from "../shared/miniapp-target.util";
+import { WEBVIEW_ORIGIN } from "../shared/webview-origin.constants";
 import { REGISTRY_LOG_INTERVAL_MS } from "./miniapps.constants";
 import { MiniappsRegistryReadError, MiniappsRegistryUnavailableError } from "./miniapps.error";
 import { resolveLogo, toMiniAppRegistry } from "./miniapps.mapper";
 import { MiniappsRepository } from "./miniapps.repository";
-import { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } from "./miniapps.rules";
+import { isSingleEmoji, toRegistryIssues } from "./miniapps.rules";
 import type { MiniAppLogoRaw } from "./miniapps.schema";
-import type { MiniAppRegistry, MiniAppsRegistryRevision, MiniAppTarget } from "./miniapps.types";
+import type { MiniAppRegistry, MiniAppsRegistryRevision } from "./miniapps.types";
 import type { MiniAppLogo } from "./miniapps.wire";
 
 // SEE: docs/decisions/0010-server-architecture.md (D1): the door other features read the registry through.

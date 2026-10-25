@@ -4,7 +4,7 @@ import type { z } from "zod";
 import { createCachedLoader } from "../infra/cached-loader";
 import config from "../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
-import { createLogThrottle } from "../infra/log-throttle";
+import { createLogThrottle } from "../shared/log-throttle.util";
 import logger from "../infra/logger";
 import { mongoCollection } from "../infra/mongo";
 import { parseEach } from "../shared/zod-list.util";

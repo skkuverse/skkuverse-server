@@ -4,7 +4,7 @@
  * image's action sent only when it has one, and nothing kept only on disk (the
  * window, the untranslated alt) on the wire.
  */
-import { WEBVIEW_ORIGIN } from "../infra/origins";
+import { WEBVIEW_ORIGIN } from "../shared/webview-origin.constants";
 import { toBannerCarousel, toLocalizedText } from "./ui.mapper";
 import type { BannerImageRaw } from "./ui.schema";
 import { bannerCarousel } from "./ui.wire";

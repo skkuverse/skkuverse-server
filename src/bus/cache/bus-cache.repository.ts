@@ -3,7 +3,7 @@ import type { Collection } from "mongodb";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import config from "../../infra/config";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { BusCacheDocument, BusCacheEntry, BusCacheKey, BusCacheValueByKey } from "./bus-cache.document";

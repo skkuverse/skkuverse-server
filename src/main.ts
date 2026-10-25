@@ -10,6 +10,7 @@ import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
 import { bootstrapHttpApp } from "./http/http-app.bootstrap";
+import { RAW_BODY_ROUTE_PATHS } from "./miniapps/notifications/miniapps-notifications.constants";
 
 const SHUTDOWN_TIMEOUT_MS = 5000;
 const SENTRY_FLUSH_MS = 2000;
@@ -72,8 +73,9 @@ async function serveHttp(app: NestExpressApplication, role: string): Promise<voi
 }
 
 async function bootstrap(): Promise<void> {
-  const app = await bootstrapHttpApp((adapter, options) =>
-    NestFactory.create<NestExpressApplication>(AppModule, adapter, options),
+  const app = await bootstrapHttpApp(
+    (adapter, options) => NestFactory.create<NestExpressApplication>(AppModule, adapter, options),
+    RAW_BODY_ROUTE_PATHS,
   );
   app.enableShutdownHooks();
   await pingDatabase();

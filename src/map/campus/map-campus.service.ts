@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { CampusShapeDoc } from "../../building/building.document";
 import { BuildingService } from "../../building/building.service";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import type { MapOverlay } from "../map.wire";
 import { SHAPES_SKIPPED_LOG_INTERVAL_MS } from "./map-campus.constants";

@@ -4,7 +4,7 @@
  * served absolute, any other as written, and one its check would have refused throws rather than
  * being served raw.
  */
-import { WEBVIEW_ORIGIN } from "../infra/origins";
+import { WEBVIEW_ORIGIN } from "./webview-origin.constants";
 import type { LinkPolicy } from "./link-action.types";
 import { isBrokenLinkAction, toLinkProblem, toServedActionValue } from "./link-action.util";
 import { isRootRelativePath } from "./link-target.util";

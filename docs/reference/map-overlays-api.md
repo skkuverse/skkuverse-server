@@ -245,7 +245,7 @@ path>]` — `eskara-2026` opens that mini app at its registered `startUrl`, and
 authored; the app resolves the path against the `startUrl` it fetched from `GET /miniapps/:id` and
 falls back to `startUrl` if the result leaves that origin. The server drops a target whose id is not
 registered, or whose path could name another host (`//…`, `/\…`). The grammar lives in
-`parseMiniAppTarget` in `src/miniapps/miniapps.rules.ts` and is shared with the app's `/m/<target>` deep link and with
+`parseMiniAppTarget` in `src/shared/miniapp-target.util.ts` and is shared with the app's `/m/<target>` deep link and with
 mini-app pushes.
 
 A button whose label is blank in every language, or whose value is wrong for its type, is **dropped**
@@ -1112,7 +1112,7 @@ Discriminated on `kind`, matching `MarkerTap` in this same domain rather than th
 camera, and encoding one as JSON inside a string would put a second parser on the wire.
 
 `webview` reuses the name **and the validator** of the SDUI action type it corresponds to
-(`src/infra/webview-url.ts`), so there is one rule for what counts as a usable web view URL rather
+(`src/shared/webview-url.util.ts`), so there is one rule for what counts as a usable web view URL rather
 than two. Authored values are root-relative and are resolved against `WEBVIEW_ORIGIN` before they
 ship, so a client never receives a relative string to hand to an opener. There is deliberately **no
 `title`**: the client already holds the chip's `label`, and a page a chip opened is titled by that
