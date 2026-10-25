@@ -5,7 +5,8 @@ import helmet from "helmet";
 import config from "../infra/config";
 import { mountRequestLogging } from "../infra/http-logging";
 import { PinoNestLogger } from "../infra/nest-logger";
-import { CORS_METHODS, corsOrigins, EXPOSED_RESPONSE_HEADERS } from "../infra/origins";
+import { OriginTrust } from "../perimeter/perimeter.ports";
+import { corsOptions } from "./cors.config";
 import { HttpExceptionFilter } from "./http-exception.filter";
 import { LangMiddleware } from "./lang.middleware";
 import { localDevRequestFilter } from "./local-dev-request.middleware";
@@ -35,14 +36,8 @@ export async function bootstrapHttpApp(create: CreateApp): Promise<NestExpressAp
   // express.json above parses the body instead.
   const app = await create(new ExpressAdapter(expressInstance), { logger: new PinoNestLogger(), bodyParser: false });
 
-  // WHY: read-only methods from first-party origins, so a page cannot preflight a POST to /internal/*.
-  app.enableCors({
-    origin: corsOrigins(config.isDevelopment),
-    methods: [...CORS_METHODS],
-    exposedHeaders: EXPOSED_RESPONSE_HEADERS,
-    credentials: false,
-    maxAge: 86400,
-  });
+  // SEE: docs/decisions/0023-perimeter-ports.md ("D5. CORS before dependency injection")
+  app.enableCors(corsOptions(app.get(OriginTrust)));
 
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());

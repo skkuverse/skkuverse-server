@@ -9,16 +9,15 @@
  * The first-party game origins (skkuverse-app add-game-factory design D2) are
  * a second trust list: each is `https://<id>.game.skkuverse.com`, owned by the
  * game of that id, and in no list a mini app's page is trusted through (the
- * bridge, CORS, the mini-app owners), so no game page ever gets a mini-app
- * grant.
+ * bridge, the mini-app owners), so no game page ever gets a mini-app grant.
+ * CORS is ORIGIN_TRUST's (ADR 0023, D5): its game cases are tested beside its
+ * implementations in src/perimeter/.
  */
 import {
   BRIDGE_ORIGINS,
-  CORS_ORIGINS,
   FIRST_PARTY_MINIAPP_ORIGINS,
   GAME_ID_BY_FIRST_PARTY_ORIGIN,
   MINIAPP_ID_BY_FIRST_PARTY_ORIGIN,
-  corsOrigins,
 } from "./origins";
 
 describe("MINIAPP_ID_BY_FIRST_PARTY_ORIGIN", () => {
@@ -103,13 +102,6 @@ describe("GAME_ID_BY_FIRST_PARTY_ORIGIN", () => {
   it("grants no game origin the bridge", () => {
     // Act & Assert
     expect(BRIDGE_ORIGINS.filter((origin) => gameOrigins.includes(origin))).toEqual([]);
-  });
-
-  it("grants no game origin CORS, in production or in development", () => {
-    // Act & Assert
-    expect(CORS_ORIGINS.filter((origin) => gameOrigins.includes(origin))).toEqual([]);
-    expect(corsOrigins(false).filter((origin) => typeof origin === "string" && gameOrigins.includes(origin))).toEqual([]);
-    expect(corsOrigins(true).filter((origin) => typeof origin === "string" && gameOrigins.includes(origin))).toEqual([]);
   });
 
   it("shares no origin with the mini-app owners, so none is polled for a manifest", () => {

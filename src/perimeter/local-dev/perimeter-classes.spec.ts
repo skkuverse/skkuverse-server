@@ -150,6 +150,8 @@ describe("the LocalDev class for originTrust", () => {
     ["http://localhost", true],
     ["https://localhost:5173", false],
     ["http://localhost.evil.test", false],
+    ["http://192.168.0.5:5173", false],
+    ["https://apple-game.game.skkuverse.com", false],
     ["https://webview.skkuverse.com", false],
   ])("trusts %s: %s", (origin, trusted) => {
     // Act & Assert
