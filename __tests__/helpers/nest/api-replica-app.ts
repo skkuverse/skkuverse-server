@@ -41,6 +41,8 @@ import { storedSubwayTopologyRepository } from "../subway/topology";
 import { storedSubwayTimetableRepository } from "../subway/timetables";
 import { appModulesUnder } from "./app-modules";
 import { buildTestApp } from "./build-test-app";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../fakes/perimeter/rate-limit-policy.fake";
 
 const CLOCK = { now: (): Date => new Date("2026-10-20T01:00:00Z") };
 
@@ -48,6 +50,7 @@ export function buildApiReplicaApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/"),
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: new FakeBusCacheRepository() },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },

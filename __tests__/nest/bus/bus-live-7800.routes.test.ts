@@ -55,6 +55,8 @@ import { FakeBusRealtimeGbisRepository } from "../../helpers/fakes/bus/bus-realt
 import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import gbisCapture from "./fixtures/gbis-location-7800.json";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const NOW = new Date("2026-10-24T08:51:10Z");
 const busCache = new FakeBusCacheRepository();
@@ -93,6 +95,7 @@ beforeAll(async () => {
       BusLiveGroupModule,
     ],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: busCache },
       { provide: BusRealtimeJongroClient, useValue: client },
       { provide: BusRealtimeGbisClient, useValue: gbisClient },

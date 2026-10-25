@@ -49,6 +49,8 @@ import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.reposito
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 type Tick = () => Promise<unknown>;
 
@@ -95,6 +97,7 @@ beforeEach(async () => {
       SubwayArrivalsModule,
     ],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },

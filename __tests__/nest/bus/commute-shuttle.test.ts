@@ -56,6 +56,8 @@ import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.reposito
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 let busConfig: BusConfigService;
 const groupsByLang = new Map<SupportedLang, BusGroup[]>();
@@ -484,6 +486,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         SubwayArrivalsModule,
       ],
       overrides: [
+        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: Clock, useValue: PILOT_NOON },
         { provide: CalendarRepository, useValue: storedCalendarRepository() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },

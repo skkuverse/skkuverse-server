@@ -31,6 +31,8 @@ import { FakeBuildingRepository } from "../../helpers/fakes/building/building.re
 import { FakeMealsMenusRepository } from "../../helpers/fakes/meals/meals-menus.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import crawlerDocs from "./fixtures/crawler-meal-docs-2026-10-14.json";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: 01:30 KST on Monday the 19th is still Sunday the 18th in UTC.
 const CLOCK: Clock = { now: () => new Date("2026-10-18T16:30:00Z") };
@@ -73,6 +75,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [MealsCatalogModule, MealsMenusModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BuildingRepository, useValue: buildings },
       { provide: BuildingCafeteriaListRepository, useValue: listedCafeterias },
       { provide: MealsMenusRepository, useValue: menus },

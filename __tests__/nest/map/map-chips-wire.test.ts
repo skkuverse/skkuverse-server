@@ -29,6 +29,8 @@ import { Clock } from "../../../src/infra/clock";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { mapConfig } from "../../../src/map/config/map-config.wire";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
@@ -53,6 +55,7 @@ describe("GET /map/config (real map services)", () => {
     app = await buildTestApp({
       imports: [MapModule, MapLayerSetModule, MapConfigModule, MapCampusModule, MapEventModule, MapEventDetailsModule],
       overrides: [
+        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
         { provide: MapRepository, useValue: mapRepository },
         { provide: MapLayerSetRepository, useValue: fixtureLayerSetRepository() },

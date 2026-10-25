@@ -20,12 +20,13 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { InternalAuthorizer } from "../../../src/perimeter/perimeter.ports";
+import { InternalAuthorizer, RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
 import type { SubwayPredictionDoc } from "../../../src/subway/history/subway-history.document";
 import type { SubwayHistoryRepository } from "../../../src/subway/history/subway-history.repository";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
@@ -58,6 +59,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/calendar/", "src/subway/"),
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: Clock, useValue: CLOCK },
       { provide: InternalAuthorizer, useValue: internalAuthorizer },
     ],
@@ -240,7 +242,7 @@ describe("SubwayHistoryRepository at boot", () => {
     const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller").mockImplementation(() => undefined);
     const pollerApp = await buildTestApp({
       imports: appModulesUnder("src/scheduling/", "src/calendar/", "src/subway/"),
-      overrides: [{ provide: Clock, useValue: CLOCK }],
+      overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: CLOCK }],
       role: "poller",
     });
 

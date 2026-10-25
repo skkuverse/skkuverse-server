@@ -41,6 +41,8 @@ import { Clock } from "../../../src/infra/clock";
 import { storedPlatformGatesRepository } from "../../helpers/app-config/app-platform-gates";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 /** What production served at 2026-10-19T20:12:40Z: the body text and its weak ETag. */
 const CAPTURED = {
@@ -73,6 +75,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: appModulesUnder("src/config/", "src/app-config/"),
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: AppConfigRepository, useValue: storedPlatformGatesRepository() },
       { provide: Clock, useValue: { now: () => new Date("2026-10-25T03:00:00.000Z") } },
     ],

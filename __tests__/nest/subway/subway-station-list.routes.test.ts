@@ -26,6 +26,8 @@ import type { FakeSubwayStationCoordsRepository } from "../../helpers/fakes/subw
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { stationCoordsFixture, storedStationCoordsRepository } from "../../helpers/subway/station-coords";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const CLOCK: Clock = { now: () => new Date("2026-10-24T03:00:00.000Z") };
 
@@ -35,6 +37,7 @@ function bootWith(coordsRepository: FakeSubwayStationCoordsRepository): Promise<
   return buildTestApp({
     imports: [SubwayModule, SubwayStationsModule, SubwayStationCoordsModule, SubwayStationListModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: SubwayStationCoordsRepository, useValue: coordsRepository },
       { provide: Clock, useValue: CLOCK },

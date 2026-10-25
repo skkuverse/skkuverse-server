@@ -38,6 +38,8 @@ import { FakeSubwaySeoulApiClient } from "../fakes/subway/subway-seoul-api.clien
 import { FakeSubwaySeoulTrainmapClient } from "../fakes/subway/subway-seoul-trainmap.client.fake";
 import { appModulesUnder } from "./app-modules";
 import { buildTestApp } from "./build-test-app";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../fakes/perimeter/rate-limit-policy.fake";
 
 const CLOCK = { now: (): Date => new Date("2026-10-20T01:00:00Z") };
 
@@ -45,6 +47,7 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/"),
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusEtaForecastClient, useValue: new FakeBusEtaForecastClient() },
       { provide: BusEtaProbeClient, useValue: new FakeBusEtaProbeClient() },
       { provide: BusEtaTravelClient, useValue: new FakeBusEtaTravelClient() },

@@ -20,6 +20,8 @@ import { AppConfigRepository } from "../../../src/app-config/app-config.reposito
 import { Clock } from "../../../src/infra/clock";
 import { appPlatformGatesFixture, storedPlatformGatesRepository } from "../../helpers/app-config/app-platform-gates";
 import { FakeAppConfigRepository } from "../../helpers/fakes/app-config/app-config.repository.fake";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const CLOCK: Clock = { now: () => new Date("2026-10-25T03:00:00.000Z") };
 
@@ -27,6 +29,7 @@ function bootAppConfig(repository: FakeAppConfigRepository = storedPlatformGates
   return buildTestApp({
     imports: [ConfigModule, AppConfigModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: AppConfigRepository, useValue: repository },
       { provide: Clock, useValue: CLOCK },
     ],

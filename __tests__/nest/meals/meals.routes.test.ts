@@ -19,6 +19,8 @@ import { FakeBuildingCafeteriaListRepository } from "../../helpers/fakes/buildin
 import { storedBuilding } from "../../helpers/building/buildings";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -55,6 +57,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [MealsCatalogModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BuildingRepository, useValue: buildings },
       { provide: BuildingCafeteriaListRepository, useValue: listedCafeterias },
     ],

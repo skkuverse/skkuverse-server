@@ -48,6 +48,8 @@ import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, star
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/map-production.capture.json";
 import festival from "./fixtures/map-festival.expected.json";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const store = require("../../../scripts/lib/datasets/store");
@@ -135,7 +137,7 @@ beforeAll(async () => {
       name,
       await buildTestApp({
         imports: appModulesUnder("src/map/layer-set/", "src/map/config/", "src/map/event/", "src/map/event-details/"),
-        overrides: [{ provide: Clock, useValue: clock }],
+        overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: clock }],
         role: "api",
       }),
     );
