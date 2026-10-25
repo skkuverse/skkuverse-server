@@ -3,7 +3,7 @@
  * indexes of a route a stop is at, read only while the live group's stations version is the index's; which board
  * and alight stations a leg rides between, the alight after the board; a stop's service day from TOPIS's first and
  * last run, read by time of day so a last run after midnight belongs to the day before; and the board itself: the
- * predicted vehicles at the board station with a time, each call as the live route serves it, joined to the same
+ * predicted vehicles at the board station with a time inside the window, each call as the live route serves it, joined to the same
  * vehicle's call at the alight station; past them, half a headway from `term` while the stop's service day runs, and
  * nothing without `term`; a route TOPIS says has ended, or whose last run has passed, lists no headway and names the
  * next service day's first run; before the first run it lists that run, from the timetable, when it falls in the window.
@@ -141,6 +141,21 @@ describe("toTopisBoard", () => {
       "200011607": { id: "200011607", occupancy: null, seatsLeft: 12, isLowFloor: false },
       "200010898": { id: "200010898", occupancy: null, seatsLeft: null, isLowFloor: false },
     });
+  });
+
+  it.each([
+    ["one second before the window's end", "21:58:39", 1],
+    ["at the window's end", "21:58:40", 1],
+    ["one second after it", "21:58:41", 0],
+  ])("lists a predicted vehicle %s", (_case, local, count) => {
+    // Arrange
+    const late = call({ expectedArrivalAt: `2026-10-25T${local}+09:00`, vehicleId: "200011607" });
+
+    // Act
+    const board = toTopisBoard({ group: group([station(40, [late])]), row: row(), legStations: LEG, query: query() });
+
+    // Assert
+    expect(board.departures).toHaveLength(count);
   });
 
   it("boards past the predicted vehicles at half the headway until the stop's last run, and names the next day's first run", () => {
