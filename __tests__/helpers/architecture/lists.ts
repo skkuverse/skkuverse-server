@@ -127,16 +127,20 @@ function exemptionViolations(change: ListChange, commits: readonly ListCommit[],
     const why = allowed === undefined ? `register ${name} in EXEMPTION_DECISIONS first` : `a new exemption cites the decision behind it: ${allowed.join(" or ")}`;
     return [`${file}: ${entry} (${why})`];
   });
-  return name === SIZE_CAPS ? [...out, ...capRaises(change, commits)] : out;
+  return name === SIZE_CAPS ? [...out, ...capRaises(change, commits, { keysAdded: false })] : out;
 }
 
-/** `<file>: <key> max raised (…)` for each cap above the base whose raising commits do not all carry the trailer. */
-function capRaises(change: ListChange, commits: readonly ListCommit[]): string[] {
+/**
+ * `<file>: <key> max raised (…)` for each cap above the base whose raising commits do not all carry the trailer.
+ * With `keysAdded`, a new key is a raise from nothing (`caps/`); a new size-cap exemption is checked by its reason.
+ */
+function capRaises(change: ListChange, commits: readonly ListCommit[], { keysAdded }: { keysAdded: boolean }): string[] {
   const { file, before, after } = change;
   const was = new Set(listEntries(before));
-  const risen = listEntries(after).filter((e) => was.has(e) && (capMax(after, e) ?? 0) > (capMax(before, e) ?? 0));
+  const absent = keysAdded ? 0 : Infinity;
+  const risen = listEntries(after).filter((e) => (keysAdded || was.has(e)) && (capMax(after, e) ?? 0) > (capMax(before, e) ?? 0));
   return risen.flatMap((entry) => {
-    const raised = commitsThat(commits, file, (l) => (capMax(l.after, entry) ?? 0) > (capMax(l.before, entry) ?? Infinity));
+    const raised = commitsThat(commits, file, (l) => (capMax(l.after, entry) ?? 0) > (capMax(l.before, entry) ?? absent));
     if (raised.length > 0 && raised.every((c) => c.debt.includes(file))) return [];
     return [`${file}: ${entry} max raised (${describeCommits(raised)}; each commit that raises a cap carries "${DEBT_TRAILER}: ${file}")`];
   });
@@ -146,7 +150,7 @@ function capRaises(change: ListChange, commits: readonly ListCommit[]): string[]
 export function growthViolations(changes: readonly ListChange[], commits: readonly ListCommit[], gate: ListGate): string[] {
   return changes.flatMap((change) => {
     if (dirOf(change.file) === "exemptions") return exemptionViolations(change, commits, gate);
-    if (dirOf(change.file) === "caps") return capRaises(change, commits);
+    if (dirOf(change.file) === "caps") return capRaises(change, commits, { keysAdded: true });
     const { file, before, after } = change;
     const was = new Set(listEntries(before));
     const readers = new Set(gate.readers(file));
