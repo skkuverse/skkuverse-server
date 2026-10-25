@@ -1,6 +1,7 @@
 // SEE: docs/decisions/0023-perimeter-ports.md ("D3. The mode check")
 // WHY: imports nothing from src/infra/: config.ts runs this while it is itself loading.
 import net from "node:net";
+import { OVERLAY_ENTRY, overlayResolveErrors } from "./perimeter-overlay.rules";
 import { PERIMETER_MODES, type PerimeterMode } from "./perimeter.ports";
 
 const LOOPBACK = new net.BlockList();
@@ -37,6 +38,9 @@ function hostErrors(env: NodeJS.ProcessEnv): string[] {
   return [];
 }
 
+// WHY: resolves the entry without loading it: config.ts runs this before the error reporter starts.
 export function perimeterModeErrors(env: NodeJS.ProcessEnv): string[] {
-  return [...modeErrors(env), ...hostErrors(env)];
+  const errors = [...modeErrors(env), ...hostErrors(env)];
+  if (errors.length > 0 || env.PERIMETER_MODE !== "overlay") return errors;
+  return overlayResolveErrors(() => require.resolve(OVERLAY_ENTRY));
 }

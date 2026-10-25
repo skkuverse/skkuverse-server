@@ -389,3 +389,48 @@ describe("validateEnv refuses an invalid perimeter mode or host", () => {
     expect(() => validateEnv({ ...test, MONGO_URL: undefined })).not.toThrow();
   });
 });
+
+describe("validateEnv loads the overlay entry in overlay mode", () => {
+  const OVERLAY_ENTRY_MODULE = "../perimeter/current/perimeter.overlay";
+  const overlayTest = { ...process.env, NODE_ENV: "test", PERIMETER_MODE: "overlay", HOST: "127.0.0.1" };
+
+  // WHY: one object for every case: Jest keeps the first export a mock factory returned, so each case refills it.
+  const mockedEntry: Record<string, unknown> = {};
+
+  /** validateEnv from a fresh module registry whose overlay entry is the real one with `overrides`. */
+  function validateWithEntry(overrides: Record<string, unknown>, env: NodeJS.ProcessEnv): void {
+    let validate: typeof validateEnv | undefined;
+    for (const key of Object.keys(mockedEntry)) delete mockedEntry[key];
+    jest.isolateModules(() => {
+      jest.doMock(OVERLAY_ENTRY_MODULE, () => mockedEntry);
+      // WHY: the real entry from the same registry, so its classes extend the ports validateEnv checks against.
+      Object.assign(mockedEntry, jest.requireActual(OVERLAY_ENTRY_MODULE), overrides);
+      validate = (require("./required-env") as typeof import("./required-env")).validateEnv;
+    });
+    try {
+      validate!(env);
+    } finally {
+      jest.dontMock(OVERLAY_ENTRY_MODULE);
+    }
+  }
+
+  it("accepts the entry this build carries, under NODE_ENV=test too", () => {
+    // Act & Assert
+    expect(() => validateEnv(overlayTest)).not.toThrow();
+  });
+
+  it("refuses an entry built against other ports, before the early return for a test", () => {
+    // Act & Assert
+    expect(() => validateWithEntry({ portsVersion: 0 }, overlayTest)).toThrow(/Invalid perimeter[\s\S]*built against ports version 0/);
+  });
+
+  it("refuses settings the entry's own check refuses, naming PERIMETER_SETTINGS", () => {
+    // Arrange
+    const settingsErrors = (settings: string | undefined) => (settings === "bad" ? ["not base64url JSON"] : []);
+
+    // Act & Assert
+    expect(() => validateWithEntry({ settingsErrors }, { ...overlayTest, PERIMETER_SETTINGS: "bad" })).toThrow(
+      /Invalid perimeter[\s\S]*PERIMETER_SETTINGS: not base64url JSON/,
+    );
+  });
+});

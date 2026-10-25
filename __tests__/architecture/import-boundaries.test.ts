@@ -275,3 +275,42 @@ describe("a boundary block's ignores", () => {
     expect(listed).toEqual([]);
   });
 });
+
+/**
+ * The perimeter boundary (ADR 0023, D8): feature code and src/http/ reach a perimeter decision through the ports
+ * file alone, only src/perimeter/ reaches an implementation set, and nothing imports the overlay's private build
+ * output by name.
+ */
+describe("boundaries/perimeter, boundaries/http and the feature boundaries", () => {
+  it.each([
+    ["a feature, the ports", "src/notices/attachment/notices-attachment.service.ts", "../../perimeter/perimeter.ports", "boundaries/feature/notices/depth-2"],
+    ["src/http/, the ports", "src/http/http-app.bootstrap.ts", "../perimeter/perimeter.ports", "boundaries/http"],
+    ["the root module, the registry module", "src/app.module.ts", "./perimeter/perimeter.module", "boundaries/perimeter"],
+    ["src/infra/, the mode check", "src/infra/config.ts", "../perimeter/perimeter-mode.rules", "boundaries/perimeter"],
+    ["the registry, its implementation set", "src/perimeter/perimeter-registry.rules.ts", "./local-dev/perimeter-classes", "boundaries/perimeter"],
+    ["an implementation, the ports", "src/perimeter/current/origin-trust.ts", "../perimeter.ports", "boundaries/perimeter"],
+  ])("let %s import %s", (_case, file, specifier, name) => {
+    // Act
+    const messages = lint(block(name).rules!, file, `import { X } from "${specifier}";`);
+
+    // Assert
+    expect(messages).toEqual([]);
+  });
+
+  it.each([
+    ["a feature, an implementation", "src/notices/attachment/notices-attachment.service.ts", "../../perimeter/current/outbound-policy", "boundaries/perimeter"],
+    ["a feature, the registry module", "src/miniapps/miniapps.module.ts", "../perimeter/perimeter.module", "boundaries/feature/miniapps/depth-1"],
+    ["a feature, a type of a rules file", "src/miniapps/miniapps.service.ts", "../perimeter/perimeter-registry.rules", "boundaries/feature/miniapps/depth-1"],
+    ["src/http/, a rules file", "src/http/http-app.bootstrap.ts", "../perimeter/perimeter-registry.rules", "boundaries/http"],
+    ["src/http/, an implementation", "src/http/x.middleware.ts", "../perimeter/local-dev/origin-trust", "boundaries/http"],
+    ["src/infra/, an implementation", "src/infra/config.ts", "../perimeter/local-dev/origin-trust", "boundaries/perimeter"],
+    ["the root module, the overlay", "src/app.module.ts", "./perimeter/current/perimeter.overlay", "boundaries/perimeter"],
+    ["the registry, the private build", "src/perimeter/perimeter-registry.rules.ts", "../private/perimeter.overlay", "boundaries/perimeter"],
+  ])("reject %s import of %s", (_case, file, specifier, name) => {
+    // Act
+    const messages = lint(block(name).rules!, file, `import type { X } from "${specifier}";`);
+
+    // Assert
+    expect(messages).toHaveLength(1);
+  });
+});

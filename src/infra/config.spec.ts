@@ -69,6 +69,24 @@ describe("loading config with an invalid perimeter mode or host", () => {
     expect(mockLogger.fatal).toHaveBeenCalledWith(expect.objectContaining({ event: "config.invalid_perimeter" }), expect.any(String));
   });
 
+  // WHY: config.ts runs before the error reporter starts, so overlay mode only resolves the entry here.
+  it("resolves the overlay entry in overlay mode without loading it", () => {
+    // Arrange
+    const loaded = jest.fn();
+    jest.doMock("../perimeter/current/perimeter.overlay", () => {
+      loaded();
+      return {};
+    });
+
+    try {
+      // Act & Assert
+      expect(() => loadConfigWith({ NODE_ENV: "test", PERIMETER_MODE: "overlay" })).not.toThrow();
+      expect(loaded).not.toHaveBeenCalled();
+    } finally {
+      jest.dontMock("../perimeter/current/perimeter.overlay");
+    }
+  });
+
   it("throws in a listening role without HOST, and loads the poller without one", () => {
     // Act & Assert
     expect(() => loadConfigWith({ NODE_ENV: "test", ROLE: "api", HOST: undefined })).toThrow(/HOST is required where the server listens/);

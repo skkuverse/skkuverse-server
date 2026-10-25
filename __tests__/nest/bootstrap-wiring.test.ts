@@ -435,6 +435,47 @@ describe("bootstrapHttpApp pipeline", () => {
   });
 });
 
+/**
+ * A local-dev server refuses, before helmet or any route, a request that came through a proxy or a tunnel or names
+ * a host other than loopback (ADR 0023, D2); the other perimeter modes mount no such filter.
+ */
+describe("bootstrapHttpApp pipeline with PERIMETER_MODE=local-dev", () => {
+  let app: NestExpressApplication;
+  let mode: jest.ReplaceProperty<typeof config.perimeter.mode>;
+
+  beforeAll(async () => {
+    // WHY: bootstrapHttpApp reads config.perimeter.mode when it builds the app, as main.ts does.
+    mode = jest.replaceProperty(config.perimeter, "mode", "local-dev");
+    app = await buildTestApp({ imports: [PipelineModule] });
+  });
+
+  afterAll(async () => {
+    await app.close();
+    mode.restore();
+  });
+
+  it("mounts the local-dev request filter first, before helmet", () => {
+    // Act
+    const layers = pipelineLayers(app, 2);
+
+    // Assert
+    expect(layers).toEqual(["localDevRequestFilter", "helmetMiddleware"]);
+  });
+
+  it("answers a loopback request and refuses a forwarded one or one for another host", async () => {
+    // Act
+    const direct = await request(app.getHttpServer()).get("/pipeline");
+    const forwarded = await request(app.getHttpServer()).get("/pipeline").set("X-Forwarded-For", "203.0.113.1");
+    const rebound = await request(app.getHttpServer()).get("/pipeline").set("Host", "rebind.example:3000");
+
+    // Assert
+    expect(direct.status).toBe(200);
+    expect(forwarded.status).toBe(403);
+    expect(forwarded.body).toEqual({ error: { code: "LOCAL_DEV_ONLY", message: "A local-development server answers requests from this machine only" } });
+    expect(rebound.status).toBe(403);
+  });
+});
+
 describe("bootstrapHttpApp pipeline with CACHE=off", () => {
   let app: NestExpressApplication;
   let cacheEnabled: jest.ReplaceProperty<boolean>;

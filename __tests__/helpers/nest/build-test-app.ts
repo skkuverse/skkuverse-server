@@ -13,6 +13,7 @@ import type { ModuleMetadata } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { bootstrapHttpApp } from "../../../src/http/http-app.bootstrap";
+import { PerimeterModule } from "../../../src/perimeter/perimeter.module";
 
 export interface OverrideSpec {
   provide: unknown;
@@ -30,7 +31,8 @@ export interface TestAppOptions {
 export async function buildTestApp({ imports, overrides = [], role }: TestAppOptions): Promise<NestExpressApplication> {
   const restoreRole = role === undefined ? () => undefined : setRole(role);
 
-  const builder = Test.createTestingModule({ imports });
+  // The perimeter ports every route reaches, test-mode stubs unless overridden with a fake (ADR 0023, D7).
+  const builder = Test.createTestingModule({ imports: [PerimeterModule, ...imports] });
   for (const o of overrides) {
     builder.overrideProvider(o.provide as never).useValue(o.useValue);
   }

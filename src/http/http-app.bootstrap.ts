@@ -8,18 +8,17 @@ import { PinoNestLogger } from "../infra/nest-logger";
 import { CORS_METHODS, corsOrigins, EXPOSED_RESPONSE_HEADERS } from "../infra/origins";
 import { HttpExceptionFilter } from "./http-exception.filter";
 import { LangMiddleware } from "./lang.middleware";
+import { localDevRequestFilter } from "./local-dev-request.middleware";
 import { noStoreMiddleware } from "./no-store.middleware";
 import { ResponseInterceptor } from "./response.interceptor";
 
+type CreateApp = (adapter: ExpressAdapter, options: NestApplicationOptions) => NestExpressApplication | Promise<NestExpressApplication>;
+
 /** WHY: main.ts and the route tests create the app differently, so the caller passes `create` and both get this pipeline. */
-export async function bootstrapHttpApp(
-  create: (
-    adapter: ExpressAdapter,
-    options: NestApplicationOptions,
-  ) => NestExpressApplication | Promise<NestExpressApplication>,
-): Promise<NestExpressApplication> {
+export async function bootstrapHttpApp(create: CreateApp): Promise<NestExpressApplication> {
   const expressInstance = express();
   expressInstance.set("trust proxy", 1);
+  if (config.perimeter.mode === "local-dev") expressInstance.use(localDevRequestFilter);
   expressInstance.use(helmet());
   mountRequestLogging(expressInstance);
   expressInstance.use(express.json({ limit: "100kb" }));
@@ -34,10 +33,7 @@ export async function bootstrapHttpApp(
 
   // QUIRK(nestjs): Nest's own body parser reads `app.router`, which express 4.22 made throw, so it is off;
   // express.json above parses the body instead.
-  const app = await create(new ExpressAdapter(expressInstance), {
-    logger: new PinoNestLogger(),
-    bodyParser: false,
-  });
+  const app = await create(new ExpressAdapter(expressInstance), { logger: new PinoNestLogger(), bodyParser: false });
 
   // WHY: read-only methods from first-party origins, so a page cannot preflight a POST to /internal/*.
   app.enableCors({

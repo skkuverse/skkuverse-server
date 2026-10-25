@@ -197,6 +197,8 @@ const SRC_SYNTAX_PLUGIN = {
     "firebase-calls": CORE_RESTRICTED_SYNTAX,
     // An alias of no-restricted-imports, so the boundary blocks keep their own patterns.
     "import-paths": CORE_RULES.get("no-restricted-imports"),
+    // Another alias, so the perimeter blocks keep their own patterns beside the feature and import-path blocks.
+    "perimeter-imports": CORE_RULES.get("no-restricted-imports"),
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
     "generic-names": CORE_RULES.get("id-denylist"),
   },
@@ -362,6 +364,23 @@ const FEATURES = require("fs")
   .map((d) => d.name)
   .sort();
 
+const PERIMETER_IMPLEMENTATION_PATTERNS = [
+  {
+    regex: "(?:^|/)perimeter/(?:local-dev|current)/",
+    message: "Only src/perimeter/ reaches a perimeter implementation: inject its port from src/perimeter/perimeter.ports.",
+  },
+  {
+    regex: "(?:^|/)private/",
+    message: "Nothing imports the overlay's private build output: the registry loads it by path (ADR 0023, D4).",
+  },
+];
+
+// Feature code and src/http/ reach src/perimeter/ through the ports file alone (ADR 0023, D8).
+const PERIMETER_PORTS_ONLY_PATTERN = {
+  regex: "^(?:\\.\\./)+perimeter/(?!perimeter\\.ports$)(?!(?:local-dev|current)/)",
+  message: "Feature code and src/http/ import only src/perimeter/perimeter.ports: inject the port.",
+};
+
 const GET_CLIENT_PATTERN = {
   regex: "(?:^|/)infra/db$|^\\./db$",
   importNames: ["getClient"],
@@ -408,6 +427,7 @@ function featureBoundaryBlocks() {
                   message:
                     "Feature modules meet through DI: import another module's *.module or *.service, use `import type` for its types, or move a pure helper to src/shared/.",
                 },
+                PERIMETER_PORTS_ONLY_PATTERN,
               ],
             },
           ],
@@ -785,6 +805,22 @@ module.exports = [
     },
   },
   {
+    // ADR 0023, D8: only src/perimeter/ reaches an implementation set (its own files name it `./local-dev/…`,
+    // never through `perimeter/`), and no file names the overlay's private build output, which the registry loads
+    // by path (src/perimeter/perimeter-overlay.rules.ts).
+    name: "boundaries/perimeter",
+    files: ["src/**/*.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/perimeter-imports": ["error", { patterns: PERIMETER_IMPLEMENTATION_PATTERNS }] },
+  },
+  {
+    // Replaces the block above for src/http/, its patterns kept: the pipeline injects a port (ADR 0023, D8).
+    name: "boundaries/http",
+    files: ["src/http/**/*.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/perimeter-imports": ["error", { patterns: [...PERIMETER_IMPLEMENTATION_PATTERNS, PERIMETER_PORTS_ONLY_PATTERN] }] },
+  },
+  {
     // The boundaries above read import declarations: a `require()` or an `import()` call would pass them all,
     // so non-spec src/ loads modules only through `import`. Specs may still require a module after setup.
     name: "boundaries/module-loads",
@@ -824,9 +860,9 @@ module.exports = [
         {
           selector: [
             "CallExpression[callee.property.name='initializeApp'] > ObjectExpression.arguments > :not(Property[key.name='projectId'])",
-            "CallExpression[callee.property.name='initializeApp']:not([arguments.length=1][arguments.0.type='ObjectExpression'])",
+            "CallExpression[callee.property.name='initializeApp']:not([arguments.0.type='ObjectExpression']:matches([arguments.length=1], [arguments.length=2][arguments.1.type='Literal'][arguments.1.value=/^[a-z][a-z-]*$/]))",
           ].join(", "),
-          message: "initializeApp takes `{ projectId }` alone: the server holds no service-account credential.",
+          message: "initializeApp takes `{ projectId }` alone, and at most a literal app name: the server holds no service-account credential.",
         },
         {
           selector: [
