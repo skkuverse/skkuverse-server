@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-26
 audience: internal
 ---
 
@@ -56,11 +56,17 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
    | --- | --- |
    | iOS simulator | `http://localhost:3000` |
    | Android emulator | `http://10.0.2.2:3000`, or `http://localhost:3000` after `adb reverse tcp:3000 tcp:3000` |
-   | Physical phone | `http://<Mac LAN IP>:3000` on the same Wi-Fi, or the https URL from `cloudflared tunnel --url http://localhost:3000` |
+   | Physical phone | `http://<Mac LAN IP>:3000` on the same Wi-Fi, or the https URL from `cloudflared tunnel --url http://localhost:3000`, both in the `overlay` mode below |
 
-   The server listens on every interface, port `PORT` or 3000. Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
+   `npm run dev` sets `PERIMETER_MODE=local-dev` and `HOST=127.0.0.1`, so the server listens on loopback only, port `PORT` or 3000. The simulator and the emulator reach it; a phone on the Wi-Fi does not. `local-dev` refuses to start on any other address ([ADR 0023](../decisions/0023-perimeter-ports.md)). Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
 
-   A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Start it with `RATE_LIMIT=on CACHE=on` while a tunnel is up — with the caches off, every request through it is a query on the shared cluster — and stop the tunnel when you are done.
+   A phone or a tunnel needs the `overlay` mode, the perimeter production runs:
+
+   ```bash
+   npm run build && NODE_ENV=development PERIMETER_MODE=overlay HOST=0.0.0.0 RATE_LIMIT=on CACHE=on npm run dev:watch
+   ```
+
+   A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `RATE_LIMIT=on CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
 
 3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing (`skkuverse-app/LESSONS.md`). Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
 

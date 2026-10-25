@@ -40,10 +40,11 @@ ARG GIT_SHA
 ENV GIT_SHA=$GIT_SHA
 
 # /health/ready: lib/db pingDb() + (role==="api" OR pollers.isReady()).
+# 127.0.0.1, not localhost: HOST=0.0.0.0 listens on IPv4 only, and localhost may resolve to ::1.
 # docker-compose.yml의 api-1/api-2 healthcheck와 별개로 Dockerfile-level도 유지
 # — `docker run` 단독 사용 시도 healthcheck 동작.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health/ready || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/health/ready || exit 1
 
 # NestJS entrypoint (cutover 2026-05-30). dist/src/main.js handles the ROLE
 # branch (poller/api/combined) itself, same as the legacy dist/index.js did.
