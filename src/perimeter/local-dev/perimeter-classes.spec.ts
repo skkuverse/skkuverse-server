@@ -5,8 +5,10 @@
  * sender allowed.
  */
 import axios from "axios";
+import express from "express";
 import admin from "firebase-admin";
 import type { AddressInfo } from "node:net";
+import request from "supertest";
 import { LoopbackServers } from "../../../__tests__/helpers/nest/loopback-servers";
 import { describeAbuseSignalsContract } from "../../../__tests__/helpers/perimeter/abuse-signals.contract";
 import { describeInternalAuthorizerContract } from "../../../__tests__/helpers/perimeter/internal-authorizer.contract";
@@ -78,7 +80,13 @@ describe("the LocalDev class for requestAuthenticator", () => {
 });
 
 describe("the LocalDev class for rateLimitPolicy", () => {
-  it("serves every class with one limit", () => {
+  const servers = new LoopbackServers();
+
+  afterEach(async () => {
+    await servers.closeAll();
+  });
+
+  it("serves each class with a handler of its own", () => {
     // Arrange
     const policy = new LOCAL_DEV_CLASSES.rateLimitPolicy(perimeterTestDeps());
 
@@ -86,7 +94,33 @@ describe("the LocalDev class for rateLimitPolicy", () => {
     const handlers = new Set(RATE_LIMIT_CLASSES.map((limitClass) => policy.handlerFor(limitClass)));
 
     // Assert
-    expect(handlers.size).toBe(1);
+    expect(handlers.size).toBe(RATE_LIMIT_CLASSES.length);
+  });
+
+  // WHY: /notices/overview passes the notices and the notices-overview bindings; one shared count would spend two.
+  it("counts a request that passes two classes once in each", async () => {
+    // Arrange
+    const policy = new LOCAL_DEV_CLASSES.rateLimitPolicy(perimeterTestDeps());
+    const app = express();
+    app.use(policy.handlerFor("notices"), policy.handlerFor("notices-overview"));
+    app.get("/notices/overview", (_req, res) => {
+      res.json({ ok: true });
+    });
+    const server = await servers.serve(app);
+    const alone = express();
+    alone.use(new LOCAL_DEV_CLASSES.rateLimitPolicy(perimeterTestDeps()).handlerFor("notices-overview"));
+    alone.get("/notices/overview", (_req, res) => {
+      res.json({ ok: true });
+    });
+    const aloneServer = await servers.serve(alone);
+
+    // Act
+    const res = await request(server).get("/notices/overview");
+    const aloneRes = await request(aloneServer).get("/notices/overview");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.headers["ratelimit-remaining"]).toBe(aloneRes.headers["ratelimit-remaining"]);
   });
 });
 
