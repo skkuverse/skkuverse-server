@@ -4,15 +4,19 @@
  * them to a check: revision 1 of the 인자셔틀 options passes and names its four stops as `bus-stops` references; a push
  * is refused for an unknown stop, a cited place without coords, an id outside `[a-z0-9-]{1,128}`, a reversed stop
  * pair, legs that do not chain, a ride on no line and a stop where only a building or stop area may stand; and a
- * `bus-stops` push that drops a cited stop is refused while the journey dataset names it.
+ * `bus-stops` push that drops a cited stop is refused while the journey dataset names it. Against the stored
+ * `subway-timetables` too, revision 2's 4호선 → 금정 → 1호선 options pass; a ride is refused for a platform of another
+ * station, a platform on another line than the ride's, and platforms no train of a day type runs between in order; with
+ * no stored timetables the train order is a warning, not a refusal.
  */
 import path from "path";
 import { storedJongroRouteDocuments } from "../../helpers/bus/bus-registry";
 import { storedJongroRoutePathDocuments } from "../../helpers/bus/bus-route-path";
 import { registryDoc7800 } from "../../helpers/bus/topis-7800";
+import { subwayTimetablesFixture } from "../../helpers/subway/timetables";
 
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
-const { checkData } = require("../../../scripts/lib/datasets/checks");
+const { checkContent, checkData } = require("../../../scripts/lib/datasets/checks");
 
 const SRC = path.join(__dirname, "../../../src");
 const srcLoader = (relativePath: string): unknown => require(path.join(SRC, relativePath));
@@ -210,5 +214,75 @@ describe("loadCatalog journey-routes", () => {
 
     // Assert
     expect(lines).toEqual(expect.arrayContaining(['journey-routes: routes.1.options.0.legs.1.alight.place: "hssc-600th" is no longer in bus-stops']));
+  });
+});
+
+describe("loadCatalog journey-routes with the subway options", () => {
+  const revision2 = () => datasetFixture("./fixtures/journey-routes-revision-2.dataset.json");
+  // WHY: as the tool hands a parted dataset to a check: its manifest's parts, each with its data.
+  const storedTables = (tables = subwayTimetablesFixture()) => ({ parts: tables.map((table) => ({ key: `${table.operator}-${table.line}-${table.dayType}`, data: table })) });
+  const withTimetables = () => ({ ...stored(), "subway-timetables": storedTables() });
+  const checkSubway = (data: unknown, storedData: Record<string, unknown> = withTimetables()) => issueLines(checkData(loadCatalog(srcLoader), "journey-routes", data, storedData, { buildings: BUILDINGS }));
+  const toNscLegs = (data: any) => data.routes[0].options[1].legs;
+
+  it("accepts revision 2, the 4호선 → 금정 → 1호선 option each way", () => {
+    // Act
+    const lines = checkSubway(revision2());
+
+    // Assert
+    expect(lines).toEqual([]);
+  });
+
+  it("Wrong platform: refuses a ride that boards at a platform of another station", () => {
+    // Arrange
+    const data = revision2();
+    toNscLegs(data)[1].board.platformId = "KR-1-P153";
+
+    // Act
+    const lines = checkSubway(data);
+
+    // Assert
+    expect(lines).toEqual(expect.arrayContaining(["journey-routes: routes.0.options.1.legs.1.board.place: KR-1-P153 is no platform of subway_station:hyehwa"]));
+  });
+
+  it("refuses a 4호선 ride that alights at 금정's 1호선 platform", () => {
+    // Arrange
+    const data = revision2();
+    toNscLegs(data)[1].alight.platformId = "KR-1-P149";
+
+    // Act
+    const lines = checkSubway(data);
+
+    // Assert
+    expect(lines).toEqual(["journey-routes: routes.0.options.1.legs.1: KR-1-P149 is a platform of line 1, not of line 4"]);
+  });
+
+  it("refuses a ride whose platforms no train runs between in order, with the stored tables", () => {
+    // Arrange
+    const data = revision2();
+    const tables = subwayTimetablesFixture().map((table) => (table.operator === "KR" && table.line === "1" ? { ...table, trains: table.trains.filter((train) => train.direction === "up") } : table));
+
+    // Act
+    const lines = checkSubway(data, { ...withTimetables(), "subway-timetables": storedTables(tables) });
+
+    // Assert
+    expect(lines).toEqual(["journey-routes: routes.0.options.1.legs.3: no weekday train runs from KR-1-P149 to KR-1-P153"]);
+  });
+
+  it("checks no train order with no stored subway-timetables, and refuses nothing for it", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const { issues, warnings } = checkContent(catalog, "journey-routes", revision2(), stored(), { buildings: BUILDINGS });
+
+    // Assert
+    expect(issues).toEqual([]);
+    expect(issueLines(warnings)).toEqual([
+      "journey-routes: routes.0.options.1.legs.1.line: no stored subway-timetables, so the ride's train order was not checked",
+      "journey-routes: routes.0.options.1.legs.3.line: no stored subway-timetables, so the ride's train order was not checked",
+      "journey-routes: routes.1.options.1.legs.1.line: no stored subway-timetables, so the ride's train order was not checked",
+      "journey-routes: routes.1.options.1.legs.3.line: no stored subway-timetables, so the ride's train order was not checked",
+    ]);
   });
 });

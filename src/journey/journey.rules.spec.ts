@@ -2,9 +2,11 @@
  * What the journey dataset decides whatever its places resolve to (ADR 0022, D4 and D5): a place ref read apart into
  * its kind and the catalog's id, a leg's two ends, every cited place with its role, the cited stops as bus-stops
  * references, and the push issues of ids used twice, legs that do not chain from the route's from to its to, a ride on
- * no line, and a timetabled ride whose stops no sequence boards and alights in that order.
+ * no line, a timetabled ride whose stops no sequence boards and alights in that order, and a subway ride the stored
+ * timetables refuse, asked of the catalog by line and platforms, a warning when none is stored.
  */
 import { journeyRoutesFixture } from "../../__tests__/helpers/journey/journey-routes";
+import revision2 from "../../__tests__/nest/journey/fixtures/journey-routes-revision-2.dataset.json";
 import type { JourneyRoutesData } from "./journey.document";
 import { journeyRoutesReferences, toCitedPlaces, toJourneyRoutesIssues, toLegEnds, toPlaceRef } from "./journey.rules";
 import type { JourneyCatalog } from "./journey.types";
@@ -20,6 +22,7 @@ const CATALOG: JourneyCatalog = {
   stationCoords: new Map(),
   platformIdsByStation: new Map(),
   sequencesByService: { "campus-inja": { regular: sequence("hssc-bus-lot", "nsc-n-center") }, "campus-jain": { regular: sequence("nsc-opposite", "hssc-600th") } },
+  subwayRideIssueOf: () => null,
 };
 const messages = (data: JourneyRoutesData, catalog = CATALOG) => toJourneyRoutesIssues(data, catalog).map((issue) => `${issue.path.join(".")}: ${issue.message}`);
 
@@ -120,5 +123,40 @@ describe("toJourneyRoutesIssues", () => {
 
     // Act & Assert
     expect(messages(fixture(), catalog)).toEqual(["routes.0.options.0.legs.1: campus-inja has no sequence that boards at hssc-bus-lot and then alights at nsc-n-center"]);
+  });
+
+  it("asks the stored timetables of each subway ride by its line and platforms, and refuses at the ride what they refuse", () => {
+    // Arrange
+    const { _about: note, ...data } = structuredClone(revision2);
+    void note;
+    const rides: string[] = [];
+    const subwayRideIssueOf = ({ lineId, boardPlatformId, alightPlatformId }: { lineId: string; boardPlatformId: string; alightPlatformId: string }) => {
+      rides.push(`${lineId} ${boardPlatformId}>${alightPlatformId}`);
+      return lineId === "1" && boardPlatformId === "KR-1-P149" ? "no weekday train runs" : null;
+    };
+
+    // Act
+    const lines = messages(data as JourneyRoutesData, { ...CATALOG, subwayRideIssueOf });
+
+    // Assert
+    expect(lines).toEqual(["routes.0.options.1.legs.3: no weekday train runs"]);
+    expect(rides).toEqual(["4 S1-4-420>KR-4-443", "1 KR-1-P149>KR-1-P153", "1 KR-1-P153>KR-1-P149", "4 KR-4-443>S1-4-420"]);
+  });
+
+  it("warns at a subway ride's line, refusing nothing, when no subway-timetables is stored", () => {
+    // Arrange
+    const { _about: note, ...data } = structuredClone(revision2);
+    void note;
+
+    // Act
+    const issues = toJourneyRoutesIssues(data as JourneyRoutesData, { ...CATALOG, subwayRideIssueOf: null });
+
+    // Assert
+    expect(issues.map((issue) => [issue.path.join("."), issue.warning])).toEqual([
+      ["routes.0.options.1.legs.1.line", true],
+      ["routes.0.options.1.legs.3.line", true],
+      ["routes.1.options.1.legs.1.line", true],
+      ["routes.1.options.1.legs.3.line", true],
+    ]);
   });
 });
