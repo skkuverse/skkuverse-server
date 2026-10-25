@@ -9,6 +9,7 @@ function toJongroStations(doc: JongroRouteDocument): JongroStation[] {
     sequence: String(index + 1),
     stationName: station.stationName,
     stationNumber: station.arsId,
+    topisId: station.topisId,
     isFirstStation: index === 0,
     isLastStation: index === last,
     isRotationStation: station.topisId === doc.turnaroundTopisId,

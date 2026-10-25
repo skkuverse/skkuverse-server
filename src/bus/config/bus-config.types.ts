@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { SupportedLang } from "../../infra/types";
-import type { JongroRouteAttributes, TransferLine } from "../bus.types";
+import type { JongroRouteAttributes, StopAliases, TransferLine } from "../bus.types";
 import type { JongroStation, RegistryRoute } from "../registry/bus-registry.types";
 import type { HsscLineStation } from "../stops/bus-stops.document";
 import type { ResolvedStops } from "../stops/bus-stops.types";
@@ -60,8 +60,8 @@ export interface BusGroupSources {
   lang: SupportedLang;
   stops: GroupStops;
   hsscStations: readonly HsscLineStation[];
-  /** WHY: the bus-stops aliases, by ARS number, which name the stop of a Jongno station whose pole a local stop is. */
-  stopIdByArsId: ReadonlyMap<string, string>;
+  /** WHY: the bus-stops aliases, which name the stop of a Jongno station whose pole a local stop is. */
+  aliases: StopAliases;
   jongroRoutes: ReadonlyArray<AttributedJongroRoute>;
   webviewOrigin: string;
 }

@@ -101,7 +101,7 @@ The rules:
   - A place with an id has the form `<kind>:<id>`.
   - A new kind joins the push and link lists only once the app routes it: app first, then server. The journey wire passes through neither list.
 - **Ids.**
-  - Each catalog keeps its own ids: the bus-stops slug or `seoul-<ARS>`, the subway slug, and the SKKU building `_id` as a string.
+  - Each catalog keeps its own ids: the bus-stops slug or a pole's national nine-digit station id (`100900075`; its `seoul-<ARS>` id stays a legacy alias that resolves to it, ADR 0019 D5 amended 2026-10-25), the subway slug, and the SKKU building `_id` as a string.
   - Every place id matches `[a-z0-9-]{1,128}`.
   - A KRIC platform id is uppercase, so it is an attribute, never an id.
 - **No second id layer.** An alias never retires an id (ADR 0019, D5, amended), with one exception: an unlisted route's pole exists only through its alias, so that alias cannot be removed while the journey dataset names the pole.

@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/jongro07 captured from production 2026-10-20 (Accept-Language ko, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to the first two, each with the stopId each realtime station carries (hand-added: production served no stopId at the capture) The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23. Each realtime screen's directions (right after stations) and each station's directionId (right after stationNumber) are added by hand, as the server serves them since 2026-10-23 (ADR 0019, D16).",
+  "_about": "GET /bus/config/jongro07 captured from production 2026-10-20 (Accept-Language ko, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to the first two, each with the stopId each realtime station carries (hand-added: production served no stopId at the capture) The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23. Each realtime screen's directions (right after stations) and each station's directionId (right after stationNumber) are added by hand, as the server serves them since 2026-10-23 (ADR 0019, D16). Each pole's stop id is its national station id since 2026-10-25 (owner; ADR 0019, D5), where it was seoul-<ARS>, now an alias that still answers its stop page.",
   "data": {
     "id": "jongro07",
     "screenType": "realtime",
@@ -30,7 +30,7 @@
           "isPassThrough": false,
           "isAlightOnly": false,
           "transferLines": [],
-          "stopId": "seoul-01617"
+          "stopId": "100900220"
         },
         {
           "index": 1,
@@ -44,7 +44,7 @@
           "isPassThrough": false,
           "isAlightOnly": false,
           "transferLines": [],
-          "stopId": "seoul-01618"
+          "stopId": "100900221"
         }
       ],
       "directions": [
