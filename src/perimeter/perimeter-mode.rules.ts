@@ -25,7 +25,7 @@ function modeErrors(env: NodeJS.ProcessEnv): string[] {
   if (mode === "local-dev" && env.NODE_ENV !== "development") {
     return [`PERIMETER_MODE=local-dev needs NODE_ENV=development set explicitly (got "${env.NODE_ENV ?? ""}")`];
   }
-  if (mode === "test" && env.NODE_ENV === "production") return ["PERIMETER_MODE=test is refused in production"];
+  if (mode === "test" && env.NODE_ENV !== "test") return [`PERIMETER_MODE=test needs NODE_ENV=test (got "${env.NODE_ENV ?? ""}")`];
   return [];
 }
 
