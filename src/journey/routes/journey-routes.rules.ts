@@ -64,32 +64,38 @@ function timedBack(steps: readonly PlannedStep[], leaveAtMs: number): PlannedSte
   });
 }
 
+type FirstRide = { leaveAtMs: number; boardAtMs: number; nextServiceAt: Date | null };
+
+// WHY: a later ride's next first run is caught by boarding the first ride as much earlier, never before it runs again (ADR 0022, D7).
+function toChainNextServiceAt(first: FirstRide | null, endedNextAt: Date | null, readyAtMs: number): Date | null {
+  if (first === null || endedNextAt === null) return endedNextAt;
+  return new Date(Math.max(endedNextAt.getTime() - (readyAtMs - first.boardAtMs), first.nextServiceAt?.getTime() ?? 0));
+}
+
 /** WHY: each ride boards the first run catchable a catch margin after the legs before it (ADR 0022, D5 and D7). */
 export function planOption(option: JourneyOption, { now, catchMarginSec, lineById, boards }: PlanContext): PlannedOption {
-  const marginMs = catchMarginSec * 1000;
-  const legs: PlannedLeg[] = [];
+  const [marginMs, legs]: [number, PlannedLeg[]] = [catchMarginSec * 1000, []];
   let atMs = now.getTime();
-  let leaveAtMs: number | null = null;
+  let first: FirstRide | null = null;
   for (const [index, leg] of option.legs.entries()) {
     if (leg.kind !== "ride") {
       legs.push({ leg, startAt: new Date(atMs), endAt: new Date(atMs + leg.minutes * MINUTE_MS) });
       atMs += leg.minutes * MINUTE_MS;
       continue;
     }
-    const board = boards.get(index);
-    const line = lineById.get(leg.line);
+    const [board, line] = [boards.get(index), lineById.get(leg.line)];
     if (!board || board instanceof Error || !line) return { status: "notRunning", reason: "unavailable", nextServiceAt: null };
     const ride = toRide(leg, board, { arrivedAtMs: atMs, readyAtMs: atMs + marginMs, line });
-    if (!ride) return { status: "notRunning", reason: "ended", nextServiceAt: board.nextServiceAt };
-    if (leaveAtMs === null) {
-      leaveAtMs = Math.max(now.getTime(), ride.boardAtMs - (atMs - now.getTime()) - marginMs);
-      legs.splice(0, legs.length, ...timedBack(legs as PlannedStep[], leaveAtMs));
-      ride.planned.waitSec = Math.round((ride.boardAtMs - (leaveAtMs + atMs - now.getTime())) / 1000);
+    if (!ride) return { status: "notRunning", reason: "ended", nextServiceAt: toChainNextServiceAt(first, board.nextServiceAt, atMs + marginMs) };
+    if (first === null) {
+      first = { leaveAtMs: Math.max(now.getTime(), ride.boardAtMs - (atMs - now.getTime()) - marginMs), boardAtMs: ride.boardAtMs, nextServiceAt: board.nextServiceAt };
+      legs.splice(0, legs.length, ...timedBack(legs as PlannedStep[], first.leaveAtMs));
+      ride.planned.waitSec = Math.round((ride.boardAtMs - (first.leaveAtMs + atMs - now.getTime())) / 1000);
     }
     legs.push(ride.planned);
     atMs = ride.alightAtMs;
   }
-  return { status: "running", leaveAt: new Date(leaveAtMs ?? now.getTime()), arriveAt: new Date(atMs), legs };
+  return { status: "running", leaveAt: new Date(first === null ? now.getTime() : first.leaveAtMs), arriveAt: new Date(atMs), legs };
 }
 
 /** WHY: no "fastest" flag: running options by arrival, data order breaking a tie, then the rest in data order (ADR 0022, D7). */
