@@ -5,6 +5,7 @@
 import { Linter } from "eslint";
 import { SHARED_LAYERS } from "../helpers/architecture/ast";
 import { moduleScopes } from "../helpers/architecture/scopes";
+import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const tsparser = require("@typescript-eslint/parser");
 const config: Linter.Config[] = require("../../eslint.config.js");
@@ -454,6 +455,37 @@ describe("firebase/no-credential", () => {
     expect(messages).toEqual([]);
   });
 
+  // WHY: the local-development authenticator verifies on a Firebase app of its own (ADR 0023, D2), named by a literal.
+  it("passes a named app's init with a project id alone, and the auth of that app", () => {
+    // Arrange
+    const sources = [
+      'import admin from "firebase-admin"; admin.initializeApp({ projectId: "p" }, "perimeter-local-dev");',
+      'import admin from "firebase-admin"; const app = admin.initializeApp({ projectId: deps.firebaseProjectId }, "perimeter-local-dev"); const verify = (t: string) => admin.auth(app).verifyIdToken(t);',
+    ];
+
+    // Act
+    const reported = sources.filter((source) => lint("firebase/no-credential", file, source).length > 0);
+
+    // Assert
+    expect(reported).toEqual([]);
+  });
+
+  it("rejects a named app whose name is no literal, whose options carry a credential, or with a third argument", () => {
+    // Arrange
+    const sources = [
+      'admin.initializeApp({ projectId: "p" }, name);',
+      'admin.initializeApp({ projectId: "p", credential: admin.credential.cert(key) }, "local");',
+      'admin.initializeApp({ projectId: "p" }, "local", extra);',
+      'admin.initializeApp(options, "local");',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
   it("rejects the ways around the member checks: another name, an alias, a value read, a spread and a re-export", () => {
     // Arrange
     const sources = [
@@ -510,5 +542,28 @@ describe("firebase/no-credential", () => {
     // Act & Assert
     expect(files).toEqual(["src/**/*.ts"]);
     expect(ignores).toEqual(["src/**/*.spec.ts"]);
+  });
+});
+
+/**
+ * boundaries/module-loads has one exception in src/ (ADR 0023, D4): the perimeter overlay's entry is loaded by
+ * path, so no static import names it. The exception is one `require` of `OVERLAY_ENTRY`, a path built from the
+ * loader's own folder, behind the one inline disable of the rule; a second load by path fails here.
+ */
+describe("the one require in src/", () => {
+  const LOADER = "src/perimeter/perimeter-overlay.rules.ts";
+
+  it("is the overlay loader's require of OVERLAY_ENTRY, built from its own folder", () => {
+    // Arrange
+    const sources = sourceFiles().map((file) => ({ file, text: readSource(file) }));
+
+    // Act
+    const requires = sources.flatMap(({ file, text }) => [...text.matchAll(/\brequire\(([^)]*)\)/g)].map((m) => `${file}: require(${m[1]})`));
+    const disables = sources.flatMap(({ file, text }) => [...text.matchAll(/eslint-disable-next-line @typescript-eslint\/no-require-imports/g)].map(() => file));
+
+    // Assert
+    expect(requires).toEqual([`${LOADER}: require(OVERLAY_ENTRY)`]);
+    expect(disables).toEqual([LOADER]);
+    expect(readSource(LOADER)).toContain('export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");');
   });
 });

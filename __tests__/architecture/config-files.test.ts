@@ -30,6 +30,9 @@ interface ConfigFileUse {
 const isPackageName = (arg: ts.Expression | undefined): boolean =>
   arg !== undefined && ts.isStringLiteralLike(arg) && !arg.text.startsWith(".") && !arg.text.startsWith("/") && !arg.text.endsWith(".json");
 
+/** The one module load by path, `require(OVERLAY_ENTRY)` (ADR 0023, D4): a module, not a config file. */
+const isOverlayEntry = (arg: ts.Expression | undefined): boolean => arg !== undefined && ts.isIdentifier(arg) && arg.text === "OVERLAY_ENTRY";
+
 /** How many files a source reads, and how many times it calls the `parseConfigFile` it imports from infra/config-file. */
 export function configFileUse(file: string, source: string): ConfigFileUse {
   const sf = parseSource(file, source);
@@ -41,7 +44,7 @@ export function configFileUse(file: string, source: string): ConfigFileUse {
   for (const call of collect(sf, ts.isCallExpression)) {
     const name = calleeName(call);
     if (name !== undefined && FILE_READS.has(name)) reads += 1;
-    if (ts.isIdentifier(call.expression) && call.expression.text === "require" && !isPackageName(call.arguments[0])) reads += 1;
+    if (ts.isIdentifier(call.expression) && call.expression.text === "require" && !isPackageName(call.arguments[0]) && !isOverlayEntry(call.arguments[0])) reads += 1;
     const callee = call.expression;
     if (ts.isIdentifier(callee) && parserNames.has(callee.text)) parses += 1;
     const viaNamespace =
@@ -81,6 +84,8 @@ describe("config file rule applies as specified", () => {
     ["TypeScript values only", 'import type { XDoc } from "./x.document";\nexport const SEED = [{ name: "x" }];'],
     ["a namespace import of the parser", 'import * as cfg from "../../infra/config-file";\nimport raw from "./x.json";\nexport const x = cfg.parseConfigFile("x", s, raw);'],
     ["a require of a package", 'const zod = require("zod");\nexport const x = zod;'],
+    // WHY: the perimeter overlay's entry is a module, loaded by path once (ADR 0023, D4); eslint-syntax pins the call.
+    ["the overlay entry's load", 'export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");\nexport const load = () => require(OVERLAY_ENTRY);'],
   ])("passes %s", (_case, source) => {
     // Act & Assert
     expect(unparsedConfigFiles(["src/x/x.config.ts"], ["src/x/"], () => source)).toEqual([]);

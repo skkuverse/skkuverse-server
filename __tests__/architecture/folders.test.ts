@@ -1,11 +1,13 @@
 /**
- * A folder below a top-level src/ folder is one of two things (ADR 0010, D3):
+ * A folder below a top-level src/ folder is one of three things (ADR 0010, D3):
  *
  *   - a Nest sub-module: it holds its own `*.module.ts`;
  *   - a static-asset folder: it holds JSON files only (read by a sibling
- *     `*.config.ts`).
+ *     `*.config.ts`);
+ *   - one of the perimeter's two implementation sets, `src/perimeter/local-dev/`
+ *     and `src/perimeter/current/` (ADR 0023, D4).
  *
- * Layer folders (`controllers/`) and grab-bag folders are neither.
+ * Layer folders (`controllers/`) and grab-bag folders are none of these.
  *
  * A top-level src/ folder is a shared role (SHARED_ROLES) or a feature that
  * holds `<name>/<name>.module.ts`, so a new folder is either a module or a
@@ -45,7 +47,11 @@ export function topLevelViolations(files: readonly string[]): string[] {
     .sort();
 }
 
+/** The perimeter's implementation sets, which the registry constructs (ADR 0023, D4). */
+const PERIMETER_IMPLEMENTATIONS = new Set(["src/perimeter/local-dev", "src/perimeter/current"]);
+
 export function folderViolation(dir: string, filesBelow: readonly string[]): boolean {
+  if (PERIMETER_IMPLEMENTATIONS.has(dir)) return false;
   const direct = filesBelow.filter((f) => !f.slice(dir.length + 1).includes("/"));
   if (direct.some((f) => f.endsWith(".module.ts"))) return false;
   const jsonOnly = filesBelow.length > 0 && filesBelow.every((f) => f.endsWith(".json"));
@@ -151,6 +157,15 @@ describe("folder rule applies as specified", () => {
       folderViolation("src/bus/registry", ["src/bus/registry/a.json", "src/bus/registry/a.config.ts"]),
     ).toBe(true);
     expect(folderViolation("src/bus/x", ["src/bus/x/y/y.module.ts"])).toBe(true);
+  });
+
+  // WHY: the perimeter's two implementation sets are no modules: the registry constructs them (ADR 0023, D4).
+  it("accepts the perimeter's implementation sets, and no other perimeter folder", () => {
+    // Act & Assert
+    expect(folderViolation("src/perimeter/local-dev", ["src/perimeter/local-dev/origin-trust.ts"])).toBe(false);
+    expect(folderViolation("src/perimeter/current", ["src/perimeter/current/perimeter.overlay.ts"])).toBe(false);
+    expect(folderViolation("src/perimeter/policies", ["src/perimeter/policies/origin-trust.ts"])).toBe(true);
+    expect(folderViolation("src/perimeter/local-dev/extra", ["src/perimeter/local-dev/extra/a.ts"])).toBe(true);
   });
 });
 
