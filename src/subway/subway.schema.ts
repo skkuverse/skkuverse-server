@@ -7,6 +7,8 @@ const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PLATFORM_ID = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/;
 const SEOUL_STATION_CODE = /^\d{4}$/;
 const SUBWAY_ID = /^\d{4}$/;
+const STATN_ID = /^\d{10}$/;
+const FR_CODE = /^[A-Z]?\d{1,4}(-\d+)?$/;
 
 const localizedName = z.strictObject({ ko: z.string().min(1), en: z.string().min(1), zh: z.string().min(1) });
 
@@ -46,7 +48,13 @@ export const platformDirection = z.strictObject({
   nextPlatformId: platformId,
 });
 
-const networkPlatform = z.strictObject({ id: platformId, line: z.string().min(1), timetable: platformTimetable });
+const networkPlatform = z.strictObject({
+  id: platformId,
+  line: z.string().min(1),
+  statnId: z.string().regex(STATN_ID, { error: "must be ten digits" }),
+  frCode: z.string().regex(FR_CODE, { error: "must be a station number such as 420, P153 or D7" }),
+  timetable: platformTimetable,
+});
 
 const subwayPlatformFile = networkPlatform.extend({ directions: z.strictObject({ up: platformDirection, down: platformDirection }) });
 

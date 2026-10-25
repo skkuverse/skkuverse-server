@@ -260,7 +260,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     const fetchedAt = new Date("2026-10-17T21:07:00+09:00");
     const captured = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/realtime-arrival-jamsil.json"), "utf8")) as { realtimeArrivalList: SeoulArrivalRow[] };
     const jamsil = toSeoulStations(subwayRegistryFixture()).find((station) => station.seoulName === "잠실");
-    const countdownRows = toCountdownRows(captured.realtimeArrivalList, jamsil?.platformBySubwayId ?? new Map(), fetchedAt);
+    const countdownRows = toCountdownRows(captured.realtimeArrivalList, jamsil?.platformByStatnId ?? new Map(), fetchedAt);
     clock.current = fetchedAt;
     await app.get(SubwayTrackingService).track({ observe: async () => ({ source: "seoul-subway-api", events: [], countdownRows }) });
 

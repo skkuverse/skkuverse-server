@@ -1,0 +1,113 @@
+{
+ "_about": "GET http://openapi.seoul.go.kr:8088/<key>/json/SearchInfoBySubwayNameService/1/20/<name> (SEOUL_OPENAPI_GENERAL_KEY, left out) for each served station name, 성균관대, 혜화, 정자, 잠실, 도곡, 강남, 양재, 광교중앙, 사당, 금정, 종로5가, captured 2026-10-25 18:02 KST. Trimmed: the eleven answers joined under one row list in that order, each answer's list_total_count and RESULT (INFO-000 every time) left out; no row dropped.",
+ "row": [
+  {
+   "STATION_CD": "1711",
+   "STATION_NM": "성균관대",
+   "LINE_NUM": "01호선",
+   "FR_CODE": "P153"
+  },
+  {
+   "STATION_CD": "0420",
+   "STATION_NM": "혜화",
+   "LINE_NUM": "04호선",
+   "FR_CODE": "420"
+  },
+  {
+   "STATION_CD": "1857",
+   "STATION_NM": "정자",
+   "LINE_NUM": "수인분당선",
+   "FR_CODE": "K230"
+  },
+  {
+   "STATION_CD": "4312",
+   "STATION_NM": "정자",
+   "LINE_NUM": "신분당선",
+   "FR_CODE": "D12"
+  },
+  {
+   "STATION_CD": "0216",
+   "STATION_NM": "잠실",
+   "LINE_NUM": "02호선",
+   "FR_CODE": "216"
+  },
+  {
+   "STATION_CD": "2815",
+   "STATION_NM": "잠실",
+   "LINE_NUM": "08호선",
+   "FR_CODE": "814"
+  },
+  {
+   "STATION_CD": "1025",
+   "STATION_NM": "도곡",
+   "LINE_NUM": "수인분당선",
+   "FR_CODE": "K217"
+  },
+  {
+   "STATION_CD": "0334",
+   "STATION_NM": "도곡",
+   "LINE_NUM": "03호선",
+   "FR_CODE": "344"
+  },
+  {
+   "STATION_CD": "0222",
+   "STATION_NM": "강남",
+   "LINE_NUM": "02호선",
+   "FR_CODE": "222"
+  },
+  {
+   "STATION_CD": "4307",
+   "STATION_NM": "강남",
+   "LINE_NUM": "신분당선",
+   "FR_CODE": "D7"
+  },
+  {
+   "STATION_CD": "0332",
+   "STATION_NM": "양재",
+   "LINE_NUM": "03호선",
+   "FR_CODE": "342"
+  },
+  {
+   "STATION_CD": "4308",
+   "STATION_NM": "양재",
+   "LINE_NUM": "신분당선",
+   "FR_CODE": "D8"
+  },
+  {
+   "STATION_CD": "4318",
+   "STATION_NM": "광교중앙",
+   "LINE_NUM": "신분당선",
+   "FR_CODE": "D18"
+  },
+  {
+   "STATION_CD": "0433",
+   "STATION_NM": "사당",
+   "LINE_NUM": "04호선",
+   "FR_CODE": "433"
+  },
+  {
+   "STATION_CD": "0226",
+   "STATION_NM": "사당",
+   "LINE_NUM": "02호선",
+   "FR_CODE": "226"
+  },
+  {
+   "STATION_CD": "1458",
+   "STATION_NM": "금정",
+   "LINE_NUM": "04호선",
+   "FR_CODE": "443"
+  },
+  {
+   "STATION_CD": "1708",
+   "STATION_NM": "금정",
+   "LINE_NUM": "01호선",
+   "FR_CODE": "P149"
+  },
+  {
+   "STATION_CD": "0154",
+   "STATION_NM": "종로5가",
+   "LINE_NUM": "01호선",
+   "FR_CODE": "129"
+  }
+ ]
+}

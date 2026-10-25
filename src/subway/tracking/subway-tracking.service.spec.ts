@@ -485,6 +485,8 @@ const SHINBUNDANG_WEEKDAY: Timetable = {
 const JEONGJA_SHINBUNDANG: SubwayPlatform = {
   id: JEONGJA,
   line: "D1",
+  statnId: "1077006812",
+  frCode: "D12",
   timetable: { source: "shinbundang" },
   directions: {
     up: {
@@ -565,6 +567,8 @@ describe("SubwayTrackingService.track without a table", () => {
 const JEONGJA_SUIN_BUNDANG: SubwayPlatform = {
   id: "KR-K1-K230",
   line: "K1",
+  statnId: "1075075230",
+  frCode: "K230",
   timetable: { source: "korail" },
   directions: {
     up: { ...JEONGJA_SHINBUNDANG.directions.up, upstreamPlatformIds: ["KR-K1-K231"], nextPlatformId: "KR-K1-K229" },

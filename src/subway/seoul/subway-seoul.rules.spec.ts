@@ -1,8 +1,10 @@
 /**
  * The lines the `seoul` provider polls, derived from the registry: one per
- * line, with the Seoul API's ids, the train-map line and its numbering, and the tables from each name the line's rows write (its
- * served platforms and its neighbors) to its platform id, by the Seoul API's
- * name and by the train map's where a neighbor's differs. And one upstream
+ * line, with the Seoul API's ids, the train-map line and its numbering, and the tables from what the line's rows write
+ * to a platform id: the Seoul API's statnId for a served platform and its name
+ * for a neighbor, and the train map's name for both, where a neighbor's
+ * differs. Each served station's arrival call maps a row's statnId to its
+ * platform. And one upstream
  * tick's calls settled apart: what answered is kept beside what failed, and
  * only a tick whose every call failed has nothing to hand on.
  */
@@ -12,8 +14,9 @@ import { toSeoulLines, toSeoulStations, toSettledObservations, toTrainMapLines }
 
 const REGISTRY = subwayRegistryFixture();
 const copyOf = (): SubwayRegistry => JSON.parse(JSON.stringify(REGISTRY)) as SubwayRegistry;
-const tables = ({ platformIdByApiName, platformIdByTrainMapName, ...line }: ReturnType<typeof toSeoulLines>[number]) => ({
+const tables = ({ platformIdByStatnId, platformIdByApiName, platformIdByTrainMapName, ...line }: ReturnType<typeof toSeoulLines>[number]) => ({
   ...line,
+  platformIdByStatnId: Object.fromEntries(platformIdByStatnId),
   platformIdByApiName: Object.fromEntries(platformIdByApiName),
   platformIdByTrainMapName: Object.fromEntries(platformIdByTrainMapName),
 });
@@ -204,6 +207,16 @@ const SUIN_BUNDANG_NAMES = {
   기흥: "KR-K1-K237",
 };
 
+const LINE_1_STATN_IDS = { "1001080153": "KR-1-P153", "1001080149": "KR-1-P149", "1001000129": "S1-1-154" };
+const LINE_4_STATN_IDS = { "1004000420": "S1-4-420", "1004000433": "S1-4-433", "1004000443": "KR-4-443" };
+const LINE_2_STATN_IDS = { "1002000216": "S1-2-216", "1002000222": "S1-2-222", "1002000226": "S1-2-226" };
+const LINE_3_STATN_IDS = { "1003000344": "S1-3-334", "1003000342": "S1-3-332" };
+const LINE_8_STATN_IDS = { "1008000814": "S1-8-2815" };
+const SUIN_BUNDANG_STATN_IDS = { "1075075230": "KR-K1-K230", "1075075217": "KR-K1-K217" };
+const SHINBUNDANG_STATN_IDS = { "1077006812": "DX-D1-4312", "1077000687": "DX-D1-4307", "1077000688": "DX-D1-4308", "1077006818": "DX-D1-4318" };
+const neighborNames = (names: Record<string, string>, statnIds: Record<string, string>) =>
+  Object.fromEntries(Object.entries(names).filter(([, platformId]) => !Object.values(statnIds).includes(platformId)));
+
 describe("toSeoulLines", () => {
   it("gives each line with its served stations and the Seoul names of its platforms, 금정 watched beyond 1호선's", () => {
     // Act
@@ -216,7 +229,8 @@ describe("toSeoulLines", () => {
         lineName: "1호선",
         trainMapLine: "1",
         trainNumbers: "timetable",
-        platformIdByApiName: LINE_1_NAMES,
+        platformIdByStatnId: LINE_1_STATN_IDS,
+        platformIdByApiName: neighborNames(LINE_1_NAMES, LINE_1_STATN_IDS),
         platformIdByTrainMapName: LINE_1_NAMES,
       },
       {
@@ -224,7 +238,8 @@ describe("toSeoulLines", () => {
         lineName: "4호선",
         trainMapLine: "4",
         trainNumbers: "timetable",
-        platformIdByApiName: LINE_4_NAMES,
+        platformIdByStatnId: LINE_4_STATN_IDS,
+        platformIdByApiName: neighborNames(LINE_4_NAMES, LINE_4_STATN_IDS),
         platformIdByTrainMapName: LINE_4_NAMES,
       },
       {
@@ -232,7 +247,8 @@ describe("toSeoulLines", () => {
         lineName: "2호선",
         trainMapLine: "2",
         trainNumbers: "circle",
-        platformIdByApiName: LINE_2_NAMES,
+        platformIdByStatnId: LINE_2_STATN_IDS,
+        platformIdByApiName: neighborNames(LINE_2_NAMES, LINE_2_STATN_IDS),
         platformIdByTrainMapName: LINE_2_NAMES,
       },
       {
@@ -240,7 +256,8 @@ describe("toSeoulLines", () => {
         lineName: "3호선",
         trainMapLine: "3",
         trainNumbers: "timetable",
-        platformIdByApiName: LINE_3_NAMES,
+        platformIdByStatnId: LINE_3_STATN_IDS,
+        platformIdByApiName: neighborNames(LINE_3_NAMES, LINE_3_STATN_IDS),
         platformIdByTrainMapName: LINE_3_NAMES,
       },
       {
@@ -248,7 +265,8 @@ describe("toSeoulLines", () => {
         lineName: "8호선",
         trainMapLine: "8",
         trainNumbers: "timetable",
-        platformIdByApiName: LINE_8_API_NAMES,
+        platformIdByStatnId: LINE_8_STATN_IDS,
+        platformIdByApiName: neighborNames(LINE_8_API_NAMES, LINE_8_STATN_IDS),
         platformIdByTrainMapName: LINE_8_MAP_NAMES,
       },
       {
@@ -256,7 +274,8 @@ describe("toSeoulLines", () => {
         lineName: "수인분당선",
         trainMapLine: undefined,
         trainNumbers: "timetable",
-        platformIdByApiName: SUIN_BUNDANG_NAMES,
+        platformIdByStatnId: SUIN_BUNDANG_STATN_IDS,
+        platformIdByApiName: neighborNames(SUIN_BUNDANG_NAMES, SUIN_BUNDANG_STATN_IDS),
         platformIdByTrainMapName: SUIN_BUNDANG_NAMES,
       },
       {
@@ -264,7 +283,8 @@ describe("toSeoulLines", () => {
         lineName: "신분당선",
         trainMapLine: undefined,
         trainNumbers: "trainset",
-        platformIdByApiName: SHINBUNDANG_NAMES,
+        platformIdByStatnId: SHINBUNDANG_STATN_IDS,
+        platformIdByApiName: neighborNames(SHINBUNDANG_NAMES, SHINBUNDANG_STATN_IDS),
         platformIdByTrainMapName: SHINBUNDANG_NAMES,
       },
     ]);
@@ -288,15 +308,15 @@ describe("toSeoulLines", () => {
     // Arrange
     const registry = copyOf();
     const sungkyunkwan = registry.stations[0]!;
-    registry.stations.push({ ...sungkyunkwan, id: "uijeongbu", seoulName: "의정부", platforms: [{ ...sungkyunkwan.platforms[0]!, id: "KR-1-X100" }] });
+    registry.stations.push({ ...sungkyunkwan, id: "uijeongbu", seoulName: "의정부", platforms: [{ ...sungkyunkwan.platforms[0]!, id: "KR-1-X100", statnId: "1001000110" }] });
 
     // Act
     const lines = toSeoulLines(registry);
 
     // Assert
     expect(lines).toHaveLength(REGISTRY.lines.length);
-    expect(lines[0]?.platformIdByApiName.get("성균관대")).toBe("KR-1-P153");
-    expect(lines[0]?.platformIdByApiName.get("의정부")).toBe("KR-1-X100");
+    expect(lines[0]?.platformIdByStatnId.get("1001080153")).toBe("KR-1-P153");
+    expect(lines[0]?.platformIdByStatnId.get("1001000110")).toBe("KR-1-X100");
   });
 
   it("leaves out the train-map line of a line with no map", () => {
@@ -313,65 +333,65 @@ describe("toSeoulLines", () => {
 });
 
 describe("toSeoulStations", () => {
-  it("gives each served station its one arrival call by Seoul name, its rows' subwayId mapped to its platform", () => {
+  it("gives each served station its one arrival call by Seoul name, its rows' statnId mapped to its platform", () => {
     // Act
     const stations = toSeoulStations(REGISTRY);
 
     // Assert
-    expect(stations.map(({ seoulName, platformBySubwayId }) => [seoulName, Object.fromEntries(platformBySubwayId)])).toEqual([
-      ["성균관대", { "1001": { platformId: "KR-1-P153", trainNumbers: "timetable" } }],
-      ["혜화", { "1004": { platformId: "S1-4-420", trainNumbers: "timetable" } }],
+    expect(stations.map(({ seoulName, platformByStatnId }) => [seoulName, Object.fromEntries(platformByStatnId)])).toEqual([
+      ["성균관대", { "1001080153": { platformId: "KR-1-P153", trainNumbers: "timetable" } }],
+      ["혜화", { "1004000420": { platformId: "S1-4-420", trainNumbers: "timetable" } }],
       [
         "정자",
         {
-          "1077": { platformId: "DX-D1-4312", trainNumbers: "trainset" },
-          "1075": { platformId: "KR-K1-K230", trainNumbers: "timetable" },
+          "1077006812": { platformId: "DX-D1-4312", trainNumbers: "trainset" },
+          "1075075230": { platformId: "KR-K1-K230", trainNumbers: "timetable" },
         },
       ],
       [
         "잠실",
         {
-          "1002": { platformId: "S1-2-216", trainNumbers: "circle" },
-          "1008": { platformId: "S1-8-2815", trainNumbers: "timetable" },
+          "1002000216": { platformId: "S1-2-216", trainNumbers: "circle" },
+          "1008000814": { platformId: "S1-8-2815", trainNumbers: "timetable" },
         },
       ],
       [
         "도곡",
         {
-          "1003": { platformId: "S1-3-334", trainNumbers: "timetable" },
-          "1075": { platformId: "KR-K1-K217", trainNumbers: "timetable" },
+          "1003000344": { platformId: "S1-3-334", trainNumbers: "timetable" },
+          "1075075217": { platformId: "KR-K1-K217", trainNumbers: "timetable" },
         },
       ],
       [
         "강남",
         {
-          "1002": { platformId: "S1-2-222", trainNumbers: "circle" },
-          "1077": { platformId: "DX-D1-4307", trainNumbers: "trainset" },
+          "1002000222": { platformId: "S1-2-222", trainNumbers: "circle" },
+          "1077000687": { platformId: "DX-D1-4307", trainNumbers: "trainset" },
         },
       ],
       [
         "양재",
         {
-          "1003": { platformId: "S1-3-332", trainNumbers: "timetable" },
-          "1077": { platformId: "DX-D1-4308", trainNumbers: "trainset" },
+          "1003000342": { platformId: "S1-3-332", trainNumbers: "timetable" },
+          "1077000688": { platformId: "DX-D1-4308", trainNumbers: "trainset" },
         },
       ],
-      ["광교중앙", { "1077": { platformId: "DX-D1-4318", trainNumbers: "trainset" } }],
+      ["광교중앙", { "1077006818": { platformId: "DX-D1-4318", trainNumbers: "trainset" } }],
       [
         "사당",
         {
-          "1002": { platformId: "S1-2-226", trainNumbers: "circle" },
-          "1004": { platformId: "S1-4-433", trainNumbers: "timetable" },
+          "1002000226": { platformId: "S1-2-226", trainNumbers: "circle" },
+          "1004000433": { platformId: "S1-4-433", trainNumbers: "timetable" },
         },
       ],
       [
         "금정",
         {
-          "1001": { platformId: "KR-1-P149", trainNumbers: "timetable" },
-          "1004": { platformId: "KR-4-443", trainNumbers: "timetable" },
+          "1001080149": { platformId: "KR-1-P149", trainNumbers: "timetable" },
+          "1004000443": { platformId: "KR-4-443", trainNumbers: "timetable" },
         },
       ],
-      ["종로5가", { "1001": { platformId: "S1-1-154", trainNumbers: "timetable" } }],
+      ["종로5가", { "1001000129": { platformId: "S1-1-154", trainNumbers: "timetable" } }],
     ]);
   });
 
@@ -386,9 +406,9 @@ describe("toSeoulStations", () => {
 
     // Assert
     expect(station?.seoulName).toBe("혜화");
-    expect([...(station?.platformBySubwayId.entries() ?? [])].map(([subwayId, platform]) => [subwayId, platform.platformId])).toEqual([
-      ["1004", "S1-4-420"],
-      ["1001", "KR-1-P153"],
+    expect([...(station?.platformByStatnId.entries() ?? [])].map(([statnId, platform]) => [statnId, platform.platformId])).toEqual([
+      ["1004000420", "S1-4-420"],
+      ["1001080153", "KR-1-P153"],
     ]);
   });
 });
