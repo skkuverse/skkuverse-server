@@ -98,8 +98,7 @@ function toLentDelaySec(candidate: Candidate, ahead: readonly Candidate[]): numb
   return ahead.filter(isLender).at(-1)?.delaySec ?? null;
 }
 
-// WHY: at the served station a train's arrival is observed whatever its delay, standing there delays only its
-// departure, and a seen train is placed by its own sighting, never by another train's delay.
+// WHY: at the served station a train's arrival is observed whatever its delay, standing delays only its departure, and a seen train is placed by its own sighting.
 function toServedDelaySec(candidate: Candidate, ahead: readonly Candidate[]): number | null {
   if (candidate.sighting && isAtServedStation(candidate)) return toEventDelaySec(candidate.train, candidate.sighting.latest);
   return candidate.delaySec ?? (candidate.sighting ? null : toLentDelaySec(candidate, ahead));
@@ -119,7 +118,7 @@ function isAwaitedTrain(input: EstimateInput, candidate: Candidate, later: reado
   return input.isTracked && !isSeenAtOrPast(candidate) && candidate.train.stops[0] !== candidate.servedAt && isInDelayRange && !isOvertaken;
 }
 
-function toAwaitedArrival(candidate: Candidate, now: Date): Omit<TrainArrival, "isFirstTrain"> {
+function toAwaitedArrival(candidate: Candidate, now: Date): Omit<TrainArrival, "isFirstTrain" | "isLastRun"> {
   const runMs = candidate.scheduledArrivalAt.getTime() - (candidate.train.stops[0]?.departureAt ?? candidate.scheduledArrivalAt).getTime();
   return { ...toArrival(candidate, null), arrivalAt: new Date(now.getTime() + runMs), source: "estimated" };
 }
@@ -131,7 +130,7 @@ function hasLeft(candidate: Candidate, delaySec: number | null, now: Date): bool
   return candidate.delaySec === null && departureAt < now;
 }
 
-function toArrival(candidate: Candidate, delaySec: number | null): Omit<TrainArrival, "isFirstTrain"> {
+function toArrival(candidate: Candidate, delaySec: number | null): Omit<TrainArrival, "isFirstTrain" | "isLastRun"> {
   const { trainNo, direction, destination, express } = candidate.train;
   const latest = candidate.sighting?.latest;
   return {
@@ -142,6 +141,7 @@ function toArrival(candidate: Candidate, delaySec: number | null): Omit<TrainArr
     arrivalAt: plusSec(candidate.scheduledArrivalAt, delaySec ?? 0),
     source: delaySec === null ? "scheduled" : "estimated",
     position: latest ? { platformId: latest.platformId, state: latest.state } : null,
+    scheduledArrivalAt: candidate.servedAt.arrivalAt, scheduledDepartureAt: candidate.servedAt.departureAt,
   };
 }
 
@@ -177,7 +177,7 @@ export function toStationArrivals(input: EstimateInput): StationArrivals {
     const isOverdue = hasLeft(candidate, delaySec, input.now);
     if (isOverdue && !isAwaitedTrain(input, candidate, candidates.slice(index + 1))) return [];
     const row = input.countdownRows.find((r) => r.trainNo === candidate.train.trainNo && r.platformId === input.platformId);
-    const arrival = { ...(isOverdue ? toAwaitedArrival(candidate, input.now) : toArrival(candidate, delaySec)), isFirstTrain: index === 0 };
+    const arrival = { ...(isOverdue ? toAwaitedArrival(candidate, input.now) : toArrival(candidate, delaySec)), isFirstTrain: index === 0, isLastRun: index === candidates.length - 1 };
     return [row ? withCountdown(arrival, { row, reason: toRejectionReason(candidate, row, input.now) }, findings) : arrival];
   });
   return { arrivals: arrivals.sort((a, b) => a.arrivalAt.getTime() - b.arrivalAt.getTime()), ...findings };

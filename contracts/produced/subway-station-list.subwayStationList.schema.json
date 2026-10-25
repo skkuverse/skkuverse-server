@@ -14,10 +14,17 @@
             "type": "string"
           },
           "campus": {
-            "type": "string",
-            "enum": [
-              "hssc",
-              "nsc"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "hssc",
+                  "nsc"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "lines": {

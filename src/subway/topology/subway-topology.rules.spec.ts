@@ -61,7 +61,7 @@ describe("toTopologyIssues", () => {
     [
       "Watched stop on another line: S1-3-330 watched by S1-4-420",
       (data: Record<string, any>) => data.platforms["S1-4-420"].up.watchedPlatformIds.push("S1-3-330"),
-      'platforms.S1-4-420.up.watchedPlatformIds.3: "S1-3-330" is on line "3", not "4"',
+      'platforms.S1-4-420.up.watchedPlatformIds.25: "S1-3-330" is on line "3", not "4"',
     ],
     [
       "an upstream platform on another line",
@@ -70,8 +70,8 @@ describe("toTopologyIssues", () => {
     ],
     [
       "a watched platform neither served nor a neighbor",
-      (data: Record<string, any>) => (data.platforms["KR-1-0153"].down.watchedPlatformIds = ["KR-1-P146"]),
-      'platforms.KR-1-0153.down.watchedPlatformIds.0: "KR-1-P146" is neither a served platform nor a neighbor',
+      (data: Record<string, any>) => (data.platforms["KR-1-0153"].down.watchedPlatformIds = ["KR-1-P158"]),
+      'platforms.KR-1-0153.down.watchedPlatformIds.0: "KR-1-P158" is neither a served platform nor a neighbor',
     ],
     [
       "a neighbor on a line the code does not hold",

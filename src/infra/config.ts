@@ -176,14 +176,14 @@ const config = {
     tmapDailyCap: isProduction ? 900 : 50,
   },
 
-  // WHY: about twice each source's calls in a weekday's service window, 15 API calls per 10 s tick and one
+  // WHY: about twice each source's calls in a weekday's service window, 18 API calls per 10 s tick and one
   // crawl per 15 s (ADR 0017, D3), so only a runaway loop reaches one.
   subway: {
     enabled: switches.subwayEnabled,
     get seoulApiKey(): string {
       return roleScoped("SEOUL_SUBWAY_API_KEY");
     },
-    apiDailyCap: 220_000,
+    apiDailyCap: 260_000,
     trainMapDailyCap: 10_000,
     collections: {
       arrivals: "subway_arrivals",

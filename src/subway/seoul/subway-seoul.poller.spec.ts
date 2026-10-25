@@ -10,7 +10,11 @@
  * and within one tick, what answered reaches the tracker before the tick
  * rejects with the failure, so a failing line loses no other line's trains.
  * Each ceiling is about twice a weekday's calls as the registry derives them
- * (ADR 0017, D3), so a station that outgrows one fails here.
+ * (ADR 0017, D3), so a station that outgrows one fails here. Over the
+ * 2026-10-25 captures of Sadang, Geumjeong and Jongno 5-ga (ADR 0022 D4), one
+ * API tick serves every line there: trains standing at the platform, a
+ * countdown live where the operator publishes one, and Geumjeong's Korail
+ * sections estimated.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -314,5 +318,64 @@ describe("SubwaySeoulPoller tracks what answered before it reports a failure", (
     // Assert
     await expect(trainMapTick).rejects.toMatchObject({ source: "seoul-trainmap" });
     expect(ticks).toEqual([]);
+  });
+});
+
+describe("SubwaySeoulPoller over the 2026-10-25 captures at 사당, 금정 and 종로5가", () => {
+  const CAPTURED_AT = "2026-10-25T03:23:20Z";
+
+  function setupCaptured() {
+    const { apiClient, tracking, tickAt } = setup(CAPTURED_AT);
+    apiClient.positions.set("1호선", rows("realtime-position-line1-2026-10-25.json", "realtimePositionList"));
+    apiClient.positions.set("2호선", rows("realtime-position-line2-2026-10-25.json", "realtimePositionList"));
+    apiClient.positions.set("4호선", rows("realtime-position-line4-2026-10-25.json", "realtimePositionList"));
+    apiClient.arrivals.set("혜화", []);
+    apiClient.arrivals.set("사당", rows("realtime-arrival-sadang.json", "realtimeArrivalList"));
+    apiClient.arrivals.set("금정", rows("realtime-arrival-geumjeong.json", "realtimeArrivalList"));
+    apiClient.arrivals.set("종로5가", rows("realtime-arrival-jongno5ga.json", "realtimeArrivalList"));
+    const ticks: TrackedTick[] = [];
+    tracking.addTickListener(async (tick) => {
+      ticks.push(tick);
+    });
+    return { ticks, tickAt };
+  }
+
+  const kst = (time: string): Date => new Date(`2026-10-25T${time}+09:00`);
+  const trainsOf = (ticks: readonly TrackedTick[], platformId: string, direction: "up" | "down") =>
+    ticks.flatMap((tick) => tick.platforms.filter((p) => p.platformId === platformId).flatMap((p) => p.arrivals.directions[direction]));
+
+  it("serves each new platform's trains from one API tick: 사당's trains standing there and line 2's countdown live", async () => {
+    // Arrange
+    subway.enabled = true;
+    const { ticks, tickAt } = setupCaptured();
+
+    // Act
+    await tickAt(CAPTURED_AT, "subway-seoul");
+
+    // Assert
+    expect(trainsOf(ticks, "S1-4-433", "up")[0]).toMatchObject({ trainNo: "4566", position: { stationId: "S1-4-433", state: "arrived" } });
+    expect(trainsOf(ticks, "S1-4-433", "down")[0]).toMatchObject({ trainNo: "4565", position: { stationId: "S1-4-433", state: "arrived" } });
+    expect(trainsOf(ticks, "S1-2-226", "down")[0]).toMatchObject({ trainNo: "2157", source: "live", arrivalAt: kst("12:26:12") });
+  });
+
+  it("serves 종로5가's countdown live and 금정's trains, whose Korail sections publish none, estimated", async () => {
+    // Arrange
+    subway.enabled = true;
+    const { ticks, tickAt } = setupCaptured();
+
+    // Act
+    await tickAt(CAPTURED_AT, "subway-seoul");
+
+    // Assert
+    expect(trainsOf(ticks, "S1-1-154", "up").map((train) => [train.trainNo, train.source])).toEqual([
+      ["0636", "estimated"],
+      ["0072", "live"],
+      ["1916", "estimated"],
+    ]);
+    expect(trainsOf(ticks, "S1-1-154", "up")[1]?.arrivalAt).toEqual(kst("12:26:45"));
+    expect(trainsOf(ticks, "KR-1-P149", "down")[0]).toMatchObject({ trainNo: "1919", express: true, position: { stationId: "KR-1-P149", state: "arrived" } });
+    const geumjeong = ["KR-1-P149", "KR-4-443"].flatMap((id) => [...trainsOf(ticks, id, "up"), ...trainsOf(ticks, id, "down")]);
+    expect(geumjeong.map((train) => train.source)).not.toContain("live");
+    expect(geumjeong).toHaveLength(12);
   });
 });

@@ -2,17 +2,17 @@
  * The service-day rules: which service day an instant belongs to (it starts at 03:00 KST, so a train past
  * midnight is the previous day's), which day type each timetable source serves on a date, and how a
  * timetable's seconds become instants. Also the code's platforms, each found by its KRIC id with its line and
- * timetable source, and revision 1 of the stored topology's upstream, watched and next platforms and direction
+ * timetable source, and revision 2 of the stored topology's upstream, watched and next platforms and direction
  * names for each; which table a platform reads, the travel order of a line per direction, each table's key, and
  * the push check that every served platform's source has a table for each day type it declares, and the push
- * warnings over the stops the tracker follows to each served platform: no run over 510 s between two of them,
+ * warnings over the stops the tracker follows to each served platform: no run over 600 s between two of them,
  * each train in view for 10 minutes before the platform, and no station of the line skipped between them. The
  * push check that every stop time at a served platform falls inside the service window of its table's day type.
  */
 import { subwayTimetablesFixture } from "../../../__tests__/helpers/subway/timetables";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
 import type { NetworkPlatform } from "../subway.types";
-import { TIMETABLE_DAY_TYPES } from "./subway-timetable.constants";
+import { TIMETABLE_DAY_TYPES, TIMETABLE_OPERATOR_BY_SOURCE } from "./subway-timetable.constants";
 import {
   findSubwayPlatform,
   findTimetable,
@@ -99,7 +99,7 @@ describe("toServiceInstant", () => {
   });
 });
 
-// WHY: revision 1 of the stored subway-timetables, trimmed (fixtures/subway-timetables/ of __tests__/nest/subway).
+// WHY: revision 2 of the stored subway-timetables, trimmed (fixtures/subway-timetables/ of __tests__/nest/subway).
 const STORED = subwayTimetablesFixture();
 
 describe("findTimetable", () => {
@@ -196,9 +196,9 @@ describe("toLineRoutes", () => {
     const [korailRoutes, seoulRoutes] = [toLineRoutes(korail), toLineRoutes(seoul)];
 
     // Assert
-    expect(korailRoutes.down.slice(0, 8)).toEqual(["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154"]);
+    expect(korailRoutes.down.slice(0, 8)).toEqual(["KR-1-123", "S1-1-158", "S1-1-157", "S1-1-156", "S1-1-159", "S1-1-155", "S1-1-154", "S1-1-153"]);
     expect(korailRoutes.up).toEqual([...korailRoutes.down].reverse());
-    expect(seoulRoutes.up.slice(0, 7)).toEqual(["S1-4-426", "S1-4-425", "S1-4-424", "S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
+    expect(seoulRoutes.up.slice(0, 7)).toEqual(["KR-4-448", "KR-4-447", "KR-4-446", "KR-4-445", "KR-4-444", "KR-4-443", "KR-4-442"]);
     expect(seoulRoutes.down).toEqual([...seoulRoutes.up].reverse());
   });
 });
@@ -225,6 +225,19 @@ describe("toPlatformTimetableKey", () => {
   ] as const)("keys %s's table by the platform's operator and line and the day type", (_label, platformId, dayType, key) => {
     // Act
     const tableKey = toPlatformTimetableKey(findSubwayPlatform(platformId) as NetworkPlatform, dayType);
+
+    // Assert
+    expect(tableKey).toBe(key);
+  });
+});
+
+describe("toPlatformTimetableKey by the timetable source's operator", () => {
+  it.each([
+    ["종로5가 1호선, a Seoul Metro platform that Korail's xlsx times", { id: "S1-1-154", line: "1", timetable: { source: "korail" } }, "weekday", "KR-1-weekday"],
+    ["금정 4호선, a Korail platform that the Seoul timetable times", { id: "KR-4-443", line: "4", timetable: { source: "seoul-station", stationCode: "1458" } }, "saturday", "S1-4-saturday"],
+  ] as const)("keys %s by its source's table", (_label, platform, dayType, key) => {
+    // Act
+    const tableKey = toPlatformTimetableKey(platform, dayType);
 
     // Assert
     expect(tableKey).toBe(key);
@@ -299,7 +312,7 @@ describe("toTimetableCoverageIssues", () => {
   // WHY: one small table per day type each served platform's source declares, the coverage a push must hold.
   const covering = (): Timetable[] => {
     const keys = listSubwayPlatforms().flatMap((platform) =>
-      TIMETABLE_DAY_TYPES[platform.timetable.source].map((dayType) => ({ operator: platform.id.split("-")[0] ?? "", line: platform.line, dayType })),
+      TIMETABLE_DAY_TYPES[platform.timetable.source].map((dayType) => ({ operator: TIMETABLE_OPERATOR_BY_SOURCE[platform.timetable.source], line: platform.line, dayType })),
     );
     return [...new Map(keys.map((fields) => [`${fields.operator}-${fields.line}-${fields.dayType}`, table(fields)])).values()];
   };
@@ -324,8 +337,8 @@ describe("toTimetableCoverageIssues", () => {
 
     // Assert
     expect(issues).toEqual([
-      { path: ["KR-1-holiday"], message: "no table for KR-1-0153 holiday" },
-      { path: ["S1-4-saturday"], message: "no table for S1-4-420 saturday" },
+      { path: ["KR-1-holiday"], message: "no table for KR-1-0153 holiday, KR-1-P149 holiday, S1-1-154 holiday" },
+      { path: ["S1-4-saturday"], message: "no table for S1-4-420 saturday, S1-4-433 saturday, KR-4-443 saturday" },
     ]);
   });
 
@@ -337,7 +350,7 @@ describe("toTimetableCoverageIssues", () => {
     const issues = toTimetableCoverageIssues(withoutLine2Saturday, listSubwayPlatforms());
 
     // Assert
-    expect(issues).toEqual([{ path: ["S1-2-saturday"], message: "no table for S1-2-216 saturday, S1-2-222 saturday" }]);
+    expect(issues).toEqual([{ path: ["S1-2-saturday"], message: "no table for S1-2-216 saturday, S1-2-222 saturday, S1-2-226 saturday" }]);
   });
 
   it("asks a table of no platform it is not handed", () => {
@@ -394,9 +407,9 @@ describe("toTrackedStopIssues", () => {
   });
 
   it.each([
-    [509, 0],
-    [510, 0],
-    [511, 1],
+    [599, 0],
+    [600, 0],
+    [601, 1],
   ])("warns of a %i s run between two tracked stops: %i issue(s)", (gapSec, count) => {
     // Act
     const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(gapSec)])], [HYEHWA]);
@@ -407,10 +420,10 @@ describe("toTrackedStopIssues", () => {
 
   it("names the table, the platform, the direction and the train of a long run", () => {
     // Act
-    const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(600)])], [HYEHWA]);
+    const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(700)])], [HYEHWA]);
 
     // Assert
-    expect(issues).toEqual([{ path: ["S1-4-weekday", "S1-4-420", "up"], message: "1 train(s) run over 510 s between two tracked stops: 4001 S1-4-418→S1-4-419 600 s" }]);
+    expect(issues).toEqual([{ path: ["S1-4-weekday", "S1-4-420", "up"], message: "1 train(s) run over 600 s between two tracked stops: 4001 S1-4-418→S1-4-419 700 s" }]);
   });
 
   it.each([
@@ -452,7 +465,7 @@ describe("toTrackedStopIssues", () => {
 
   it("checks a table only at the platforms it serves on its day type", () => {
     // Act
-    const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(600)])], [SUNGKYUNKWAN]);
+    const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(700)])], [SUNGKYUNKWAN]);
 
     // Assert
     expect(issues).toEqual([]);
@@ -596,11 +609,16 @@ describe("listSubwayPlatforms", () => {
       ["S1-3-332", "3"],
       ["DX-D1-4308", "D1"],
       ["DX-D1-4318", "D1"],
+      ["S1-2-226", "2"],
+      ["S1-4-433", "4"],
+      ["KR-1-P149", "1"],
+      ["KR-4-443", "4"],
+      ["S1-1-154", "1"],
     ]);
   });
 });
 
-describe("revision 1 of subway-topology at each served platform", () => {
+describe("revision 2 of subway-topology at each served platform", () => {
   it.each([
     ["KR-1-0153", "up", ["KR-1-P154", "KR-1-P155", "KR-1-1715"]],
     ["KR-1-0153", "down", ["KR-1-P152", "KR-1-P151", "KR-1-P150"]],
@@ -628,6 +646,16 @@ describe("revision 1 of subway-topology at each served platform", () => {
     ["DX-D1-4308", "down", ["DX-D1-4307", "DX-D1-4306", "DX-D1-4305"]],
     ["DX-D1-4318", "up", ["DX-D1-4319"]],
     ["DX-D1-4318", "down", ["DX-D1-4317", "DX-D1-4316", "DX-D1-D15"]],
+    ["S1-2-226", "up", ["S1-2-225", "S1-2-224", "S1-2-223"]],
+    ["S1-2-226", "down", ["S1-2-227", "S1-2-228", "S1-2-229"]],
+    ["S1-4-433", "up", ["S1-4-434", "KR-4-435", "KR-4-436"]],
+    ["S1-4-433", "down", ["S1-4-432", "S1-4-431", "S1-4-430"]],
+    ["KR-1-P149", "up", ["KR-1-P150", "KR-1-P151", "KR-1-P152"]],
+    ["KR-1-P149", "down", ["KR-1-P148", "KR-1-P147", "KR-1-P146"]],
+    ["KR-4-443", "up", ["KR-4-444", "KR-4-445", "KR-4-446"]],
+    ["KR-4-443", "down", ["KR-4-442", "KR-4-441", "KR-4-440"]],
+    ["S1-1-154", "up", ["S1-1-153", "S1-1-152", "S1-1-151"]],
+    ["S1-1-154", "down", ["S1-1-155", "S1-1-159", "S1-1-156"]],
   ] as const)("lists the upstream platforms of %s %s nearest first", (id, direction, upstreamPlatformIds) => {
     // Act
     const directions = TOPOLOGY.platforms[id];
@@ -638,15 +666,15 @@ describe("revision 1 of subway-topology at each served platform", () => {
 
   it.each([
     ["KR-1-0153", "up", ["KR-1-P157"]],
-    ["KR-1-0153", "down", ["KR-1-P149", "KR-1-P148", "KR-1-P147"]],
-    ["S1-4-420", "up", ["S1-4-424", "S1-4-425", "S1-4-426"]],
+    ["KR-1-0153", "down", ["KR-1-P149", "KR-1-P148", "KR-1-P147", "KR-1-P146", "KR-1-P145", "KR-1-P144", "KR-1-P143", "KR-1-P142", "KR-1-141", "KR-1-140", "KR-1-139", "KR-1-138", "KR-1-137", "KR-1-136", "KR-1-135", "KR-1-134", "S1-1-150", "S1-1-151", "S1-1-152", "S1-1-153", "S1-1-154", "S1-1-155", "S1-1-159", "S1-1-156", "S1-1-157", "S1-1-158", "KR-1-123"]],
+    ["S1-4-420", "up", ["S1-4-424", "S1-4-425", "S1-4-426", "S1-4-427", "S1-4-428", "S1-4-429", "S1-4-430", "S1-4-431", "S1-4-432", "S1-4-433", "S1-4-434", "KR-4-435", "KR-4-436", "KR-4-437", "KR-4-438", "KR-4-439", "KR-4-440", "KR-4-441", "KR-4-442", "KR-4-443", "KR-4-444", "KR-4-445", "KR-4-446", "KR-4-447", "KR-4-448"]],
     ["S1-4-420", "down", ["S1-4-416", "S1-4-415", "S1-4-414"]],
     ["S1-2-216", "up", ["S1-2-212"]],
-    ["S1-2-216", "down", ["S1-2-220", "S1-2-221", "S1-2-222", "S1-2-223", "S1-2-224", "S1-2-225", "S1-2-226", "S1-2-227", "S1-2-228"]],
+    ["S1-2-216", "down", ["S1-2-220", "S1-2-221", "S1-2-222", "S1-2-223", "S1-2-224", "S1-2-225", "S1-2-226", "S1-2-227", "S1-2-228", "S1-2-229", "S1-2-230", "S1-2-231", "S1-2-232"]],
     ["S1-3-334", "up", ["S1-3-338", "S1-3-339", "S1-3-340", "S1-3-341", "S1-3-342"]],
     ["S1-3-334", "down", ["S1-3-330", "S1-3-329", "S1-3-328", "S1-3-327", "S1-3-326"]],
     ["S1-2-222", "up", ["S1-2-218", "S1-2-217", "S1-2-216", "S1-2-215", "S1-2-214", "S1-2-213", "S1-2-212"]],
-    ["S1-2-222", "down", ["S1-2-226", "S1-2-227", "S1-2-228"]],
+    ["S1-2-222", "down", ["S1-2-226", "S1-2-227", "S1-2-228", "S1-2-229", "S1-2-230", "S1-2-231", "S1-2-232"]],
     ["S1-3-332", "up", ["S1-3-336", "S1-3-337", "S1-3-338", "S1-3-339", "S1-3-340", "S1-3-341", "S1-3-342"]],
     ["S1-3-332", "down", ["S1-3-328", "S1-3-327", "S1-3-326"]],
     ["KR-K1-K230", "up", ["KR-K1-K234", "KR-K1-K235", "KR-K1-K236", "KR-K1-K237"]],
@@ -663,6 +691,16 @@ describe("revision 1 of subway-topology at each served platform", () => {
     ["DX-D1-4308", "down", ["DX-D1-D04"]],
     ["DX-D1-4318", "up", []],
     ["DX-D1-4318", "down", ["DX-D1-D14", "DX-D1-D13", "DX-D1-4312", "DX-D1-4311", "DX-D1-4310", "DX-D1-4309", "DX-D1-4308", "DX-D1-4307", "DX-D1-4306", "DX-D1-4305", "DX-D1-D04"]],
+    ["S1-2-226", "up", ["S1-2-222", "S1-2-221", "S1-2-220", "S1-2-219", "S1-2-218", "S1-2-217", "S1-2-216", "S1-2-215", "S1-2-214", "S1-2-213", "S1-2-212"]],
+    ["S1-2-226", "down", ["S1-2-230", "S1-2-231", "S1-2-232"]],
+    ["S1-4-433", "up", ["KR-4-437", "KR-4-438", "KR-4-439", "KR-4-440", "KR-4-441", "KR-4-442", "KR-4-443", "KR-4-444", "KR-4-445", "KR-4-446", "KR-4-447", "KR-4-448"]],
+    ["S1-4-433", "down", ["S1-4-429", "S1-4-428", "S1-4-427", "S1-4-426", "S1-4-425", "S1-4-424", "S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420", "S1-4-419", "S1-4-418", "S1-4-417", "S1-4-416", "S1-4-415", "S1-4-414"]],
+    ["KR-1-P149", "up", ["KR-1-0153", "KR-1-P154", "KR-1-P155", "KR-1-1715", "KR-1-P157"]],
+    ["KR-1-P149", "down", ["KR-1-P145", "KR-1-P144", "KR-1-P143", "KR-1-P142", "KR-1-141", "KR-1-140", "KR-1-139", "KR-1-138", "KR-1-137", "KR-1-136", "KR-1-135", "KR-1-134", "S1-1-150", "S1-1-151", "S1-1-152", "S1-1-153", "S1-1-154", "S1-1-155", "S1-1-159", "S1-1-156", "S1-1-157", "S1-1-158", "KR-1-123"]],
+    ["KR-4-443", "up", ["KR-4-447", "KR-4-448"]],
+    ["KR-4-443", "down", ["KR-4-439", "KR-4-438", "KR-4-437", "KR-4-436", "KR-4-435", "S1-4-434", "S1-4-433", "S1-4-432", "S1-4-431", "S1-4-430", "S1-4-429", "S1-4-428", "S1-4-427", "S1-4-426", "S1-4-425", "S1-4-424", "S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420", "S1-4-419", "S1-4-418", "S1-4-417", "S1-4-416", "S1-4-415", "S1-4-414"]],
+    ["S1-1-154", "up", ["S1-1-150", "KR-1-134", "KR-1-135", "KR-1-136", "KR-1-137", "KR-1-138", "KR-1-139", "KR-1-140", "KR-1-141", "KR-1-P142", "KR-1-P143", "KR-1-P144", "KR-1-P145", "KR-1-P146", "KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154", "KR-1-P155", "KR-1-1715", "KR-1-P157"]],
+    ["S1-1-154", "down", ["S1-1-157", "S1-1-158", "KR-1-123"]],
   ] as const)("lists the watched platforms of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedPlatformIds) => {
     // Act
     const directions = TOPOLOGY.platforms[id];
@@ -698,6 +736,16 @@ describe("revision 1 of subway-topology at each served platform", () => {
     ["DX-D1-4308", "down", "DX-D1-4309"],
     ["DX-D1-4318", "up", "DX-D1-4317"],
     ["DX-D1-4318", "down", "DX-D1-4319"],
+    ["S1-2-226", "up", "S1-2-227"],
+    ["S1-2-226", "down", "S1-2-225"],
+    ["S1-4-433", "up", "S1-4-432"],
+    ["S1-4-433", "down", "S1-4-434"],
+    ["KR-1-P149", "up", "KR-1-P148"],
+    ["KR-1-P149", "down", "KR-1-P150"],
+    ["KR-4-443", "up", "KR-4-442"],
+    ["KR-4-443", "down", "KR-4-444"],
+    ["S1-1-154", "up", "S1-1-155"],
+    ["S1-1-154", "down", "S1-1-153"],
   ] as const)("names the next platform of %s %s", (id, direction, nextPlatformId) => {
     // Act
     const directions = TOPOLOGY.platforms[id];
@@ -720,6 +768,11 @@ describe("revision 1 of subway-topology at each served platform", () => {
     ["DX-D1-4307", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
     ["DX-D1-4308", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
     ["DX-D1-4318", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
+    ["S1-2-226", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
+    ["S1-4-433", { ko: "불암산·진접 방면", en: "Toward Buramsan / Jinjeop", zh: "佛岩山·榛接方向" }, { ko: "오이도·안산 방면", en: "Toward Oido / Ansan", zh: "乌耳岛·安山方向" }],
+    ["KR-1-P149", { ko: "서울 방면", en: "Toward Seoul", zh: "首尔方向" }, { ko: "천안·서동탄 방면", en: "Toward Cheonan / Seodongtan", zh: "天安·西东滩方向" }],
+    ["KR-4-443", { ko: "불암산·진접 방면", en: "Toward Buramsan / Jinjeop", zh: "佛岩山·榛接方向" }, { ko: "오이도·안산 방면", en: "Toward Oido / Ansan", zh: "乌耳岛·安山方向" }],
+    ["S1-1-154", { ko: "소요산·광운대 방면", en: "Toward Soyosan / Kwangwoon Univ.", zh: "逍遥山·光云大方向" }, { ko: "인천·신창 방면", en: "Toward Incheon / Sinchang", zh: "仁川·新昌方向" }],
   ])("names %s's directions in every language", (id, upName, downName) => {
     // Act
     const directions = TOPOLOGY.platforms[id];
@@ -745,6 +798,11 @@ describe("findSubwayPlatform", () => {
     ["DX-D1-4307", "D1", { source: "shinbundang" }],
     ["DX-D1-4308", "D1", { source: "shinbundang" }],
     ["DX-D1-4318", "D1", { source: "shinbundang" }],
+    ["S1-2-226", "2", { source: "seoul-station", stationCode: "0226" }],
+    ["S1-4-433", "4", { source: "seoul-station", stationCode: "0433" }],
+    ["KR-1-P149", "1", { source: "korail" }],
+    ["KR-4-443", "4", { source: "seoul-station", stationCode: "1458" }],
+    ["S1-1-154", "1", { source: "korail" }],
   ])("puts %s on line %s with its timetable source", (id, line, timetable) => {
     // Act
     const platform = findSubwayPlatform(id);

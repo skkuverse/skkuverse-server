@@ -38,7 +38,7 @@ const clock: Clock = { now: () => NOW };
 const mockedLogger = logger as unknown as Record<"info" | "warn" | "error", jest.Mock>;
 const callsOf = (event: string) => mockedLogger.error.mock.calls.filter(([fields]) => fields?.event === event).map(([fields]) => fields);
 
-const SERVED = { busGroupIds: ["campus", "hssc"], stationIds: ["hyehwa"] };
+const SERVED = { busGroupIds: ["campus", "hssc"], stationIds: ["hyehwa"], campuslessStationIds: [] };
 const LINK = { kind: "link", id: "taxi-share", title: { ko: "택시 합승" }, icon: { type: "taxi", color: "FFB300", text: { ko: "택시" } }, actionType: "miniapp", actionValue: "inja" };
 
 function layoutOf(...items: unknown[]): Record<string, unknown> {
