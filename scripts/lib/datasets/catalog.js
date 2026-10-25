@@ -87,7 +87,10 @@
  * (`stopTimesMismatches`, run by both writers). `jongroRoutes` and
  * `jongroRoutePaths` are the TOPIS registry and route lines the poller
  * stores; `bus-stops` builds the stop index from them, as the server does, to
- * resolve each stop area member and place it (ADR 0022, D4).
+ * resolve each stop area member and place it (ADR 0022, D4). `journey-routes`
+ * resolves its cited stops through the same stop index, and its buildings
+ * through `buildings`, the SKKU buildings skkuverse-crawler stores; it
+ * declares `recheckTriggers: ["bus-stops"]`.
  *
  * A code-held source is an identity list that still lives in code, resolved
  * against the compiled checkout (ADR 0013, D5):
@@ -194,7 +197,7 @@ function loadCatalog(load) {
   const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
   const { toBusStopsSnapshot } = load("bus/stops/bus-stops.mapper");
   const { toRegistryRoute } = load("bus/registry/bus-registry.mapper");
-  const { toCanonicalStopId, toStopIndex } = load("bus/stop-index/bus-stop-index.rules");
+  const { toCanonicalStopId, toPoleArsId, toStopIndex } = load("bus/stop-index/bus-stop-index.rules");
   const { toPoleCoords } = load("bus/stop-index/bus-stop-index.mapper");
   const { LANE_STRATEGIES } = load("bus/eta/lane/bus-eta-lane.constants");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
@@ -204,7 +207,7 @@ function loadCatalog(load) {
   const { appFeaturesDataset } = load("app-config/app-config.schema");
   const { gameIdsOf, toGameOriginIssues, toTakenIdIssues } = load("games/games.rules");
   const { GAME_ID_BY_FIRST_PARTY_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
-  const { JONGRO_ROUTES, SERVICE_CONFIG, TOPIS_ROUTES } = load("bus/bus.constants");
+  const { JONGRO_ROUTES, SERVICE_CONFIG, SLUG_LETTER_PATTERN, TOPIS_ROUTES } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");
   const { SUBWAY_NETWORK, SUBWAY_STATIONS } = load("subway/subway.constants");
@@ -216,6 +219,9 @@ function loadCatalog(load) {
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
   const { findTimetable, toLineRoutes, toServiceWindowIssues, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
   const { timetableFile } = load("subway/timetable/subway-timetable.schema");
+  const { journeyRoutesDataset } = load("journey/journey.schema");
+  const { journeyRoutesReferences, toJourneyRoutesIssues } = load("journey/journey.rules");
+  const { toPlaceIssues } = load("journey/places/journey-places.rules");
 
   const grammar = { parseTarget: parseMiniAppTarget };
   const registryParts = { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin: WEB_ORIGIN };
@@ -286,8 +292,39 @@ function loadCatalog(load) {
     return [...toBusStopsIssues(data, { ...context, stopAreaResolution }), ...timetableIssues(data, collectionOf("busSchedules")), ...unread];
   };
 
+  // What a journey dataset's places resolve against: a stop or pole through the stop index built from the target's
+  // stored bus-stops, registry and route lines (only the catalog's own stops when those are not read), the target's
+  // station coords and buildings, and this checkout's served stations and platforms.
+  const journeyCatalogOf = (storedOf, collectionOf) => {
+    const busStops = storedOf("bus-stops");
+    const [registryDocs, routePathDocs, buildings] = [collectionOf("jongroRoutes"), collectionOf("jongroRoutePaths"), collectionOf("buildings")];
+    const resolution = busStops && registryDocs && routePathDocs ? stopAreaResolutionOf(busStops, registryDocs, routePathDocs) : null;
+    const localCoords = new Map((busStops?.stops ?? []).map((stop) => [stop.id, stop.coords ?? null]));
+    const stopCoordsOf = (id) => {
+      if (resolution === null) return localCoords.has(id) ? localCoords.get(id) : undefined;
+      const stopId = resolution.stopIdOf(id);
+      return stopId === null ? undefined : resolution.coordsOf(stopId);
+    };
+    const stationCoords = storedOf("subway-station-coords");
+    const toLatLng = (location) => (Array.isArray(location?.coordinates) ? { lat: location.coordinates[1], lng: location.coordinates[0] } : null);
+    return {
+      stopCoordsOf: busStops && stopCoordsOf,
+      sequencesByService: busStops && busStops.sequences,
+      buildingCoords: buildings && new Map(buildings.map((doc) => [String(doc._id), toLatLng(doc.location)])),
+      stationCoords: new Map(subwayStations.ids().map((id) => [id, stationCoords?.stations[id] ?? null])),
+      platformIdsByStation: new Map(SUBWAY_STATIONS.map((station) => [station.id, new Set(station.platforms.map((platform) => platform.id))])),
+    };
+  };
+
   return {
     collections: {
+      // The SKKU buildings skkuverse-crawler writes; a journey dataset's skku_building places resolve to their points.
+      buildings: {
+        database: "MONGO_BUILDING_DB_NAME",
+        name: "buildings",
+        projection: { _id: 1, location: 1 },
+        keyOf: (doc) => String(doc._id),
+      },
       busSchedules: {
         database: "MONGO_DB_NAME_BUS_CAMPUS",
         name: "bus_schedules",
@@ -452,6 +489,23 @@ function loadCatalog(load) {
           ...asWarnings(toTrackedStopIssues(tables, servedPlatforms)),
         ],
         referencesOf: () => [],
+      },
+      // Lines, routes, options and legs; each place is cited as <kind>:<id> and resolves through its owning catalog in the
+      // target environment, and the sources' own identities stay in code (ADR 0022, D4; ADR 0013, D2). Its cited stops are
+      // bus-stops references, and a bus-stops push reruns its checks, so neither a dropped stop nor a dropped alias or a
+      // reordered sequence it rides on passes.
+      "journey-routes": {
+        owner: "src/journey",
+        schema: journeyRoutesDataset,
+        collections: ["buildings", "jongroRoutes", "jongroRoutePaths"],
+        recheckTriggers: ["bus-stops"],
+        issuesOf: (data, { storedOf, collectionOf }) => {
+          const journeyCatalog = journeyCatalogOf(storedOf, collectionOf);
+          return [...toJourneyRoutesIssues(data, journeyCatalog), ...toPlaceIssues(data, journeyCatalog)];
+        },
+        // A TOPIS pole (its station id, which holds no letter, or its `seoul-` alias) is no bus-stops id: it resolves
+        // through the stop index in issuesOf, rechecked on every bus-stops push.
+        referencesOf: (data) => journeyRoutesReferences(data).filter((ref) => toPoleArsId(ref.id) === null && SLUG_LETTER_PATTERN.test(ref.id)),
       },
     },
   };

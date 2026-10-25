@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "bus_stop",
+        "bus_stop_area",
+        "subway_station",
+        "skku_building",
+        "point"
+      ]
+    },
+    "id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "coords": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "lat",
+        "lng"
+      ]
+    },
+    "platformId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "action": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "actionType": {
+              "type": "string",
+              "enum": [
+                "miniapp",
+                "external",
+                "webview",
+                "route"
+              ]
+            },
+            "actionValue": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "actionType",
+            "actionValue"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "kind",
+    "id",
+    "name",
+    "coords",
+    "platformId",
+    "action"
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "_about": "Synthetic, never captured from production, which serves no journey route yet: GET /journey/routes at 20:00 KST on Friday 2026-10-23, after the week's last run, Accept-Language ko, over the stores of __tests__/nest/journey/journey-routes.routes.test.ts; untrimmed.",
+  "data": {
+    "routes": [
+      {
+        "id": "hssc-to-nsc",
+        "name": "인사캠 → 자과캠",
+        "from": {
+          "kind": "skku_building",
+          "id": "1",
+          "name": "정문",
+          "coords": {
+            "lat": 37.584865,
+            "lng": 126.997131
+          },
+          "platformId": null,
+          "action": null
+        },
+        "to": {
+          "kind": "skku_building",
+          "id": "7",
+          "name": "정문",
+          "coords": {
+            "lat": 37.290649,
+            "lng": 126.974074
+          },
+          "platformId": null,
+          "action": null
+        },
+        "options": [
+          {
+            "id": "inja",
+            "name": "인자셔틀",
+            "mode": "shuttle",
+            "status": "notRunning",
+            "warnings": [],
+            "reason": "ended",
+            "nextServiceAt": "2026-10-26T08:00:00+09:00",
+            "leaveAt": null,
+            "arriveAt": null,
+            "legs": []
+          }
+        ]
+      },
+      {
+        "id": "nsc-to-hssc",
+        "name": "자과캠 → 인사캠",
+        "from": {
+          "kind": "skku_building",
+          "id": "7",
+          "name": "정문",
+          "coords": {
+            "lat": 37.290649,
+            "lng": 126.974074
+          },
+          "platformId": null,
+          "action": null
+        },
+        "to": {
+          "kind": "skku_building",
+          "id": "1",
+          "name": "정문",
+          "coords": {
+            "lat": 37.584865,
+            "lng": 126.997131
+          },
+          "platformId": null,
+          "action": null
+        },
+        "options": [
+          {
+            "id": "inja",
+            "name": "인자셔틀",
+            "mode": "shuttle",
+            "status": "notRunning",
+            "warnings": [],
+            "reason": "ended",
+            "nextServiceAt": "2026-10-26T10:00:00+09:00",
+            "leaveAt": null,
+            "arriveAt": null,
+            "legs": []
+          }
+        ]
+      }
+    ]
+  }
+}
