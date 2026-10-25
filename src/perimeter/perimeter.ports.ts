@@ -191,9 +191,9 @@ export const PORT_LABELS: { readonly [K in PortName]: string } = {
   abuseSignals: "ABUSE_SIGNALS",
 };
 
-// WHY: shared by every process of the cluster, for low-volume quotas; never one write per request.
+// WHY: shared by every process, for low-volume quotas, never per request; `release` undoes a count in its own window.
 export interface PerimeterCounters {
-  increment(key: string, windowSeconds: number): Promise<number>;
+  increment(key: string, windowSeconds: number): Promise<{ readonly count: number; release(): Promise<void> }>;
 }
 
 // WHY: one settings section each, base64url JSON only the overlay reads: a new kind of number is a new section, never
@@ -201,11 +201,11 @@ export interface PerimeterCounters {
 export const PERIMETER_SETTINGS_RE = /^PERIMETER_SETTINGS(_[A-Z]+)*$/;
 
 // WHY: what an implementation gets instead of importing config, the logger or the clock. A constructor reads only
-// `logger`, `now`, `host` and `settings`: the poller constructs every class too, and `internalToken` throws there.
+// `logger`, `now`, `host` (null on the poller, which listens on nothing) and `settings`: the poller constructs every
+// class too, and `internalToken` throws there.
 export interface PerimeterDeps {
   readonly logger: Logger;
   readonly now: () => Date;
-  // WHY: null on the poller, which listens on nothing.
   readonly host: string | null;
   readonly firebaseProjectId: string;
   readonly settings: Readonly<Record<string, string>>;

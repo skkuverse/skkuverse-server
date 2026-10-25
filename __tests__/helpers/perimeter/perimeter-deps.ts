@@ -15,11 +15,15 @@ export class MemoryPerimeterCounters implements PerimeterCounters {
 
   constructor(private readonly now: () => Date) {}
 
-  increment(key: string, windowSeconds: number): Promise<number> {
+  increment(key: string, windowSeconds: number): ReturnType<PerimeterCounters["increment"]> {
     const { counterId } = toCounterWindow(key, windowSeconds, this.now());
     const count = (this.counts.get(counterId) ?? 0) + 1;
     this.counts.set(counterId, count);
-    return Promise.resolve(count);
+    const release = () => {
+      this.counts.set(counterId, Math.max(0, (this.counts.get(counterId) ?? 0) - 1));
+      return Promise.resolve();
+    };
+    return Promise.resolve({ count, release });
   }
 }
 
