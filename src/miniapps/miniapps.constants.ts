@@ -6,19 +6,6 @@ export const SHELL_STATUS_BARS = ["dark", "light"] as const;
 
 export const SHELL_BACKGROUND_RE = /^#[0-9A-Fa-f]{6}$/;
 
-// EVIDENCE: the canonical encodings of the 8 Ed25519 points of order 1, 2, 4 and 8 (libsodium's blocklist): a
-// signature under one can verify for messages nobody signed, so no issued key is one.
-export const SMALL_ORDER_PUBLIC_KEYS: ReadonlySet<string> = new Set([
-  "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-  "7P_______________________________________38",
-  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA",
-  "xxdqcD1N2E-6PAt2DRBnDyogU_osOczGTsf9d5KsA3o",
-  "xxdqcD1N2E-6PAt2DRBnDyogU_osOczGTsf9d5KsA_o",
-  "JuiVj8KyJ7BFw_SJ8u-Y8NXfrAXTxjM5sTgCiG1T_AU",
-  "JuiVj8KyJ7BFw_SJ8u-Y8NXfrAXTxjM5sTgCiG1T_IU",
-]);
-
 // WHY: what a send's own Cloud Function call came back as; only `not_sent` is safe to resend.
 export const DELIVERY_OUTCOMES = ["delivered", "not_sent", "unknown"] as const;
 

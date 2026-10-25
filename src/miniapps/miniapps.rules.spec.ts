@@ -5,7 +5,7 @@
  * counted in graphemes, and a startUrl on the web view that addresses a page.
  * And the one 404 both flows answer an unregistered id with, the 429 both push routes answer a spent quota with,
  * and a signing key's
- * format: a key the key tool issues, never one of the 8 small-order points.
+ * format: a key the key tool issues, never a small-order point in any spelling, nor a y of p or above.
  *
  * toRegistryIssues, the push check of who may start where (ADR 0013, D2):
  * each first-party origin is the startUrl origin of exactly the
@@ -50,6 +50,17 @@ const SMALL_ORDER_KEYS = [
   ["a fourth point of order 8", "JuiVj8KyJ7BFw_SJ8u-Y8NXfrAXTxjM5sTgCiG1T_IU"],
 ] as const;
 
+// EVIDENCE: OpenSSL 3.5 through node:crypto verifies a forged R = small-order point, S = 0 signature under each of
+// these non-canonical spellings of the same points (round-2 review of 2A-3, 64 random messages each).
+const NON_CANONICAL_SMALL_ORDER_KEYS = [
+  ["the identity with its sign bit set", "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA"],
+  ["y = p + 1, the identity again", "7v_______________________________________38"],
+  ["y = p + 1 with its sign bit set", "7v________________________________________8"],
+  ["y = p, a point of order 4", "7f_______________________________________38"],
+  ["y = p with its sign bit set", "7f________________________________________8"],
+  ["the point of order 2 with its sign bit set", "7P________________________________________8"],
+] as const;
+
 const keyIdOf = (publicKey: string): string => createHash("sha256").update(Buffer.from(publicKey, "base64url")).digest("hex").slice(0, 16);
 
 describe("isIssuedSigningKey", () => {
@@ -62,6 +73,22 @@ describe("isIssuedSigningKey", () => {
   });
 
   it.each(SMALL_ORDER_KEYS)("refuses %s, a small-order key, even under its own key id", (_label, publicKey) => {
+    // Act & Assert
+    expect(isIssuedSigningKey({ keyId: keyIdOf(publicKey), publicKey })).toBe(false);
+  });
+
+  it.each(NON_CANONICAL_SMALL_ORDER_KEYS)("refuses %s, a small-order key spelled another way", (_label, publicKey) => {
+    // Act & Assert
+    expect(isIssuedSigningKey({ keyId: keyIdOf(publicKey), publicKey })).toBe(false);
+  });
+
+  it("refuses a y of p or above even when the point it reduces to is not small-order", () => {
+    // Arrange
+    const raw = Buffer.alloc(32, 0xff);
+    raw[0] = 0xef;
+    raw[31] = 0x7f;
+    const publicKey = raw.toString("base64url");
+
     // Act & Assert
     expect(isIssuedSigningKey({ keyId: keyIdOf(publicKey), publicKey })).toBe(false);
   });
