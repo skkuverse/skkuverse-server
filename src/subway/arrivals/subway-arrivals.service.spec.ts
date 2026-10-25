@@ -11,7 +11,9 @@
  * platforms. A served station carries its stored coords; with none stored for
  * it, or none read at all, it serves the station with null coords, never a
  * 503, while an unserved slug still finds nothing. Every answer carries
- * `meta.serverNow`, the clock at +09:00 to the second.
+ * `meta.serverNow`, the clock at +09:00 to the second. One platform's calls,
+ * which a journey ride boards by, are the board's for that platform, and none
+ * for a platform the topology does not serve.
  */
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
@@ -28,6 +30,7 @@ import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import { SubwayPlatformArrivalsService } from "../platform-arrivals/subway-platform-arrivals.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
+import { toCall } from "../../shared/call.util";
 import { SubwayArrivalsService } from "./subway-arrivals.service";
 
 const NOW = new Date("2026-10-16T11:41:00Z");
@@ -206,5 +209,35 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
 
     // Assert
     expect(arrivals).toBeNull();
+  });
+});
+
+describe("SubwayArrivalsService.listPlatformCalls", () => {
+  it("is the calls the station board serves at one platform, from a fresh stored state", async () => {
+    // Arrange
+    const { service, repository } = setup();
+    repository.docs.set("S1-4-420", storedAgo(5_000));
+    const board = await service.findStationArrivals("hyehwa", "ko");
+    const boardCalls = board?.data.lines[0]?.directions.flatMap((direction) => direction.trains.map(({ trainNo: _trainNo, ...train }) => train));
+
+    // Act
+    const calls = await service.listPlatformCalls("S1-4-420");
+
+    // Assert
+    expect(calls.map(toCall)).toEqual(boardCalls);
+    expect(calls.map((call) => [call.runId, call.basis])).toEqual([["4/2026-10-16/4674", "provider"]]);
+  });
+
+  it("is the timetable's calls for a stale state, and none for a platform the topology does not serve", async () => {
+    // Arrange
+    const { service, repository } = setup();
+    repository.docs.set("S1-4-420", storedAgo(121_000));
+
+    // Act
+    const [stale, unserved] = [await service.listPlatformCalls("S1-4-420"), await service.listPlatformCalls("S1-4-999")];
+
+    // Assert
+    expect(stale.map((call) => call.basis)).toEqual(Array(6).fill("timetable"));
+    expect(unserved).toEqual([]);
   });
 });

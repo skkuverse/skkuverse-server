@@ -1,11 +1,11 @@
 import { LEG_LABELS } from "./journey-routes.constants";
 import type { SupportedLang } from "../../infra/types";
 import type { StopCall } from "../../shared/call.types";
-import { toCall, toCallTime } from "../../shared/call.util";
+import { toAlightTime, toBoardTime, toCall } from "../../shared/call.util";
 import { toKstInstant } from "../../shared/kst-date.util";
 import type { Place } from "../../shared/place.wire";
 import type { JourneyLeg, JourneyOption, JourneyRoute } from "../journey.document";
-import { toAlightTime, toLegBasis } from "./journey-routes.rules";
+import { toLegBasis } from "./journey-routes.rules";
 import type { CitedLegPlace, PlannedLeg, PlannedOption, PlannedRide, PlannedStep, ServedLeg, ServedOption, ServedRoute } from "./journey-routes.types";
 
 const MINUTE_S = 60;
@@ -40,7 +40,7 @@ function toServedStep({ leg, startAt, endAt }: PlannedStep, served: Served): Ser
 }
 
 function timeOf(call: StopCall): Date {
-  const at = toCallTime(call);
+  const at = toBoardTime(call);
   if (!at) throw new Error("journey: a ride was planned on a call with no time");
   return at;
 }

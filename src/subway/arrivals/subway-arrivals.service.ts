@@ -7,7 +7,8 @@ import { toKstInstant } from "../../shared/kst-date.util";
 import { SubwayPlatformArrivalsService } from "../platform-arrivals/subway-platform-arrivals.service";
 import { SubwayStationCoordsService } from "../station-coords/subway-station-coords.service";
 import { SubwayTopologyService } from "../topology/subway-topology.service";
-import { toSubwayStationArrivals } from "./subway-arrivals.mapper";
+import type { StopCall } from "../../shared/call.types";
+import { toPlatformCalls, toSubwayStationArrivals } from "./subway-arrivals.mapper";
 import { findSubwayStation } from "./subway-arrivals.rules";
 import type { SubwayStationArrivals, SubwayStationArrivalsMeta } from "./subway-arrivals.wire";
 
@@ -29,5 +30,14 @@ export class SubwayArrivalsService {
     const platformDocs = await this.platformArrivals.listPlatformArrivals(station.platforms);
     const arrivals = toSubwayStationArrivals(station, platformDocs, { lang, registry, coords });
     return withMeta(arrivals, { serverNow: toKstInstant(this.clock.now().getTime()) });
+  }
+
+  // WHY: the calls this route serves at one platform, so a journey ride boards a stored train by the same call (ADR 0022, D6).
+  async listPlatformCalls(platformId: string): Promise<StopCall[]> {
+    const { registry } = await this.topology.current();
+    const platform = registry.stations.flatMap((station) => station.platforms).find((candidate) => candidate.id === platformId);
+    if (!platform) return [];
+    const platformDocs = await this.platformArrivals.listPlatformArrivals([platform]);
+    return platformDocs.flatMap(toPlatformCalls);
   }
 }

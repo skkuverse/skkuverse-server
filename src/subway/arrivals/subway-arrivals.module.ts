@@ -10,5 +10,6 @@ import { SubwayArrivalsService } from "./subway-arrivals.service";
   imports: [SubwayTopologyModule, SubwayStationCoordsModule, SubwayPlatformArrivalsModule],
   controllers: [SubwayArrivalsController],
   providers: [SubwayArrivalsService, Clock],
+  exports: [SubwayArrivalsService],
 })
 export class SubwayArrivalsModule {}

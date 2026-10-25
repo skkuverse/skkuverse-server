@@ -18,13 +18,15 @@
  * headsign, and its express, first-train and stored last-run flags are
  * served; a field a train stored before it lacks serves null. A previous or
  * next stop it has no name for is served as null, as a terminus is, and the
- * rest of the line still serves.
+ * rest of the line still serves. toPlatformCalls gives one platform's trains as
+ * the same calls, with Date instants, for a journey ride boarding there.
  */
 import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { Call } from "../../shared/call.wire";
 import type { StoredTrainArrival, SubwayArrivalsDoc } from "../subway.document";
 import type { SubwayPlatform, SubwayStation } from "../subway.types";
-import { toSubwayStationArrivals } from "./subway-arrivals.mapper";
+import { toCall } from "../../shared/call.util";
+import { toPlatformCalls, toSubwayStationArrivals } from "./subway-arrivals.mapper";
 import { findSubwayStation } from "./subway-arrivals.rules";
 
 const REGISTRY = subwayRegistryFixture();
@@ -364,5 +366,21 @@ describe("toSubwayStationArrivals", () => {
     expect([upDirection?.previousStation, upDirection?.nextStation]).toEqual([null, null]);
     expect([upDirection?.name, upDirection?.trains.map((train) => train.trainNo)]).toEqual(["불암산·진접 방면", ["4674", "4676"]]);
     expect(downDirection?.previousStation).toEqual({ id: "S1-4-419", name: "한성대입구" });
+  });
+});
+
+describe("toPlatformCalls", () => {
+  it("is every train of the platform's document, up then down, as the call the station board serves for it, by its run", () => {
+    // Arrange
+    const served = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang: "ko", registry: REGISTRY, coords: HYEHWA_COORDS });
+    const boardCalls = served.lines[0]!.directions.flatMap((direction) => direction.trains.map(({ trainNo: _trainNo, ...train }) => train));
+
+    // Act
+    const calls = toPlatformCalls({ platform: HYEHWA_PLATFORM, doc: DOC });
+
+    // Assert
+    expect(calls.map(toCall)).toEqual(boardCalls);
+    expect(calls.map((each) => each.runId)).toEqual(["4/2026-10-16/4674", "4/2026-10-16/4676", "4/2026-10-16/4171", "4/2026-10-16/4173", "4/2026-10-16/4175"]);
+    expect(calls[0]?.expectedArrivalAt).toEqual(new Date("2026-10-16T11:42:50Z"));
   });
 });

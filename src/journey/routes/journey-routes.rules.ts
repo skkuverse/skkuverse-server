@@ -1,5 +1,5 @@
 import type { StopCall } from "../../shared/call.types";
-import { toCallTime } from "../../shared/call.util";
+import { toAlightTime, toBoardTime } from "../../shared/call.util";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
 import type { JourneyOption, RideLeg } from "../journey.document";
 import { MAX_LATER_CALLS } from "./journey-routes.constants";
@@ -16,12 +16,7 @@ export function toLegBasis(board: StopCall, alight: StopCall): StopCall["basis"]
   return BASIS_RANK[alight.basis] > BASIS_RANK[board.basis] ? alight.basis : board.basis;
 }
 
-const timeMsOf = (call: StopCall): number => toCallTime(call)?.getTime() ?? Number.NaN;
-
-// SEE: docs/decisions/0022-journey-and-call-spec.md ("D5. Legs, options and routes"): a rider leaves a run when it arrives.
-export function toAlightTime(call: StopCall): Date | null {
-  return call.expectedArrivalAt ?? call.scheduledArrivalAt ?? call.expectedDepartureAt ?? call.scheduledDepartureAt;
-}
+const timeMsOf = (call: StopCall): number => toBoardTime(call)?.getTime() ?? Number.NaN;
 
 // WHY: a vehicle with no seat left is skipped; unknown seats count as boardable, as 7800 seats no standing riders (ADR 0022, D7).
 function isCatchable({ board }: Departure, readyAtMs: number, { vehicles }: DepartureBoard): boolean {

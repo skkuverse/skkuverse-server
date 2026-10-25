@@ -2,7 +2,8 @@
  * How a planned route is served (ADR 0022, D5): a walk with its label, icon, minutes as seconds, distance and path (null
  * without one), a transfer between two platforms of one station, a ride with its line's name, icon and color, its
  * board, alight and later calls as served calls, its basis the weaker of its calls, its end the alight call's arrival
- * before its departure (ADR 0022, D5, amended 2026-10-25) and its duration between them; an
+ * before its departure (ADR 0022, D5, amended 2026-10-25), its start the board call's board time (a late train's
+ * expected arrival) and its duration between them; an
  * option not running with no legs and its next service at +09:00; options in the planner's order; a leg's places by
  * ref and platform. Places a running option cites are resolved before; one that is not throws.
  */
@@ -88,6 +89,19 @@ describe("toServedRoute", () => {
     // Assert
     expect(served.options[0]!.legs[1]).toMatchObject({ startAt: "2026-10-20T14:30:00+09:00", endAt: "2026-10-20T15:51:00+09:00", durationSec: 4860 });
     expect(served.options[0]!.legs[1]).toMatchObject({ alight: { scheduledArrivalAt: "2026-10-20T15:51:00+09:00", scheduledDepartureAt: "2026-10-20T15:52:00+09:00" } });
+  });
+
+  it("Late train: starts a ride at its board call's expected arrival when that is past its scheduled departure", () => {
+    // Arrange
+    const [walk, ride] = (RUNNING as Extract<PlannedOption, { status: "running" }>).legs;
+    const board = call({ scheduledArrivalAt: kst("14:29"), scheduledDepartureAt: kst("14:30"), expectedArrivalAt: kst("14:33"), basis: "provider" });
+    const planned: PlannedOption = { status: "running", leaveAt: kst("14:26"), arriveAt: kst("15:52"), legs: [walk!, { ...(ride as Extract<typeof ride, { line: JourneyLine }>), board }] };
+
+    // Act
+    const served = toServedRoute(ROUTE, { planned: [planned, ENDED], order: [0, 1] }, { places: PLACES, lang: "en" });
+
+    // Assert
+    expect(served.options[0]!.legs[1]).toMatchObject({ startAt: "2026-10-20T14:33:00+09:00", durationSec: 4740, board: { scheduledDepartureAt: "2026-10-20T14:30:00+09:00" } });
   });
 
   it("serves an option not running with no legs, its next service at +09:00, in the planner's order", () => {

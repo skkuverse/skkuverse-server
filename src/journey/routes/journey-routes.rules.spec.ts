@@ -8,10 +8,12 @@
  * an option with no run left is not running, ended, with the board's next service, and one whose door failed is
  * unavailable; when a later ride has no run left, the option is ended too, its next service the boarding of the first
  * ride that reaches that ride's next first run, never before the first ride's own next run; a ride ends at its alight call's arrival, before the run leaves that stop, so the next leg starts
- * there (ADR 0022, D5, amended 2026-10-25); a leg's basis is the weaker of its calls; options run by arrival, data
+ * there (ADR 0022, D5, amended 2026-10-25), and a run running late, past its scheduled departure, boards at its
+ * expected arrival (toBoardTime); a leg's basis is the weaker of its calls; options run by arrival, data
  * order breaking a tie, then the ones not running in data order.
  */
 import type { StopCall } from "../../shared/call.types";
+import { toBoardTime } from "../../shared/call.util";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
 import type { JourneyLine, JourneyOption } from "../journey.document";
 import { planOption, toLegBasis, toOptionOrder } from "./journey-routes.rules";
@@ -141,6 +143,22 @@ describe("planOption", () => {
 
     // Assert
     expect(rideOf(planned).board).toMatchObject({ status: "unknown", expectedArrivalAt: kst("14:12"), basis: "estimate", vehicleId: null, runId: null });
+  });
+
+  it.each([
+    ["one second before the rider is ready", "14:06:59", "14:30:00"],
+    ["when the rider is ready", "14:07:00", "14:07:00"],
+  ])("Late train: boards a live run expected to arrive %s, past its scheduled departure, at that arrival", (_case, expectedAt, boardAt) => {
+    // Arrange
+    const late = departure("14:05", null, { expectedArrivalAt: new Date(`2026-10-20T${expectedAt}+09:00`), basis: "provider" });
+    const runs = board([late, departure("14:30")]);
+
+    // Act
+    const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+    // Assert
+    expect(toBoardTime(rideOf(planned).board)).toEqual(new Date(`2026-10-20T${boardAt}+09:00`));
+    expect(running(planned).leaveAt).toEqual(new Date(Date.parse(`2026-10-20T${boardAt}+09:00`) - 7 * 60_000));
   });
 
   it("Ended: names the board's next service when no run is left", () => {
