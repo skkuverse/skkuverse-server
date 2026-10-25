@@ -10,8 +10,8 @@
  * toMiniAppRegistry, the frozen snapshot every reader takes of one registry
  * revision: the index in `order` with both
  * logos resolved under the web origin it is given, each detail by its id, and the
- * lookups every reader asks of it (isRegistered, detailOf and the target
- * grammar). It is pure and reads no config, so the data tool builds the same
+ * lookups every reader asks of it (isRegistered, detailOf, a sender's credentials and the
+ * target grammar). It is pure and reads no config, so the data tool builds the same
  * snapshot.
  */
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
@@ -198,6 +198,18 @@ describe("toMiniAppRegistry", () => {
     // Assert
     expect(registry.detailOf("skkuzine")).toEqual(fixtureRegistry().details.skkuzine);
     expect(registry.detailOf("no-such-app")).toBeUndefined();
+  });
+
+  // (A perimeter detail is left out of the public history.)
+  it("answers a sender with no status and no scopes as pending, with no scopes and no signing keys, and an unknown id with null", () => {
+    // Act
+    const registry = snapshot();
+
+    // Assert
+    expect(registry.detailOf("mukja")).not.toHaveProperty("status");
+    expect(registry.detailOf("mukja")).not.toHaveProperty("scopes");
+    expect(registry.senderCredentialsOf("mukja")).toEqual({ status: "pending", scopes: [], signingKeys: [] });
+    expect(registry.senderCredentialsOf("no-such-app")).toBeNull();
   });
 
   it("accepts a target naming a registered mini app", () => {
