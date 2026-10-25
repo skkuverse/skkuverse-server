@@ -1,6 +1,7 @@
 import type { StopCall } from "../../shared/call.types";
 import { toAlightTime, toBoardTime } from "../../shared/call.util";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
+import { toKstDate } from "../../shared/kst-date.util";
 import type { JourneyOption, RideLeg } from "../journey.document";
 import { MAX_LATER_CALLS } from "./journey-routes.constants";
 import type { PlanContext, PlannedLeg, PlannedOption, PlannedRide, PlannedStep } from "./journey-routes.types";
@@ -67,6 +68,12 @@ function toChainNextServiceAt(first: FirstRide | null, endedNextAt: Date | null,
   return new Date(Math.max(endedNextAt.getTime() - (readyAtMs - first.boardAtMs), first.nextServiceAt?.getTime() ?? 0));
 }
 
+// WHY: an option whose next run falls later today has not started; one whose next run is another day, or unknown, has ended.
+function toNoService(nextServiceAt: Date | null, now: Date): PlannedOption {
+  const isLaterToday = nextServiceAt !== null && toKstDate(nextServiceAt) === toKstDate(now);
+  return { status: "notRunning", reason: isLaterToday ? "notStarted" : "ended", nextServiceAt };
+}
+
 /** WHY: each ride boards the first run catchable a catch margin after the legs before it (ADR 0022, D5 and D7). */
 export function planOption(option: JourneyOption, { now, catchMarginSec, lineById, boards }: PlanContext): PlannedOption {
   const [marginMs, legs]: [number, PlannedLeg[]] = [catchMarginSec * 1000, []];
@@ -81,7 +88,7 @@ export function planOption(option: JourneyOption, { now, catchMarginSec, lineByI
     const [board, line] = [boards.get(index), lineById.get(leg.line)];
     if (!board || board instanceof Error || !line) return { status: "notRunning", reason: "unavailable", nextServiceAt: null };
     const ride = toRide(leg, board, { arrivedAtMs: atMs, readyAtMs: atMs + marginMs, line });
-    if (!ride) return { status: "notRunning", reason: "ended", nextServiceAt: toChainNextServiceAt(first, board.nextServiceAt, atMs + marginMs) };
+    if (!ride) return toNoService(toChainNextServiceAt(first, board.nextServiceAt, atMs + marginMs), now);
     if (first === null) {
       first = { leaveAtMs: Math.max(now.getTime(), ride.boardAtMs - (atMs - now.getTime()) - marginMs), boardAtMs: ride.boardAtMs, nextServiceAt: board.nextServiceAt };
       legs.splice(0, legs.length, ...timedBack(legs as PlannedStep[], first.leaveAtMs));

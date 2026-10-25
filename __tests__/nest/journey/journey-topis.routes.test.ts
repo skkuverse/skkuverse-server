@@ -324,7 +324,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
       const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
 
       // Assert
-      expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
+      expect(option).toMatchObject({ status: "notRunning", reason: "notStarted", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
     });
 
     it("boards the pole's first run from TOPIS's published time once it falls inside the window", async () => {

@@ -45,4 +45,4 @@ export type PlannedLeg = PlannedStep | PlannedRide;
 
 export type PlannedOption =
   | { status: "running"; leaveAt: Date; arriveAt: Date; legs: PlannedLeg[] }
-  | { status: "notRunning"; reason: "ended" | "unavailable"; nextServiceAt: Date | null };
+  | { status: "notRunning"; reason: "ended" | "notStarted" | "unavailable"; nextServiceAt: Date | null };
