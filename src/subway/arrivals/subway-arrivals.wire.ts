@@ -1,23 +1,12 @@
 import { z } from "zod";
+import { call } from "../../shared/call.wire";
+import { instant } from "../../shared/instant.wire";
 
 /** WHY: nullable for a terminus, which has no station on one side. */
 const neighborStation = z.object({ id: z.string(), name: z.string() }).nullable();
 
-const trainArrival = z.object({
-  trainNo: z.string(),
-  destination: z.string(),
-  express: z.boolean(),
-  /** WHY: an instant, not seconds left (owner decision 2026-10-17): the app counts down against `meta.serverNow`. */
-  arrivalAt: z.iso.datetime(),
-  /** WHY: 0 at the station, 1 to 3 at an upstream one; null when nothing reported the train or it is farther. */
-  stopsAway: z.int().nonnegative().nullable(),
-  source: z.enum(["live", "estimated", "scheduled"]),
-  /**
-   * WHY: the earliest train of its direction with a time at this platform on the service day's table; every served
-   * train is a run of that table, live ones too, so it is never unknown. The app labels it as the first train (app ADR 0022, D4).
-   */
-  isFirstTrain: z.boolean(),
-});
+/** WHY: the shared call (ADR 0022, D2, D3); the train number is the timetable's, which the operator's boards show. */
+const trainArrival = call.extend({ trainNo: z.string() });
 
 const directionArrivals = z.object({
   direction: z.enum(["up", "down"]),
@@ -41,7 +30,7 @@ const lineArrivals = z.object({
   /** WHY: the KRIC id of this line's platform at the station, `<operator>-<line>-<station>`. */
   platformId: z.string(),
   /** WHY: per line: each platform has its own document and falls back to the timetable alone on its own. */
-  generatedAt: z.iso.datetime(),
+  generatedAt: instant,
   directions: z.array(directionArrivals),
 });
 

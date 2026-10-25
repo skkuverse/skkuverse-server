@@ -3,7 +3,7 @@ title: Subway Arrivals and Public Holidays — Sources, Budget and Accuracy Poli
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -65,3 +65,4 @@ A service day's table is weekday, Saturday or holiday by the calendar (owner, 20
 - The train map can change or block us without notice; its fixture specs catch a format change only at the next deploy.
 - A substitute holiday run on another table serves the wrong table that day, undetected.
 - Line `2`'s long-lead countdowns stay 1–3.5 min early until the report justifies a correction.
+- Each served train is the call of [ADR 0022](0022-journey-and-call-spec.md) (D2, D3), which owns the arrivals wire; `live`, `estimated` and `scheduled` are stored sources, served as the `provider`, `estimate` and `timetable` bases.

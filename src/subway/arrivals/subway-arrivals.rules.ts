@@ -1,3 +1,4 @@
+import type { Call } from "../../shared/call.wire";
 import type { StoredTrainArrival } from "../subway.document";
 import { SUBWAY_STATIONS } from "../subway.constants";
 import type { LocalizedName, PlatformDirection, SubwayRegistry, SubwayStation } from "../subway.types";
@@ -25,9 +26,10 @@ export function toCallStopsAway(direction: PlatformDirection, platformId: string
   return stopsBefore + (position.state === "approaching" && !passed.has(position.stationId) ? 1 : 0) + 1;
 }
 
-export function toStopsAway(direction: PlatformDirection, platformId: string, position: StoredTrainArrival["position"]): number | null {
-  if (!position) return null;
-  if (position.stationId === platformId) return 0;
-  const upstreamIndex = direction.upstreamPlatformIds.indexOf(position.stationId);
-  return upstreamIndex === -1 ? null : upstreamIndex + 1;
+// SEE: docs/reference/subway-api.md ("Call status")
+export function toCallStatus(direction: PlatformDirection, platformId: string, train: Pick<StoredTrainArrival, "position" | "source">): Call["status"] {
+  const { position, source } = train;
+  if (!position) return source === "scheduled" ? "scheduled" : "unknown";
+  if (position.stationId === platformId) return position.state === "departed" ? "unknown" : "arriving";
+  return direction.upstreamPlatformIds.includes(position.stationId) ? "enRoute" : "unknown";
 }

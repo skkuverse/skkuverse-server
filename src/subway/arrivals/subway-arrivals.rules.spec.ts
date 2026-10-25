@@ -1,44 +1,18 @@
 /**
  * The arrivals route's lookups and decisions: a station is found by its slug
  * with its platforms, and a previous or next platform named in every language
- * (a served one by its station's name); and a train is so many stops away as its last
- * observed station says: 0 at the served station, the upstream station's
- * place in its direction's list (nearest first, from 1) at an upstream
- * station whatever its state there, and unknown (null) for a station off the
- * list, a watched one such as Geumjeong included, or a train nothing has reported.
+ * (a served one by its station's name).
  * A call's stops away (ADR 0022, D2) counts the stations with a stop before this one, plus one: 1 approaching
  * and 0 standing here, i + 2 approaching the upstream platform at index i and i + 1 standing at or leaving it,
  * leaving out the platforms the train's row passes, and null beyond the upstream platforms.
+ * A call's status: arriving when approaching or standing at this platform, enRoute when seen at an upstream
+ * platform, scheduled when only the timetable knows it and nothing has seen it, and unknown otherwise.
  */
 import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { SubwayPlatform } from "../subway.types";
-import { findPlatformName, findSubwayStation, toCallStopsAway, toStopsAway } from "./subway-arrivals.rules";
+import { findPlatformName, findSubwayStation, toCallStatus, toCallStopsAway } from "./subway-arrivals.rules";
 
 const REGISTRY = subwayRegistryFixture();
-
-describe("toStopsAway", () => {
-  const SUNGKYUNKWAN = REGISTRY.stations[0]?.platforms[0] as SubwayPlatform;
-  const DOWN = SUNGKYUNKWAN.directions.down;
-
-  it.each([
-    ["approaching the served station", { stationId: "KR-1-0153", state: "approaching" }, 0],
-    ["standing at the served station", { stationId: "KR-1-0153", state: "arrived" }, 0],
-    ["arrived at the nearest upstream station", { stationId: "KR-1-P152", state: "arrived" }, 1],
-    ["departed the nearest upstream station", { stationId: "KR-1-P152", state: "departed" }, 1],
-    ["approaching the second upstream station", { stationId: "KR-1-P151", state: "approaching" }, 2],
-    ["at the third upstream station", { stationId: "KR-1-P150", state: "arrived" }, 3],
-    ["at a station past the upstream list", { stationId: "KR-1-P157", state: "arrived" }, null],
-    ["departed 금정, the watched station beyond the upstream list", { stationId: "KR-1-P149", state: "departed" }, null],
-    ["at the station after the served one", { stationId: "KR-1-P154", state: "arrived" }, null],
-    ["nothing has reported", null, null],
-  ] as const)("reads a 성균관대 down train %s as %p stops away", (_label, position, stopsAway) => {
-    // Act
-    const stops = toStopsAway(DOWN, "KR-1-0153", position);
-
-    // Assert
-    expect(stops).toBe(stopsAway);
-  });
-});
 
 describe("findSubwayStation", () => {
   it.each([
@@ -153,5 +127,30 @@ describe("toCallStopsAway, the call's stops away (ADR 0022, D2)", () => {
   it("knows nothing of a train nothing has reported", () => {
     // Act & Assert
     expect(toCallStopsAway(DOWN, "KR-1-0153", { position: null, passedPlatformIds: [] })).toBeNull();
+  });
+});
+
+describe("toCallStatus", () => {
+  const SUNGKYUNKWAN = REGISTRY.stations[0]?.platforms[0] as SubwayPlatform;
+  // WHY: Sungkyunkwan Univ. down's upstream platforms, nearest first: Uiwang, Dangjeong, Gunpo.
+  const DOWN = SUNGKYUNKWAN.directions.down;
+  const at = (stationId: string, state: "approaching" | "arrived" | "departed") => ({ stationId, state });
+
+  it.each([
+    ["approaching the served platform", at("KR-1-0153", "approaching"), "estimated", "arriving"],
+    ["standing at the served platform", at("KR-1-0153", "arrived"), "live", "arriving"],
+    ["standing at the served platform, its time still the timetable's", at("KR-1-0153", "arrived"), "scheduled", "arriving"],
+    ["leaving the served platform", at("KR-1-0153", "departed"), "estimated", "unknown"],
+    ["approaching 의왕, the nearest upstream platform", at("KR-1-P152", "approaching"), "estimated", "enRoute"],
+    ["leaving 군포, the last upstream platform", at("KR-1-P150", "departed"), "live", "enRoute"],
+    ["seen upstream, its time still the timetable's", at("KR-1-P151", "arrived"), "scheduled", "enRoute"],
+    ["at 금정, beyond the upstream platforms", at("KR-1-P149", "departed"), "estimated", "unknown"],
+    ["at 화서, after the served platform", at("KR-1-P154", "arrived"), "estimated", "unknown"],
+    ["unseen, from the timetable alone", null, "scheduled", "scheduled"],
+    ["unseen, with a countdown", null, "live", "unknown"],
+    ["unseen, with an estimate", null, "estimated", "unknown"],
+  ] as const)("reads a train %s as %s", (_label, position, source, status) => {
+    // Act & Assert
+    expect(toCallStatus(DOWN, "KR-1-0153", { position, source })).toBe(status);
   });
 });
