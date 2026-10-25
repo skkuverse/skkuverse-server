@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DepartureUnavailableError } from "../../../shared/departure.error";
 import type { DepartureBoard, DepartureQuery, DepartureSource } from "../../../shared/departure.types";
+import { SubwayArrivalsService } from "../../arrivals/subway-arrivals.service";
 import { SubwayTimetablesUnavailableError } from "../subway-timetable.error";
 import { SubwayTimetableService } from "../subway-timetable.service";
 import type { PlatformSchedule } from "../subway-timetable.types";
@@ -15,14 +16,18 @@ export class SubwayTimetableDeparturesService implements DepartureSource {
   // read for another day would evict and read again (SubwayTimetableService holds one day type per line).
   private readonly nextServiceByRide = new Map<string, { serviceDate: string; nextServiceAt: Promise<Date | null> }>();
 
-  constructor(private readonly timetable: SubwayTimetableService) {}
+  constructor(
+    private readonly timetable: SubwayTimetableService,
+    private readonly arrivals: SubwayArrivalsService,
+  ) {}
 
+  // WHY: a train the board platform's station board lists live boards by that board's call (ADR 0022 PR (h)).
   async listDepartures(query: DepartureQuery): Promise<DepartureBoard> {
     const { alightStopId } = query;
     if (alightStopId === null) throw new DepartureUnavailableError(`subway line ${query.lineId} takes its direction from an alight platform`);
     const ride = { ...query, alightStopId };
-    const [board, alight] = await this.findSchedules(ride, query.from);
-    const today = toTimetableDepartureBoard(board, alight, query);
+    const [[board, alight], liveCalls] = await Promise.all([this.findSchedules(ride, query.from), this.arrivals.listPlatformCalls(query.boardStopId)]);
+    const today = toTimetableDepartureBoard(board, alight, { ...query, liveCalls });
     if (today.nextServiceAt !== null) return today;
     if (toLegTrains(board, alight).length === 0) throw new DepartureUnavailableError(`no train of line ${ride.lineId} runs from ${ride.boardStopId} to ${alightStopId}`);
     return { ...today, nextServiceAt: await this.findNextServiceAt(ride, board.serviceDate) };

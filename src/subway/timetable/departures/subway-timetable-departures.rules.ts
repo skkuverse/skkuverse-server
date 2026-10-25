@@ -1,5 +1,5 @@
 import type { StopCall } from "../../../shared/call.types";
-import { toCallTime } from "../../../shared/call.util";
+import { toAlightTime, toBoardTime } from "../../../shared/call.util";
 import type { Departure, DepartureBoard, DepartureQuery } from "../../../shared/departure.types";
 import type { NetworkPlatform } from "../../subway.types";
 import { SERVICE_DAY_START_HOUR } from "../subway-timetable.constants";
@@ -8,7 +8,6 @@ import type { PlatformSchedule, ScheduledStop, Timetable } from "../subway-timet
 import type { LegTrain, SubwayRide } from "./subway-timetable-departures.types";
 
 const HOUR_SEC = 3600;
-const DAY_SEC = 24 * HOUR_SEC;
 // WHY: a Monday, a Saturday and a Sunday, so toDayType picks every table a platform's source declares for the push check.
 const SAMPLE_SERVICE_DATES = ["2026-01-05", "2026-01-10", "2026-01-11"] as const;
 
@@ -16,6 +15,7 @@ type Run = Pick<StopCall, "runId" | "headsign" | "isFirstRun" | "isLastRun" | "i
 
 const boardTimeOf = (stop: ScheduledStop): Date | null => stop.departureAt ?? stop.arrivalAt;
 const alightTimeOf = (stop: ScheduledStop): Date | null => stop.arrivalAt ?? stop.departureAt;
+const msOf = (at: Date | null): number => at?.getTime() ?? Number.NaN;
 
 function isAfter(alight: ScheduledStop | undefined, board: ScheduledStop): alight is ScheduledStop {
   const [alightAt, boardAt] = [alight && alightTimeOf(alight), boardTimeOf(board)];
@@ -47,14 +47,27 @@ function toTimetableCall(stop: ScheduledStop, run: Run): StopCall {
   };
 }
 
-/** WHY: the trains that serve the ride from the query's instant to its end, by board time, first and last flags across the ride's trains. */
-export function toTimetableDepartureBoard(board: PlatformSchedule, alight: PlatformSchedule, query: Pick<DepartureQuery, "lineId" | "from" | "until">): DepartureBoard {
+// WHY: a stored train boards by the station board's call, the ride's flags kept; its delay there carries to the alight (ADR 0017, D5).
+function withLiveBoard(departure: Departure, live: StopCall | undefined): Departure {
+  const { board, alight } = departure;
+  if (live === undefined || live.basis === "timetable") return departure;
+  const delayMs = msOf(live.expectedArrivalAt) - msOf(toAlightTime(board));
+  const lateAlight = alight && delayMs > 0 ? { ...alight, expectedArrivalAt: new Date(msOf(toAlightTime(alight)) + delayMs), basis: "estimate" as const } : alight;
+  return { ...departure, board: { ...live, isFirstRun: board.isFirstRun, isLastRun: board.isLastRun }, alight: lateAlight };
+}
+
+type BoardWindow = Pick<DepartureQuery, "lineId" | "from" | "until"> & { liveCalls?: readonly StopCall[] };
+
+/** WHY: the ride's trains boarding from the query's instant to its end, a stored one by its live call (withLiveBoard). */
+export function toTimetableDepartureBoard(board: PlatformSchedule, alight: PlatformSchedule, query: BoardWindow): DepartureBoard {
   const legTrains = toLegTrains(board, alight);
+  const liveByRunId = new Map((query.liveCalls ?? []).map((call) => [call.runId, call]));
   const timed = legTrains.map(({ train, boardStop, alightStop }, index) => {
     const runId = `${board.platform.line}/${board.serviceDate}/${train.trainNo}`;
     const run = { runId, headsign: train.destination, isFirstRun: index === 0, isLastRun: index === legTrains.length - 1, isExpress: train.express };
-    const departure: Departure = { lineId: query.lineId, board: toTimetableCall(boardStop, run), alight: alightStop && toTimetableCall(alightStop, run), observedAt: null };
-    return { boardAtMs: toCallTime(departure.board)?.getTime() ?? Number.NaN, departure };
+    const timetabled: Departure = { lineId: query.lineId, board: toTimetableCall(boardStop, run), alight: alightStop && toTimetableCall(alightStop, run), observedAt: null };
+    const departure = withLiveBoard(timetabled, liveByRunId.get(runId));
+    return { boardAtMs: toBoardTime(departure.board)?.getTime() ?? Number.NaN, departure };
   });
   const [fromMs, untilMs] = [query.from.getTime(), query.until.getTime()];
   const departures = timed.filter(({ boardAtMs }) => boardAtMs >= fromMs && boardAtMs <= untilMs).map(({ departure }) => departure);
@@ -63,7 +76,7 @@ export function toTimetableDepartureBoard(board: PlatformSchedule, alight: Platf
 }
 
 export function toNextServiceDayStart(serviceDate: string): Date {
-  return toServiceInstant(serviceDate, DAY_SEC + SERVICE_DAY_START_HOUR * HOUR_SEC);
+  return toServiceInstant(serviceDate, (24 + SERVICE_DAY_START_HOUR) * HOUR_SEC);
 }
 
 function toSampleSchedule(tables: readonly Timetable[], platform: NetworkPlatform, serviceDate: string): PlatformSchedule | string {

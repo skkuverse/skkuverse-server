@@ -5,12 +5,17 @@
  * holiday table; past midnight the line 1 ride from Geumjeong to Sungkyunkwan Univ. still boards the previous service day's last train;
  * after the day's last train the next service is the next service day's first train, read once per ride and day, so
  * polls after the last train do not read the tables again; and a platform off the ride's line, an unserved one, a
- * ride no train runs and a missing table each throw DepartureUnavailableError.
+ * ride no train runs and a missing table each throw DepartureUnavailableError. A train the board platform's station
+ * board lists live (a FakeSubwayArrivalsService) boards by that board's call, and only the board platform is read.
  */
 jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { FakeCalendarService } from "../../../../__tests__/helpers/fakes/calendar/calendar.service.fake";
 import { storedSubwayTimetableRepository, storedSubwayTimetableService, subwayTimetablesFixture } from "../../../../__tests__/helpers/subway/timetables";
+import { FakeSubwayArrivalsService } from "../../../../__tests__/helpers/fakes/subway/subway-arrivals.service.fake";
+import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import type { StopCall } from "../../../shared/call.types";
 import { DepartureUnavailableError } from "../../../shared/departure.error";
+import type { SubwayArrivalsService } from "../../arrivals/subway-arrivals.service";
 import type { DepartureQuery } from "../../../shared/departure.types";
 import { SubwayTimetableDeparturesService } from "./subway-timetable-departures.service";
 
@@ -27,8 +32,9 @@ const LINE1_DOWN: [string, string] = ["KR-1-P149", "KR-1-P153"];
 function setup(tables = subwayTimetablesFixture()) {
   const holidays = new FakeCalendarService();
   const repository = storedSubwayTimetableRepository(tables);
-  const door = new SubwayTimetableDeparturesService(storedSubwayTimetableService({ repository, holidays }));
-  return { holidays, repository, door };
+  const arrivals = new FakeSubwayArrivalsService();
+  const door = new SubwayTimetableDeparturesService(storedSubwayTimetableService({ repository, holidays }), asReal<SubwayArrivalsService>(arrivals));
+  return { holidays, repository, arrivals, door };
 }
 
 const partKeys = (reads: readonly string[]): string[] => reads.map((partId) => partId.replace(/^subway-timetables\/|@.*$/g, ""));
@@ -46,6 +52,25 @@ describe("SubwayTimetableDeparturesService.listDepartures", () => {
     expect(first?.board).toMatchObject({ runId: "4/2026-10-20/4517", scheduledDepartureAt: kst("2026-10-20", "06:21:30"), basis: "timetable", status: "scheduled" });
     expect(first?.alight).toMatchObject({ runId: "4/2026-10-20/4517", scheduledArrivalAt: kst("2026-10-20", "07:14:00"), basis: "timetable" });
     expect(board.departures.every((departure) => departure.lineId === "4" && departure.alight !== null)).toBe(true);
+  });
+
+  it("Live train: boards a train the board platform's station board lists live by that board's call, reading only that platform", async () => {
+    // Arrange
+    const { arrivals, door } = setup();
+    const live: StopCall = {
+      ...{ status: "enRoute", expectedArrivalAt: kst("2026-10-20", "06:22:00"), expectedDepartureAt: null, scheduledArrivalAt: kst("2026-10-20", "06:21:00") },
+      ...{ scheduledDepartureAt: kst("2026-10-20", "06:21:30"), basis: "provider", stopsAway: 2, runId: "4/2026-10-20/4517", vehicleId: null, headsign: "오이도" },
+      ...{ isFirstRun: false, isLastRun: null, isExpress: false, providerText: null },
+    };
+    arrivals.callsByPlatform.set("S1-4-420", [live]);
+
+    // Act
+    const board = await door.listDepartures(query("4", LINE4_DOWN, kst("2026-10-20", "06:20:00")));
+
+    // Assert
+    expect(board.departures[0]?.board).toEqual({ ...live, isFirstRun: expect.any(Boolean), isLastRun: false });
+    expect(board.departures[0]?.alight).toMatchObject({ basis: "estimate", expectedArrivalAt: kst("2026-10-20", "07:15:00") });
+    expect(arrivals.reads).toEqual(["S1-4-420"]);
   });
 
   it("Holiday table: boards a public holiday's first train after 10:00 from the holiday table, not the weekday one", async () => {
