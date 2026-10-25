@@ -27,6 +27,7 @@ import { BuildingModule } from "../../../src/building/building.module";
 import { BuildingRepository } from "../../../src/building/building.repository";
 import { BusModule } from "../../../src/bus/bus.module";
 import type { JongroArrivalDoc } from "../../../src/bus/cache/bus-cache.document";
+import type { StationServiceHours } from "../../../src/bus/registry/bus-registry.document";
 import { BusCacheModule } from "../../../src/bus/cache/bus-cache.module";
 import { BusCacheRepository } from "../../../src/bus/cache/bus-cache.repository";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
@@ -128,7 +129,7 @@ type Seats = Array<{ vehicleId: string; seatsLeft: number | null }>;
 
 const apps: NestExpressApplication[] = [];
 
-async function boot(now: Date, rows: Rows = {}, seats: Seats = []): Promise<import("http").Server> {
+async function boot(now: Date, rows: Rows = {}, seats: Seats = [], jongro08Hours: StationServiceHours[] = []): Promise<import("http").Server> {
   const journey = new FakeJourneyRepository();
   journey.storeRoutes(revision3);
   const buildings = new FakeBuildingRepository();
@@ -141,6 +142,7 @@ async function boot(now: Date, rows: Rows = {}, seats: Seats = []): Promise<impo
   busCache.values.set("jongro_locations_7800", []);
   const registry = storedBusRegistryRepository();
   registry.routes.set("gyeonggi7800", registryDoc7800());
+  registry.routes.set("jongro08", { ...registry.routes.get("jongro08")!, serviceHours: jongro08Hours });
   const routePaths = storedBusRoutePathRepository();
   routePaths.routePaths.set("gyeonggi7800", routePathDoc7800());
   const stops = busStopsFixture() as { stops: unknown[] };
@@ -326,6 +328,34 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
     // Assert
     expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-21T06:00:00+09:00" });
+  });
+
+  describe("Overnight: TOPIS answers no rows, so bus_cache holds none for 종로 08", () => {
+    // WHY: the hours the poller kept on the route from the previous service day's rows, dated as TOPIS dated them.
+    const keptHours = (): StationServiceHours[] =>
+      serviceHoursDocs("jongro08", "2026-10-19").flatMap(({ sequence, firstTm, lastTm }) => (firstTm && lastTm ? [{ sequence: Number(sequence), firstTm, lastTm }] : []));
+
+    it("names today's first run at the pole from the hours kept on the route, not started yet", async () => {
+      // Arrange
+      const server = await boot(at("02:00:00"), { jongro08: [] }, [], keptHours());
+
+      // Act
+      const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
+
+      // Assert
+      expect(option).toMatchObject({ status: "notRunning", reason: "notStarted", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
+    });
+
+    it("names no next service with no hours kept on the route", async () => {
+      // Arrange
+      const server = await boot(at("02:00:00"), { jongro08: [] });
+
+      // Act
+      const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
+
+      // Assert
+      expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: null });
+    });
   });
 
   describe("before the first run, every slot waiting to depart with no bus", () => {

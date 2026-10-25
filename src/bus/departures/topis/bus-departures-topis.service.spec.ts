@@ -5,7 +5,8 @@
  * (119000302 to 200000159) rides from station index 40 to 57, its calls the live route's for the request language,
  * and boards past them at half the stored headway of the board station's row; it throws DepartureUnavailableError
  * for a line that is no TOPIS route, a stop the route does not call at, a reversed pair, a live group placed by
- * another stations version, and a route with no stored arrival rows.
+ * another stations version, and a route with no stored arrival rows. Overnight, when TOPIS stores no rows, the pole's
+ * next first run comes from the hours last stated for it on the route's registry document (ADR 0022 PR (h)).
  */
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
@@ -25,6 +26,7 @@ import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import type { LiveGroup } from "../../live/bus-live.wire";
 import type { BusLiveGroupService } from "../../live/group/bus-live-group.service";
 import type { BusRealtimeJongroClient } from "../../realtime/jongro/bus-realtime-jongro.client";
+import type { StationServiceHours } from "../../registry/bus-registry.document";
 import { BusRealtimeJongroService } from "../../realtime/jongro/bus-realtime-jongro.service";
 import type { BusRoutePathService } from "../../route-path/bus-route-path.service";
 import { BusStopIndexService } from "../../stop-index/bus-stop-index.service";
@@ -63,17 +65,17 @@ const query = (extra: Partial<DepartureQuery> = {}): DepartureQuery => ({
   ...extra,
 });
 
-function setup({ group = liveGroup(), hasArrivals = true } = {}) {
+function setup({ group = liveGroup(), hasArrivals = true, hasRows = true, serviceHours = [] as StationServiceHours[] } = {}) {
   const data = busStopsFixture() as { stops: unknown[] };
   data.stops.push(...proposal.stops);
   const registry = storedBusRegistryRepository();
-  registry.routes.set("gyeonggi7800", registryDoc7800());
+  registry.routes.set("gyeonggi7800", { ...registryDoc7800(), serviceHours });
   const registryService = storedBusRegistryService(registry);
   const index = new BusStopIndexService(storedBusStopsService(storedBusStopsRepository(data), CLOCK), registryService, asReal<BusRoutePathService>(new FakeBusRoutePathService()), CLOCK);
   const cache = new FakeBusCacheRepository();
   if (hasArrivals) {
     const row = jongroArrivalDoc({ stationId: "119000302", sequence: "41", term: 10, firstTm: "2026-10-25T05:52:00+09:00", lastTm: "2026-10-25T23:50:00+09:00" });
-    cache.values.set("jongro_stations_7800", [jongroArrivalDoc({ stationId: "119000302", sequence: "40", term: 4 }), row]);
+    cache.values.set("jongro_stations_7800", hasRows ? [jongroArrivalDoc({ stationId: "119000302", sequence: "40", term: 4 }), row] : []);
   }
   const cacheService = new BusCacheService(asReal<BusCacheRepository>(cache));
   const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cacheService, registryService, CLOCK);
@@ -96,6 +98,34 @@ describe("BusDeparturesTopisService.listDepartures", () => {
     ]);
     expect(board.continuation).toEqual({ kind: "headway", headwaySec: 600, serviceEndsAt: new Date("2026-10-25T23:50:00+09:00") });
     expect(live.readGroupIds).toEqual(["gyeonggi7800"]);
+  });
+
+  describe("Overnight: TOPIS stores no rows, and the live route lists no arrival", () => {
+    const night = (): LiveGroup => ({ ...liveGroup(), operation: "noData", stations: liveGroup().stations.map((station) => ({ ...station, operation: "noData", arrivals: [] })) });
+    const AT_02_00 = new Date("2026-10-26T02:00:00+09:00");
+    const HOURS_41 = { sequence: 41, firstTm: "2026-10-25T05:52:00+09:00", lastTm: "2026-10-25T23:50:00+09:00" };
+
+    it("names the pole's next first run from the hours last stated for it on the route", async () => {
+      // Arrange
+      const { service } = setup({ group: night(), hasRows: false, serviceHours: [{ ...HOURS_41, sequence: 40 }, HOURS_41] });
+
+      // Act
+      const board = await service.listDepartures(query({ from: AT_02_00, until: new Date(AT_02_00.getTime() + 3 * 3_600_000) }));
+
+      // Assert
+      expect([board.departures, board.continuation, board.nextServiceAt]).toEqual([[], { kind: "listed" }, new Date("2026-10-26T05:52:00+09:00")]);
+    });
+
+    it("names none when the route holds no hours for the pole", async () => {
+      // Arrange
+      const { service } = setup({ group: night(), hasRows: false, serviceHours: [{ ...HOURS_41, sequence: 40 }] });
+
+      // Act
+      const board = await service.listDepartures(query({ from: AT_02_00, until: new Date(AT_02_00.getTime() + 3 * 3_600_000) }));
+
+      // Assert
+      expect(board.nextServiceAt).toBeNull();
+    });
   });
 
   it.each([
