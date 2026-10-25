@@ -9,6 +9,10 @@
  * (__tests__/helpers/bus/), with a copy changed where a case needs other data. A pole's stop id is the bus root's
  * `toPoleStopId`, which `/bus/config` serves too; ported (old → new): `toTopisStopId` "prefixes the ARS
  * number" → src/bus/bus.rules.spec.ts `toPoleStopId`.
+ *
+ * Each stop names the stop area that holds it (ADR 0022, D4): a member is the stop the index serves under its id, a
+ * `seoul-` member the stop its pole is (a local stop when one aliases it), and a member the index cannot find is left
+ * out and named, never failing the build.
  */
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
@@ -371,5 +375,44 @@ describe("toStopIndex", () => {
     // Assert
     expect(routesAt(index, "seoul-01592")?.map((route) => route.groupId)).toEqual(["jongro08"]);
     expect(index.stopById.has("seoul-01616")).toBe(false);
+  });
+});
+
+describe("toStopIndex stop areas", () => {
+  async function snapshotWithAreas(stopAreas: Array<{ id: string; stopIds: string[] }>): Promise<BusStopsSnapshot> {
+    return snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.arsIds = ["01618"];
+      Object.assign(data, { stopAreas: stopAreas.map((area) => ({ name: { ko: "정류장" }, ...area })) });
+    });
+  }
+
+  it("files each member's stop under its area, a pole a local stop aliases as that stop, and leaves every other stop in none", async () => {
+    // Arrange
+    const areas = [
+      { id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] },
+      { id: "hssc-lot", stopIds: ["seoul-01618", "hssc-600th"] },
+    ];
+    const [snapshot, routes] = await Promise.all([snapshotWithAreas(areas), routesOf()]);
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    const areaOf = (stopId: string) => index.stopById.get(stopId)?.stopAreaId;
+    expect(["hssc-hyehwa-exit1", "seoul-01592", "hssc-bus-lot", "hssc-600th", "seoul-01722"].map(areaOf)).toEqual(["hyehwa-exit1", "hyehwa-exit1", "hssc-lot", "hssc-lot", undefined]);
+    expect(index.unmatchedStopAreaMembers).toEqual([]);
+  });
+
+  it("leaves out a member the index cannot find, as a pole TOPIS dropped, and keeps the rest of its area", async () => {
+    // Arrange
+    const areas = [{ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "seoul-01592", "seoul-99999"] }];
+    const [snapshot, routes] = await Promise.all([snapshotWithAreas(areas), routesOf()]);
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.stopById.get("hssc-hyehwa-exit1")?.stopAreaId).toBe("hyehwa-exit1");
+    expect(index.unmatchedStopAreaMembers).toEqual([{ stopAreaId: "hyehwa-exit1", memberId: "seoul-99999" }]);
   });
 });

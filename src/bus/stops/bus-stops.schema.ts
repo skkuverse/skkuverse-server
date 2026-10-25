@@ -2,7 +2,7 @@ import { z } from "zod";
 import { campus } from "../../shared/campus.wire";
 import { ARS_ID_PATTERN, HSSC_POSITION_COUNT, STOP_ID_PATTERN, TOPIS_STOP_ID_PREFIX } from "../bus.constants";
 import { TOPIS_STATION_ID_PATTERN } from "./bus-stops.constants";
-import type { BusStopsData, StoredBusStops } from "./bus-stops.document";
+import type { BusStopsData, StopArea, StoredBusStops } from "./bus-stops.document";
 import type { ScheduleStop, SequenceStop } from "./bus-stops.types";
 
 const arsId = z.string().regex(ARS_ID_PATTERN, "must be a five-digit ARS number");
@@ -36,6 +36,26 @@ const topisOverlay = z.strictObject({
   subwayStationId: z.string().min(1).optional(),
 });
 
+const nonBlankText = z.string().regex(/\S/, "must not be blank");
+
+// WHY: whether a member resolves, and how far apart the members lie, need the stop index, so only the push checks them
+// (src/bus/stop-index/area); the name takes a stop's shape: Korean required, `OPTIONAL_LANGS` never blank.
+const stopArea = z.strictObject({
+  id: stopId,
+  name: z.strictObject({ ko: nonBlankText, en: nonBlankText.optional(), zh: nonBlankText.optional() }),
+  stopIds: z.array(z.string().regex(STOP_ID_PATTERN, "must be a stop id")).min(2, "must list at least two stops"),
+}) satisfies z.ZodType<StopArea>;
+
+function addStopAreaIdIssues({ stops, stopAreas = [] }: BusStopsData, context: z.RefinementCtx): void {
+  const stopIds = new Set(stops.map((each) => each.id));
+  const earlierIds = new Set<string>();
+  stopAreas.forEach(({ id }, index) => {
+    if (stopIds.has(id)) context.addIssue({ code: "custom", path: ["stopAreas", index, "id"], message: `"${id}" is a stop id too` });
+    else if (earlierIds.has(id)) context.addIssue({ code: "custom", path: ["stopAreas", index, "id"], message: `"${id}" is the id of an earlier area too` });
+    earlierIds.add(id);
+  });
+}
+
 export const busStopsDataset = z.strictObject({
   stops: z.array(stop),
   sequences: z.record(z.string(), z.record(z.string(), z.array(z.custom<SequenceStop>()))),
@@ -43,6 +63,7 @@ export const busStopsDataset = z.strictObject({
     stations: z.array(hsscStation).length(HSSC_POSITION_COUNT, `must list exactly ${HSSC_POSITION_COUNT} positions, the count the HSSC realtime view fills`),
   }),
   topis: z.record(arsId, topisOverlay).optional(),
-}) satisfies z.ZodType<BusStopsData>;
+  stopAreas: z.array(stopArea).optional(),
+}).superRefine(addStopAreaIdIssues) satisfies z.ZodType<BusStopsData>;
 
 export const storedBusStops = z.object({ revision: z.int().positive(), data: busStopsDataset }) satisfies z.ZodType<StoredBusStops>;

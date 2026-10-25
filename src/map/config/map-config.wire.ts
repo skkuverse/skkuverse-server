@@ -26,7 +26,7 @@ const layer = z.object({
 });
 
 const cameraMotion = z.object({ zoom: z.number(), tilt: z.number(), bearing: z.number(), durationMs: z.number() });
-// CONTRACT(skkuverse-app): skkuverse-app/apps/mobile/src/features/map/map.schema.ts drops a chip whose action kind is not in CHIP_ACTION_KINDS.
+// CONTRACT(skkuverse-app): skkuverse-app/apps/mobile/src/features/map/map-config.schema.ts drops a chip whose action kind chipActionSchema does not list.
 const chipAction = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("webview"), url: z.string() }),
   z.object({ kind: z.literal("focus"), camera: cameraMotion.extend({ lat: z.number(), lng: z.number() }), layerIds: z.array(z.string()) }),

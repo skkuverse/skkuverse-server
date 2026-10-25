@@ -279,6 +279,44 @@ describe("BusStopsService.current with a revision the HSSC line or alias checks 
   });
 });
 
+describe("BusStopsService.current with stop areas", () => {
+  const withAreas = (stopAreas: unknown[]): BusStopsData => ({ ...fixture(), stopAreas }) as BusStopsData;
+  const hyehwa = { id: "hyehwa-exit1", name: { ko: "혜화역 1번 출구" }, stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] };
+
+  it("answers the stored areas, frozen, and none for a revision without them", async () => {
+    // Arrange
+    const { repository, stops, advanceTo } = setup();
+    repository.storeStops(fixture());
+    const without = await stops.current();
+    repository.storeStops(withAreas([hyehwa]));
+
+    // Act
+    advanceTo(DATASET_CACHE_TTL_MS);
+    const served = await stops.current();
+
+    // Assert
+    expect(without.stopAreas).toEqual([]);
+    expect(served.stopAreas).toEqual([hyehwa]);
+    expect(Object.isFrozen(served.stopAreas[0]!.stopIds)).toBe(true);
+  });
+
+  it("keeps serving the last good revision after a push whose area takes a stop's id", async () => {
+    // Arrange
+    const { repository, stops, advanceTo } = setup();
+    repository.storeStops(withAreas([hyehwa]));
+    await stops.current();
+    repository.storeStops(withAreas([{ ...hyehwa, id: "hssc-hyehwa-exit1" }]));
+
+    // Act
+    advanceTo(DATASET_CACHE_TTL_MS);
+    const served = await stops.current();
+
+    // Assert
+    expect(served.revision).toBe(1);
+    expect(served.stopAreas.map((area) => area.id)).toEqual(["hyehwa-exit1"]);
+  });
+});
+
 describe("BusStopsService.servedSequences", () => {
   it("resolves the snapshot's commute sequences and stops in English, without their maps", async () => {
     // Arrange

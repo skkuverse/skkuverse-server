@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: GET /bus/stops on 2026-10-23 over the stores of __tests__/nest/bus/bus-stop-list.routes.test.ts (revision 1 of bus-stops, the Jongno registry and route lines production stored), trimmed from 94 stops to five in served order: an HSSC stop with no coordinates, two shuttle stops, the 종로02 loop terminal listed once and a pole 종로07 and 종로08 share.",
+  "_about": "Synthetic: GET /bus/stops on 2026-10-23 over the stores of __tests__/nest/bus/bus-stop-list.routes.test.ts (revision 1 of bus-stops, the Jongno registry and route lines production stored), trimmed from 94 stops to five in served order: an HSSC stop with no coordinates, two shuttle stops, the 종로02 loop terminal listed once and a pole 종로07 and 종로08 share. Each stop's stopAreaId (ADR 0022, D4) is added by hand as null, since no stop area is stored.",
   "data": {
     "stops": [
       {
@@ -12,6 +12,7 @@
         "coords": null,
         "arsIds": null,
         "campus": null,
+        "stopAreaId": null,
         "routes": [
           {
             "kind": "live",
@@ -44,6 +45,7 @@
         },
         "arsIds": null,
         "campus": null,
+        "stopAreaId": null,
         "routes": [
           {
             "kind": "timetable",
@@ -84,6 +86,7 @@
         },
         "arsIds": null,
         "campus": null,
+        "stopAreaId": null,
         "routes": [
           {
             "kind": "timetable",
@@ -114,6 +117,7 @@
           "01881"
         ],
         "campus": "hssc",
+        "stopAreaId": null,
         "routes": [
           {
             "kind": "live",
@@ -148,6 +152,7 @@
           "01592"
         ],
         "campus": "hssc",
+        "stopAreaId": null,
         "routes": [
           {
             "kind": "live",

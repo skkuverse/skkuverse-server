@@ -52,6 +52,7 @@ export function toListedStop(stop: LocatedStop, names: LocalizedText | null, lin
     coords: stop.coords,
     arsIds: arsIds ? [...arsIds] : null,
     campus: toStopCampus({ localStop: stop.localStop, poles: toCampusPoles(stop) }),
+    stopAreaId: stop.stopAreaId ?? null,
     routes: stop.routes.map((route) => toListedRoute(route, lines)),
   };
 }

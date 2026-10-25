@@ -2,7 +2,7 @@ import type { I18n, SupportedLang } from "../../infra/types";
 import type { Campus } from "../../shared/campus.wire";
 import type { LatLng } from "../../shared/lat-lng.types";
 import type { ServedSequenceStop, ServedStop } from "../bus.wire";
-import type { HsscLineStation } from "./bus-stops.document";
+import type { HsscLineStation, StopArea } from "./bus-stops.document";
 
 export interface StopPhoto { original: string; localized?: Partial<Record<SupportedLang, string>> }
 
@@ -66,4 +66,4 @@ export interface ResolvedStops {
   stops: ServedStop[];
 }
 
-export type BusStopsSnapshot = Readonly<{ revision: number; catalog: Readonly<ScheduleStopCatalog>; hssc: readonly HsscLineStation[]; stopIdByArsId: ReadonlyMap<string, string>; stopIdByTopisId: ReadonlyMap<string, string> }>;
+export type BusStopsSnapshot = Readonly<{ revision: number; catalog: Readonly<ScheduleStopCatalog>; hssc: readonly HsscLineStation[]; stopIdByArsId: ReadonlyMap<string, string>; stopIdByTopisId: ReadonlyMap<string, string>; stopAreas: readonly StopArea[] }>;

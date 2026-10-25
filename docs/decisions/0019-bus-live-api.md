@@ -47,6 +47,8 @@ Every key is always present, and what a source cannot supply is null, never a mi
 - Added 2026-10-24, for 7800: a local stop may alias a pole by its TOPIS station id (`topisIds` in `bus-stops`) beside its ARS number (`arsIds`), since TOPIS gives some poles none (7800's 성균관대학교, `200000162` toward 사당 and `200000159` toward 수원, both `arsId` `0`). A station's `stopId` is the local stop aliasing its station id, else its ARS number, else `seoul-<arsId>`; a push refuses a station id claimed twice, as it refuses an ARS number.
 - A route `/bus/config` does not list (`isListed: false` in the TOPIS route list, 7800 for now) names only the poles a local stop aliases, on the live route and in the stop index: its other stations serve `stopId: null` and add no `seoul-` stop to `GET /bus/stops`, which installed apps list. A listed route keeps the rule above.
 
+- Added 2026-10-25 ([ADR 0022](0022-journey-and-call-spec.md), D4): an alias never retires an id. `seoul-<arsId>` keeps resolving to the stop that aliases it, so a reference written with either id stays valid. An unlisted route's pole exists only through its alias, so that alias cannot be removed while the journey dataset names the pole.
+
 Agreed with the session that owns the stop catalog, 2026-10-22; the TOPIS alias and the unlisted rule by the owner, 2026-10-24 (Q3 of [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md)).
 
 ### D6. One vehicle object per bus; two clocks on its position

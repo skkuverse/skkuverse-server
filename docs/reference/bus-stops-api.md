@@ -3,7 +3,7 @@ title: Bus Stops API Reference
 type: reference
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-24
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -67,7 +67,7 @@ The stop list: every stop a served route stops at, once, with where it is and wh
 | Controller | `src/bus/stop-list/bus-stop-list.controller.ts` |
 | Envelope | `{ meta: {}, data: { stops } }`: one body for every language, so no `meta.lang` and no `Accept-Language` in it |
 | `Cache-Control` | `public, max-age=300`; `public, max-age=60` while a Jongno route's registry or the route lines cannot be read |
-| `ETag` | `"stops-<md5 of the body>"`; `If-None-Match` with it answers `304` with no body. The body derives from the `bus-stops` revision, every stored stations version and every stored route line, so the tag moves when one of them changes what is served |
+| `ETag` | `"stops-<md5 of the body>"`; `If-None-Match` with it answers `304` with no body. The body derives from the `bus-stops` revision (its stop areas included, through `stopAreaId`), every stored stations version and every stored route line, so the tag moves when one of them changes what is served |
 | Tests | `__tests__/nest/bus/bus-stop-list.routes.test.ts`, the specs under `src/bus/stop-list/` and `BusStopIndexService.listStops` in `src/bus/stop-index/bus-stop-index.service.spec.ts` |
 
 ```json
@@ -78,19 +78,19 @@ The stop list: every stop a served route stops at, once, with where it is and wh
       {
         "id": "hssc-hyehwa-exit1",
         "name": { "ko": "혜화역 1번출구", "en": "Hyehwa Station (Shuttle Bus Stop)", "zh": "Hyehwa Station (Shuttle Bus Stop)" },
-        "coords": { "lat": 37.5836601, "lng": 127.0018387 }, "arsIds": null, "campus": "hssc",
+        "coords": { "lat": 37.5836601, "lng": 127.0018387 }, "arsIds": null, "campus": "hssc", "stopAreaId": null,
         "routes": [{ "kind": "live", "groupId": "hssc", "label": { "ko": "인사캠 셔틀버스", "en": "HSSC Shuttle Bus", "zh": "人文校区班车" }, "stationIndex": 6, "towards": { "ko": "성균관대입구사거리", "en": "SKKU Junction", "zh": "SKKU Junction" }, "action": "board" }]
       },
       {
         "id": "jeongja-exit3",
         "name": { "ko": "정자역 3번 출구", "en": "Jeongja Stn. Exit 3", "zh": "亭子站 3号出口" },
-        "coords": { "lat": 37.365499, "lng": 127.107906 }, "arsIds": null, "campus": null,
+        "coords": { "lat": 37.365499, "lng": 127.107906 }, "arsIds": null, "campus": null, "stopAreaId": null,
         "routes": [{ "kind": "timetable", "groupId": "commute", "label": { "ko": "정자", "en": "Jeongja", "zh": "亭子" }, "serviceId": "commute-jeongja", "routeType": "up", "action": "board" }]
       },
       {
         "id": "seoul-01592",
         "name": { "ko": "혜화역1번출구", "en": "혜화역1번출구", "zh": "혜화역1번출구" },
-        "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"], "campus": "hssc",
+        "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"], "campus": "hssc", "stopAreaId": null,
         "routes": [
           { "kind": "live", "groupId": "jongro07", "label": { "ko": "종로 07", "en": "Jongro 07", "zh": "钟路 07" }, "stationIndex": 16, "towards": { "ko": "혜화동로터리", "en": "혜화동로터리", "zh": "혜화동로터리" }, "action": "board" },
           { "kind": "live", "groupId": "jongro08", "label": { "ko": "종로 08", "en": "Jongro 08", "zh": "钟路 08" }, "stationIndex": 22, "towards": { "ko": "혜화동로터리", "en": "혜화동로터리", "zh": "혜화동로터리" }, "action": "board" }
@@ -110,6 +110,7 @@ The stop list: every stop a served route stops at, once, with where it is and wh
 | `coords` | `{ lat, lng }` or `null` | The stop's own `coords` in `bus-stops`, else its pole's on the stored route line; `null` while it has neither: a pole while the route lines cannot be read, or a local stop stored without `coords` (a push refuses a served stop without them, [edit-bus-stops.md](../how-to/edit-bus-stops.md), but the read still serves a revision stored before that check). A client draws no pin for `null`. A realtime station's coordinates are its stop's: join `/bus/config` `station.stopId` on `id` |
 | `arsIds` | string array or `null` | The ARS numbers of the TOPIS poles it stands for: a pole's own, or those a local stop aliases, as stored; `null` for a local stop whose entry has no `arsIds`, where the stop page leaves `stop.arsIds` out. A local stop stored with an empty `arsIds` is served `[]`, as on its stop page |
 | `campus` | `"hssc"`, `"nsc"` or `null` | A catalog stop's `campus` in `bus-stops`: `hssc` for a stop on the HSSC campus, `nsc` for one on the NSC campus, left out for a commute station stop, which serves neither; without one, `hssc` for a Jongno pole or a local stop aliasing one, since all three Jongno routes serve the HSSC campus, else `null` |
+| `stopAreaId` | string or `null` | The [stop area](#stop-areas) that holds the stop; `null` when none does |
 | `routes` | array | One entry per served route at the stop, in the stop page's order, without arrivals |
 
 | Entry | Fields |
@@ -141,7 +142,7 @@ Every read goes through the caches the stop page already uses (the `bus-stops` d
 {
   "meta": { "lang": "ko", "serverNow": "2026-10-20T14:10:00+09:00" },
   "data": {
-    "stop": { "id": "seoul-01592", "name": "혜화역1번출구", "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"] },
+    "stop": { "id": "seoul-01592", "name": "혜화역1번출구", "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"], "stopAreaId": null },
     "routes": [
       {
         "kind": "live", "groupId": "jongro07", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "direction": { "id": "100900220", "label": "성균관대운동장 방면" }, "action": "board",
@@ -171,8 +172,9 @@ The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busSto
 | `stop.coords` | object, optional | `{ lat, lng }`: the stop's own, else its pole's on the stored route line; left out while it has neither, where the stop list serves `coords: null` |
 | `stop.photoUrl`, `stop.streetViewUrl`, `stop.subwayStation` | optional | As the stop's `/bus/config` record serves them |
 | `stop.arsIds` | string array, optional | The ARS numbers of the TOPIS poles the stop stands for: a pole's own, or the ones a local stop aliases, as stored (an empty `arsIds` is served `[]`); left out for a local stop whose entry has none |
+| `stop.stopAreaId` | string or `null` | The [stop area](#stop-areas) that holds the stop, as the stop list serves it; `null` when none does |
 
-A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map`, which belongs to a group's screen: `/bus/stops/jeongja-exit3/arrivals` in `en` serves the same `stop` as `/bus/config/commute` in `en`.
+A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map`, which belongs to a group's screen, plus `stopAreaId`: `/bus/stops/jeongja-exit3/arrivals` in `en` serves the same `stop` as `/bus/config/commute` in `en`, with `stopAreaId` added.
 
 ### Routes
 
@@ -217,6 +219,10 @@ A run is listed while its time at this stop is not before the current minute in 
 | `503` | `JONGRO_REGISTRY_UNAVAILABLE` | While a Jongno route's stored registry cannot be read: a `seoul-` pole that neither a readable route nor an alias names, or a local stop that aliases a pole (`arsIds`) and that no readable route serves |
 
 A Jongno route whose stored registry cannot be read is left out of the stop index, logged at error as `bus.stop_index.registry_unread` at most once a minute, and read again at most every `REGISTRY_RETRY_MS`; an aliased pole on it still answers its local stop's page. A route whose other source cannot be read (its attributes for a Jongno entry, the timetable for a shuttle entry) is left out of `routes` and logged at error as `bus.stop_arrivals.route_left_out`, at most once a minute per route. Either way the rest of the page is served with `200`. A Jongno entry whose live answer was placed by another stations version than the index (a TOPIS sync between the two reads) is left out of that one response.
+
+## Stop areas
+
+A stop area groups the stops a rider would call one place, such as the poles on both sides of one subway exit, so that a journey planner can offer it as one place to pick ([ADR 0022, D4](../decisions/0022-journey-and-call-spec.md)). It is for picking only: the stop list still lists each stop once with its own pin, and each stop keeps its own page. `stopAreaId` on a listed stop and on a page's `stop` is the area's id, which no stop id ever takes, or `null`. An area's coordinates are its members' centroid, derived and never served here. Areas are stored in `bus-stops` (`stopAreas`, [edit-bus-stops.md](../how-to/edit-bus-stops.md#add-a-stop-area)); none is stored yet. A member TOPIS drops at runtime is left out of its area and logged at warn as `bus.stop_index.stop_area_member_unmatched`, at most once a minute, while the rest is served.
 
 ## Freshness and cost
 

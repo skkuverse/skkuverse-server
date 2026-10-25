@@ -42,6 +42,7 @@ export interface IndexedStop {
   poles: IndexedPole[];
   /** WHY: in the order /bus/config lists the groups, then a group's services and route types. */
   routes: StopRoute[];
+  stopAreaId?: string;
 }
 
 export interface StopIndex {
@@ -52,6 +53,7 @@ export interface StopIndex {
   /** WHY: aliased ARS numbers no stored station has, or whose pole another stop's TOPIS alias claims, which serve nothing. */
   unmatchedArsIds: readonly string[];
   unmatchedTopisIds: readonly string[];
+  unmatchedStopAreaMembers: ReadonlyArray<{ stopAreaId: string; memberId: string }>;
   /** WHY: the first registry route that could not be read, so a pole only it names is not answered as gone. */
   registryFailure?: unknown;
 }

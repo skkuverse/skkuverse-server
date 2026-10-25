@@ -230,7 +230,7 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
     // WHY: serverNow is what ADR 0019 adds to meta, a deliberate change of this pin.
     expect(res.body.meta).toEqual({ lang: "ko", serverNow: "2026-10-20T14:10:00+09:00" });
-    expect(res.body.data.stop).toEqual({ id: "seoul-01592", name: "혜화역1번출구", coords: { lat: 37.5834729904, lng: 127.0017632862 }, arsIds: ["01592"] });
+    expect(res.body.data.stop).toEqual({ id: "seoul-01592", name: "혜화역1번출구", coords: { lat: 37.5834729904, lng: 127.0017632862 }, arsIds: ["01592"], stopAreaId: null });
     expect(routesOf(res.body).map((route) => [route.groupId, route.kind, route.stationIndex, route.towards])).toEqual([
       ["jongro07", "live", 16, "혜화동로터리"],
       ["jongro08", "live", 22, "혜화동로터리"],
@@ -251,7 +251,7 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(record).toBeDefined();
-    expect(res.body.data.stop).toEqual(record);
+    expect(res.body.data.stop).toEqual({ ...record, stopAreaId: null });
     expect(res.body.data.stop).not.toHaveProperty("map");
     expect(res.body.data.stop.name).toBe("Jeongja Stn. Exit 3");
     expectWire(busStopArrivals, res.body.data);
@@ -282,8 +282,27 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.stop).toEqual({ id: "hssc-hyehwa-exit1", name: "Hyehwa Station (Shuttle Bus Stop)" });
+    expect(res.body.data.stop).toEqual({ id: "hssc-hyehwa-exit1", name: "Hyehwa Station (Shuttle Bus Stop)", stopAreaId: null });
     expectWire(busStopArrivals, res.body.data);
+  });
+
+  it("Stop area: a member's page names the area, reached by its own id and by its aliased pole's, and keeps its own routes", async () => {
+    // Arrange
+    const data = busStopsFixture() as Record<string, unknown> & { stops: Array<{ id: string; arsIds?: string[] }> };
+    data.stops.find((stop) => stop.id === "hssc-bus-lot")!.arsIds = ["01618"];
+    data.stopAreas = [{ id: "hssc-lot", name: { ko: "학생회관" }, stopIds: ["seoul-01618", "hssc-600th"] }];
+    const server = await boot({ ...freshStores(), stops: storedBusStopsRepository(data) });
+
+    // Act
+    const bySlug = await request(server).get("/bus/stops/hssc-bus-lot/arrivals");
+    const byPole = await request(server).get("/bus/stops/seoul-01618/arrivals");
+    const other = await request(server).get("/bus/stops/hssc-600th/arrivals");
+
+    // Assert
+    expect([bySlug.body.data.stop.stopAreaId, byPole.body.data.stop.stopAreaId, other.body.data.stop.stopAreaId]).toEqual(["hssc-lot", "hssc-lot", "hssc-lot"]);
+    expect(bySlug.body.data.stop.id).toBe("hssc-bus-lot");
+    expect(other.body.data.stop.id).toBe("hssc-600th");
+    expectWire(busStopArrivals, bySlug.body.data);
   });
 });
 

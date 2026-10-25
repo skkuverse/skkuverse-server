@@ -99,6 +99,7 @@ export class BusStopIndexService {
     const routes = reads.flatMap((read): RegistryRoute[] => (read.status === "fulfilled" && read.value !== null ? [read.value] : []));
     const index: StopIndex = { ...toStopIndex(snapshot, routes), ...(failed && { registryFailure: failed.reason }) };
     if (!failed) this.warnUnmatchedAliases(index);
+    if (!failed) this.warnUnmatchedStopAreaMembers(index);
     return index;
   }
 
@@ -159,5 +160,16 @@ export class BusStopIndexService {
       { event: "bus.stop_index.alias_unmatched", revision, arsIds: unmatchedArsIds, topisIds: unmatchedTopisIds },
       "A stop aliases an ARS number or TOPIS station no stored station has, or a pole another stop's TOPIS alias claims",
     );
+  }
+
+  // WHY: TOPIS drops a pole at runtime, which a push could not foresee; the area serves its other members (ADR 0022, D4).
+  private warnUnmatchedStopAreaMembers({ snapshot: { revision }, unmatchedStopAreaMembers: members }: StopIndex): void {
+    const ticket = members.length > 0 ? this.logThrottle.take("stop_area_members") : null;
+    if (ticket) {
+      logger.warn(
+        { event: "bus.stop_index.stop_area_member_unmatched", revision, stopAreaIds: [...new Set(members.map((member) => member.stopAreaId))], memberIds: members.map((member) => member.memberId), suppressed: ticket.suppressed },
+        "A stop area lists a stop the stop index cannot find; left out of the area",
+      );
+    }
   }
 }
