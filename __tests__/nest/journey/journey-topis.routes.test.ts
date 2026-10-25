@@ -12,7 +12,8 @@
  *   its rows so the predicted bus is still catchable after the walk, since the door reads TOPIS's predicted instants
  *   and never the clock;
  * - a ride past both predicted vehicles names no vehicle and boards half the stored headway after the rider is ready,
- *   as an estimate, and a vehicle GBIS reports with no seat left is skipped for it;
+ *   as an estimate, and a vehicle GBIS reports with no seat left is skipped for it; the 1호선 board after such a ride
+ *   warns `connectionAtRisk` when the rider has less time at 종로5가 than that arrival's uncertainty;
  * - rows a poller older than the stored headway wrote serve with no extrapolation;
  * - past the pole's last run, or once TOPIS says 운행종료 there, the option is not running, ended, with the next
  *   day's first run from the stored firstTm; before the first run, past the plan's window, with today's, and inside
@@ -275,6 +276,20 @@ describe("GET /journey/routes with the TOPIS options", () => {
     expect([option.leaveAt, option.legs[0]!.endAt]).toEqual(["2026-10-20T19:12:25+09:00", "2026-10-20T19:18:25+09:00"]);
     expect(jongro!.board).toMatchObject({ status: "unknown", vehicleId: null, runId: null, basis: "estimate", expectedArrivalAt: "2026-10-20T19:19:25+09:00" });
     expect([jongro!.basis, jongro!.vehicles]).toEqual(["estimate", []]);
+  });
+
+  it("Connection at risk: a 1호선 board within the 종로 08 headway's uncertainty warns, naming 종로5가", async () => {
+    // Arrange
+    const server = await boot(at("19:09:55"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
+
+    // Assert
+    const [jongro, line1] = ridesOf(option);
+    // WHY: 335 s at the platform is under the 종로 08 arrival's uncertainty, 150 s plus half its 9-minute headway (420 s).
+    expect([jongro!.board.basis, jongro!.board.vehicleId, line1!.waitSec]).toEqual(["estimate", null, 335]);
+    expect(option.warnings).toEqual([{ code: "connectionAtRisk", message: "종로5가역에서 갈아탈 차를 놓칠 수 있어요" }]);
   });
 
   it("No term: rows a poller older than the stored headway wrote serve with no extrapolation", async () => {
