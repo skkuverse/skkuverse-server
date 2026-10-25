@@ -177,9 +177,9 @@ const CLOCK_SYNTAX = [
   },
 ];
 
-// (A perimeter detail is left out of the public history.)
-const FIREBASE_MODULE = "/^firebase-admin$|(?:^\\.|\\/infra)\\/firebase$/";
-const FIREBASE_REEXPORT = "/^firebase-admin(?:$|\\/)|(?:^\\.|\\/infra)\\/firebase$/";
+// firebase-admin, which every file imports directly; a re-export also counts its subpath entry points.
+const FIREBASE_MODULE = "/^firebase-admin$/";
+const FIREBASE_REEXPORT = "/^firebase-admin(?:$|\\/)/";
 
 // no-restricted-syntax replaces rather than merges across blocks, and the role blocks above each
 // set it for their files. The rules below run beside them under their own names: the same core
@@ -199,6 +199,9 @@ const SRC_SYNTAX_PLUGIN = {
     "import-paths": CORE_RULES.get("no-restricted-imports"),
     // Another alias, so the perimeter blocks keep their own patterns beside the feature and import-path blocks.
     "perimeter-imports": CORE_RULES.get("no-restricted-imports"),
+    // And one for what a perimeter implementation may import, beside the perimeter blocks' own patterns.
+    "perimeter-implementation-imports": CORE_RULES.get("no-restricted-imports"),
+    "perimeter-calls": CORE_RESTRICTED_SYNTAX,
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
     "generic-names": CORE_RULES.get("id-denylist"),
   },
@@ -374,6 +377,28 @@ const PERIMETER_IMPLEMENTATION_PATTERNS = [
     message: "Nothing imports the overlay's private build output: the registry loads it by path (ADR 0023, D4).",
   },
 ];
+
+// (A perimeter detail is left out of the public history.)
+const PERIMETER_SHARED_MODULES = [
+  "guarded-lookup.util",
+  "ip-address.util",
+  "link-action.types",
+  "link-action.util",
+  "link-action.wire",
+  "link-target.util",
+  "log-throttle.types",
+  "log-throttle.util",
+  "miniapp-target.types",
+  "miniapp-target.util",
+  "outbound-blocked.error",
+  "outbound-guard.util",
+  "outbound-url.util",
+  "webview-origin.constants",
+  "webview-url.util",
+];
+
+// An import that leaves an implementation's folder for anything but the ports file or a listed shared module.
+const PERIMETER_OUTSIDE_IMPORT = `^\\.\\./(?!perimeter\\.ports$)(?!\\.\\./shared/(?:${PERIMETER_SHARED_MODULES.map((m) => m.replaceAll(".", "\\.")).join("|")})$)`;
 
 // Feature code and src/http/ reach src/perimeter/ through the ports file alone (ADR 0023, D8).
 const PERIMETER_PORTS_ONLY_PATTERN = {
@@ -839,6 +864,53 @@ module.exports = [
     rules: { "src-syntax/perimeter-imports": ["error", { patterns: [...PERIMETER_IMPLEMENTATION_PATTERNS, PERIMETER_PORTS_ONLY_PATTERN] }] },
   },
   {
+    // ADR 0023, D4: an implementation leaves for the overlay, which is built against the ports file, the listed
+    // src/shared/ modules and packages, so it imports nothing else from this repository but its own folder.
+    name: "boundaries/perimeter-implementations",
+    files: ["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/perimeter-implementation-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: PERIMETER_OUTSIDE_IMPORT,
+              message:
+                "A perimeter implementation imports only ../perimeter.ports, the src/shared/ modules eslint.config.js lists, its own folder and packages: take the rest through PerimeterDeps.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // ADR 0023, D8: a limiter, a token verification or a constant-time comparison is a perimeter decision, made
+    // only behind a port, so it leaves for the overlay with the rest.
+    name: "perimeter/calls",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts", "src/perimeter/**", "src/private/**"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/perimeter-calls": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='rateLimit'], CallExpression[callee.property.name='rateLimit']",
+          message: "Build a limiter only in src/perimeter/: bind its class through RateLimitPolicy.handlerFor().",
+        },
+        {
+          selector: "CallExpression[callee.property.name='verifyIdToken']",
+          message: "Verify a token only in src/perimeter/: bind RequestAuthenticationMiddleware, which asks REQUEST_AUTHENTICATOR.",
+        },
+        {
+          selector: "CallExpression[callee.name='timingSafeEqual'], CallExpression[callee.property.name='timingSafeEqual']",
+          message: "Compare a credential only in src/perimeter/: ask INTERNAL_AUTHORIZER or the push authorizer.",
+        },
+      ],
+    },
+  },
+  {
     // The boundaries above read import declarations: a `require()` or an `import()` call would pass them all,
     // so non-spec src/ loads modules only through `import`. Specs may still require a module after setup.
     name: "boundaries/module-loads",
@@ -854,7 +926,11 @@ module.exports = [
     },
   },
   {
-    // (A perimeter detail is left out of the public history.)
+    // The server holds no Firebase service-account key: verifyIdToken without checkRevoked needs only the
+    // project id (the REQUEST_AUTHENTICATOR implementations, ADR 0023 D2). Every call that needs a credential is
+    // refused, so adding one is a decision to hold a key again, not a lint-free edit. The import is pinned to
+    // `admin`, which the member selectors read, and `admin` is never aliased or exported, so no use hides under
+    // another name.
     name: "firebase/no-credential",
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
@@ -864,7 +940,7 @@ module.exports = [
         "error",
         {
           selector: "ImportDeclaration[source.value=/^firebase-admin\\//]",
-          message: "Use the firebase-admin namespace through src/infra/private-file: its subpath entry points reach services that need a credential.",
+          message: "Import the firebase-admin namespace, not a subpath: its subpath entry points reach services that need a credential.",
         },
         {
           selector: `:matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=${FIREBASE_REEXPORT}]`,
@@ -904,12 +980,11 @@ module.exports = [
           selector: [
             "Identifier[name='admin']:not(:matches(ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier) > Identifier)",
             ":not(MemberExpression > Identifier.object)",
-            ":not(TSExportAssignment > Identifier.expression)",
             // A property or member named `admin` (`user.admin`, `{ admin: true }`) is not the binding.
             ":not(MemberExpression[computed=false] > Identifier.property)",
             ":not(:matches(Property, PropertyDefinition, MethodDefinition, TSPropertySignature, TSMethodSignature)[computed=false] > Identifier.key)",
           ].join(""),
-          message: "Use `admin` only as `admin.auth()` or `admin.initializeApp()`: an alias, a destructuring or an argument escapes these checks.",
+          message: "Use `admin` only as `admin.auth()` or `admin.initializeApp()`: an alias, a destructuring, an argument or an export escapes these checks.",
         },
         {
           selector: [

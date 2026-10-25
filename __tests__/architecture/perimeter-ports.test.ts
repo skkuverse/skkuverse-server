@@ -2,12 +2,13 @@
  * Every perimeter port has what ADR 0023 (D2 and D7) promises a reader of the public code: a fake a route test
  * passes (`__tests__/helpers/fakes/perimeter/<port>.fake.ts`, `Fake<Port>`), a contract suite every implementation
  * runs (`__tests__/helpers/perimeter/<port>.contract.ts`, `describe<Port>Contract`), and a local-development class
- * (`src/perimeter/local-dev/<port>.ts`, `LocalDev<Port>`). Each contract suite runs over the LocalDev classes and
- * over the overlay this build carries. The records below are typed by the port names, so a new port fails the
- * type check here until all three exist.
+ * (`src/perimeter/local-dev/<port>.ts`, `LocalDev<Port>`). Each contract suite runs over the LocalDev classes and,
+ * when this checkout carries the overlay, over it too (`implementationFolders`). The records below are typed by the
+ * port names, so a new port fails the type check here until all three exist.
  */
 import fs from "node:fs";
 import path from "node:path";
+import { contractRunnersIn, implementationFolders } from "../helpers/architecture/perimeter-runners";
 import * as abuseSignalsFake from "../helpers/fakes/perimeter/abuse-signals.fake";
 import * as internalAuthorizerFake from "../helpers/fakes/perimeter/internal-authorizer.fake";
 import * as miniAppPushAuthorizerFake from "../helpers/fakes/perimeter/mini-app-push-authorizer.fake";
@@ -56,8 +57,6 @@ const CONTRACTS: { readonly [K in PortName]: ModuleExports } = {
   abuseSignals: abuseSignalsContract,
 };
 
-const CONTRACT_RUNNERS = ["src/perimeter/local-dev/perimeter-classes.spec.ts", "src/perimeter/current/private-file"];
-
 const kebab = (name: string): string => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const pascal = (name: string): string => name.charAt(0).toUpperCase() + name.slice(1);
 const exists = (file: string): boolean => fs.existsSync(path.join(ROOT, file));
@@ -72,17 +71,17 @@ describe("perimeter ports", () => {
     expect(typeof fake).toBe("function");
   });
 
-  it.each(PORT_NAMES)("give %s a contract suite, run over the LocalDev classes and the overlay", (name) => {
+  it.each(PORT_NAMES)("give %s a contract suite, run over the LocalDev classes and the overlay this checkout carries", (name) => {
     // Arrange
     const suite = `describe${pascal(name)}Contract`;
 
     // Act
-    const runners = CONTRACT_RUNNERS.filter((file) => fs.readFileSync(path.join(ROOT, file), "utf8").includes(`${suite}((deps) =>`));
+    const unrun = implementationFolders().filter((folder) => contractRunnersIn(folder, suite).length === 0);
 
     // Assert
     expect(exists(`__tests__/helpers/perimeter/${kebab(name)}.contract.ts`)).toBe(true);
     expect(typeof CONTRACTS[name][suite]).toBe("function");
-    expect(runners).toEqual(CONTRACT_RUNNERS);
+    expect(unrun).toEqual([]);
   });
 
   it.each(PORT_NAMES)("give %s a LocalDev class in its own file, extending the port", (name) => {

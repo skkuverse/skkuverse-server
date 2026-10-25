@@ -1,6 +1,54 @@
 /**
- * (A perimeter detail is left out of the public history.)
+ * The syntax rules that run beside the role blocks (eslint.config.js), each an
+ * alias of no-restricted-syntax under the local `src-syntax` plugin so a
+ * block that sets one leaves the rest alone:
  *
+ *   - `zod/issue-path`: every issue src/ hands zod names its `path`
+ *     (`path: []` when the issue is the whole value), since parseConfigFile
+ *     and the boot error print it: `ctx.addIssue({ … })`, `ctx["addIssue"]`,
+ *     a destructured `addIssue({ … })` and `ctx.issues.push({ … })`; a bare
+ *     message string and `path: undefined` are refused too, and so is an
+ *     object-level `.refine` (on `z.object`, `strictObject`, `looseObject`
+ *     or `.extend`, or after refinements of one) without a `path`. Specs may
+ *     build a pathless issue to test how one is answered.
+ *   - `schemas/no-double-cast`: no cast through `unknown` (or any second
+ *     cast) in a `.schema`, which would certify fields the schema never
+ *     checked.
+ *   - `boundaries/pure-schema`: a `.rules` or `.mapper` imports a `.schema`
+ *     for types only, so boundaries/pure cannot be passed one hop deep.
+ *   - `boundaries/literals`: a hex color (`#FFFFFF`, `#FF003626`, a bare
+ *     hex that mixes letters and digits, or any bare hex bound to a name
+ *     ending in `color`), an `rgb()` string, a `0x…` color number or a web
+ *     view path (`/skku/…`, `${origin}/skku/…`) appears only in a
+ *     `*.constants.ts` file (or JSON). Specs state the values they expect
+ *     and are left out.
+ *   - `readability/src`: no comma operator in src/, parenthesised or not
+ *     (`return (dropped.push(reason), null)` packs two steps into one).
+ *   - `naming/generic-names`: in every module scope's sources, no name that
+ *     says nothing on its own (`info`, `obj`, `tmp`, `helper`, `manager`).
+ *   - `specs/fixed-clock`: a spec in a module scope (and a top-level
+ *     module's `__tests__/nest/<module>/` tests) never constructs the real
+ *     `Clock`, aliased, through a namespace, as a Nest provider or as a
+ *     subclass; an alias whose name hides the real Clock (`Tick`,
+ *     `FixedClock`) is refused at its import. It passes a fixed fake, so one
+ *     answer reads one instant and does not depend on the day the test runs.
+ *   - `firebase/no-credential`: src/ makes only the Firebase calls a project
+ *     id serves, since the server holds no service-account key:
+ *     `initializeApp` takes `projectId` alone, `verifyIdToken` takes the
+ *     token alone (`checkRevoked` reads the user record), `admin` reaches
+ *     only `auth` and `initializeApp`, `admin.auth()` only `verifyIdToken`,
+ *     firebase-admin's subpath entry points are not imported, and
+ *     firebase-admin is imported as `admin`, so the member checks see every
+ *     use. `admin` itself is never aliased, destructured, passed on or
+ *     exported, `verifyIdToken` is only called, never with a spread, and
+ *     nothing re-exports firebase-admin.
+ *     Specs may mock it freely.
+ *   - `migrated/syntax-clock`: the `Date.now()` / `new Date()` ban covers
+ *     every module scope but the shared layers, derived from the tree
+ *     (scopes.ts), so a new module is bound from its first file. It and the
+ *     pure files' ban also refuse moment reading the clock: `moment()`,
+ *     `moment.utc()` and `moment.now()` without an argument, and
+ *     `moment.tz(zone)`.
  */
 import { Linter } from "eslint";
 import { SHARED_LAYERS } from "../helpers/architecture/ast";
@@ -410,7 +458,7 @@ describe("firebase/no-credential", () => {
     // Arrange
     const sources = [
       'import admin from "firebase-admin"; admin.initializeApp({ projectId: config.firebase.projectId });',
-      'import admin from "../infra/private-file"; async function f(idToken: string) { return admin.auth().verifyIdToken(idToken); }',
+      'import admin from "firebase-admin"; async function f(idToken: string) { return admin.auth().verifyIdToken(idToken); }',
     ];
 
     // Act
@@ -433,7 +481,6 @@ describe("firebase/no-credential", () => {
       'import { getFirestore } from "firebase-admin/firestore";',
       'import fb from "firebase-admin";',
       'import * as admin from "firebase-admin";',
-      'import firebase from "../infra/private-file";',
     ];
 
     // Act
@@ -443,16 +490,12 @@ describe("firebase/no-credential", () => {
     expect(counts).toEqual(sources.map(() => 1));
   });
 
-  it("passes src/infra/private-file's own init and export", () => {
+  it("rejects exporting `admin`, which a file importing it under another name would use unchecked", () => {
     // Act
-    const messages = lint(
-      "firebase/no-credential",
-      "src/infra/private-file",
-      'import admin from "firebase-admin"; admin.initializeApp({ projectId: config.firebase.projectId }); export = admin;',
-    );
+    const messages = lint("firebase/no-credential", "src/perimeter/x.ts", 'import admin from "firebase-admin"; admin.initializeApp({ projectId: "p" }); export = admin;');
 
     // Assert
-    expect(messages).toEqual([]);
+    expect(messages).toHaveLength(1);
   });
 
   // WHY: the local-development authenticator verifies on a Firebase app of its own (ADR 0023, D2), named by a literal.
@@ -489,8 +532,8 @@ describe("firebase/no-credential", () => {
   it("rejects the ways around the member checks: another name, an alias, a value read, a spread and a re-export", () => {
     // Arrange
     const sources = [
-      'import fb from "./firebase";',
-      'import admin from "../infra/private-file"; const fb = admin;',
+      'import { auth } from "firebase-admin";',
+      'import admin from "firebase-admin"; const fb = admin;',
       "const { messaging } = admin;",
       "register(admin);",
       "admin.apps[0]!.firestore();",
@@ -513,7 +556,7 @@ describe("firebase/no-credential", () => {
   it("rejects admin.auth and admin.initializeApp read as values, which a later call would use unchecked", () => {
     // Arrange
     const sources = [
-      'import admin from "../infra/private-file"; const a = admin.auth; a().getUser(u);',
+      'import admin from "firebase-admin"; const a = admin.auth; a().getUser(u);',
       'import admin from "firebase-admin"; const init = admin.initializeApp; init({ credential: c });',
     ];
 
@@ -542,6 +585,49 @@ describe("firebase/no-credential", () => {
     // Act & Assert
     expect(files).toEqual(["src/**/*.ts"]);
     expect(ignores).toEqual(["src/**/*.spec.ts"]);
+  });
+});
+
+// WHY: a limiter, a token verification or a constant-time comparison is a perimeter decision (ADR 0023, D8), made
+// only behind a port, so it leaves for the overlay with the rest.
+describe("perimeter/calls", () => {
+  const file = "src/http/x.middleware.ts";
+
+  it("rejects building a limiter, verifying a token or comparing in constant time", () => {
+    // Arrange
+    const sources = [
+      'import { rateLimit } from "express-rate-limit"; const limiter = rateLimit({ limit: 5 });',
+      "const limiter = expressRateLimit.rateLimit({ limit: 5 });",
+      "await admin.auth().verifyIdToken(idToken);",
+      'import crypto from "crypto"; crypto.timingSafeEqual(a, b);',
+      'import { timingSafeEqual } from "node:crypto"; timingSafeEqual(a, b);',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("perimeter/calls", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("passes the port calls that stand for them", () => {
+    // Arrange
+    const sources = ['const limiter = policy.handlerFor("general");', "await authenticator.authenticate(request);", "await authorizer.authorize(scope, request);"];
+
+    // Act
+    const reported = sources.filter((source) => lint("perimeter/calls", file, source).length > 0);
+
+    // Assert
+    expect(reported).toEqual([]);
+  });
+
+  it("covers src/ but the perimeter and the overlay's build output, and no spec", () => {
+    // Arrange
+    const { files, ignores } = block("perimeter/calls");
+
+    // Act & Assert
+    expect(files).toEqual(["src/**/*.ts"]);
+    expect(ignores).toEqual(["src/**/*.spec.ts", "src/perimeter/**", "src/private/**"]);
   });
 });
 

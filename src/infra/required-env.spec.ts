@@ -10,6 +10,7 @@
  * Each scenario sets env, then loads the module fresh with
  * jest.isolateModules().
  */
+import { OVERLAY_ENTRY, overlayResolveErrors } from "../perimeter/perimeter-overlay.rules";
 import { envRole, isPollingRole, listMalformedRequired, listMissingRequired, requiredValues, roleErrors, ROLES, validateEnv } from "./required-env";
 
 const HSSC_KEYS = ["API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"] as const;
@@ -390,29 +391,31 @@ describe("validateEnv refuses an invalid perimeter mode or host", () => {
   });
 });
 
-describe("validateEnv loads the overlay entry in overlay mode", () => {
-  const OVERLAY_ENTRY_MODULE = "../perimeter/current/perimeter.overlay";
-  const overlayTest = { ...process.env, NODE_ENV: "test", PERIMETER_MODE: "overlay", HOST: "127.0.0.1" };
+// WHY: one object for every case: Jest keeps the first export a mock factory returned, so each case refills it.
+const mockedEntry: Record<string, unknown> = {};
 
-  // WHY: one object for every case: Jest keeps the first export a mock factory returned, so each case refills it.
-  const mockedEntry: Record<string, unknown> = {};
-
-  /** validateEnv from a fresh module registry whose overlay entry is the real one with `overrides`. */
-  function validateWithEntry(overrides: Record<string, unknown>, env: NodeJS.ProcessEnv): void {
-    let validate: typeof validateEnv | undefined;
-    for (const key of Object.keys(mockedEntry)) delete mockedEntry[key];
-    jest.isolateModules(() => {
-      jest.doMock(OVERLAY_ENTRY_MODULE, () => mockedEntry);
-      // WHY: the real entry from the same registry, so its classes extend the ports validateEnv checks against.
-      Object.assign(mockedEntry, jest.requireActual(OVERLAY_ENTRY_MODULE), overrides);
-      validate = (require("./required-env") as typeof import("./required-env")).validateEnv;
-    });
-    try {
-      validate!(env);
-    } finally {
-      jest.dontMock(OVERLAY_ENTRY_MODULE);
-    }
+/** validateEnv from a fresh module registry whose overlay entry is synthetic: the LocalDev classes, with `overrides`. */
+function validateWithEntry(overrides: Record<string, unknown>, env: NodeJS.ProcessEnv): void {
+  let validate: typeof validateEnv | undefined;
+  for (const key of Object.keys(mockedEntry)) delete mockedEntry[key];
+  jest.isolateModules(() => {
+    // WHY: virtual only when no entry resolves: Jest keys a mock of a file that exists by its resolved path.
+    jest.doMock(OVERLAY_ENTRY, () => mockedEntry, { virtual: overlayResolveErrors().length > 0 });
+    // WHY: the ports and classes from the same registry, so the classes extend the ports validateEnv checks against.
+    const ports = require("../perimeter/perimeter.ports") as typeof import("../perimeter/perimeter.ports");
+    const localDev = require("../perimeter/local-dev/perimeter-classes") as typeof import("../perimeter/local-dev/perimeter-classes");
+    Object.assign(mockedEntry, { portsVersion: ports.PERIMETER_PORTS_VERSION, classes: localDev.LOCAL_DEV_CLASSES, settingsErrors: () => [] }, overrides);
+    validate = (require("./required-env") as typeof import("./required-env")).validateEnv;
+  });
+  try {
+    validate!(env);
+  } finally {
+    jest.dontMock(OVERLAY_ENTRY);
   }
+}
+
+describe("validateEnv loads the overlay entry in overlay mode", () => {
+  const overlayTest = { ...process.env, NODE_ENV: "test", PERIMETER_MODE: "overlay", HOST: "127.0.0.1" };
 
   it("accepts the entry this build carries, under NODE_ENV=test too", () => {
     // Act & Assert
@@ -432,5 +435,42 @@ describe("validateEnv loads the overlay entry in overlay mode", () => {
     expect(() => validateWithEntry({ settingsErrors }, { ...overlayTest, PERIMETER_SETTINGS: "bad" })).toThrow(
       /Invalid perimeter[\s\S]*PERIMETER_SETTINGS: not base64url JSON/,
     );
+  });
+});
+
+describe("requiredValues PERIMETER_SETTINGS", () => {
+  // WHY: the overlay's rate-limit policy reads its limits from it, and every role constructs every class (ADR 0023, D4).
+  const production = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...process.env, NODE_ENV: "production", SENTRY_DSN: "disabled", HOST: "0.0.0.0", ...env });
+
+  it.each(["api", "poller", "combined"])("is required in overlay mode for ROLE=%s", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role });
+    delete env.PERIMETER_SETTINGS;
+
+    // Act & Assert
+    expect(listMissingRequired(env).map((v) => v.env)).toEqual(["PERIMETER_SETTINGS"]);
+  });
+
+  it.each(["local-dev", "test"])("is not required in %s mode, which reads no settings", (mode) => {
+    // Act & Assert
+    expect(requiredValues({ NODE_ENV: "development", PERIMETER_MODE: mode }).map((v) => v.env)).not.toContain("PERIMETER_SETTINGS");
+  });
+
+  it("refuses a production overlay boot without it, naming it", () => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: "api" });
+    delete env.PERIMETER_SETTINGS;
+
+    // Act & Assert
+    expect(() => validateEnv(env)).toThrow(/Missing required config[\s\S]*perimeter\.settings \(env: PERIMETER_SETTINGS\)/);
+  });
+
+  it.each(["api", "poller"])("refuses a production overlay boot of ROLE=%s whose settings the overlay refuses", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role, PERIMETER_SETTINGS: "refused" });
+    const settingsErrors = (settings: string | undefined) => (settings === "refused" ? ["a limit is missing"] : []);
+
+    // Act & Assert
+    expect(() => validateWithEntry({ settingsErrors }, env)).toThrow(/Invalid perimeter[\s\S]*PERIMETER_SETTINGS: a limit is missing/);
   });
 });

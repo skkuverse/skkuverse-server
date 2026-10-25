@@ -2,6 +2,7 @@
 // consumer setup, so `log` is declared here. tsconfig.test.json lists this file by name.
 import type { Logger } from "pino";
 import type { SupportedLang } from "./infra/types";
+import type { Principal } from "./perimeter/perimeter.ports";
 
 declare global {
   namespace Express {
@@ -9,7 +10,8 @@ declare global {
       // WHY: optional because middleware mounted before LangMiddleware (request logging) sees the request first;
       // a handler takes @Lang(), which throws when it is unset.
       lang?: SupportedLang;
-      uid?: string;
+      // WHY: set by RequestAuthenticationMiddleware on the routes it binds, before a limiter keys on it.
+      principal?: Principal;
       // WHY: the JSON body's bytes, kept on the push path only (ADR 0023, D6); decoded when it came with a Content-Encoding.
       rawBody?: Buffer;
       // WHY: non-optional so a missing logger fails loud: reading `.warn` on undefined throws, a 500 that alerts.
