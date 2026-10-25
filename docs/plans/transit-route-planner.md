@@ -106,8 +106,14 @@ type JourneyLeg =
       board: LegStop;
       alight: LegStop;
       rideMinutes: number;   // used only when the door cannot place the run at the alight stop
+      rideMinutesBands?: { weekday?: Band[]; weekend?: Band[] }; // rideMinutes by the board's KST time of day
       evidence: string;      // where rideMinutes comes from
     };
+
+interface Band {
+  from: string;              // KST "HH:mm"; the band runs until the next band's from, the last until midnight
+  minutes: number;
+}
 
 interface LegStop {
   place: PlaceRef;           // bus_stop, or subway_station
@@ -117,7 +123,8 @@ interface LegStop {
 
 - **Place refs.** The kinds are ADR 0022 D4's (`bus_stop`, `bus_stop_area`, `subway_station`, `skku_building`; `point` is the user's location and never stored). The id is the owning catalog's verbatim: a `bus-stops` slug or a pole's nine-digit station id (`100900046`; `seoul-<ARS>` is a legacy alias that resolves to it), a `SUBWAY_STATIONS` slug, a building `_id` as a string. A KRIC platform id is uppercase, so it is `platformId`, never an id.
 - **Walk and transfer legs.** A walk joins two places; a transfer is a change between two platforms of one station (금정's line 4 to line 1). A walk between a station and a bus stop (사당, 종로5가) is a walk.
-- **Walk minutes and evidence.** Measured once, at data-authoring time, by a person running TMAP pedestrian routing between the two places' coords; the api never calls it (ADR 0022, D7). `evidence` names the source and date (`TMAP pedestrian 2026-10-2x, 412 m`), and `distanceM` and an optional `path` come from the same answer. A key walk measured on site later replaces it with that evidence. Transfer minutes and fallback ride minutes carry evidence the same way.
+- **Walk minutes and evidence.** Measured once, at data-authoring time, by a person running TMAP pedestrian routing between the two places' coords; the api never calls it (ADR 0022, D7). `evidence` names the source and date (`TMAP pedestrian 2026-10-2x, 412 m`), and `distanceM` and an optional `path` come from the same answer. A key walk measured on site later replaces it with that evidence. Transfer minutes and fallback ride minutes carry evidence the same way. Since revision 4 (owner, 2026-10-25) these rough real-world numbers come from Naver Map's transit directions, read in a browser, which include the walk inside a station to and from the platform.
+- **Ride minutes by time of day.** A ride whose duration swings with traffic (7800: 28 to 50 min) carries `rideMinutesBands`, per day type: `weekday`, or `weekend` for a Saturday, a Sunday or a public holiday. A band runs from its `from` (KST `HH:mm`) until the next band's, the last until midnight; the board's KST time picks one, and outside every band the flat `rideMinutes` applies. The push refuses bands out of order, at one time or at a malformed time. Bands come from Naver's per-stop schedule sampled through the day, and their evidence says when.
 - **Labels.** A ride leg's `label` is its line's name in the request language; walk and transfer labels are i18n keys in `src/infra/i18n.ts`. Names of places come from their catalogs, never from this dataset.
 - **Why this fits ADR 0013 D2.** The planner branches on no route, option, line or place, so all four are data. A source's own identities (TOPIS route ids, shuttle service ids, KRIC platforms) stay in code; the dataset only names them.
 
