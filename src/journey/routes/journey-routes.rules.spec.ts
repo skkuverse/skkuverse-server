@@ -6,8 +6,9 @@
  * calls are kept; the alight is the door's call for the same run, else the boarding plus the leg's ride minutes as an
  * estimate; past a source's listed vehicles a headway boards half a headway after the rider is ready, as an estimate;
  * an option with no run left is not running, ended, with the board's next service, and one whose door failed is
- * unavailable; a leg's basis is the weaker of its calls; options run by arrival, data order breaking a tie, then the
- * ones not running in data order.
+ * unavailable; a ride ends at its alight call's arrival, before the run leaves that stop, so the next leg starts
+ * there (ADR 0022, D5, amended 2026-10-25); a leg's basis is the weaker of its calls; options run by arrival, data
+ * order breaking a tie, then the ones not running in data order.
  */
 import type { StopCall } from "../../shared/call.types";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
@@ -150,6 +151,32 @@ describe("planOption", () => {
 
     // Assert
     expect(planned).toEqual({ status: "notRunning", reason: "ended", nextServiceAt: new Date("2026-10-21T08:00:00+09:00") });
+  });
+
+  it("Alight time: ends a 1호선 ride at its alight call's arrival, not its departure, and starts the walk after it there", () => {
+    // Arrange
+    const at = (clock: string) => new Date(`2026-10-20T${clock}+09:00`);
+    const line1: JourneyLine = { id: "line1", source: "subway", sourceLineId: "1", mode: "subway", name: { ko: "1호선", en: "Line 1", zh: "1号线" }, color: "0052A4", icon: "subway" };
+    const option: JourneyOption = {
+      id: "line1",
+      name: line1.name,
+      mode: "subway",
+      legs: [
+        { kind: "walk", from: "skku_building:1", to: "subway_station:geumjeong", minutes: 5, distanceM: 400, evidence: "TMAP" },
+        { kind: "ride", line: "line1", board: { place: "subway_station:geumjeong", platformId: "KR-1-P149" }, alight: { place: "subway_station:sungkyunkwan", platformId: "KR-1-P153" }, rideMinutes: 11, evidence: "timetable" },
+        { kind: "walk", from: "subway_station:sungkyunkwan", to: "skku_building:7", minutes: 23, distanceM: 1590, evidence: "TMAP" },
+      ],
+    };
+    const alight = call(at("08:58:30"), { scheduledArrivalAt: at("08:58:00"), runId: "1/2026-10-20/1907" });
+    const runs = board([{ lineId: "1", board: call(at("08:49:00"), { scheduledArrivalAt: at("08:48:30"), runId: "1/2026-10-20/1907" }), alight, observedAt: null }]);
+
+    // Act
+    const planned = planOption(option, { now: at("08:40:00"), catchMarginSec: 60, lineById: new Map([["line1", line1]]), boards: new Map([[1, runs]]) });
+
+    // Assert
+    expect(rideOf(planned).alight).toEqual(alight);
+    expect([stepAt(planned, 2).startAt, stepAt(planned, 2).endAt]).toEqual([at("08:58:00"), at("09:21:00")]);
+    expect(running(planned).arriveAt).toEqual(at("09:21:00"));
   });
 
   it("is unavailable when the door could not answer", () => {

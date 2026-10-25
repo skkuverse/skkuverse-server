@@ -4,7 +4,7 @@
  * `journey-routes` (the 인자셔틀 options plus 4호선 → 금정 → 1호선 each way) and the trimmed `subway-timetables`
  * fixture of revision 1, no subway state stored, so every board serves its timetable trains: on a Tuesday morning the
  * subway option walks to 혜화, rides line 4 to 금정, transfers, rides line 1 to 성균관대 and walks to 정문, each ride
- * on the first train catchable a catch margin after the legs before it; and each ride's board and alight calls equal the
+ * on the first train catchable a catch margin after the legs before it, and ending at its train's arrival; and each ride's board and alight calls equal the
  * calls the station boards serve for the same run at both platforms, read when each board lists that train (ADR 0022,
  * D1 and D2).
  *
@@ -175,13 +175,13 @@ describe("GET /journey/routes with the subway options", () => {
     const option = await subwayOption(server, "hssc-to-nsc", "line4-line1");
 
     // Assert
-    expect([option.status, option.leaveAt, option.arriveAt]).toEqual(["running", "2026-10-20T07:44:30+09:00", "2026-10-20T09:21:30+09:00"]);
+    expect([option.status, option.leaveAt, option.arriveAt]).toEqual(["running", "2026-10-20T07:44:30+09:00", "2026-10-20T09:21:00+09:00"]);
     expect(option.legs.map((leg) => [leg.kind, leg.mode, leg.from.id, leg.from.platformId, leg.to.id, leg.to.platformId, leg.startAt, leg.endAt, leg.basis])).toEqual([
       ["walk", "walk", "1", null, "hyehwa", null, "2026-10-20T07:44:30+09:00", "2026-10-20T07:52:30+09:00", "estimate"],
-      ["ride", "subway", "hyehwa", "S1-4-420", "geumjeong", "KR-4-443", "2026-10-20T07:53:30+09:00", "2026-10-20T08:46:30+09:00", "timetable"],
-      ["transfer", "subway", "geumjeong", "KR-4-443", "geumjeong", "KR-1-P149", "2026-10-20T08:46:30+09:00", "2026-10-20T08:47:30+09:00", "estimate"],
-      ["ride", "subway", "geumjeong", "KR-1-P149", "sungkyunkwan", "KR-1-P153", "2026-10-20T08:49:00+09:00", "2026-10-20T08:58:30+09:00", "timetable"],
-      ["walk", "walk", "sungkyunkwan", null, "7", null, "2026-10-20T08:58:30+09:00", "2026-10-20T09:21:30+09:00", "estimate"],
+      ["ride", "subway", "hyehwa", "S1-4-420", "geumjeong", "KR-4-443", "2026-10-20T07:53:30+09:00", "2026-10-20T08:46:00+09:00", "timetable"],
+      ["transfer", "subway", "geumjeong", "KR-4-443", "geumjeong", "KR-1-P149", "2026-10-20T08:46:00+09:00", "2026-10-20T08:47:00+09:00", "estimate"],
+      ["ride", "subway", "geumjeong", "KR-1-P149", "sungkyunkwan", "KR-1-P153", "2026-10-20T08:49:00+09:00", "2026-10-20T08:58:00+09:00", "timetable"],
+      ["walk", "walk", "sungkyunkwan", null, "7", null, "2026-10-20T08:58:00+09:00", "2026-10-20T09:21:00+09:00", "estimate"],
     ]);
     expect(option.legs.filter((leg) => leg.kind === "ride").map((leg) => [leg.line.name, leg.board.runId, leg.board.isExpress])).toEqual([
       ["4호선", "4/2026-10-20/4305", false],
