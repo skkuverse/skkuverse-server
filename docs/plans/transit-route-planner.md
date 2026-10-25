@@ -254,7 +254,7 @@ for leg in option.legs:
     none, and continuation is headway and readyAt < serviceEndsAt
         → a call at readyAt + headwaySec / 2: status unknown, basis estimate, no vehicle
     none otherwise → notRunning, nextServiceAt = board.nextServiceAt,
-        reason "notStarted" when that falls later the same KST date, else "ended"
+        reason "notStarted" when that falls later in the same service day (from 03:00 KST), else "ended"
     alightAt = timeOf(dep.alight) ?? timeOf(dep.board) + leg.rideMinutes
     later = the next two catchable listed departures after dep, never a headway call
     after an earlier ride: warn by this ride's waitSec (tightTransfer, connectionAtRisk)
@@ -267,7 +267,7 @@ arriveAt = t
 - `waitSec` is the boarding time minus when the rider is ready at the stop.
 - **Realtime reach** (D7): a bus leg uses the upstream's predicted vehicles and nothing past them, then the half-headway call, shown as approximate ("약") because its basis is `estimate`. A subway leg past the stored trains boards from the timetable.
 - **Full buses** (D7): `seatsLeft: 0` skips the vehicle; null seats count as boardable, since 7800 seats no standing riders.
-- **No service** (D7): an option with a leg that has no run left is `notRunning` with `nextServiceAt`, the next first departure of that leg, and `reason: notStarted` when that falls later the same KST date, else `ended`.
+- **No service** (D7): an option with a leg that has no run left is `notRunning` with `nextServiceAt`, the next first departure of that leg, and `reason: notStarted` when that falls later in the same service day as now, else `ended`. A service day runs from 03:00 KST (`SERVICE_DAY_START_MS`), so from the last run until 03:00 an option reads `ended` (운행종료) with the morning's first run, as Korean transit apps show it (owner, 2026-10-25).
 - **Order.** Running options by `arriveAt`, data order breaking a tie, then the others in data order. No "fastest" flag: the app decides emphasis.
 - **`warnings`** (from (h)), open codes, `{ code, message }`, the message naming the next ride's board place in the request language. The slack is the next ride's `waitSec`: its board minus the rider reaching its stop after the previous ride's alight and the walks between. The first ride has no connection.
 

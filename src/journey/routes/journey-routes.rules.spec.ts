@@ -5,8 +5,9 @@
  * when it must, never before now; the wait is the boarding minus the arrival at the stop; up to two later catchable
  * listed calls are kept, a full vehicle skipped, and never a headway estimate (ADR 0022 PR (h)); the alight is the door's call for the same run, else the boarding plus the leg's ride minutes as an
  * estimate; past a source's listed vehicles a headway boards half a headway after the rider is ready, as an estimate;
- * an option with no run left is not running, with the board's next service: not started when that falls later on
- * the same KST date as now, ended when on a later date or unknown (ADR 0022 PR (h)); one whose door failed is
+ * an option with no run left is not running, with the board's next service: not started when that falls later in the
+ * same service day as now (03:00 to 03:00 KST), ended when in a later one or unknown, so between the last run and
+ * 03:00 it is ended (ADR 0022 PR (h)); one whose door failed is
  * unavailable; when a later ride has no run left, the option is ended too, its next service the boarding of the first
  * ride that reaches that ride's next first run, never before the first ride's own next run; a ride ends at its alight call's arrival, before the run leaves that stop, so the next leg starts
  * there (ADR 0022, D5, amended 2026-10-25), and a run running late, past its scheduled departure, boards at its
@@ -207,10 +208,14 @@ describe("planOption", () => {
   });
 
   it.each([
-    ["later the same KST date, though another UTC date", "2026-10-20T08:30:00+09:00", "2026-10-20T10:00:00+09:00", "notStarted"],
-    ["one second before the KST midnight", "2026-10-20T21:00:00+09:00", "2026-10-20T23:59:59+09:00", "notStarted"],
-    ["at the KST midnight", "2026-10-20T21:00:00+09:00", "2026-10-21T00:00:00+09:00", "ended"],
-    ["one second after it", "2026-10-20T21:00:00+09:00", "2026-10-21T00:00:01+09:00", "ended"],
+    ["later the same service day, though another UTC date", "2026-10-20T08:30:00+09:00", "2026-10-20T10:00:00+09:00", "notStarted"],
+    ["one second before 03:00 KST, when the next service day starts", "2026-10-20T21:00:00+09:00", "2026-10-21T02:59:59+09:00", "notStarted"],
+    ["at that 03:00", "2026-10-20T21:00:00+09:00", "2026-10-21T03:00:00+09:00", "ended"],
+    ["one second after it", "2026-10-20T21:00:00+09:00", "2026-10-21T03:00:01+09:00", "ended"],
+    ["of the morning, asked one second before 03:00, after the last run", "2026-10-21T02:59:59+09:00", "2026-10-21T06:00:00+09:00", "ended"],
+    ["of the morning, asked at 03:00", "2026-10-21T03:00:00+09:00", "2026-10-21T06:00:00+09:00", "notStarted"],
+    ["of the morning, asked one second after 03:00", "2026-10-21T03:00:01+09:00", "2026-10-21T06:00:00+09:00", "notStarted"],
+    ["of the morning, asked at 04:00", "2026-10-21T04:00:00+09:00", "2026-10-21T06:00:00+09:00", "notStarted"],
   ])("Not started: with no run in the window, a next service %s is %s", (_case, nowAt, nextAt, reason) => {
     // Arrange
     const runs = board([], { nextServiceAt: new Date(nextAt) });
