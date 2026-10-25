@@ -2,7 +2,7 @@
 // WHY: imports nothing from src/infra/: config.ts runs this while it is itself loading.
 import net from "node:net";
 import { isLoopbackAddress } from "../shared/ip-address.util";
-import { OVERLAY_ENTRY, overlayResolveErrors } from "./perimeter-overlay.rules";
+import { overlayResolveErrors } from "./perimeter-overlay.rules";
 import { PERIMETER_MODES, type PerimeterMode } from "./perimeter.ports";
 
 function isPerimeterMode(value: string): value is PerimeterMode {
@@ -34,5 +34,5 @@ function hostErrors(env: NodeJS.ProcessEnv): string[] {
 export function perimeterModeErrors(env: NodeJS.ProcessEnv): string[] {
   const errors = [...modeErrors(env), ...hostErrors(env)];
   if (errors.length > 0 || env.PERIMETER_MODE !== "overlay") return errors;
-  return overlayResolveErrors(() => require.resolve(OVERLAY_ENTRY));
+  return overlayResolveErrors();
 }
