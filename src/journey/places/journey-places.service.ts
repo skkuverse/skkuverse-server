@@ -11,7 +11,7 @@ import { SubwayStationsService } from "../../subway/stations/subway-stations.ser
 import { toPlaceRef } from "../journey.rules";
 import type { PlaceRef } from "../journey.types";
 
-// WHY: `id` is the one the catalog serves, a stop's canonical id for a `seoul-<arsId>` alias, which the tap opens.
+// WHY: `id` is the one the catalog serves, a stop's canonical id for a `seoul-<arsId>` alias, as /bus/stops serves it.
 type Located = { id: string; name: string; coords: LatLng };
 
 // SEE: docs/explanation/journey-architecture.md ("Glossary"): a place ref resolves through its owning catalog at plan time, never copied.
@@ -29,7 +29,7 @@ export class JourneyPlacesService {
     const placeRef = toPlaceRef(ref);
     const located = placeRef && (await this.locate(placeRef, lang));
     if (!placeRef || !located) return null;
-    return { kind: placeRef.kind, id: placeRef.id, name: located.name, coords: located.coords, platformId, action: toPlaceAction(placeRef.kind, located.id) };
+    return { kind: placeRef.kind, id: located.id, name: located.name, coords: located.coords, platformId, action: toPlaceAction(placeRef.kind, located.id) };
   }
 
   private locate({ kind, id }: PlaceRef, lang: SupportedLang): Promise<Located | null> {

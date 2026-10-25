@@ -58,7 +58,7 @@ describe("JourneyPlacesService.findPlace", () => {
     expect(place?.action).toEqual({ actionType: "route", actionValue: "/map?place=subway_station:hyehwa" });
   });
 
-  it("opens a stop cited by its seoul-<ARS> alias at the pole's nine-digit station id", async () => {
+  it("serves and opens a stop cited by its seoul-<ARS> alias as the pole's nine-digit station id", async () => {
     // Arrange
     const routePaths = new FakeBusRoutePathService();
     // WHY: a pole has no coords of its own; it is drawn on the stored line of a route that stops at it.
@@ -68,6 +68,7 @@ describe("JourneyPlacesService.findPlace", () => {
     const place = await placesService(routePaths).findPlace("bus_stop:seoul-01592", null, "ko");
 
     // Assert
+    expect(place?.id).toBe("100900075");
     expect(place?.action).toEqual({ actionType: "route", actionValue: "/map?place=bus_stop:100900075" });
   });
 
