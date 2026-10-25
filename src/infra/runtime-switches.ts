@@ -16,6 +16,7 @@ export interface RuntimeSwitches {
   shuttleEnabled: boolean;
   regionalBusEnabled: boolean;
   gbisEnabled: boolean;
+  noticeOverviewEnabled: boolean;
 }
 
 export const RUNTIME_SWITCH_NAMES = [
@@ -27,6 +28,7 @@ export const RUNTIME_SWITCH_NAMES = [
   "SHUTTLE",
   "REGIONAL_BUS",
   "GBIS",
+  "NOTICE_OVERVIEW",
 ] as const;
 
 export function runtimeMode(nodeEnv: string | undefined): RuntimeMode {
@@ -76,6 +78,12 @@ function isOn(
   return (resolution.read(name, ON_OFF) ?? (resolution.mode === "development" ? "off" : "on")) === "on";
 }
 
+// WHY: off in production until its route has a cost guard: anyone with the URL could spend a paid LLM call per
+// request. Development keeps it on for local work; test mirrors production, and jest.setup.ts turns it on.
+function isNoticeOverviewOn(resolution: Resolution): boolean {
+  return (resolution.read("NOTICE_OVERVIEW", ON_OFF) ?? (resolution.mode === "development" ? "on" : "off")) === "on";
+}
+
 // WHY: a production override may only reduce outbound effects, never remove a guard.
 function isGuardOn(resolution: Resolution, name: "RATE_LIMIT" | "CACHE"): boolean {
   const on = isOn(resolution, name);
@@ -102,6 +110,7 @@ export function resolveRuntimeSwitches(
       shuttleEnabled: isOn(resolution, "SHUTTLE"),
       regionalBusEnabled: isOn(resolution, "REGIONAL_BUS"),
       gbisEnabled: isOn(resolution, "GBIS"),
+      noticeOverviewEnabled: isNoticeOverviewOn(resolution),
     },
     errors,
   };
