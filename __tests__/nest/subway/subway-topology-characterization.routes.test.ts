@@ -66,24 +66,28 @@ let clockAt = NOW;
 const CLOCK: Clock = { now: () => new Date(clockAt) };
 const VARY = "Accept-Language, Origin";
 
-// The stops away of each seeded train, in its direction's order: up at the station (0), at its first upstream
-// platform (1) and at its last (its upstream count); down at its second upstream platform (2), at no position
-// and at its next platform, which is no upstream platform (null).
+// The stops away of each seeded train (ADR 0022, D2), in its direction's order: up standing at the station (0),
+// leaving its first upstream platform (1) and approaching its last (its upstream count plus one); down standing at
+// its second upstream platform (2), at no position and at its next platform, which is no upstream platform (null).
 const STOPS_AWAY: Record<string, { up: Array<number | null>; down: Array<number | null> }> = {
-  "KR-1-0153": { up: [0, 1, 3], down: [2, null, null] },
-  "S1-4-420": { up: [0, 1, 3], down: [2, null, null] },
-  "DX-D1-4312": { up: [0, 1, 3], down: [2, null, null] },
-  "KR-K1-K230": { up: [0, 1, 3], down: [2, null, null] },
-  "S1-2-216": { up: [0, 1, 3], down: [2, null, null] },
-  "S1-8-2815": { up: [0, 1, 3], down: [2, null, null] },
-  "S1-3-334": { up: [0, 1, 3], down: [2, null, null] },
-  "KR-K1-K217": { up: [0, 1, 3], down: [2, null, null] },
-  "S1-2-222": { up: [0, 1, 3], down: [2, null, null] },
-  "DX-D1-4307": { up: [0, 1, 3], down: [2, null, null] },
-  "S1-3-332": { up: [0, 1, 3], down: [2, null, null] },
-  "DX-D1-4308": { up: [0, 1, 3], down: [2, null, null] },
-  "DX-D1-4318": { up: [0, 1, 1], down: [2, null, null] },
+  "KR-1-P153": { up: [0, 1, 4], down: [2, null, null] },
+  "S1-4-420": { up: [0, 1, 4], down: [2, null, null] },
+  "DX-D1-4312": { up: [0, 1, 4], down: [2, null, null] },
+  "KR-K1-K230": { up: [0, 1, 4], down: [2, null, null] },
+  "S1-2-216": { up: [0, 1, 4], down: [2, null, null] },
+  "S1-8-2815": { up: [0, 1, 4], down: [2, null, null] },
+  "S1-3-334": { up: [0, 1, 4], down: [2, null, null] },
+  "KR-K1-K217": { up: [0, 1, 4], down: [2, null, null] },
+  "S1-2-222": { up: [0, 1, 4], down: [2, null, null] },
+  "DX-D1-4307": { up: [0, 1, 4], down: [2, null, null] },
+  "S1-3-332": { up: [0, 1, 4], down: [2, null, null] },
+  "DX-D1-4308": { up: [0, 1, 4], down: [2, null, null] },
+  "DX-D1-4318": { up: [0, 1, 2], down: [2, null, null] },
 };
+// The status of each seeded train, in the same order, by the table of docs/reference/subway-api.md ("Call status").
+const STATUSES = { up: ["arriving", "enRoute", "enRoute"], down: ["enRoute", "scheduled", "unknown"] } as const;
+const BASES = { live: "provider", estimated: "estimate", scheduled: "timetable" } as const;
+const atKst = (iso: string): string => `${new Date(Date.parse(iso) + 9 * 3_600_000).toISOString().slice(0, 19)}+09:00`;
 
 type SeededDoc = (typeof seeded.docs)[number];
 type CapturedStation = (typeof captured.stations)[StationId]["ko"];
@@ -93,7 +97,10 @@ const seededDocOf = (platformId: string): SeededDoc => seeded.docs.find((doc) =>
 /**
  * The body: the capture's static fields, and each seeded train with its pinned stops away. Production served no
  * `meta.serverNow` or `isFirstTrain` on 2026-10-20: the expected meta adds the clock at +09:00 to the capture's, and
- * each train its seeded `isFirstTrain` (app ADR 0022, D4).
+ * each train its seeded `isFirstTrain` (app ADR 0022, D4). Changed 2026-10-25 with the behavior it pins (ADR 0022,
+ * D2, D3): each train is the call plus its trainNo, its stops away counted per C4, its status by its position; the
+ * seed stores none of the timetable pair or isLastRun, so they serve null, and a scheduled train's time is its
+ * scheduled arrival; generatedAt and every instant are at +09:00 to the second.
  */
 function expectedBody(stationId: StationId, lang: Lang) {
   const capture: CapturedStation = captured.stations[stationId][lang];
@@ -106,18 +113,29 @@ function expectedBody(stationId: StationId, lang: Lang) {
         return {
           line,
           platformId,
-          generatedAt: doc.generatedAt,
+          generatedAt: atKst(doc.generatedAt),
           directions: directions.map(({ direction, name, previousStation, nextStation }) => {
             const key = direction as "up" | "down";
-            const trains = doc.directions[key].map(({ trainNo, destination, express, arrivalAt, source, isFirstTrain }, i) => ({
-              trainNo,
-              destination,
-              express,
-              arrivalAt,
-              stopsAway: STOPS_AWAY[platformId]![key][i],
-              source,
-              isFirstTrain,
-            }));
+            const trains = doc.directions[key].map(({ trainNo, destination, express, arrivalAt, source, isFirstTrain }, i) => {
+              const basis = BASES[source as keyof typeof BASES];
+              return {
+                status: STATUSES[key][i],
+                expectedArrivalAt: basis === "timetable" ? null : atKst(arrivalAt),
+                expectedDepartureAt: null,
+                scheduledArrivalAt: basis === "timetable" ? atKst(arrivalAt) : null,
+                scheduledDepartureAt: null,
+                basis,
+                stopsAway: STOPS_AWAY[platformId]![key][i],
+                runId: `${line.code}/${doc.serviceDate}/${trainNo}`,
+                vehicleId: null,
+                headsign: destination,
+                isFirstRun: isFirstTrain,
+                isLastRun: null,
+                isExpress: express,
+                providerText: null,
+                trainNo,
+              };
+            });
             return { direction, name, previousStation, nextStation, trains };
           }),
         };

@@ -41,6 +41,7 @@ import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import { SUBWAY_STATIONS } from "../subway.constants";
+import { TIMETABLE_OPERATOR_BY_SOURCE } from "./subway-timetable.constants";
 import type { PlatformSchedule, Timetable } from "./subway-timetable.types";
 
 // WHY: revision 1 of the stored topology, the directions these checks hold against revision 1 of the timetables.
@@ -62,7 +63,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
 
     // Assert
     expect(schedules.map((s) => [s.platform.id, s.serviceDate, s.dayType])).toEqual([
-      ["KR-1-0153", "2026-10-17", "holiday"],
+      ["KR-1-P153", "2026-10-17", "holiday"],
       ["S1-4-420", "2026-10-17", "saturday"],
       ["DX-D1-4312", "2026-10-17", "holiday"],
       ["KR-K1-K230", "2026-10-17", "holiday"],
@@ -75,6 +76,11 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
       ["S1-3-332", "2026-10-17", "saturday"],
       ["DX-D1-4308", "2026-10-17", "holiday"],
       ["DX-D1-4318", "2026-10-17", "holiday"],
+      ["S1-2-226", "2026-10-17", "saturday"],
+      ["S1-4-433", "2026-10-17", "saturday"],
+      ["KR-1-P149", "2026-10-17", "holiday"],
+      ["KR-4-443", "2026-10-17", "saturday"],
+      ["S1-1-154", "2026-10-17", "holiday"],
     ]);
   });
 
@@ -88,7 +94,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
 
     // Assert
     expect(new Set(schedules.map((s) => s.dayType))).toEqual(new Set(["holiday"]));
-    expect(schedules).toHaveLength(13);
+    expect(schedules).toHaveLength(18);
   });
 
   it("matches 00:13 on Saturday to Friday's weekday table, its trains at instants of that day", async () => {
@@ -102,7 +108,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
 
     // Assert
     expect([sungkyunkwan?.serviceDate, sungkyunkwan?.dayType]).toEqual(["2026-10-16", "weekday"]);
-    const arrivals = sungkyunkwan?.trains.flatMap((t) => t.stops.filter((s) => s.platformId === "KR-1-0153").map((s) => s.arrivalAt));
+    const arrivals = sungkyunkwan?.trains.flatMap((t) => t.stops.filter((s) => s.platformId === "KR-1-P153").map((s) => s.arrivalAt));
     expect(arrivals).toContainEqual(new Date("2026-10-16T15:13:00Z"));
   });
 
@@ -116,8 +122,8 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     } = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
 
     // Assert
-    expect(sungkyunkwan?.lineRoutes.down.slice(0, 7)).toEqual(["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153"]);
-    expect(hyehwa?.lineRoutes.up.slice(0, 7)).toEqual(["S1-4-426", "S1-4-425", "S1-4-424", "S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
+    expect(sungkyunkwan?.lineRoutes.down.slice(-11, -4)).toEqual(["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-P153"]);
+    expect(hyehwa?.lineRoutes.up.slice(22, 29)).toEqual(["S1-4-426", "S1-4-425", "S1-4-424", "S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
   });
 
   it("hands 강남 2호선 the inner circle in rising station codes and 양재 3호선 the line toward 대화 in falling ones", async () => {
@@ -150,7 +156,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
       }),
     );
     expect(watched.map(([declared]) => declared)).toEqual(watched.map(([, onRoute]) => onRoute));
-    expect(watched.slice(0, 2).map(([declared]) => declared)).toEqual([["KR-1-P157"], ["KR-1-P149", "KR-1-P148", "KR-1-P147"]]);
+    expect(watched.slice(0, 2).map(([declared]) => declared?.slice(0, 3))).toEqual([["KR-1-P157"], ["KR-1-P149", "KR-1-P148", "KR-1-P147"]]);
   });
 
   it("lists each platform's upstream platforms as the three before it on its direction's route, nearest first, and its next platform as the one after", async () => {
@@ -234,17 +240,27 @@ describe("SubwayTimetableService.listPlatformSchedules over the tracked stations
   // WHY: the longest horizon the estimate is measured at (PREDICTION_HORIZONS_MIN in history/, which a timetable
   // spec may not import): a train due within it should be seen on its own, not lent a delay.
   const HORIZON_SEC = 10 * 60;
-  // EVIDENCE: the longest run of subway-timetables revision 1 between two stops of one train with no stop between them is
-  // 510 s, the line 1 express from Geumjeong to Sungkyunkwan Univ., and between two adjacent stations 420 s
-  // (Shinbundang, Cheonggyesan to Pangyo).
-  const MAX_UNOBSERVED_RUN_SEC = 510;
+  // EVIDENCE: the longest run of subway-timetables revision 2 between two stops of one train with no stop between them is
+  // 600 s, the line 1 express from Gasan Digital Complex to Anyang (weekday 1909 and 1911), and between two adjacent
+  // stations 420 s (Shinbundang, Cheonggyesan to Pangyo).
+  const MAX_UNOBSERVED_RUN_SEC = 600;
   // WHY: a run starts at these with an arrival in its row: the Shinbundang table writes arrival = departure at a run's
   // first stop (scripts/subway-timetable/convert.py), and every line 2 inner-circle lap starts at Seongsu, one station
   // before Konkuk Univ., which stays untracked because an outer-circle lap starts there too under the number it reaches
   // Jamsil with.
   const RUN_STARTS = ["DX-D1-D04", "DX-D1-4319", "DX-D1-4311", "DX-D1-4312", "S1-2-212"];
-  // WHY: the id frozen at first use and the codes the 2026-05-11 KRIC list skips, each pair adjacent.
-  const ADJACENT_ACROSS_CODES = ["KR-1-P157 KR-1-1715", "KR-1-1715 KR-1-P155", "S1-8-2809 S1-8-2811", "S1-8-2821 S1-8-2828"];
+  // WHY: the id frozen at first use, the codes the 2026-05-11 KRIC list skips and line 1's joins between Seoul Metro's
+  // section and Korail's, each pair adjacent.
+  const ADJACENT_ACROSS_CODES = [
+    "KR-1-P157 KR-1-1715",
+    "KR-1-1715 KR-1-P155",
+    "S1-8-2809 S1-8-2811",
+    "S1-8-2821 S1-8-2828",
+    "KR-1-134 S1-1-150",
+    "S1-1-155 S1-1-159",
+    "S1-1-159 S1-1-156",
+    "S1-1-158 KR-1-123",
+  ];
   const DAYS = ["2026-10-16T03:00:00Z", "2026-10-17T03:00:00Z", "2026-10-18T03:00:00Z"];
   const SECOND_MS = 1000;
 
@@ -280,7 +296,7 @@ describe("SubwayTimetableService.listPlatformSchedules over the tracked stations
     expect(unnamed).toEqual([]);
   });
 
-  it("leaves no run over 510 s between two tracked stops of a train at a served platform", async () => {
+  it("leaves no run over 600 s between two tracked stops of a train at a served platform", async () => {
     // Act
     const tracked = await listTracked();
 
@@ -417,10 +433,10 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     const { schedules } = await service.listPlatformSchedules(NIGHT);
 
     // Assert
-    // WHY: a tick converts tens of thousands of stops; 13 platforms read 7 tables, so a conversion per platform doubles it.
-    const keyOf = (s: PlatformSchedule): string => `${s.platform.id.split("-")[0]}-${s.platform.line}-${s.dayType}`;
+    // WHY: a tick converts tens of thousands of stops; 18 platforms read 7 tables, so a conversion per platform more than doubles it.
+    const keyOf = (s: PlatformSchedule): string => `${TIMETABLE_OPERATOR_BY_SOURCE[s.platform.timetable.source]}-${s.platform.line}-${s.dayType}`;
     const firstByKey = new Map(schedules.map((s) => [keyOf(s), s] as const).reverse());
-    expect(schedules).toHaveLength(13);
+    expect(schedules).toHaveLength(18);
     expect(firstByKey.size).toBe(7);
     expect(new Set(schedules.map((s) => s.trains)).size).toBe(7);
     expect(new Set(schedules.map((s) => s.lineRoutes)).size).toBe(7);
@@ -436,7 +452,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     await service.listPlatformSchedules(NIGHT);
 
     // Assert
-    expect(listed.schedules).toHaveLength(13);
+    expect(listed.schedules).toHaveLength(18);
     expect(listed.unavailable).toBeNull();
     expect(repository.tableReads.map((partId) => partId.replace(/^subway-timetables\/|@.*$/g, "")).sort()).toEqual([
       "DX-D1-weekday",
@@ -488,8 +504,8 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
 
     // Assert
     expect(repository.tableReads.slice(7)).toEqual([partIdOf("KR-1-weekday")]);
-    const shifted = arrivalsAt(before.schedules[0] ?? null, "KR-1-0153").map((iso) => iso && new Date(Date.parse(iso) + 120_000).toISOString());
-    expect(arrivalsAt(after.schedules[0] ?? null, "KR-1-0153")).toEqual(shifted);
+    const shifted = arrivalsAt(before.schedules[0] ?? null, "KR-1-P153").map((iso) => iso && new Date(Date.parse(iso) + 120_000).toISOString());
+    expect(arrivalsAt(after.schedules[0] ?? null, "KR-1-P153")).toEqual(shifted);
   });
 
   it("Invalid table in a new revision: keeps serving the held KR-1-weekday for 24 h, reading the new part once a minute, then has none", async () => {
@@ -497,14 +513,14 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     const tables = subwayTimetablesFixture();
     const { repository, service, advanceTo, partIdOf } = setupStored(tables);
     const pushedAt = Date.parse("2026-10-20T01:00:00.000Z");
-    const held = await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt)));
+    const held = await service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt)));
     const invalid = tables.map((t) => (t === tableOf(tables, "KR-1-weekday") ? { ...t, trains: [{ ...t.trains[0]!, trainNo: "K602" }] } : t));
     repository.storeTables(invalid);
 
     // Act
-    const served = await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + 1)));
-    await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + 30_000)));
-    const late = service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + DAY_MS + 1)));
+    const served = await service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt + MINUTE_MS + 1)));
+    await service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt + MINUTE_MS + 30_000)));
+    const late = service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt + MINUTE_MS + DAY_MS + 1)));
 
     // Assert
     expect(served?.trains).toEqual(held?.trains.map((train) => ({ ...train, stops: train.stops })));
@@ -559,7 +575,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     const listed = await service.listPlatformSchedules(advanceTo("2026-10-20T01:10:00.000Z"));
 
     // Assert
-    expect(listed.schedules).toHaveLength(13);
+    expect(listed.schedules).toHaveLength(18);
     expect(listed.unavailable).toBeNull();
   });
 
@@ -572,7 +588,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     const listed = await service.listPlatformSchedules(new Date("2026-10-20T01:00:00.000Z"));
 
     // Assert
-    expect(listed.schedules.map((schedule) => schedule.platform.id)).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((p) => p.id)).filter((id) => id !== "KR-1-0153"));
+    expect(listed.schedules.map((schedule) => schedule.platform.id)).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((p) => p.id)).filter((id) => !["KR-1-P153", "KR-1-P149", "S1-1-154"].includes(id)));
     expect(listed.unavailable).toMatchObject({ code: "SUBWAY_TIMETABLES_UNAVAILABLE", httpStatus: 503, keys: ["KR-1-weekday"] });
   });
 
@@ -589,10 +605,10 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     const listed = await service.listPlatformSchedules(advanceTo("2026-10-20T01:04:00.000Z"));
 
     // Assert
-    expect(listed.schedules).toHaveLength(13);
+    expect(listed.schedules).toHaveLength(18);
     expect(mockedLogger.error.mock.calls.map(([fields]) => fields)).toEqual([
-      expect.objectContaining({ event: "subway.timetables.table_missing", revision: 1, key: "S1-4-saturday", platformIds: ["S1-4-420"] }),
-      expect.objectContaining({ event: "subway.timetables.table_missing", revision: 2, key: "S1-4-saturday", platformIds: ["S1-4-420"] }),
+      expect.objectContaining({ event: "subway.timetables.table_missing", revision: 1, key: "S1-4-saturday", platformIds: ["S1-4-420", "S1-4-433", "KR-4-443"] }),
+      expect.objectContaining({ event: "subway.timetables.table_missing", revision: 2, key: "S1-4-saturday", platformIds: ["S1-4-420", "S1-4-433", "KR-4-443"] }),
     ]);
   });
 

@@ -12,6 +12,7 @@ import {
   SERVICE_WINDOW_CLOSES_SEC,
   SERVICE_WINDOW_OPENS_SEC,
   TIMETABLE_DAY_TYPES,
+  TIMETABLE_OPERATOR_BY_SOURCE,
 } from "./subway-timetable.constants";
 import type { DayType, LineRoutes, ScheduledTrain, Timetable, TimetableSource, TimetableStop } from "./subway-timetable.types";
 
@@ -49,15 +50,14 @@ export function toTimetableKey({ operator, line, dayType }: Pick<Timetable, "ope
 }
 
 export function toPlatformTimetableKey(platform: NetworkPlatform, dayType: DayType): string {
-  return toTimetableKey({ operator: platform.id.split("-")[0] ?? "", line: platform.line, dayType });
+  return toTimetableKey({ operator: TIMETABLE_OPERATOR_BY_SOURCE[platform.timetable.source], line: platform.line, dayType });
 }
 
 export function findTimetable(timetables: readonly Timetable[], platform: NetworkPlatform, dayType: DayType): Timetable | null {
   return timetables.find((t) => toTimetableKey(t) === toPlatformTimetableKey(platform, dayType)) ?? null;
 }
 
-// WHY: every tick reads tables of tens of thousands of stop times, so the time zone is applied once per table,
-// not once per time.
+// WHY: every tick reads tables of tens of thousands of stop times, so the time zone is applied once per table.
 export function toScheduledTrains(timetable: Timetable, serviceDate: string): ScheduledTrain[] {
   const midnightMs = toServiceInstant(serviceDate, 0).getTime();
   const toInstant = (seconds: number | null): Date | null => (seconds === null ? null : new Date(midnightMs + seconds * SECOND_MS));

@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: GET /subway/stations, Accept-Language ko, as the route answers it 2026-10-24, each station with its campus: the served stations of SUBWAY_STATIONS mapped by toListedStation in src/subway/station-list/subway-station-list.mapper.ts, each joined to its coords from revision 1 of subway-station-coords (__tests__/nest/subway/fixtures/subway-station-coords.dataset.json). Never captured from a running server, since the route is new; not trimmed.",
+  "_about": "Synthetic: GET /subway/stations, Accept-Language ko, as the route answers it 2026-10-25, each station with its campus or, for 사당, 금정 and 종로5가 (ADR 0022 D7), null: the served stations of SUBWAY_STATIONS mapped by toListedStation in src/subway/station-list/subway-station-list.mapper.ts, each joined to its coords from revision 2 of subway-station-coords (__tests__/nest/subway/fixtures/subway-station-coords.dataset.json). Never captured from a running server, since the route is new; not trimmed.",
   "data": {
     "stations": [
       {
@@ -205,6 +205,84 @@
         "coords": {
           "lat": 37.288617,
           "lng": 127.051478
+        }
+      },
+      {
+        "id": "sadang",
+        "title": "사당역",
+        "campus": null,
+        "lines": [
+          {
+            "code": "2",
+            "name": "2호선",
+            "color": "00A84D",
+            "marker": {
+              "text": "2",
+              "color": "00893F"
+            }
+          },
+          {
+            "code": "4",
+            "name": "4호선",
+            "color": "00A5DE",
+            "marker": {
+              "text": "4",
+              "color": "007FAB"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.476746,
+          "lng": 126.981597
+        }
+      },
+      {
+        "id": "geumjeong",
+        "title": "금정역",
+        "campus": null,
+        "lines": [
+          {
+            "code": "1",
+            "name": "1호선",
+            "color": "0052A4",
+            "marker": {
+              "text": "1",
+              "color": "0052A4"
+            }
+          },
+          {
+            "code": "4",
+            "name": "4호선",
+            "color": "00A5DE",
+            "marker": {
+              "text": "4",
+              "color": "007FAB"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.372215,
+          "lng": 126.943423
+        }
+      },
+      {
+        "id": "jongno-5-ga",
+        "title": "종로5가역",
+        "campus": null,
+        "lines": [
+          {
+            "code": "1",
+            "name": "1호선",
+            "color": "0052A4",
+            "marker": {
+              "text": "1",
+              "color": "0052A4"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.570926,
+          "lng": 127.001849
         }
       }
     ]

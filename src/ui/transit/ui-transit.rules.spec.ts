@@ -11,7 +11,9 @@
  * - toTransitLayoutIssues finds a bus group or station the code does not
  *   serve, a broken link action, a `visibleWith` group unknown or not placed
  *   in its section, and each served group or station the layout leaves
- *   unplaced (at `sections`), a group's children counting as placed;
+ *   unplaced (at `sections`), a group's children counting as placed, and a
+ *   station with no campus, which has no section to sit in (ADR 0022 D7),
+ *   never counting as unplaced;
  * - transitLayoutReferences lists every bus group, station and mini app the
  *   layout names, at its path;
  * - withoutUnresolvedItems drops each item an issue points into (a group whole
@@ -43,7 +45,7 @@ describe("toTransitItemId", () => {
 });
 
 const registry = fixtureRegistrySnapshot();
-const references: TransitLayoutReferences = { busGroupIds: ["campus", "hssc"], stationIds: ["hyehwa"], registry };
+const references: TransitLayoutReferences = { busGroupIds: ["campus", "hssc"], stationIds: ["hyehwa"], campuslessStationIds: [], registry };
 const withCommute: TransitLayoutReferences = { ...references, busGroupIds: ["campus", "hssc", "commute"], stationIds: ["hyehwa", "jamsil", "gangnam"] };
 
 const LINK = {
@@ -204,6 +206,22 @@ describe("toTransitLayoutIssues", () => {
     expect(toTransitLayoutIssues(raw, withCommute)).toEqual([]);
   });
 
+  it("leaves a served station with no campus unplaced without an issue", () => {
+    // Arrange
+    const withSadang = { ...references, stationIds: [...references.stationIds, "sadang"], campuslessStationIds: ["sadang"] };
+
+    // Act & Assert
+    expect(toTransitLayoutIssues(layout(...PLACED), withSadang)).toEqual([]);
+  });
+
+  it("still serves a station with no campus that the layout places", () => {
+    // Arrange
+    const withSadang = { ...references, stationIds: [...references.stationIds, "sadang"], campuslessStationIds: ["sadang"] };
+
+    // Act & Assert
+    expect(toTransitLayoutIssues(layout(...PLACED, { kind: "subway", stationId: "sadang" }), withSadang)).toEqual([]);
+  });
+
   it("finds a station left unplaced when the others sit in a group", () => {
     // Arrange
     const raw = twoSections(PLACED, [COMMUTE, group([{ kind: "subway", stationId: "jamsil" }])]);
@@ -218,6 +236,10 @@ describe("toTransitLayoutIssues", () => {
       // BusConfigService.listGroupIds reads neither of its providers.
       busGroupIds: new BusConfigService(null as never, null as never, null as never, null as never).listGroupIds(),
       stationIds: new SubwayStationsService().listStations().map((station) => station.id),
+      campuslessStationIds: new SubwayStationsService()
+        .listStations()
+        .filter((station) => station.campus === null)
+        .map((station) => station.id),
       registry,
     };
 

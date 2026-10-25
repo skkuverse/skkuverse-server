@@ -1,6 +1,7 @@
 /**
  * An HSSC bus in the live shape (ADR 0019, D1, D6, D7, D14): an engine ETA is an estimated stop call (standing at the
- * stop as arriving with no departure instant, en route with when it comes, or waiting behind the layover), a bus laying over waits to
+ * stop as arriving with no departure instant, en route with when it comes, or waiting behind the layover), with no run,
+ * flag or headsign of its own (ADR 0022, D2; the live group heads it), a bus laying over waits to
  * depart, and a moving bus's trajectory runs through each stop's arrival and departure to the turnaround, s passing
  * the last index on the way back to station 0.
  */
@@ -16,7 +17,7 @@ function bus(extra: Partial<HsscLiveBus> = {}): HsscLiveBus {
 
 describe("toHsscCall", () => {
   const common = { vehicleId: "32149", observedAt: at("2026-10-20T00:59:00Z") };
-  const empty = { expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, runId: null, runDepartureAt: null };
+  const empty = { expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, runId: null, headsign: null, isFirstRun: null, isExpress: null };
 
   it("serves an en-route bus with its expected arrival", () => {
     // Act & Assert
@@ -26,7 +27,7 @@ describe("toHsscCall", () => {
       expectedArrivalAt: at("2026-10-20T01:03:00Z"),
       basis: "estimate",
       stopsAway: 2,
-      isLastBus: null,
+      isLastRun: null,
       vehicleId: "32149",
       providerText: null,
     });
@@ -40,7 +41,7 @@ describe("toHsscCall", () => {
       status: "arriving",
       basis: "estimate",
       stopsAway: 0,
-      isLastBus: null,
+      isLastRun: null,
       vehicleId: "32149",
       providerText: null,
     });
@@ -48,7 +49,7 @@ describe("toHsscCall", () => {
 
   it("serves a bus behind the layover with no instant", () => {
     // Act & Assert
-    expect(toHsscCall({ ...common, status: "waitingToDepart", stopsAway: 5 })).toEqual({ ...empty, status: "waitingToDepart", basis: "estimate", stopsAway: 5, isLastBus: null, vehicleId: "32149", providerText: null });
+    expect(toHsscCall({ ...common, status: "waitingToDepart", stopsAway: 5 })).toEqual({ ...empty, status: "waitingToDepart", basis: "estimate", stopsAway: 5, isLastRun: null, vehicleId: "32149", providerText: null });
   });
 });
 
@@ -123,11 +124,13 @@ describe("toHsscCall for an overdue bus", () => {
       scheduledDepartureAt: null,
       basis: "estimate",
       stopsAway: 2,
-      isLastBus: null,
+      isLastRun: null,
       vehicleId: "32149",
       providerText: null,
       runId: null,
-      runDepartureAt: null,
+      headsign: null,
+      isFirstRun: null,
+      isExpress: null,
     });
   });
 });

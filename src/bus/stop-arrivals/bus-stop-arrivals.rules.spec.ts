@@ -3,19 +3,20 @@
  * instants (review F1): a run of the stop's route type is listed while its time at the stop (the estimate at an
  * estimated stop, else the timetable's), or its departure when no time is known there, is not before the current
  * minute in Asia/Seoul; a boarding stop fills the departure pair and an alighting stop the arrival pair, the
- * estimate's when the run read served one there; each run keeps its departure, and the run read's last run of the day
- * is the last bus. Where the stop shows no timetable time, a run is listed until the later of its latest estimate's
+ * estimate's when the run read served one there, beside the timetable's own time there (ADR 0022, D2); each run keeps
+ * its departure and its run id, and the run read's first and last runs of the day are its first and last run, with no
+ * vehicle, express flag or headsign, which the entry gives. Where the stop shows no timetable time, a run is listed until the later of its latest estimate's
  * arrival (the newest fetched, served or not) and the served estimate it shows, else by its departure, while the page
  * shows only the served estimate. How a stop time past midnight is read is the run read's (toStopAt in
  * src/bus/eta/smart/bus-eta-smart.rules.spec.ts); the HSSC line's next station with a stop moved with toTowards to
  * src/bus/bus.rules.spec.ts, since GET /bus/stops heads its stations the same way.
  */
 import type { RunStopTime, ShuttleRun } from "../eta/smart/bus-eta-smart.types";
-import { toTimetableArrivals } from "./bus-stop-arrivals.rules";
+import { toRunHeadsign, toTimetableArrivals } from "./bus-stop-arrivals.rules";
 
 const kst = (date: string, time: string) => new Date(`${date}T${time}:00+09:00`);
-const timetable = (at: Date | null): RunStopTime => ({ shownAt: at, isEstimated: false, latestEstimateAt: null });
-const estimated = (at: Date, latestEstimateAt: Date | null = at): RunStopTime => ({ shownAt: at, isEstimated: true, latestEstimateAt });
+const timetable = (at: Date | null): RunStopTime => ({ shownAt: at, isEstimated: false, latestEstimateAt: null, timetableAt: at });
+const estimated = (at: Date, latestEstimateAt: Date | null = at, timetableAt: Date | null = null): RunStopTime => ({ shownAt: at, isEstimated: true, latestEstimateAt, timetableAt });
 
 /** A campus-inja regular run on a date: boarding at its departure, then the drop-off as given (none by default). */
 function run(date: string, time: string, extra: Partial<ShuttleRun> & { dropOff?: RunStopTime } = {}): ShuttleRun {
@@ -25,6 +26,7 @@ function run(date: string, time: string, extra: Partial<ShuttleRun> & { dropOff?
     routeType: "regular",
     date,
     departureAt: kst(date, time),
+    isFirstOfDay: false,
     isLastOfDay: false,
     stopTimes: [timetable(kst(date, time)), dropOff],
     estimate: null,
@@ -56,13 +58,17 @@ describe("toTimetableArrivals", () => {
         scheduledDepartureAt: "2026-10-20T14:30:00+09:00",
         basis: "timetable",
         stopsAway: null,
-        isLastBus: false,
+        runId: "campus-inja|regular|2026-10-20|14:30",
         vehicleId: null,
+        headsign: null,
+        isFirstRun: false,
+        isLastRun: false,
+        isExpress: null,
         providerText: null,
         runDepartureAt: "2026-10-20T14:30:00+09:00",
       }),
     );
-    expect(arrivals.map((arrival) => arrival.isLastBus)).toEqual([false, false, true]);
+    expect(arrivals.map((arrival) => arrival.isLastRun)).toEqual([false, false, true]);
   });
 
   it.each([
@@ -162,10 +168,34 @@ describe("toTimetableArrivals", () => {
     const arrivals = toTimetableArrivals(runs, BOARD, AT_14_10_KST);
 
     // Assert
-    expect(arrivals.map(({ runDepartureAt, isLastBus }) => [runDepartureAt, isLastBus])).toEqual([
+    expect(arrivals.map(({ runDepartureAt, isLastRun }) => [runDepartureAt, isLastRun])).toEqual([
       ["2026-10-21T09:00:00+09:00", false],
       ["2026-10-21T10:00:00+09:00", true],
       ["2026-10-22T09:00:00+09:00", false],
+    ]);
+  });
+
+  it("keeps the timetable's own time at an estimated stop in the scheduled pair beside the estimate in the expected pair", () => {
+    // Arrange
+    const runs = [run("2026-10-20", "14:30", { dropOff: estimated(kst("2026-10-20", "15:20"), kst("2026-10-20", "15:20"), kst("2026-10-20", "15:15")) })];
+
+    // Act & Assert
+    expect(toTimetableArrivals(runs, ALIGHT, AT_14_10_KST)).toEqual([
+      expect.objectContaining({ expectedArrivalAt: "2026-10-20T15:20:00+09:00", scheduledArrivalAt: "2026-10-20T15:15:00+09:00", basis: "estimate" }),
+    ]);
+  });
+
+  it("carries each run's id and its first and last run of the day flags, with no headsign or express flag", () => {
+    // Arrange
+    const runs = [run("2026-10-20", "14:30", { isFirstOfDay: true }), run("2026-10-20", "15:00", { isLastOfDay: true })];
+
+    // Act
+    const arrivals = toTimetableArrivals(runs, BOARD, AT_14_10_KST);
+
+    // Assert
+    expect(arrivals.map(({ runId, isFirstRun, isLastRun, headsign, isExpress }) => [runId, isFirstRun, isLastRun, headsign, isExpress])).toEqual([
+      ["campus-inja|regular|2026-10-20|14:30", true, false, null, null],
+      ["campus-inja|regular|2026-10-20|15:00", false, true, null, null],
     ]);
   });
 
@@ -177,6 +207,23 @@ describe("toTimetableArrivals", () => {
     expect(toTimetableArrivals(runs, ALIGHT, AT_14_10_KST)).toEqual([
       expect.objectContaining({ runDepartureAt: "2026-10-20T14:30:00+09:00", scheduledArrivalAt: null, expectedArrivalAt: null }),
     ]);
+  });
+});
+
+// WHY: a commute run's service label names its station, not which way it goes; up and down say that (ADR 0022, D2).
+describe("toRunHeadsign", () => {
+  it.each([
+    ["up", "ko", "등교"],
+    ["up", "en", "To campus"],
+    ["up", "zh", "上学"],
+    ["down", "ko", "하교"],
+    ["down", "en", "From campus"],
+    ["down", "zh", "放学"],
+    ["regular", "ko", "잠실"],
+    ["hakbu", "en", "잠실"],
+  ] as const)("heads a %s run in %s as %s", (routeType, lang, headsign) => {
+    // Act & Assert
+    expect(toRunHeadsign(routeType, "잠실", lang)).toBe(headsign);
   });
 });
 
@@ -203,7 +250,7 @@ describe("toTimetableArrivals with each run's latest estimate", () => {
     ["15:11", false],
   ])("with only a live value too old to serve, at %s KST lists the 14:00 run: %s, showing no time", (now, listed) => {
     // Arrange
-    const dropOff: RunStopTime = { shownAt: null, isEstimated: false, latestEstimateAt: at("15:10") };
+    const dropOff: RunStopTime = { shownAt: null, isEstimated: false, latestEstimateAt: at("15:10"), timetableAt: null };
 
     // Act
     const arrivals = arrivalsAt(dropOff, at(now));
@@ -246,7 +293,7 @@ describe("toTimetableArrivals with each run's latest estimate", () => {
 
   it("keeps a timetable time the stop shows as the cutoff", () => {
     // Arrange
-    const dropOff: RunStopTime = { shownAt: at("15:20"), isEstimated: false, latestEstimateAt: at("15:10") };
+    const dropOff: RunStopTime = { shownAt: at("15:20"), isEstimated: false, latestEstimateAt: at("15:10"), timetableAt: at("15:20") };
 
     // Act
     const arrivals = arrivalsAt(dropOff, at("15:15"));
@@ -258,7 +305,7 @@ describe("toTimetableArrivals with each run's latest estimate", () => {
   it("orders runs by the time they are listed until", () => {
     // Arrange
     const runs = [
-      run("2026-10-20", "14:00", { dropOff: { shownAt: null, isEstimated: false, latestEstimateAt: at("15:10") } }),
+      run("2026-10-20", "14:00", { dropOff: { shownAt: null, isEstimated: false, latestEstimateAt: at("15:10"), timetableAt: null } }),
       run("2026-10-20", "14:20", { dropOff: estimated(at("15:00")) }),
     ];
 

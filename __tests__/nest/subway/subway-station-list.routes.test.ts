@@ -29,7 +29,7 @@ import { stationCoordsFixture, storedStationCoordsRepository } from "../../helpe
 
 const CLOCK: Clock = { now: () => new Date("2026-10-24T03:00:00.000Z") };
 
-const SERVED_ORDER = ["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae", "gwanggyo-jungang"];
+const SERVED_ORDER = ["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae", "gwanggyo-jungang", "sadang", "geumjeong", "jongno-5-ga"];
 
 function bootWith(coordsRepository: FakeSubwayStationCoordsRepository): Promise<NestExpressApplication> {
   return buildTestApp({
@@ -86,7 +86,7 @@ describe("GET /subway/stations", () => {
     expectWire(subwayStationList, res.body.data);
   });
 
-  it("files every station under its campus, as the bus stop list does: 혜화 under hssc, the rest under nsc, as the wire publishes it", async () => {
+  it("files every station under its campus, as the bus stop list does: 혜화 under hssc, 사당, 금정 and 종로5가 under none, the rest under nsc, as the wire publishes it", async () => {
     // Act
     const res = await request(app.getHttpServer()).get("/subway/stations");
 
@@ -101,7 +101,30 @@ describe("GET /subway/stations", () => {
       ["gangnam", "nsc"],
       ["yangjae", "nsc"],
       ["gwanggyo-jungang", "nsc"],
+      ["sadang", null],
+      ["geumjeong", null],
+      ["jongno-5-ga", null],
     ]);
+    expectWire(subwayStationList, res.body.data);
+  });
+
+  it("lists 사당, 금정 and 종로5가, which a journey boards or alights at, with every line that stops there and no campus, as the wire publishes it", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/subway/stations");
+
+    // Assert
+    expect(stationOf(res.body, "sadang")).toEqual({
+      id: "sadang",
+      title: "사당역",
+      campus: null,
+      lines: [
+        { code: "2", name: "2호선", color: "00A84D", marker: { text: "2", color: "00893F" } },
+        { code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } },
+      ],
+      coords: { lat: 37.476746, lng: 126.981597 },
+    });
+    expect(stationOf(res.body, "geumjeong")?.lines.map((line) => line.code)).toEqual(["1", "4"]);
+    expect(stationOf(res.body, "jongno-5-ga")).toMatchObject({ title: "종로5가역", campus: null, lines: [{ code: "1" }], coords: { lat: 37.570926, lng: 127.001849 } });
     expectWire(subwayStationList, res.body.data);
   });
 

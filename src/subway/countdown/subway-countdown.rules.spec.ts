@@ -29,7 +29,7 @@ describe("toFirstPublishedRows", () => {
   it.each([
     ["a new countdown for the same train", row("4540", "10:54:25", 240)],
     ["the same countdown of another train", row("4542", "10:54:25", 150)],
-    ["the same countdown at another station", row("4540", "10:54:25", 150, "KR-1-0153")],
+    ["the same countdown at another station", row("4540", "10:54:25", 150, "KR-1-P153")],
   ])("keeps a row's own time against %s", (_label, previous) => {
     // Act
     const rows = toFirstPublishedRows([previous], [row("4540", "10:55:35", 150)]);

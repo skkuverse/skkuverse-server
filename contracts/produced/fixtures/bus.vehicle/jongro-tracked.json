@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/jongro07.json: its one tracked vehicle, low-floor. Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus.",
+  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/jongro07.json: its one tracked vehicle, low-floor. Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus. Reshaped by hand to ADR 0022 (D2): the vehicle loses isLastBus, which is the call's isLastRun.",
   "data": {
     "id": "100000103",
     "plateNumber": "서울74사5537",
@@ -8,7 +8,6 @@
       "passengerCount": 9
     },
     "seatsLeft": null,
-    "isLastBus": false,
     "isLowFloor": true,
     "position": {
       "stationIndex": 5,

@@ -39,12 +39,12 @@ describe("subwayTopologyDataset", () => {
   });
 
   it.each([
-    [["platforms", "KR-1-0153"], "up"],
-    [["platforms", "KR-1-0153"], "down"],
-    [["platforms", "KR-1-0153", "up"], "name"],
-    [["platforms", "KR-1-0153", "up"], "upstreamPlatformIds"],
-    [["platforms", "KR-1-0153", "up"], "watchedPlatformIds"],
-    [["platforms", "KR-1-0153", "up"], "nextPlatformId"],
+    [["platforms", "KR-1-P153"], "up"],
+    [["platforms", "KR-1-P153"], "down"],
+    [["platforms", "KR-1-P153", "up"], "name"],
+    [["platforms", "KR-1-P153", "up"], "upstreamPlatformIds"],
+    [["platforms", "KR-1-P153", "up"], "watchedPlatformIds"],
+    [["platforms", "KR-1-P153", "up"], "nextPlatformId"],
     [["neighbors", "KR-1-P152"], "line"],
     [["neighbors", "KR-1-P152"], "seoulName"],
   ] as const)("fails a copy whose %j has no %s, with its path", (path, field) => {
@@ -57,16 +57,16 @@ describe("subwayTopologyDataset", () => {
   });
 
   it.each([
-    ["a platform keyed by a malformed id", (data: Record<string, any>) => (data.platforms["KR-0153"] = data.platforms["KR-1-0153"]), /^platforms\.KR-0153: /],
+    ["a platform keyed by a malformed id", (data: Record<string, any>) => (data.platforms["KR-0153"] = data.platforms["KR-1-P153"]), /^platforms\.KR-0153: /],
     [
       "a malformed next platform",
-      (data: Record<string, any>) => (data.platforms["KR-1-0153"].up.nextPlatformId = "kr-1-p152"),
-      /^platforms\.KR-1-0153\.up\.nextPlatformId: must be <operator>-<line>-<station>$/,
+      (data: Record<string, any>) => (data.platforms["KR-1-P153"].up.nextPlatformId = "kr-1-p152"),
+      /^platforms\.KR-1-P153\.up\.nextPlatformId: must be <operator>-<line>-<station>$/,
     ],
     [
       "four upstream platforms",
-      (data: Record<string, any>) => data.platforms["KR-1-0153"].up.upstreamPlatformIds.push("KR-1-1716"),
-      /^platforms\.KR-1-0153\.up\.upstreamPlatformIds: /,
+      (data: Record<string, any>) => data.platforms["KR-1-P153"].up.upstreamPlatformIds.push("KR-1-1716"),
+      /^platforms\.KR-1-P153\.up\.upstreamPlatformIds: /,
     ],
     ["a direction name without zh", (data: Record<string, any>) => delete data.platforms["S1-4-420"].down.name.zh, /^platforms\.S1-4-420\.down\.name\.zh: /],
     ["a neighbor name without en", (data: Record<string, any>) => delete data.neighbors["KR-1-P152"].name.en, /^neighbors\.KR-1-P152\.name\.en: /],
@@ -85,8 +85,8 @@ describe("subwayTopologyDataset", () => {
   it("passes a neighbor with no name and no train-map name", () => {
     // Arrange
     const data = fixture();
-    delete data.neighbors["KR-1-P149"].name;
-    delete data.neighbors["KR-1-P149"].trainMapName;
+    delete data.neighbors["KR-1-P151"].name;
+    delete data.neighbors["KR-1-P151"].trainMapName;
 
     // Act & Assert
     expect(messagesOf(data)).toEqual([]);

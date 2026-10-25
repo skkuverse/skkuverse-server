@@ -15,7 +15,7 @@ import { toDelaySec, toStationArrivals } from "./subway-estimate.rules";
 import type { EstimateInput, TrainArrival } from "./subway-estimate.types";
 
 const UIWANG = "KR-1-P152";
-const SUNGKYUNKWAN = "KR-1-0153";
+const SUNGKYUNKWAN = "KR-1-P153";
 const HWASEO = "KR-1-P154";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
@@ -125,6 +125,9 @@ describe("toStationArrivals", () => {
         source: "estimated",
         position: { platformId: UIWANG, state: "arrived" },
         isFirstTrain: true,
+        isLastRun: true,
+        scheduledArrivalAt: at("21:04:00"),
+        scheduledDepartureAt: at("21:04:30"),
       },
     ]);
   });
@@ -1027,5 +1030,91 @@ describe("toStationArrivals, marking the first train of the service day", () => 
 
     // Assert
     expect(arrivals[0]).toMatchObject({ trainNo: "4509", source: "live", arrivalAt: at("05:35:30"), isFirstTrain: true });
+  });
+});
+
+const lastRunsAt = (overrides: Partial<EstimateInput>) =>
+  toStationArrivals(input({ platformId: HYEHWA, trains: [T4004, T4509, T4511], ...overrides })).arrivals.map((a) => [a.trainNo, a.isLastRun]);
+
+describe("toStationArrivals, marking the last run of the service day (ADR 0022, D2)", () => {
+  it("marks 4511, the latest down train through 혜화 on its service day, and not 4509 before it", () => {
+    // Act & Assert
+    expect(lastRunsAt({ direction: "down", now: at("05:20:00") })).toEqual([
+      ["4509", false],
+      ["4511", true],
+    ]);
+  });
+
+  it("marks the latest train, not the one the table lists last: 4511 though 4509 comes after it", () => {
+    // Act & Assert
+    expect(lastRunsAt({ direction: "down", trains: [T4511, T4004, T4509], now: at("05:20:00") })).toEqual([
+      ["4509", false],
+      ["4511", true],
+    ]);
+  });
+
+  it("marks the latest train of each direction on its own: 4004 up, the only up train, is both first and last", () => {
+    // Act
+    const { arrivals } = toStationArrivals(input({ platformId: HYEHWA, direction: "up", trains: [T4004, T4509, T4511], now: at("05:20:00") }));
+
+    // Assert
+    expect(arrivals.map((a) => [a.trainNo, a.isFirstTrain, a.isLastRun])).toEqual([["4004", true, true]]);
+  });
+
+  it("does not count a train whose row passes 혜화 with no time there as the last", () => {
+    // Arrange
+    const passing: ScheduledTrain = { ...T4511, trainNo: "4513", stops: [{ platformId: HYEHWA, arrivalAt: null, departureAt: null }] };
+
+    // Act & Assert
+    expect(lastRunsAt({ direction: "down", trains: [T4509, T4511, passing], now: at("05:20:00") })).toEqual([
+      ["4509", false],
+      ["4511", true],
+    ]);
+  });
+
+  it("keeps 4511 last when its published countdown serves it live", () => {
+    // Arrange
+    const row: CountdownRow = { trainNo: "4511", platformId: HYEHWA, generatedAt: at("05:40:00"), remainingSec: 600 };
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ platformId: HYEHWA, trains: [T4509, T4511], countdownRows: [row], now: at("05:40:10") }));
+
+    // Assert
+    expect(arrivals.at(-1)).toMatchObject({ trainNo: "4511", source: "live", isLastRun: true });
+  });
+});
+
+describe("toStationArrivals, keeping each train's timetable times at the platform beside its estimate (ADR 0022, D2)", () => {
+  it("keeps 0493's scheduled 21:04:00 arrival and 21:04:30 departure at 성균관대 while it is estimated 90 s late", () => {
+    // Arrange
+    const histories = historiesOf(history("0493", { platformId: UIWANG, state: "arrived", at: at("21:02:00") }));
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [T0493], histories, now: at("21:02:10") }));
+
+    // Assert
+    expect(arrivals[0]).toMatchObject({ arrivalAt: at("21:05:30"), scheduledArrivalAt: at("21:04:00"), scheduledDepartureAt: at("21:04:30") });
+  });
+
+  it("keeps 4509's timetable times when its countdown serves it live, and while the tracker awaits it overdue", () => {
+    // Arrange
+    const row: CountdownRow = { trainNo: "4509", platformId: HYEHWA, generatedAt: at("05:30:00"), remainingSec: 330 };
+    const scheduled = { scheduledArrivalAt: at("05:35:00"), scheduledDepartureAt: at("05:35:30") };
+
+    // Act
+    const live = toStationArrivals(input({ platformId: HYEHWA, trains: [T4509, T4511], countdownRows: [row], now: at("05:30:10") })).arrivals[0];
+    const awaited = toStationArrivals(input({ platformId: HYEHWA, trains: [T4509, T4511], isTracked: true, now: at("05:37:00") })).arrivals[0];
+
+    // Assert
+    expect(live).toMatchObject({ trainNo: "4509", source: "live", ...scheduled });
+    expect(awaited).toMatchObject({ trainNo: "4509", source: "estimated", ...scheduled });
+  });
+
+  it("gives a train starting at the platform no scheduled arrival, only its departure", () => {
+    // Act
+    const { arrivals } = toStationArrivals(input({ platformId: BEFORE_HYEHWA, trains: [T4509], now: at("05:20:00") }));
+
+    // Assert
+    expect(arrivals[0]).toMatchObject({ trainNo: "4509", scheduledArrivalAt: null, scheduledDepartureAt: at("05:33:30") });
   });
 });

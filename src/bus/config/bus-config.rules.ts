@@ -80,6 +80,11 @@ export function toLineStationDirection({ directions, directionIds }: LineDirecti
   return direction ? { id: direction.id, label: direction.label } : null;
 }
 
+/** WHY: each station's direction by index, as toLineStationDirection names one. */
+export function toLineStationDirections(line: LineDirections): Array<StationDirection | null> {
+  return line.directionIds.map((_, stationIndex) => toLineStationDirection(line, stationIndex));
+}
+
 // WHY: a config placed by another stations version than the caller's (a sync between the two reads) would name another
 // station's direction at this index, so it names none.
 export function toStationDirection(group: BusGroup | null, stationIndex: number, stationsVersion: string | null): StationDirection | null {
@@ -87,4 +92,10 @@ export function toStationDirection(group: BusGroup | null, stationIndex: number,
   const directionId = group.screen.stations[stationIndex]?.directionId ?? null;
   const direction = group.screen.directions.find((candidate) => candidate.id === directionId);
   return direction ? { id: direction.id, label: direction.label } : null;
+}
+
+/** WHY: each station's direction by index, as toStationDirection names one. */
+export function toStationDirections(group: BusGroup | null, stationsVersion: string | null): Array<StationDirection | null> {
+  if (group === null || !("stations" in group.screen)) return [];
+  return group.screen.stations.map((_, stationIndex) => toStationDirection(group, stationIndex, stationsVersion));
 }

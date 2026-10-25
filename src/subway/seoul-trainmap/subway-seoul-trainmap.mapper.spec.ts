@@ -30,7 +30,7 @@ const OBSERVED_AT = new Date("2026-10-16T11:45:00Z");
 
 const LINE_1 = new Map([
   ["의왕", "KR-1-P152"],
-  ["성균관대", "KR-1-0153"],
+  ["성균관대", "KR-1-P153"],
   ["화서", "KR-1-P154"],
   ["수원", "KR-1-P155"],
   ["병점", "KR-1-P157"],
@@ -129,12 +129,12 @@ describe("toTrainMapTrains", () => {
 });
 
 describe("toTrainEvents", () => {
-  it("turns 0493 departed from 성균관대 into a departure at KR-1-0153, stamped with the crawl time", () => {
+  it("turns 0493 departed from 성균관대 into a departure at KR-1-P153, stamped with the crawl time", () => {
     // Act
     const events = toTrainEvents([train({})], LINE_1, OBSERVED_AT);
 
     // Assert
-    expect(events).toEqual([{ trainNo: "0493", platformId: "KR-1-0153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
+    expect(events).toEqual([{ trainNo: "0493", platformId: "KR-1-P153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
   });
 
   it.each([
@@ -168,7 +168,7 @@ describe("toTrainEvents", () => {
     // Assert
     expect(events.map((e) => `${e.trainNo} ${e.platformId} ${e.state}`).sort()).toEqual([
       "0491 KR-1-P157 approaching",
-      "0493 KR-1-0153 departed",
+      "0493 KR-1-P153 departed",
       "0494 KR-1-P154 departed",
       "0496 KR-1-P155 approaching",
       "0692 KR-1-P152 arrived",

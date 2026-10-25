@@ -1,5 +1,5 @@
 {
- "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed. Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes. Changed 2026-10-24 with the behavior it pins (app ADR 0022, D4), no other value changed: each answer's meta gained serverNow, the clock at +09:00, each train gained isFirstTrain, from the earliest train of its direction at its platform in the instant's table, and each ETag was recomputed from the new bytes.",
+ "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed. Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes. Changed 2026-10-24 with the behavior it pins (app ADR 0022, D4), no other value changed: each answer's meta gained serverNow, the clock at +09:00, each train gained isFirstTrain, from the earliest train of its direction at its platform in the instant's table, and each ETag was recomputed from the new bytes. Changed 2026-10-25 with the behavior it pins (ADR 0022, D2, D3), no other value changed: each train became the shared call plus its trainNo, in the call's key order: arrivalAt became scheduledArrivalAt, or scheduledDepartureAt at a train's origin, to the second at +09:00; each train gained the timetable departure at its platform, isLastRun and runId (<line>/2026-10-20/<trainNo>); source scheduled became basis timetable and status scheduled; destination, express and isFirstTrain became headsign, isExpress and isFirstRun; each line's generatedAt is at +09:00 to the second; and each ETag was recomputed from the new bytes. Renamed 2026-10-25 (owner decision): 성균관대's platform id KR-1-0153 became its KRIC code KR-1-P153 wherever it appears; no other value changed, except that each ETag of a 성균관대 answer was recomputed from the new bytes.",
  "instants": {
   "2026-10-20T15:20:00.000Z": {
    "sungkyunkwan": {
@@ -7,7 +7,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a7-dPHkSf8uqO+qVuxoyn7EhzcZ3GQ\"",
+     "etag": "W/\"2a8-vkx8WaoyhBnJsb/LxZ2jntHPbqM\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -33,8 +33,8 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "platformId": "KR-1-P153",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -72,7 +72,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2ae-HlgyN28m9WO9l94RNfJfmiYA03Y\"",
+     "etag": "W/\"2af-y/K8Bb+iyPUE9WK6+t6IVyMItWk\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -98,8 +98,8 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "platformId": "KR-1-P153",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -137,7 +137,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a8-XY6yiYgp+H0twhVPuucVTperRzs\"",
+     "etag": "W/\"2a9-cp1KQp7qyP0Fc7rU7RMhnZaM9TE\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -163,8 +163,8 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "platformId": "KR-1-P153",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -204,7 +204,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"5d6-HYrKMqrUf/dzri8wjkr0HravlxY\"",
+     "etag": "W/\"9fe-b0YsmNacfWO5u4uqzwDFJXf3R9Y\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -231,7 +231,7 @@
           }
          },
          "platformId": "S1-4-420",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -246,31 +246,55 @@
            },
            "trains": [
             {
-             "trainNo": "4702",
-             "destination": "불암산",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:27:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4702",
+             "vehicleId": null,
+             "headsign": "불암산",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4702"
             },
             {
-             "trainNo": "4222",
-             "destination": "불암산",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:39:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:39:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:40:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4222",
+             "vehicleId": null,
+             "headsign": "불암산",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4222"
             },
             {
-             "trainNo": "4704",
-             "destination": "한성대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:58:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:58:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:58:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4704",
+             "vehicleId": null,
+             "headsign": "한성대입구",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4704"
             }
            ]
           },
@@ -287,22 +311,38 @@
            },
            "trains": [
             {
-             "trainNo": "4219",
-             "destination": "사당",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:30:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:30:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:30:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4219",
+             "vehicleId": null,
+             "headsign": "사당",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4219"
             },
             {
-             "trainNo": "4221",
-             "destination": "서울역",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:48:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:48:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:49:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4221",
+             "vehicleId": null,
+             "headsign": "서울역",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4221"
             }
            ]
           }
@@ -316,7 +356,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"5cf-g+e5NI2Zb/rhv751aVGO1AFAbYQ\"",
+     "etag": "W/\"9f7-FqUQxxqehc4GRWVAVxk/fYqFc60\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -343,7 +383,7 @@
           }
          },
          "platformId": "S1-4-420",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -358,31 +398,55 @@
            },
            "trains": [
             {
-             "trainNo": "4702",
-             "destination": "불암산",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:27:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4702",
+             "vehicleId": null,
+             "headsign": "불암산",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4702"
             },
             {
-             "trainNo": "4222",
-             "destination": "불암산",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:39:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:39:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:40:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4222",
+             "vehicleId": null,
+             "headsign": "불암산",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4222"
             },
             {
-             "trainNo": "4704",
-             "destination": "한성대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:58:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:58:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:58:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4704",
+             "vehicleId": null,
+             "headsign": "한성대입구",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4704"
             }
            ]
           },
@@ -399,22 +463,38 @@
            },
            "trains": [
             {
-             "trainNo": "4219",
-             "destination": "사당",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:30:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:30:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:30:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4219",
+             "vehicleId": null,
+             "headsign": "사당",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4219"
             },
             {
-             "trainNo": "4221",
-             "destination": "서울역",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:48:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:48:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:49:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4221",
+             "vehicleId": null,
+             "headsign": "서울역",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4221"
             }
            ]
           }
@@ -428,7 +508,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"5d4-Bpr0Cx3sbXrkm38Z0hXy0roJGiE\"",
+     "etag": "W/\"9fc-Ji4EYcJtFv095ERFQWwgJM3I6LU\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -455,7 +535,7 @@
           }
          },
          "platformId": "S1-4-420",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -470,31 +550,55 @@
            },
            "trains": [
             {
-             "trainNo": "4702",
-             "destination": "불암산",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:27:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4702",
+             "vehicleId": null,
+             "headsign": "불암산",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4702"
             },
             {
-             "trainNo": "4222",
-             "destination": "불암산",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:39:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:39:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:40:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4222",
+             "vehicleId": null,
+             "headsign": "불암산",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4222"
             },
             {
-             "trainNo": "4704",
-             "destination": "한성대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:58:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:58:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:58:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4704",
+             "vehicleId": null,
+             "headsign": "한성대입구",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4704"
             }
            ]
           },
@@ -511,22 +615,38 @@
            },
            "trains": [
             {
-             "trainNo": "4219",
-             "destination": "사당",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:30:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:30:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:30:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4219",
+             "vehicleId": null,
+             "headsign": "사당",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4219"
             },
             {
-             "trainNo": "4221",
-             "destination": "서울역",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:48:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:48:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:49:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "4/2026-10-20/4221",
+             "vehicleId": null,
+             "headsign": "서울역",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "4221"
             }
            ]
           }
@@ -542,7 +662,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"708-W3Bc+FIrZquv8UN9Dkwqd/EnYFM\"",
+     "etag": "W/\"a32-kqxgXQIFAhlupxJqDAYvct7WPZw\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -569,7 +689,7 @@
           }
          },
          "platformId": "DX-D1-4312",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -597,31 +717,55 @@
            },
            "trains": [
             {
-             "trainNo": "1327",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1327",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1327"
             },
             {
-             "trainNo": "1329",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1329",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1329"
             },
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:45:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:45:00+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -638,7 +782,7 @@
           }
          },
          "platformId": "KR-K1-K230",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -666,13 +810,21 @@
            },
            "trains": [
             {
-             "trainNo": "6253",
-             "destination": "죽전",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "K1/2026-10-20/6253",
+             "vehicleId": null,
+             "headsign": "죽전",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "6253"
             }
            ]
           }
@@ -686,7 +838,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"715-M6IxCER5HpLeFGWKO6J1fmKpbMY\"",
+     "etag": "W/\"a3f-U5kcnAA35NJ/OE7Z9kwTAAi9t3g\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -713,7 +865,7 @@
           }
          },
          "platformId": "DX-D1-4312",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -741,31 +893,55 @@
            },
            "trains": [
             {
-             "trainNo": "1327",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1327",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1327"
             },
             {
-             "trainNo": "1329",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1329",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1329"
             },
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:45:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:45:00+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -782,7 +958,7 @@
           }
          },
          "platformId": "KR-K1-K230",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -810,13 +986,21 @@
            },
            "trains": [
             {
-             "trainNo": "6253",
-             "destination": "죽전",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "K1/2026-10-20/6253",
+             "vehicleId": null,
+             "headsign": "죽전",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "6253"
             }
            ]
           }
@@ -830,7 +1014,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"706-JorV2PveOlPXw62ojnm+EQbaFnA\"",
+     "etag": "W/\"a30-Zf38ILQCoHBcb8gcMut+LIlW2mw\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -857,7 +1041,7 @@
           }
          },
          "platformId": "DX-D1-4312",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -885,31 +1069,55 @@
            },
            "trains": [
             {
-             "trainNo": "1327",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1327",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1327"
             },
             {
-             "trainNo": "1329",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1329",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1329"
             },
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:45:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:45:00+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -926,7 +1134,7 @@
           }
          },
          "platformId": "KR-K1-K230",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -954,13 +1162,21 @@
            },
            "trains": [
             {
-             "trainNo": "6253",
-             "destination": "죽전",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "K1/2026-10-20/6253",
+             "vehicleId": null,
+             "headsign": "죽전",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "6253"
             }
            ]
           }
@@ -976,7 +1192,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"b6c-PAhDLPlvUeiZ8LViZDRjZWDGrI0\"",
+     "etag": "W/\"147a-/o3aooeb84uthiEUtEAK0b++B4c\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -1003,7 +1219,7 @@
           }
          },
          "platformId": "S1-2-216",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1018,31 +1234,55 @@
            },
            "trains": [
             {
-             "trainNo": "2516",
-             "destination": "신도림",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2516",
+             "vehicleId": null,
+             "headsign": "신도림",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2516"
             },
             {
-             "trainNo": "2518",
-             "destination": "서울대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2518",
+             "vehicleId": null,
+             "headsign": "서울대입구",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2518"
             },
             {
-             "trainNo": "2520",
-             "destination": "삼성",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2520",
+             "vehicleId": null,
+             "headsign": "삼성",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2520"
             }
            ]
           },
@@ -1059,31 +1299,55 @@
            },
            "trains": [
             {
-             "trainNo": "2505",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2505",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2505"
             },
             {
-             "trainNo": "2509",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:35:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2509",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2509"
             },
             {
-             "trainNo": "2513",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:49:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:49:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:50:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2513",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2513"
             }
            ]
           }
@@ -1100,7 +1364,7 @@
           }
          },
          "platformId": "S1-8-2815",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1115,31 +1379,55 @@
            },
            "trains": [
             {
-             "trainNo": "8320",
-             "destination": "별내",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:50.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:50+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8320",
+             "vehicleId": null,
+             "headsign": "별내",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8320"
             },
             {
-             "trainNo": "8322",
-             "destination": "암사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:20.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:20+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:47:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8322",
+             "vehicleId": null,
+             "headsign": "암사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8322"
             },
             {
-             "trainNo": "8324",
-             "destination": "잠실",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:59:50.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:59:50+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8324",
+             "vehicleId": null,
+             "headsign": "잠실",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8324"
             }
            ]
           },
@@ -1156,22 +1444,38 @@
            },
            "trains": [
             {
-             "trainNo": "8319",
-             "destination": "모란",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:35:10+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8319",
+             "vehicleId": null,
+             "headsign": "모란",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8319"
             },
             {
-             "trainNo": "8321",
-             "destination": "가락시장",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:40+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8321",
+             "vehicleId": null,
+             "headsign": "가락시장",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8321"
             }
            ]
           }
@@ -1185,7 +1489,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"b71-GDNfQeS3dP+0c8yiHza4QXzuQhk\"",
+     "etag": "W/\"147f-Hh3ENDZGxltmmz1//mR595bjqKQ\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -1212,7 +1516,7 @@
           }
          },
          "platformId": "S1-2-216",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1227,31 +1531,55 @@
            },
            "trains": [
             {
-             "trainNo": "2516",
-             "destination": "신도림",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2516",
+             "vehicleId": null,
+             "headsign": "신도림",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2516"
             },
             {
-             "trainNo": "2518",
-             "destination": "서울대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2518",
+             "vehicleId": null,
+             "headsign": "서울대입구",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2518"
             },
             {
-             "trainNo": "2520",
-             "destination": "삼성",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2520",
+             "vehicleId": null,
+             "headsign": "삼성",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2520"
             }
            ]
           },
@@ -1268,31 +1596,55 @@
            },
            "trains": [
             {
-             "trainNo": "2505",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2505",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2505"
             },
             {
-             "trainNo": "2509",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:35:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2509",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2509"
             },
             {
-             "trainNo": "2513",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:49:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:49:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:50:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2513",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2513"
             }
            ]
           }
@@ -1309,7 +1661,7 @@
           }
          },
          "platformId": "S1-8-2815",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1324,31 +1676,55 @@
            },
            "trains": [
             {
-             "trainNo": "8320",
-             "destination": "별내",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:50.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:50+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8320",
+             "vehicleId": null,
+             "headsign": "별내",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8320"
             },
             {
-             "trainNo": "8322",
-             "destination": "암사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:20.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:20+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:47:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8322",
+             "vehicleId": null,
+             "headsign": "암사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8322"
             },
             {
-             "trainNo": "8324",
-             "destination": "잠실",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:59:50.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:59:50+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8324",
+             "vehicleId": null,
+             "headsign": "잠실",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8324"
             }
            ]
           },
@@ -1365,22 +1741,38 @@
            },
            "trains": [
             {
-             "trainNo": "8319",
-             "destination": "모란",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:35:10+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8319",
+             "vehicleId": null,
+             "headsign": "모란",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8319"
             },
             {
-             "trainNo": "8321",
-             "destination": "가락시장",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:40+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8321",
+             "vehicleId": null,
+             "headsign": "가락시장",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8321"
             }
            ]
           }
@@ -1394,7 +1786,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"b5e-gedRzU5KwV/r2Pe3LybivOXY/uY\"",
+     "etag": "W/\"146c-K5y29JKbnB8o/G6mtyL7ppgdrXs\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -1421,7 +1813,7 @@
           }
          },
          "platformId": "S1-2-216",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1436,31 +1828,55 @@
            },
            "trains": [
             {
-             "trainNo": "2516",
-             "destination": "신도림",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2516",
+             "vehicleId": null,
+             "headsign": "신도림",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2516"
             },
             {
-             "trainNo": "2518",
-             "destination": "서울대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2518",
+             "vehicleId": null,
+             "headsign": "서울대입구",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2518"
             },
             {
-             "trainNo": "2520",
-             "destination": "삼성",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2520",
+             "vehicleId": null,
+             "headsign": "삼성",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2520"
             }
            ]
           },
@@ -1477,31 +1893,55 @@
            },
            "trains": [
             {
-             "trainNo": "2505",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2505",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2505"
             },
             {
-             "trainNo": "2509",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:35:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2509",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2509"
             },
             {
-             "trainNo": "2513",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:49:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:49:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:50:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2513",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2513"
             }
            ]
           }
@@ -1518,7 +1958,7 @@
           }
          },
          "platformId": "S1-8-2815",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1533,31 +1973,55 @@
            },
            "trains": [
             {
-             "trainNo": "8320",
-             "destination": "별내",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:50.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:50+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8320",
+             "vehicleId": null,
+             "headsign": "별내",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8320"
             },
             {
-             "trainNo": "8322",
-             "destination": "암사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:20.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:20+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:47:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8322",
+             "vehicleId": null,
+             "headsign": "암사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8322"
             },
             {
-             "trainNo": "8324",
-             "destination": "잠실",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:59:50.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:59:50+09:00",
+             "scheduledDepartureAt": null,
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8324",
+             "vehicleId": null,
+             "headsign": "잠실",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8324"
             }
            ]
           },
@@ -1574,22 +2038,38 @@
            },
            "trains": [
             {
-             "trainNo": "8319",
-             "destination": "모란",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:35:10+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8319",
+             "vehicleId": null,
+             "headsign": "모란",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8319"
             },
             {
-             "trainNo": "8321",
-             "destination": "가락시장",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:40+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "8/2026-10-20/8321",
+             "vehicleId": null,
+             "headsign": "가락시장",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "8321"
             }
            ]
           }
@@ -1605,7 +2085,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"798-6Y0+r9975Rd1O0BNTHT3hlqGyXo\"",
+     "etag": "W/\"bc2-uFRlmG0qlqCaHWRr6Q+OkmAZMQQ\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -1632,7 +2112,7 @@
           }
          },
          "platformId": "S1-3-334",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1647,22 +2127,38 @@
            },
            "trains": [
             {
-             "trainNo": "3432",
-             "destination": "독립문",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:23:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:23:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:23:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3432",
+             "vehicleId": null,
+             "headsign": "독립문",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3432"
             },
             {
-             "trainNo": "3434",
-             "destination": "압구정",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:41:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:41:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:42:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3434",
+             "vehicleId": null,
+             "headsign": "압구정",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3434"
             }
            ]
           },
@@ -1679,31 +2175,55 @@
            },
            "trains": [
             {
-             "trainNo": "3411",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:24:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:24:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:25:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3411",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3411"
             },
             {
-             "trainNo": "3413",
-             "destination": "오금",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:33:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3413",
+             "vehicleId": null,
+             "headsign": "오금",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3413"
             },
             {
-             "trainNo": "3415",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:42:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:42:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:43:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3415",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3415"
             }
            ]
           }
@@ -1720,7 +2240,7 @@
           }
          },
          "platformId": "KR-K1-K217",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1758,7 +2278,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"7a0-5mw2NSBVbd/32dK7QWzGACVn9Ms\"",
+     "etag": "W/\"bca-t63Oi+7i/enaAM8e/RA8bKz0rhs\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -1785,7 +2305,7 @@
           }
          },
          "platformId": "S1-3-334",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1800,22 +2320,38 @@
            },
            "trains": [
             {
-             "trainNo": "3432",
-             "destination": "독립문",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:23:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:23:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:23:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3432",
+             "vehicleId": null,
+             "headsign": "독립문",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3432"
             },
             {
-             "trainNo": "3434",
-             "destination": "압구정",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:41:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:41:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:42:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3434",
+             "vehicleId": null,
+             "headsign": "압구정",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3434"
             }
            ]
           },
@@ -1832,31 +2368,55 @@
            },
            "trains": [
             {
-             "trainNo": "3411",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:24:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:24:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:25:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3411",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3411"
             },
             {
-             "trainNo": "3413",
-             "destination": "오금",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:33:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3413",
+             "vehicleId": null,
+             "headsign": "오금",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3413"
             },
             {
-             "trainNo": "3415",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:42:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:42:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:43:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3415",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3415"
             }
            ]
           }
@@ -1873,7 +2433,7 @@
           }
          },
          "platformId": "KR-K1-K217",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1911,7 +2471,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"796-io95FIewP154PSDS23YyWWQODqw\"",
+     "etag": "W/\"bc0-PbKzbuxqPDMowtR7nv6VVAOpO20\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -1938,7 +2498,7 @@
           }
          },
          "platformId": "S1-3-334",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -1953,22 +2513,38 @@
            },
            "trains": [
             {
-             "trainNo": "3432",
-             "destination": "독립문",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:23:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:23:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:23:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3432",
+             "vehicleId": null,
+             "headsign": "독립문",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3432"
             },
             {
-             "trainNo": "3434",
-             "destination": "압구정",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:41:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:41:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:42:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3434",
+             "vehicleId": null,
+             "headsign": "압구정",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3434"
             }
            ]
           },
@@ -1985,31 +2561,55 @@
            },
            "trains": [
             {
-             "trainNo": "3411",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:24:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:24:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:25:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3411",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3411"
             },
             {
-             "trainNo": "3413",
-             "destination": "오금",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:33:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3413",
+             "vehicleId": null,
+             "headsign": "오금",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3413"
             },
             {
-             "trainNo": "3415",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:42:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:42:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:43:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3415",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3415"
             }
            ]
           }
@@ -2026,7 +2626,7 @@
           }
          },
          "platformId": "KR-K1-K217",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2066,7 +2666,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a1e-5YfPiKeN22Dei4tIYPt4jVjkgck\"",
+     "etag": "W/\"119c-bvt/Kh/rDJcuLGJKZet9Vg8BaW8\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -2093,7 +2693,7 @@
           }
          },
          "platformId": "S1-2-222",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2108,31 +2708,55 @@
            },
            "trains": [
             {
-             "trainNo": "2514",
-             "destination": "홍대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2514",
+             "vehicleId": null,
+             "headsign": "홍대입구",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2514"
             },
             {
-             "trainNo": "2516",
-             "destination": "신도림",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:33:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2516",
+             "vehicleId": null,
+             "headsign": "신도림",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2516"
             },
             {
-             "trainNo": "2518",
-             "destination": "서울대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:46:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2518",
+             "vehicleId": null,
+             "headsign": "서울대입구",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2518"
             }
            ]
           },
@@ -2149,31 +2773,55 @@
            },
            "trains": [
             {
-             "trainNo": "2509",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:22:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:22:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:23:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2509",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2509"
             },
             {
-             "trainNo": "2513",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:37:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:37:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2513",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2513"
             },
             {
-             "trainNo": "2517",
-             "destination": "삼성",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2517",
+             "vehicleId": null,
+             "headsign": "삼성",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2517"
             }
            ]
           }
@@ -2190,7 +2838,7 @@
           }
          },
          "platformId": "DX-D1-4307",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2205,22 +2853,38 @@
            },
            "trains": [
             {
-             "trainNo": "1330",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:24:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:24:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:24:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1330",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1330"
             },
             {
-             "trainNo": "1332",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:36:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:36:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:36:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1332",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1332"
             }
            ]
           },
@@ -2237,13 +2901,21 @@
            },
            "trains": [
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:27:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -2257,7 +2929,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a5b-PT1g501Y7cW6gaSL7z5xypPBohI\"",
+     "etag": "W/\"11d9-ayngoDv1oqdXsndmAopbl5SoMSY\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -2284,7 +2956,7 @@
           }
          },
          "platformId": "S1-2-222",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2299,31 +2971,55 @@
            },
            "trains": [
             {
-             "trainNo": "2514",
-             "destination": "홍대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2514",
+             "vehicleId": null,
+             "headsign": "홍대입구",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2514"
             },
             {
-             "trainNo": "2516",
-             "destination": "신도림",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:33:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2516",
+             "vehicleId": null,
+             "headsign": "신도림",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2516"
             },
             {
-             "trainNo": "2518",
-             "destination": "서울대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:46:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2518",
+             "vehicleId": null,
+             "headsign": "서울대입구",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2518"
             }
            ]
           },
@@ -2340,31 +3036,55 @@
            },
            "trains": [
             {
-             "trainNo": "2509",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:22:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:22:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:23:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2509",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2509"
             },
             {
-             "trainNo": "2513",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:37:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:37:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2513",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2513"
             },
             {
-             "trainNo": "2517",
-             "destination": "삼성",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2517",
+             "vehicleId": null,
+             "headsign": "삼성",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2517"
             }
            ]
           }
@@ -2381,7 +3101,7 @@
           }
          },
          "platformId": "DX-D1-4307",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2396,22 +3116,38 @@
            },
            "trains": [
             {
-             "trainNo": "1330",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:24:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:24:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:24:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1330",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1330"
             },
             {
-             "trainNo": "1332",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:36:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:36:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:36:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1332",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1332"
             }
            ]
           },
@@ -2428,13 +3164,21 @@
            },
            "trains": [
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:27:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -2448,7 +3192,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a10-/iF34dtARM9qjbIZaPxo8M+mBW4\"",
+     "etag": "W/\"118e-dDgGTlCvGsPc1XJGewyNV8zGSEs\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -2475,7 +3219,7 @@
           }
          },
          "platformId": "S1-2-222",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2490,31 +3234,55 @@
            },
            "trains": [
             {
-             "trainNo": "2514",
-             "destination": "홍대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:21:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:21:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2514",
+             "vehicleId": null,
+             "headsign": "홍대입구",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2514"
             },
             {
-             "trainNo": "2516",
-             "destination": "신도림",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:33:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:33:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2516",
+             "vehicleId": null,
+             "headsign": "신도림",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2516"
             },
             {
-             "trainNo": "2518",
-             "destination": "서울대입구",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:46:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2518",
+             "vehicleId": null,
+             "headsign": "서울대입구",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2518"
             }
            ]
           },
@@ -2531,31 +3299,55 @@
            },
            "trains": [
             {
-             "trainNo": "2509",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:22:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:22:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:23:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2509",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2509"
             },
             {
-             "trainNo": "2513",
-             "destination": "외선순환",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:37:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:37:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2513",
+             "vehicleId": null,
+             "headsign": "외선순환",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2513"
             },
             {
-             "trainNo": "2517",
-             "destination": "삼성",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:54:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:54:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "2/2026-10-20/2517",
+             "vehicleId": null,
+             "headsign": "삼성",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "2517"
             }
            ]
           }
@@ -2572,7 +3364,7 @@
           }
          },
          "platformId": "DX-D1-4307",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2587,22 +3379,38 @@
            },
            "trains": [
             {
-             "trainNo": "1330",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:24:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:24:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:24:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1330",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1330"
             },
             {
-             "trainNo": "1332",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:36:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:36:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:36:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1332",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1332"
             }
            ]
           },
@@ -2619,13 +3427,21 @@
            },
            "trains": [
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:27:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -2641,7 +3457,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"990-HGebgqS+Sr6QbxjYc4Ww5ZkF26g\"",
+     "etag": "W/\"103a-hm4Aznb0Qw65KMqeoUieNGuCU/o\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -2668,7 +3484,7 @@
           }
          },
          "platformId": "S1-3-332",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2683,22 +3499,38 @@
            },
            "trains": [
             {
-             "trainNo": "3432",
-             "destination": "독립문",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:28:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3432",
+             "vehicleId": null,
+             "headsign": "독립문",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3432"
             },
             {
-             "trainNo": "3434",
-             "destination": "압구정",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:46:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3434",
+             "vehicleId": null,
+             "headsign": "압구정",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3434"
             }
            ]
           },
@@ -2715,31 +3547,55 @@
            },
            "trains": [
             {
-             "trainNo": "3411",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:20:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:20:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:20:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3411",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3411"
             },
             {
-             "trainNo": "3413",
-             "destination": "오금",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:28:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:28:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:29:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3413",
+             "vehicleId": null,
+             "headsign": "오금",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3413"
             },
             {
-             "trainNo": "3415",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:38:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3415",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3415"
             }
            ]
           }
@@ -2756,7 +3612,7 @@
           }
          },
          "platformId": "DX-D1-4308",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2771,22 +3627,38 @@
            },
            "trains": [
             {
-             "trainNo": "1330",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:22:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:22:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1330",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1330"
             },
             {
-             "trainNo": "1332",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1332",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1332"
             }
            ]
           },
@@ -2803,13 +3675,21 @@
            },
            "trains": [
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:29:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:29:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:29:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -2823,7 +3703,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"9aa-vacuDOWRuYGnN8bQVN2vgz+23FE\"",
+     "etag": "W/\"1054-bwFLGB6sDMIgpXPUb2zo0yZJStA\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -2850,7 +3730,7 @@
           }
          },
          "platformId": "S1-3-332",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2865,22 +3745,38 @@
            },
            "trains": [
             {
-             "trainNo": "3432",
-             "destination": "독립문",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:28:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3432",
+             "vehicleId": null,
+             "headsign": "독립문",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3432"
             },
             {
-             "trainNo": "3434",
-             "destination": "압구정",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:46:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3434",
+             "vehicleId": null,
+             "headsign": "압구정",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3434"
             }
            ]
           },
@@ -2897,31 +3793,55 @@
            },
            "trains": [
             {
-             "trainNo": "3411",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:20:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:20:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:20:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3411",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3411"
             },
             {
-             "trainNo": "3413",
-             "destination": "오금",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:28:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:28:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:29:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3413",
+             "vehicleId": null,
+             "headsign": "오금",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3413"
             },
             {
-             "trainNo": "3415",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:38:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3415",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3415"
             }
            ]
           }
@@ -2938,7 +3858,7 @@
           }
          },
          "platformId": "DX-D1-4308",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -2953,22 +3873,38 @@
            },
            "trains": [
             {
-             "trainNo": "1330",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:22:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:22:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1330",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1330"
             },
             {
-             "trainNo": "1332",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1332",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1332"
             }
            ]
           },
@@ -2985,13 +3921,21 @@
            },
            "trains": [
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:29:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:29:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:29:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -3005,7 +3949,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"98c-+R1H0oSR2wUgP8NtUEKOOTgr5VU\"",
+     "etag": "W/\"1036-RbSTzpnh/+As3hzE1Jg7agIjkM0\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -3032,7 +3976,7 @@
           }
          },
          "platformId": "S1-3-332",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3047,22 +3991,38 @@
            },
            "trains": [
             {
-             "trainNo": "3432",
-             "destination": "독립문",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:27:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:27:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:28:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3432",
+             "vehicleId": null,
+             "headsign": "독립문",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3432"
             },
             {
-             "trainNo": "3434",
-             "destination": "압구정",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:46:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:46:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3434",
+             "vehicleId": null,
+             "headsign": "압구정",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3434"
             }
            ]
           },
@@ -3079,31 +4039,55 @@
            },
            "trains": [
             {
-             "trainNo": "3411",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:20:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:20:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:20:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3411",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3411"
             },
             {
-             "trainNo": "3413",
-             "destination": "오금",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:28:30.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:28:30+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:29:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3413",
+             "vehicleId": null,
+             "headsign": "오금",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3413"
             },
             {
-             "trainNo": "3415",
-             "destination": "수서",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:38:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:30+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "3/2026-10-20/3415",
+             "vehicleId": null,
+             "headsign": "수서",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "3415"
             }
            ]
           }
@@ -3120,7 +4104,7 @@
           }
          },
          "platformId": "DX-D1-4308",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3135,22 +4119,38 @@
            },
            "trains": [
             {
-             "trainNo": "1330",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:22:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:22:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:22:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1330",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1330"
             },
             {
-             "trainNo": "1332",
-             "destination": "신사",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:34:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:34:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1332",
+             "vehicleId": null,
+             "headsign": "신사",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1332"
             }
            ]
           },
@@ -3167,13 +4167,21 @@
            },
            "trains": [
             {
-             "trainNo": "1331",
-             "destination": "정자",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:29:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:29:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:29:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1331",
+             "vehicleId": null,
+             "headsign": "정자",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1331"
             }
            ]
           }
@@ -3189,7 +4197,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"3e5-KzzCAlSRYW1TP1X2DwwhCcy33mU\"",
+     "etag": "W/\"591-1mdOOP/2DdKrceBpjGfJKGwaxMw\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -3216,7 +4224,7 @@
           }
          },
          "platformId": "DX-D1-4318",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3244,22 +4252,38 @@
            },
            "trains": [
             {
-             "trainNo": "1325",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:28:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:28:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:28:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1325",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1325"
             },
             {
-             "trainNo": "1327",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:38:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1327",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1327"
             }
            ]
           }
@@ -3273,7 +4297,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"3f7-V5WG/UVrO5VOjJeig7wGHyXUv38\"",
+     "etag": "W/\"5a3-HCxvtGq7pX2da+f2PXwojnWcSMA\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -3300,7 +4324,7 @@
           }
          },
          "platformId": "DX-D1-4318",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3328,22 +4352,38 @@
            },
            "trains": [
             {
-             "trainNo": "1325",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:28:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:28:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:28:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1325",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1325"
             },
             {
-             "trainNo": "1327",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:38:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1327",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1327"
             }
            ]
           }
@@ -3357,7 +4397,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"3e3-qnfyg4ujN666qLQi/ZY2ST1WplY\"",
+     "etag": "W/\"58f-XEXsh5HyKRzRNrzMPQwes6z8miw\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -3384,7 +4424,7 @@
           }
          },
          "platformId": "DX-D1-4318",
-         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3412,22 +4452,38 @@
            },
            "trains": [
             {
-             "trainNo": "1325",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:28:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:28:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:28:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1325",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": false,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1325"
             },
             {
-             "trainNo": "1327",
-             "destination": "광교",
-             "express": false,
-             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "status": "scheduled",
+             "expectedArrivalAt": null,
+             "expectedDepartureAt": null,
+             "scheduledArrivalAt": "2026-10-21T00:38:00+09:00",
+             "scheduledDepartureAt": "2026-10-21T00:38:00+09:00",
+             "basis": "timetable",
              "stopsAway": null,
-             "source": "scheduled",
-             "isFirstTrain": false
+             "runId": "D1/2026-10-20/1327",
+             "vehicleId": null,
+             "headsign": "광교",
+             "isFirstRun": false,
+             "isLastRun": true,
+             "isExpress": false,
+             "providerText": null,
+             "trainNo": "1327"
             }
            ]
           }
@@ -3445,7 +4501,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a7-EPi2xuoN4coC5zUlMmZ+Rjy/qQM\"",
+     "etag": "W/\"2a8-c8HuO1asrWNKkACbBbsw0U/+4f4\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -3471,8 +4527,8 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "platformId": "KR-1-P153",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3510,7 +4566,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2ae-bHuopWM16J4d+bpq/xeZV8eSUbA\"",
+     "etag": "W/\"2af-MKpxxCsG2PMfhACazBrmFeUIaUI\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -3536,8 +4592,8 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "platformId": "KR-1-P153",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3575,7 +4631,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a8-Olk8K/b1jGDtOiBpjP4/ufynWHU\"",
+     "etag": "W/\"2a9-PCDqRqSmGZri/0aBU+gJhgB0Xp0\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -3601,8 +4657,8 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "platformId": "KR-1-P153",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3642,7 +4698,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2ba-s/3c/7JqON1UtiN9D39wGTnBoHM\"",
+     "etag": "W/\"2bb-xKbGD/DKzvj4Pa+7RTbRsZd7ZCg\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -3669,7 +4725,7 @@
           }
          },
          "platformId": "S1-4-420",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3707,7 +4763,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2b3-Kfcsc36hHqktVrJOAr94Bd3ERkc\"",
+     "etag": "W/\"2b4-9U53IpTZ39o863PXIAWgRtGXXTI\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -3734,7 +4790,7 @@
           }
          },
          "platformId": "S1-4-420",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3772,7 +4828,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2b8-xqFub+x8awnxFCF3l1lcl3R4HbY\"",
+     "etag": "W/\"2b9-Wz6UV52qWCcWuR0JTWKuch5a3IY\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -3799,7 +4855,7 @@
           }
          },
          "platformId": "S1-4-420",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3839,7 +4895,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"49a-6OV3RZA4QyAMeD7CT+ByjjdGmxc\"",
+     "etag": "W/\"49c-eoKjg6D2B4OpHxXxMk/3W8yRFFs\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -3866,7 +4922,7 @@
           }
          },
          "platformId": "DX-D1-4312",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3907,7 +4963,7 @@
           }
          },
          "platformId": "KR-K1-K230",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -3945,7 +5001,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"4a7-2hetJaZ2KmMFNafyrPxp3Lc4/FY\"",
+     "etag": "W/\"4a9-9p4CKw9QpvPjIF/JLsrHZ9tKwew\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -3972,7 +5028,7 @@
           }
          },
          "platformId": "DX-D1-4312",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4013,7 +5069,7 @@
           }
          },
          "platformId": "KR-K1-K230",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4051,7 +5107,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"498-uPUO+pJ+HGdIdZZH0nfLI5z01n8\"",
+     "etag": "W/\"49a-oUwbTN3CpGMqyX+ehPuwo1vhls4\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -4078,7 +5134,7 @@
           }
          },
          "platformId": "DX-D1-4312",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4119,7 +5175,7 @@
           }
          },
          "platformId": "KR-K1-K230",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4159,7 +5215,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"498-8bkaLJDjHunPP5VE9kFH+Iz/rVk\"",
+     "etag": "W/\"49a-2yZNq/SInS2flIZyxWxqfQHT96M\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -4186,7 +5242,7 @@
           }
          },
          "platformId": "S1-2-216",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4227,7 +5283,7 @@
           }
          },
          "platformId": "S1-8-2815",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4265,7 +5321,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"49d-M6SvCay/lDZH0VeXX7MT+1LqaXU\"",
+     "etag": "W/\"49f-sIOa5twBLyYcgpm6O1vbBO4zykU\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -4292,7 +5348,7 @@
           }
          },
          "platformId": "S1-2-216",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4333,7 +5389,7 @@
           }
          },
          "platformId": "S1-8-2815",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4371,7 +5427,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"48a-0ABdoyr19J36GcO/ESR702TqmFo\"",
+     "etag": "W/\"48c-H9E/OfSS7knTHzvS7rJ33S0iJh4\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -4398,7 +5454,7 @@
           }
          },
          "platformId": "S1-2-216",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4439,7 +5495,7 @@
           }
          },
          "platformId": "S1-8-2815",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4479,7 +5535,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"488-uJ2CL80Tk26ni/5BitUAHNjyFy4\"",
+     "etag": "W/\"48a-UDZ1u75ByQM/dJ5JDYiOiY7iYds\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -4506,7 +5562,7 @@
           }
          },
          "platformId": "S1-3-334",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4547,7 +5603,7 @@
           }
          },
          "platformId": "KR-K1-K217",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4585,7 +5641,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"490-Yon10vn33d61gNAZsTvUFLa/a/Y\"",
+     "etag": "W/\"492-kVFikbIvqEQFWru/Ga+7kDM0hSY\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -4612,7 +5668,7 @@
           }
          },
          "platformId": "S1-3-334",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4653,7 +5709,7 @@
           }
          },
          "platformId": "KR-K1-K217",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4691,7 +5747,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"486-XuTpP9Jdyxqwek0ZGOv4aghxvzo\"",
+     "etag": "W/\"488-hn3mTDrjYPiDw3KQM0ebG+HCbUA\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -4718,7 +5774,7 @@
           }
          },
          "platformId": "S1-3-334",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4759,7 +5815,7 @@
           }
          },
          "platformId": "KR-K1-K217",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4799,7 +5855,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"488-t6lCS14PpmHmTi/6GjgWbuucKmE\"",
+     "etag": "W/\"48a-fjE0eQncvhYGvIO85zwKJcU7QFA\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -4826,7 +5882,7 @@
           }
          },
          "platformId": "S1-2-222",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4867,7 +5923,7 @@
           }
          },
          "platformId": "DX-D1-4307",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4905,7 +5961,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"4c5-sswQjn/z6f7RoysFw2EW93J5In4\"",
+     "etag": "W/\"4c7-xQCjaVbQ3U3dkLkkEAvF6Eoal00\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -4932,7 +5988,7 @@
           }
          },
          "platformId": "S1-2-222",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -4973,7 +6029,7 @@
           }
          },
          "platformId": "DX-D1-4307",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5011,7 +6067,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"47a-LZElzCIhVn9eig3zqauG/N96DU8\"",
+     "etag": "W/\"47c-uFX31KOShTl/uz39idCxSyMjb8U\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -5038,7 +6094,7 @@
           }
          },
          "platformId": "S1-2-222",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5079,7 +6135,7 @@
           }
          },
          "platformId": "DX-D1-4307",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5119,7 +6175,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"4ae-q5kwG+EyM2GfGe9qHL4zQHcnc0E\"",
+     "etag": "W/\"4b0-kJZdLq16magzVbLqQM7tQnJ4mb8\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -5146,7 +6202,7 @@
           }
          },
          "platformId": "S1-3-332",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5187,7 +6243,7 @@
           }
          },
          "platformId": "DX-D1-4308",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5225,7 +6281,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"4c8-fBDtoquF+qOJA9LBGGWDdiVLkOU\"",
+     "etag": "W/\"4ca-WLRtv6qEz6sLsQsJyvC1gQIPXOw\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -5252,7 +6308,7 @@
           }
          },
          "platformId": "S1-3-332",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5293,7 +6349,7 @@
           }
          },
          "platformId": "DX-D1-4308",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5331,7 +6387,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"4aa-WmIr26lP1NklaxNEvoL/NkRX8iQ\"",
+     "etag": "W/\"4ac-42EarcjTsV4WnlZwyZph46MktyY\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -5358,7 +6414,7 @@
           }
          },
          "platformId": "S1-3-332",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5399,7 +6455,7 @@
           }
          },
          "platformId": "DX-D1-4308",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5439,7 +6495,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2ae-v0D2Ps1hT7VGk6UTHZPYOIqcv+0\"",
+     "etag": "W/\"2af-U5UZKd/xqpd64F8qJ8Qv4q+K7h4\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -5466,7 +6522,7 @@
           }
          },
          "platformId": "DX-D1-4318",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5504,7 +6560,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2c0-M7oLrhCTSvyX6Zd1z1u9HZAGiWY\"",
+     "etag": "W/\"2c1-vfUsKpnmTD8uNguTg48gQdXv3qI\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -5531,7 +6587,7 @@
           }
          },
          "platformId": "DX-D1-4318",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",
@@ -5569,7 +6625,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2ac-LnBkmuVw5k1F2vY2rw/ASeEbjd8\"",
+     "etag": "W/\"2ad-+aSuLwYV3c2n1EU1hQU5tSxRGTo\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -5596,7 +6652,7 @@
           }
          },
          "platformId": "DX-D1-4318",
-         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
            "direction": "up",

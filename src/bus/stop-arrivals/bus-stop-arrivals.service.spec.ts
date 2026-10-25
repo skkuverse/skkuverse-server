@@ -64,10 +64,11 @@ function runsOn(serviceId: string, date: string, times: string[], routeTypes = [
       routeType,
       date,
       departureAt: kst(date, time),
+      isFirstOfDay: time === times[0],
       isLastOfDay: time === times.at(-1),
       stopTimes: [
-        { shownAt: kst(date, time), isEstimated: false, latestEstimateAt: null },
-        { shownAt: null, isEstimated: false, latestEstimateAt: null },
+        { shownAt: kst(date, time), isEstimated: false, latestEstimateAt: null, timetableAt: kst(date, time) },
+        { shownAt: null, isEstimated: false, latestEstimateAt: null, timetableAt: null },
       ],
       estimate: null,
     })),
@@ -122,7 +123,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
         routeType: "regular",
         operation: "running",
         vehicles: [],
-        arrivals: [expect.objectContaining({ status: "scheduled", scheduledDepartureAt: "2026-10-20T14:30:00+09:00", runDepartureAt: "2026-10-20T14:30:00+09:00", isLastBus: true })],
+        arrivals: [expect.objectContaining({ status: "scheduled", scheduledDepartureAt: "2026-10-20T14:30:00+09:00", runDepartureAt: "2026-10-20T14:30:00+09:00", isLastRun: true })],
       }),
       expect.objectContaining({ kind: "timetable", groupId: "campus", label: "HSSC → NSC", routeType: "hakbu" }),
       { kind: "live", groupId: "jongro07", label: "Jongro 07", stationIndex: 1, towards: "비천당", direction: { id: "100900043", label: "To 이화사거리" }, action: "board", stationsVersion: versionOf("jongro07"), updatedAt: null, operation: "noData", vehicles: [], arrivals: [] },
@@ -160,8 +161,8 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
   it("serves the HSSC line's station entry, heading towards the next station with a stop past the rotary", async () => {
     // Arrange
     const { service, live } = setup();
-    const arrival = { status: "enRoute" as const, expectedArrivalAt: "2026-10-20T14:12:00+09:00", expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, basis: "estimate" as const, stopsAway: 2, isLastBus: null, vehicleId: "32149", providerText: null };
-    const bus = { id: "32149", plateNumber: null, occupancy: null, seatsLeft: null, isLastBus: null, isLowFloor: null, position: null, trajectory: null };
+    const arrival = { status: "enRoute" as const, expectedArrivalAt: "2026-10-20T14:12:00+09:00", expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, basis: "estimate" as const, stopsAway: 2, runId: null, vehicleId: "32149", headsign: "上学", isFirstRun: null, isLastRun: null, isExpress: null, providerText: null };
+    const bus = { id: "32149", plateNumber: null, occupancy: null, seatsLeft: null, isLowFloor: null, position: null, trajectory: null };
     live.groups.set("hssc", liveGroup("hssc", { operation: "running", vehicles: [bus, { ...bus, id: "32150" }], stations: [{ stationIndex: 6, stopId: "hssc-hyehwa-exit1", arsId: null, operation: "running", arrivals: [arrival] }] }));
     live.directions.set("hssc:6:null", { id: "toCampus", label: "上学" });
 

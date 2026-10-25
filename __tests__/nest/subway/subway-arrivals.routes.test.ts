@@ -6,12 +6,12 @@
  * and a scripted Clock. The tracker is fed one upstream's observations per
  * tick, as the pollers feed it. What it guards: a station is requested by its
  * slug, and the 200 body names it and holds one line entry per platform, with
- * the line's display data, the platform's KRIC id, its own generatedAt and one
- * entry per direction, as the wire publishes it; any other id, a KRIC platform
+ * the line's display data, the platform's KRIC id, its own generatedAt at +09:00 and one
+ * entry per direction, each train ADR 0022's call, as the wire publishes it; any other id, a KRIC platform
  * id included, is a 404 `SUBWAY_STATION_NOT_FOUND`; a served response
  * is `private, max-age=5`; a state older than 2 minutes serves every train
- * `scheduled`; a train whose departure was observed is not listed; a published
- * countdown arrives at its row time plus its seconds; a train seen at the
+ * on the `timetable` basis; a train whose departure was observed is not listed; a published
+ * countdown is expected at its row time plus its seconds, on the `provider` basis; a train seen at the
  * nearest upstream station is one stop away; 강남 serves its 2호선 line entry
  * with the circle directions and a published countdown live; 잠실 and 도곡
  * serve two line entries in platform order, 잠실's captured 8호선 rows giving
@@ -126,7 +126,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.body.data.lines[0]).toMatchObject({
       line: { code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } },
       platformId: "S1-4-420",
-      generatedAt: at("20:41:00").toISOString(),
+      generatedAt: "2026-10-16T20:41:00+09:00",
     });
     expect(directionsOf(res.body).map((d: { direction: string; trains: unknown[] }) => [d.direction, d.trains.length])).toEqual([
       ["up", 3],
@@ -143,7 +143,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.station).toEqual({ id: "sungkyunkwan", name: "성균관대", coords: { lat: 37.300349, lng: 126.97075 } });
     expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
-      [{ code: "1", name: "1호선", color: "0052A4", marker: { text: "1", color: "0052A4" } }, "KR-1-0153"],
+      [{ code: "1", name: "1호선", color: "0052A4", marker: { text: "1", color: "0052A4" } }, "KR-1-P153"],
     ]);
     expectWire(subwayStationArrivals, res.body.data);
   });
@@ -179,7 +179,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
     // Assert
     const up = directionsOf(res.body).find((d: { direction: string }) => d.direction === "up");
-    expect(up.trains.find((t: { trainNo: string }) => t.trainNo === "2440")).toMatchObject({ arrivalAt: at("20:42:50").toISOString(), source: "live" });
+    expect(up.trains.find((t: { trainNo: string }) => t.trainNo === "2440")).toMatchObject({ expectedArrivalAt: "2026-10-16T20:42:50+09:00", basis: "provider" });
   });
 
   it("answers jamsil with its 2호선 then its 8호선 line entry, and dogok with 3호선 then 수인분당선, as the wire publishes them", async () => {
@@ -204,7 +204,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
   });
 
   it.each([
-    ["sungkyunkwan", ["KR-1-0153"]],
+    ["sungkyunkwan", ["KR-1-P153"]],
     ["hyehwa", ["S1-4-420"]],
     ["jeongja", ["DX-D1-4312", "KR-K1-K230"]],
     ["jamsil", ["S1-2-216", "S1-8-2815"]],
@@ -251,7 +251,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     // Assert
     const up = directionsOf(res.body).find((d: { direction: string }) => d.direction === "up");
     const train = up.trains.find((t: { trainNo: string }) => t.trainNo === "1286");
-    expect(train).toMatchObject({ destination: "신사", arrivalAt: at("20:44:10").toISOString(), stopsAway: 1, source: "estimated" });
+    expect(train).toMatchObject({ headsign: "신사", expectedArrivalAt: "2026-10-16T20:44:10+09:00", stopsAway: 1, basis: "estimate" });
     expect(up.trains.map((t: { trainNo: string }) => t.trainNo)).not.toContain("20");
   });
 
@@ -269,12 +269,12 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     const res = await request(httpServer).get("/subway/stations/jamsil/arrivals");
 
     // Assert
-    const sourcesOf = (index: number): string[] =>
-      res.body.data.lines[index].directions.flatMap((d: { trains: Array<{ source: string }> }) => d.trains.map((t) => t.source));
+    const basesOf = (index: number): string[] =>
+      res.body.data.lines[index].directions.flatMap((d: { trains: Array<{ basis: string }> }) => d.trains.map((t) => t.basis));
     expect(res.body.data.lines.map((l: { platformId: string }) => l.platformId)).toEqual(["S1-2-216", "S1-8-2815"]);
-    expect(sourcesOf(0)).toContain("live");
-    expect(sourcesOf(1).length).toBeGreaterThan(0);
-    expect(sourcesOf(1).every((source) => source === "estimated" || source === "scheduled")).toBe(true);
+    expect(basesOf(0)).toContain("provider");
+    expect(basesOf(1).length).toBeGreaterThan(0);
+    expect(basesOf(1).every((basis) => basis === "estimate" || basis === "timetable")).toBe(true);
   });
 
   it.each([
@@ -292,10 +292,10 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     const up = res.body.data.lines.find((l: { platformId: string }) => l.platformId === "KR-K1-K230").directions[0];
     const train = up.trains.find((t: { trainNo: string }) => t.trainNo === "6204");
     expect(train !== undefined).toBe(listed);
-    if (listed) expect(train).toMatchObject({ arrivalAt: at("20:42:20").toISOString(), stopsAway: 0, source: "estimated" });
+    if (listed) expect(train).toMatchObject({ expectedArrivalAt: "2026-10-16T20:42:20+09:00", stopsAway: 0, basis: "estimate" });
   });
 
-  it.each(["S1-4-420", "KR-1-0153", "S1-2-222", "seoul", "Hyehwa"])("answers %s with 404 SUBWAY_STATION_NOT_FOUND and no cache header", async (stationId) => {
+  it.each(["S1-4-420", "KR-1-P153", "S1-2-222", "seoul", "Hyehwa"])("answers %s with 404 SUBWAY_STATION_NOT_FOUND and no cache header", async (stationId) => {
     // Act
     const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
 
@@ -323,17 +323,17 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     const stale = await getAt("20:41:11", "/subway/stations/sungkyunkwan/arrivals");
 
     // Assert
-    const sources = (body: typeof fresh.body) => directionsOf(body).flatMap((d: { trains: { source: string }[] }) => d.trains.map((t) => t.source));
-    expect(sources(fresh.body)).toContain("estimated");
-    expect(sources(stale.body)).toEqual(Array(6).fill("scheduled"));
-    expect(stale.body.data.lines[0].generatedAt).toBe(at("20:41:11").toISOString());
+    const bases = (body: typeof fresh.body) => directionsOf(body).flatMap((d: { trains: { basis: string }[] }) => d.trains.map((t) => t.basis));
+    expect(bases(fresh.body)).toContain("estimate");
+    expect(bases(stale.body)).toEqual(Array(6).fill("timetable"));
+    expect(stale.body.data.lines[0].generatedAt).toBe("2026-10-16T20:41:11+09:00");
   });
 
   it("no longer lists 0493 at 성균관대 once the train map shows it departed, the API still saying arrived", async () => {
     // Arrange
-    const stuck = event("0493", "KR-1-0153", "arrived", "20:41:05", "서동탄");
+    const stuck = event("0493", "KR-1-P153", "arrived", "20:41:05", "서동탄");
     await trackAt("20:41:10", "seoul-subway-api", [stuck]);
-    await trackAt("20:41:40", "seoul-trainmap", [event("0493", "KR-1-0153", "departed", "20:41:40", "서동탄")]);
+    await trackAt("20:41:40", "seoul-trainmap", [event("0493", "KR-1-P153", "departed", "20:41:40", "서동탄")]);
     await trackAt("20:41:50", "seoul-subway-api", [stuck]);
 
     // Act
@@ -355,9 +355,9 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
     // Assert
     const up = directionsOf(res.body).find((d: { direction: string }) => d.direction === "up");
-    expect(res.body.data.lines[0].generatedAt).toBe(at("20:41:00").toISOString());
+    expect(res.body.data.lines[0].generatedAt).toBe("2026-10-16T20:41:00+09:00");
     const train = up.trains.find((t: { trainNo: string }) => t.trainNo === "4674");
-    expect(train).toMatchObject({ arrivalAt: at("20:42:50").toISOString(), source: "live" });
+    expect(train).toMatchObject({ expectedArrivalAt: "2026-10-16T20:42:50+09:00", basis: "provider" });
     expect(train).not.toHaveProperty("remainingSec");
   });
 
@@ -372,7 +372,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.status).toBe(200);
     const down = directionsOf(res.body).find((d: { direction: string }) => d.direction === "down");
     const train = down.trains.find((t: { trainNo: string }) => t.trainNo === "0691");
-    expect(train).toMatchObject({ stopsAway: 1, source: "estimated" });
+    expect(train).toMatchObject({ stopsAway: 1, basis: "estimate" });
     expect(train).not.toHaveProperty("position");
   });
 
@@ -412,8 +412,8 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    const [up, down] = directionsOf(res.body).map((d: { trains: Array<{ trainNo: string; isFirstTrain: boolean }> }) =>
-      d.trains.map((t) => [t.trainNo, t.isFirstTrain]),
+    const [up, down] = directionsOf(res.body).map((d: { trains: Array<{ trainNo: string; isFirstRun: boolean }> }) =>
+      d.trains.map((t) => [t.trainNo, t.isFirstRun]),
     );
     expect(up.slice(0, 2)).toEqual([
       ["4004", true],
@@ -434,7 +434,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    const firsts = directionsOf(res.body).flatMap((d: { trains: Array<{ isFirstTrain: boolean }> }) => d.trains.map((t) => t.isFirstTrain));
+    const firsts = directionsOf(res.body).flatMap((d: { trains: Array<{ isFirstRun: boolean }> }) => d.trains.map((t) => t.isFirstRun));
     expect(firsts).toEqual(Array(6).fill(false));
   });
 

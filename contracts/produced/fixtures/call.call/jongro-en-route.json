@@ -1,0 +1,19 @@
+{
+  "_about": "Synthetic, never captured: taken from bus-live.liveGroup/jongro07.json: the first arrival at station index 0, TOPIS's prediction headed by the station's direction (ADR 0022, D2). It replaces bus.arrival/jongro-en-route.json, which the call replaced.",
+  "data": {
+    "status": "enRoute",
+    "expectedArrivalAt": "2026-10-20T10:02:00+09:00",
+    "expectedDepartureAt": null,
+    "scheduledArrivalAt": null,
+    "scheduledDepartureAt": null,
+    "basis": "provider",
+    "stopsAway": 2,
+    "runId": null,
+    "vehicleId": "100000103",
+    "headsign": "이화사거리 방면",
+    "isFirstRun": null,
+    "isLastRun": false,
+    "isExpress": null,
+    "providerText": "3분후[1번째 전]"
+  }
+}

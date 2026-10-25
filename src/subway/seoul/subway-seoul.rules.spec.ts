@@ -19,7 +19,7 @@ const tables = ({ platformIdByApiName, platformIdByTrainMapName, ...line }: Retu
 });
 
 const LINE_1_NAMES = {
-  성균관대: "KR-1-0153",
+  성균관대: "KR-1-P153",
   금정: "KR-1-P149",
   군포: "KR-1-P150",
   당정: "KR-1-P151",
@@ -30,6 +30,30 @@ const LINE_1_NAMES = {
   병점: "KR-1-P157",
   명학: "KR-1-P148",
   안양: "KR-1-P147",
+  관악: "KR-1-P146",
+  석수: "KR-1-P145",
+  금천구청: "KR-1-P144",
+  독산: "KR-1-P143",
+  가산디지털단지: "KR-1-P142",
+  구로: "KR-1-141",
+  신도림: "KR-1-140",
+  영등포: "KR-1-139",
+  신길: "KR-1-138",
+  대방: "KR-1-137",
+  노량진: "KR-1-136",
+  용산: "KR-1-135",
+  남영: "KR-1-134",
+  서울: "S1-1-150",
+  시청: "S1-1-151",
+  종각: "S1-1-152",
+  종로3가: "S1-1-153",
+  동대문: "S1-1-155",
+  동묘앞: "S1-1-159",
+  신설동: "S1-1-156",
+  제기동: "S1-1-157",
+  청량리: "S1-1-158",
+  회기: "KR-1-123",
+  종로5가: "S1-1-154",
 };
 const LINE_4_NAMES = {
   혜화: "S1-4-420",
@@ -45,10 +69,33 @@ const LINE_4_NAMES = {
   명동: "S1-4-424",
   회현: "S1-4-425",
   서울: "S1-4-426",
+  상록수: "KR-4-448",
+  반월: "KR-4-447",
+  대야미: "KR-4-446",
+  수리산: "KR-4-445",
+  산본: "KR-4-444",
+  범계: "KR-4-442",
+  평촌: "KR-4-441",
+  인덕원: "KR-4-440",
+  정부과천청사: "KR-4-439",
+  과천: "KR-4-438",
+  대공원: "KR-4-437",
+  경마공원: "KR-4-436",
+  선바위: "KR-4-435",
+  남태령: "S1-4-434",
+  "총신대입구(이수)": "S1-4-432",
+  동작: "S1-4-431",
+  이촌: "S1-4-430",
+  신용산: "S1-4-429",
+  삼각지: "S1-4-428",
+  숙대입구: "S1-4-427",
+  사당: "S1-4-433",
+  금정: "KR-4-443",
 };
 // WHY: every name checked against the 2026-10-17 21:05–21:21 position rows and the train map pages, and the
 // ones tracked for coverage (ADR 0017, D6) against the 2026-10-18 11:16–11:35 position rows and train map pages (line 4 writes Seoul
-// Station as `서울`).
+// Station as `서울`), and those Sadang, Geumjeong and Jongno 5-ga add against the 2026-10-25 12:23–12:27 ones (both write
+// Chongshin Univ. with its suffix).
 const LINE_2_NAMES = {
   잠실: "S1-2-216",
   강남: "S1-2-222",
@@ -67,6 +114,10 @@ const LINE_2_NAMES = {
   사당: "S1-2-226",
   낙성대: "S1-2-227",
   서울대입구: "S1-2-228",
+  봉천: "S1-2-229",
+  신림: "S1-2-230",
+  신대방: "S1-2-231",
+  구로디지털단지: "S1-2-232",
 };
 const LINE_3_NAMES = {
   도곡: "S1-3-334",
@@ -244,7 +295,7 @@ describe("toSeoulLines", () => {
 
     // Assert
     expect(lines).toHaveLength(REGISTRY.lines.length);
-    expect(lines[0]?.platformIdByApiName.get("성균관대")).toBe("KR-1-0153");
+    expect(lines[0]?.platformIdByApiName.get("성균관대")).toBe("KR-1-P153");
     expect(lines[0]?.platformIdByApiName.get("의정부")).toBe("KR-1-X100");
   });
 
@@ -268,7 +319,7 @@ describe("toSeoulStations", () => {
 
     // Assert
     expect(stations.map(({ seoulName, platformBySubwayId }) => [seoulName, Object.fromEntries(platformBySubwayId)])).toEqual([
-      ["성균관대", { "1001": { platformId: "KR-1-0153", trainNumbers: "timetable" } }],
+      ["성균관대", { "1001": { platformId: "KR-1-P153", trainNumbers: "timetable" } }],
       ["혜화", { "1004": { platformId: "S1-4-420", trainNumbers: "timetable" } }],
       [
         "정자",
@@ -306,6 +357,21 @@ describe("toSeoulStations", () => {
         },
       ],
       ["광교중앙", { "1077": { platformId: "DX-D1-4318", trainNumbers: "trainset" } }],
+      [
+        "사당",
+        {
+          "1002": { platformId: "S1-2-226", trainNumbers: "circle" },
+          "1004": { platformId: "S1-4-433", trainNumbers: "timetable" },
+        },
+      ],
+      [
+        "금정",
+        {
+          "1001": { platformId: "KR-1-P149", trainNumbers: "timetable" },
+          "1004": { platformId: "KR-4-443", trainNumbers: "timetable" },
+        },
+      ],
+      ["종로5가", { "1001": { platformId: "S1-1-154", trainNumbers: "timetable" } }],
     ]);
   });
 
@@ -322,7 +388,7 @@ describe("toSeoulStations", () => {
     expect(station?.seoulName).toBe("혜화");
     expect([...(station?.platformBySubwayId.entries() ?? [])].map(([subwayId, platform]) => [subwayId, platform.platformId])).toEqual([
       ["1004", "S1-4-420"],
-      ["1001", "KR-1-0153"],
+      ["1001", "KR-1-P153"],
     ]);
   });
 });
@@ -349,7 +415,7 @@ describe("toTrainMapLines", () => {
 describe("toSettledObservations", () => {
   const event = (trainNo: string): TrainEvent => ({
     trainNo,
-    platformId: "KR-1-0153",
+    platformId: "KR-1-P153",
     state: "arrived",
     stateChangedAt: new Date("2026-10-16T20:16:00Z"),
     destination: "광운대",
