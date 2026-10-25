@@ -233,18 +233,30 @@ describe("list growth rule applies as specified", () => {
     expect(growthViolations([lowered], [], gate)).toEqual([]);
   });
 
-  it("refuses a role cap raised without the trailer, and passes one raised with it, lowered, added or removed", () => {
+  it("refuses a role cap raised without the trailer, and passes one raised with it, lowered or removed", () => {
     // Arrange
     const roleCaps = "__tests__/architecture/caps/role-max-lines.json";
     const change = { file: roleCaps, before: '{ "filter": 68, "error": 18 }', after: '{ "filter": 83, "error": 18 }' };
     const bare = commit("9999999999", [], [roleCaps], [change]);
     const recorded = commit("aaaaaaaaaa", [roleCaps], [roleCaps], [change]);
-    const reshaped = { file: roleCaps, before: '{ "filter": 83, "error": 18 }', after: '{ "error": 12, "pipe": 31 }' };
+    const reshaped = { file: roleCaps, before: '{ "filter": 83, "error": 18 }', after: '{ "error": 12 }' };
 
     // Act & Assert
     expect(growthViolations([change], [bare], gate)).toEqual([expect.stringContaining(`${roleCaps}: filter max raised`)]);
     expect(growthViolations([change], [recorded], gate)).toEqual([]);
     expect(growthViolations([reshaped], [], gate)).toEqual([]);
+  });
+
+  it("refuses a role cap key added without the trailer, and passes one added with it", () => {
+    // Arrange
+    const roleCaps = "__tests__/architecture/caps/role-max-lines.json";
+    const change = { file: roleCaps, before: '{ "error": 18 }', after: '{ "error": 18, "pipe": 31 }' };
+    const bare = commit("bbbbbbbbbb", [], [roleCaps], [change]);
+    const recorded = commit("cccccccccc", [roleCaps], [roleCaps], [change]);
+
+    // Act & Assert
+    expect(growthViolations([change], [bare], gate)).toEqual([expect.stringContaining(`${roleCaps}: pipe max raised`)]);
+    expect(growthViolations([change], [recorded], gate)).toEqual([]);
   });
 
   it("passes a new exemption whose reason cites a decision its file allows, and refuses any other", () => {

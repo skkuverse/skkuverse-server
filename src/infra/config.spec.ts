@@ -12,7 +12,7 @@
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), fatal: jest.fn() };
 jest.mock("./logger", () => mockLogger);
 
-const TOUCHED = ["NODE_ENV", "ROLE", "SEOUL_BUS_SERVICE_KEY"] as const;
+const TOUCHED = ["NODE_ENV", "ROLE", "SEOUL_BUS_SERVICE_KEY", "PERIMETER_MODE", "HOST"] as const;
 
 /** Requires a fresh config.ts with `env` over the test env, and restores it after. */
 function loadConfigWith(env: Partial<Record<(typeof TOUCHED)[number], string | undefined>>): void {
@@ -59,5 +59,19 @@ describe("loading config under NODE_ENV=test", () => {
   it("loads with the URL-encoded test key in a polling role", () => {
     // Act & Assert
     expect(() => loadConfigWith({ NODE_ENV: "test", ROLE: "poller", SEOUL_BUS_SERVICE_KEY: "test-seoul-bus-key" })).not.toThrow();
+  });
+});
+
+describe("loading config with an invalid perimeter mode or host", () => {
+  it("throws under NODE_ENV=test without PERIMETER_MODE, naming it", () => {
+    // Act & Assert
+    expect(() => loadConfigWith({ NODE_ENV: "test", PERIMETER_MODE: undefined })).toThrow(/Invalid perimeter[\s\S]*PERIMETER_MODE is required/);
+    expect(mockLogger.fatal).toHaveBeenCalledWith(expect.objectContaining({ event: "config.invalid_perimeter" }), expect.any(String));
+  });
+
+  it("throws in a listening role without HOST, and loads the poller without one", () => {
+    // Act & Assert
+    expect(() => loadConfigWith({ NODE_ENV: "test", ROLE: "api", HOST: undefined })).toThrow(/HOST is required where the server listens/);
+    expect(() => loadConfigWith({ NODE_ENV: "test", ROLE: "poller", HOST: undefined })).not.toThrow();
   });
 });
