@@ -3,7 +3,7 @@
  * first run the rider can catch after the legs before it, a catch margin ahead of their arrival at the stop, skipping
  * a vehicle with no seat left; the legs before the first ride are timed back from that boarding, so the option leaves
  * when it must, never before now; the wait is the boarding minus the arrival at the stop; up to two later catchable
- * calls are kept; the alight is the door's call for the same run, else the boarding plus the leg's ride minutes as an
+ * listed calls are kept, a full vehicle skipped, and never a headway estimate (ADR 0022 PR (h)); the alight is the door's call for the same run, else the boarding plus the leg's ride minutes as an
  * estimate; past a source's listed vehicles a headway boards half a headway after the rider is ready, as an estimate;
  * an option with no run left is not running, ended, with the board's next service, and one whose door failed is
  * unavailable; when a later ride has no run left, the option is ended too, its next service the boarding of the first
@@ -132,6 +132,37 @@ describe("planOption", () => {
     // Assert
     expect(rideOf(planned).board.vehicleId).toBe("unknown");
     expect(rideOf(planned).vehicles.map((vehicle) => vehicle.id)).toEqual(["unknown"]);
+  });
+
+  describe("Later calls: the next two catchable listed calls after the boarded one, never a headway estimate", () => {
+    const seats = (id: string, seatsLeft: number | null) => ({ id, occupancy: null, seatsLeft, isLowFloor: null });
+    const HEADWAY = { kind: "headway", headwaySec: 600, serviceEndsAt: kst("23:00") } as const;
+
+    it("lists the predicted vehicles after the boarded one, skipping a full one, at most two", () => {
+      // Arrange
+      const vehicles = { a: seats("a", 3), full: seats("full", 0), b: seats("b", null), c: seats("c", 9), d: seats("d", 1) };
+      const runs = board(["a", "full", "b", "c", "d"].map((id, index) => departure(`14:1${index}`, null, { vehicleId: id, basis: "provider" })), { vehicles, continuation: HEADWAY });
+
+      // Act
+      const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+      // Assert
+      expect([rideOf(planned).board.vehicleId, ...rideOf(planned).later.map((later) => later.vehicleId)]).toEqual(["a", "b", "c"]);
+      expect(rideOf(planned).vehicles.map((vehicle) => vehicle.id)).toEqual(["a", "b", "c"]);
+    });
+
+    it("lists only the listed vehicle left, and nothing after a headway board, though a headway follows", () => {
+      // Arrange
+      const oneLeft = board([departure("14:10", null, { vehicleId: "a" }), departure("14:20", null, { vehicleId: "b" })], { continuation: HEADWAY });
+      const headwayOnly = board([departure("14:05", null, { vehicleId: "a" })], { continuation: HEADWAY });
+
+      // Act
+      const [listed, headway] = [planOption(OPTION, context(kst("14:00"), oneLeft)), planOption(OPTION, context(kst("14:00"), headwayOnly))];
+
+      // Assert
+      expect(rideOf(listed).later.map((later) => later.vehicleId)).toEqual(["b"]);
+      expect([rideOf(headway).board.basis, rideOf(headway).later]).toEqual(["estimate", []]);
+    });
   });
 
   it("Past the listed vehicles: boards half a headway after the rider is ready, as an estimate naming no vehicle", () => {
