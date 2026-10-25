@@ -245,23 +245,6 @@ const config = {
     },
   },
 
-  app: {
-    ios: {
-      minVersion: process.env.APP_IOS_MIN_VERSION || "1.0.0",
-      updateUrl: process.env.APP_IOS_UPDATE_URL || null,
-      get minOsVersion(): string {
-        return roleScoped("APP_IOS_MIN_OS_VERSION");
-      },
-    },
-    android: {
-      minVersion: process.env.APP_ANDROID_MIN_VERSION || "1.0.0",
-      updateUrl: process.env.APP_ANDROID_UPDATE_URL || null,
-      get minOsVersion(): string {
-        return roleScoped("APP_ANDROID_MIN_OS_VERSION");
-      },
-    },
-  },
-
   naver: {
     get styleId(): string {
       return roleScoped("NAVER_MAP_STYLE_ID");

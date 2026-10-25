@@ -1,10 +1,10 @@
-import type { AppFeatures } from "./app-config.types";
-
-export const APP_FEATURES_DATASET = "app-features";
+export const APP_PLATFORM_GATES_DATASET = "app-platform-gates";
 
 // WHY: a missing, invalid or unreadable dataset recurs on every read; one line a minute, as docs/reference/logging.md asks.
-export const APP_FEATURES_LOG_INTERVAL_MS = 60_000;
+export const APP_PLATFORM_GATES_LOG_INTERVAL_MS = 60_000;
 
-// WHY: the safe side of a kill switch is off: with no good stored value the app keeps its old shell. This is the
-// defined failure mode, not a silent fallback: each cause is logged at error (skkuverse-app ADR 0023, decision 4).
-export const APP_FEATURES_WHEN_UNREAD: Readonly<AppFeatures> = Object.freeze({ sharedMapShell: false });
+// CONTRACT(skkuverse-app): its force-update gate compares these with isVersionLessThan and the device's OS
+// (skkuverse-app/packages/shared/src/schema/app-config.schema.ts), which reads a malformed OS floor as absent.
+export const APP_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+export const IOS_VERSION_PATTERN = /^\d+(\.\d+){0,2}$/;
+export const ANDROID_API_LEVEL_PATTERN = /^\d+$/;
