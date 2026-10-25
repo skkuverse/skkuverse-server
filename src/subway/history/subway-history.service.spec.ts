@@ -36,7 +36,7 @@ import type { SubwayHistoryRepository } from "./subway-history.repository";
 import { SubwayHistoryService } from "./subway-history.service";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
-const SUNGKYUNKWAN = "KR-1-0153";
+const SUNGKYUNKWAN = "KR-1-P153";
 
 function setup() {
   let now = at("20:20:00");

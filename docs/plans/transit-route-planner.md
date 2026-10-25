@@ -305,8 +305,8 @@ Both routes, four options each, in data order. Stop ids exist in production toda
 | Option | Legs | Pushed in |
 | --- | --- | --- |
 | `inja` 인자셔틀 | walk → `bus_stop:hssc-bus-lot`; ride `inja` (`busTimetable`, `campus-inja`) `hssc-bus-lot` → `bus_stop:nsc-n-center`; walk → `skku_building:7` | (e) |
-| `line4-line1` 4호선 · 1호선 | walk → `subway_station:hyehwa`; ride `line4` (`subway`, `4`) `hyehwa` `S1-4-420` → `subway_station:geumjeong` (line 4 platform: to be filled by (b)); transfer at `geumjeong` to `KR-1-P149`; ride `line1` (`subway`, `1`) `geumjeong` `KR-1-P149` → `subway_station:sungkyunkwan` `KR-1-0153`; walk → `skku_building:7` | (f) |
-| `jongro08-line1` 종로08 · 1호선 | walk → `bus_stop:seoul-01531` (명륜시장.성대후문); ride `jongro08` (`topis`, `jongro08`) → `bus_stop:seoul-01794` (종로5가역.광장시장); walk → `subway_station:jongno5ga` (platform: to be filled by (b)); ride `line1` → `sungkyunkwan` `KR-1-0153`; walk → `skku_building:7` | (g) |
+| `line4-line1` 4호선 · 1호선 | walk → `subway_station:hyehwa`; ride `line4` (`subway`, `4`) `hyehwa` `S1-4-420` → `subway_station:geumjeong` (line 4 platform: to be filled by (b)); transfer at `geumjeong` to `KR-1-P149`; ride `line1` (`subway`, `1`) `geumjeong` `KR-1-P149` → `subway_station:sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (f) |
+| `jongro08-line1` 종로08 · 1호선 | walk → `bus_stop:seoul-01531` (명륜시장.성대후문); ride `jongro08` (`topis`, `jongro08`) → `bus_stop:seoul-01794` (종로5가역.광장시장); walk → `subway_station:jongno5ga` (platform: to be filled by (b)); ride `line1` → `sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (g) |
 | `line4-7800` 4호선 · 7800 | walk → `hyehwa`; ride `line4` `S1-4-420` → `subway_station:sadang` (line 4 platform: to be filled by (b)); walk → `bus_stop:sadang-exit9`; ride `bus7800` (`topis`, `gyeonggi7800`, mode `expressBus`) → `bus_stop:nsc-skku-to-suwon`; walk → `skku_building:7` | (g) |
 
 ### 자과캠 → 인사캠 (`nsc-to-hssc`: `skku_building:7` → `skku_building:1`)
@@ -314,8 +314,8 @@ Both routes, four options each, in data order. Stop ids exist in production toda
 | Option | Legs | Pushed in |
 | --- | --- | --- |
 | `inja` 인자셔틀 | walk → `bus_stop:nsc-opposite`; ride `jain` (`busTimetable`, `campus-jain`) → `bus_stop:hssc-600th`; walk → `skku_building:1` | (e) |
-| `line1-line4` 1호선 · 4호선 | walk → `sungkyunkwan`; ride `line1` `KR-1-0153` → `geumjeong` `KR-1-P149`; transfer at `geumjeong` to its line 4 platform; ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (f) |
-| `line1-jongro08` 1호선 · 종로08 | walk → `sungkyunkwan`; ride `line1` `KR-1-0153` → `jongno5ga`; walk → `bus_stop:seoul-01725` (종로5가역.중부교육지원청); ride `jongro08` → `bus_stop:seoul-01864` (명륜시장.성대후문); walk → `skku_building:1` | (g) |
+| `line1-line4` 1호선 · 4호선 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `geumjeong` `KR-1-P149`; transfer at `geumjeong` to its line 4 platform; ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (f) |
+| `line1-jongro08` 1호선 · 종로08 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `jongno5ga`; walk → `bus_stop:seoul-01725` (종로5가역.중부교육지원청); ride `jongro08` → `bus_stop:seoul-01864` (명륜시장.성대후문); walk → `skku_building:1` | (g) |
 | `7800-line4` 7800 · 4호선 | walk → `bus_stop:nsc-skku-to-sadang`; ride `bus7800` → `bus_stop:sadang-median`; walk → `sadang`; ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (g) |
 
 - **Lines.** `inja` and `jain` (`busTimetable`, every route type of `campus-inja` and `campus-jain`, D7), `line1` and `line4` (`subway`), `jongro08` and `bus7800` (`topis`). Colors and names follow the boards: 1호선 `0052A4` and 4호선 `00A5DE` as `SUBWAY_LINES` has them.

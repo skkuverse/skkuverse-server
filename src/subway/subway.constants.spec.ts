@@ -19,7 +19,7 @@ describe("SUBWAY_STATIONS", () => {
 
     // Assert
     expect(stations).toEqual([
-      ["sungkyunkwan", ["KR-1-0153"]],
+      ["sungkyunkwan", ["KR-1-P153"]],
       ["hyehwa", ["S1-4-420"]],
       ["jeongja", ["DX-D1-4312", "KR-K1-K230"]],
       ["jamsil", ["S1-2-216", "S1-8-2815"]],
@@ -40,7 +40,7 @@ describe("SUBWAY_STATIONS", () => {
 
     // Assert
     expect(sources).toEqual([
-      ["KR-1-0153", "1", { source: "korail" }],
+      ["KR-1-P153", "1", { source: "korail" }],
       ["S1-4-420", "4", { source: "seoul-station", stationCode: "0420" }],
       ["DX-D1-4312", "D1", { source: "shinbundang" }],
       ["KR-K1-K230", "K1", { source: "korail" }],

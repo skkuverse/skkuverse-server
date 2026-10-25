@@ -323,7 +323,7 @@ describe("toSubwayStationArrivals", () => {
   it("serves one line entry per platform, in the station's order, each with its own document's generatedAt", () => {
     // Arrange
     const transfer: SubwayStation = { ...HYEHWA, id: "transfer", platforms: [HYEHWA_PLATFORM, SUNGKYUNKWAN.platforms[0] as SubwayPlatform] };
-    const stale = { ...DOC, _id: "KR-1-0153", generatedAt: new Date("2026-10-16T11:30:00Z"), directions: { up: [], down: [] } };
+    const stale = { ...DOC, _id: "KR-1-P153", generatedAt: new Date("2026-10-16T11:30:00Z"), directions: { up: [], down: [] } };
 
     // Act
     const response = toSubwayStationArrivals(transfer, transfer.platforms.map((platform, i) => ({ platform, doc: i === 0 ? DOC : stale })), { lang: "en", registry: REGISTRY, coords: HYEHWA_COORDS });
@@ -331,7 +331,7 @@ describe("toSubwayStationArrivals", () => {
     // Assert
     expect(response.lines.map((l) => [l.line.code, l.line.marker.text, l.line.color, l.platformId, l.generatedAt])).toEqual([
       ["4", "4", "00A5DE", "S1-4-420", "2026-10-16T20:41:00+09:00"],
-      ["1", "1", "0052A4", "KR-1-0153", "2026-10-16T20:30:00+09:00"],
+      ["1", "1", "0052A4", "KR-1-P153", "2026-10-16T20:30:00+09:00"],
     ]);
   });
 

@@ -25,7 +25,7 @@ const SHINBUNDANG = { source: "shinbundang" } as const;
 const seoulStation = (stationCode: string) => ({ source: "seoul-station", stationCode }) as const;
 
 export const SUBWAY_STATIONS: readonly NetworkStation[] = [
-  { id: "sungkyunkwan", name: named("성균관대", "Sungkyunkwan Univ.", "成均馆大学"), seoulName: "성균관대", campus: "nsc", platforms: [{ id: "KR-1-0153", line: "1", timetable: KORAIL }] },
+  { id: "sungkyunkwan", name: named("성균관대", "Sungkyunkwan Univ.", "成均馆大学"), seoulName: "성균관대", campus: "nsc", platforms: [{ id: "KR-1-P153", line: "1", timetable: KORAIL }] },
   { id: "hyehwa", name: named("혜화", "Hyehwa", "惠化"), seoulName: "혜화", campus: "hssc", platforms: [{ id: "S1-4-420", line: "4", timetable: seoulStation("0420") }] },
   { id: "jeongja", name: named("정자", "Jeongja", "亭子"), seoulName: "정자", campus: "nsc", platforms: [{ id: "DX-D1-4312", line: "D1", timetable: SHINBUNDANG }, { id: "KR-K1-K230", line: "K1", timetable: KORAIL }] },
   { id: "jamsil", name: named("잠실", "Jamsil", "蚕室"), seoulName: "잠실", campus: "nsc", platforms: [{ id: "S1-2-216", line: "2", timetable: seoulStation("0216") }, { id: "S1-8-2815", line: "8", timetable: seoulStation("2815") }] },

@@ -51,12 +51,12 @@ describe("toTopologyIssues", () => {
     [
       "Next stop without a name: a next platform whose neighbor has no name",
       (data: Record<string, any>) => delete data.neighbors["KR-1-P152"].name,
-      'platforms.KR-1-0153.up.nextPlatformId: neighbor "KR-1-P152" is a previous or next station and has no name',
+      'platforms.KR-1-P153.up.nextPlatformId: neighbor "KR-1-P152" is a previous or next station and has no name',
     ],
     [
       "a previous stop whose neighbor has no name",
       (data: Record<string, any>) => delete data.neighbors["KR-1-P154"].name,
-      'platforms.KR-1-0153.up.upstreamPlatformIds.0: neighbor "KR-1-P154" is a previous or next station and has no name',
+      'platforms.KR-1-P153.up.upstreamPlatformIds.0: neighbor "KR-1-P154" is a previous or next station and has no name',
     ],
     [
       "Watched stop on another line: S1-3-330 watched by S1-4-420",
@@ -70,8 +70,8 @@ describe("toTopologyIssues", () => {
     ],
     [
       "a watched platform neither served nor a neighbor",
-      (data: Record<string, any>) => (data.platforms["KR-1-0153"].down.watchedPlatformIds = ["KR-1-P158"]),
-      'platforms.KR-1-0153.down.watchedPlatformIds.0: "KR-1-P158" is neither a served platform nor a neighbor',
+      (data: Record<string, any>) => (data.platforms["KR-1-P153"].down.watchedPlatformIds = ["KR-1-P158"]),
+      'platforms.KR-1-P153.down.watchedPlatformIds.0: "KR-1-P158" is neither a served platform nor a neighbor',
     ],
     [
       "a neighbor on a line the code does not hold",
@@ -126,10 +126,10 @@ describe("toMissingPlatformIds", () => {
     // Arrange
     const data = fixture();
     delete data.platforms["S1-2-222"];
-    delete data.platforms["KR-1-0153"];
+    delete data.platforms["KR-1-P153"];
 
     // Act & Assert
-    expect(toMissingPlatformIds(data as SubwayTopologyData, PLATFORM_IDS)).toEqual(["KR-1-0153", "S1-2-222"]);
+    expect(toMissingPlatformIds(data as SubwayTopologyData, PLATFORM_IDS)).toEqual(["KR-1-P153", "S1-2-222"]);
   });
 });
 
@@ -155,7 +155,7 @@ describe("toUnnamedStopIds", () => {
   it("Topology pushed ahead of a deploy: lists KR-1-P154 once when a push serves it and drops its neighbor entry, though 성균관대 names it both ways", () => {
     // Arrange
     const data = fixture();
-    data.platforms["KR-1-P154"] = data.platforms["KR-1-0153"];
+    data.platforms["KR-1-P154"] = data.platforms["KR-1-P153"];
     delete data.neighbors["KR-1-P154"];
 
     // Act & Assert
@@ -217,21 +217,21 @@ describe("toRouteIssues", () => {
     ],
     [
       "a next platform that is not the stop after the platform",
-      (data: Record<string, any>) => (data.platforms["KR-1-0153"].up.nextPlatformId = "KR-1-P151"),
-      /^platforms\.KR-1-0153\.up\.nextPlatformId: .*"KR-1-P152"/,
+      (data: Record<string, any>) => (data.platforms["KR-1-P153"].up.nextPlatformId = "KR-1-P151"),
+      /^platforms\.KR-1-P153\.up\.nextPlatformId: .*"KR-1-P152"/,
     ],
     [
       "watched platforms out of route order",
-      (data: Record<string, any>) => data.platforms["KR-1-0153"].down.watchedPlatformIds.reverse(),
-      /^platforms\.KR-1-0153\.down\.watchedPlatformIds: .*"KR-1-P149","KR-1-P148","KR-1-P147"/,
+      (data: Record<string, any>) => data.platforms["KR-1-P153"].down.watchedPlatformIds.reverse(),
+      /^platforms\.KR-1-P153\.down\.watchedPlatformIds: .*"KR-1-P149","KR-1-P148","KR-1-P147"/,
     ],
     [
       "Watched platform dropped with its neighbor: 성균관대 down without 안양 (KR-1-P147)",
       (data: Record<string, any>) => {
-        data.platforms["KR-1-0153"].down.watchedPlatformIds.pop();
+        data.platforms["KR-1-P153"].down.watchedPlatformIds.pop();
         delete data.neighbors["KR-1-P147"];
       },
-      /^platforms\.KR-1-0153\.down: "KR-1-P147" .*neither a served platform nor a neighbor/,
+      /^platforms\.KR-1-P153\.down: "KR-1-P147" .*neither a served platform nor a neighbor/,
     ],
   ])("reports %s, with its path", async (_case, arrange, issue) => {
     // Arrange

@@ -1057,27 +1057,27 @@ describe("loadCatalog subway-topology", () => {
     const catalog = loadCatalog(srcLoader);
     const data = topology();
     // WHY: 회기 ends the down stretch of every line 1 platform, so each one drops it.
-    for (const id of ["KR-1-0153", "KR-1-P149", "S1-1-154"]) data.platforms[id]!.down.watchedPlatformIds.pop();
+    for (const id of ["KR-1-P153", "KR-1-P149", "S1-1-154"]) data.platforms[id]!.down.watchedPlatformIds.pop();
     delete data.neighbors["KR-1-123"];
 
     // Act
     const lines = issueLines(checkData(catalog, "subway-topology", data, storedTimetables()));
 
     // Assert
-    expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.down: "KR-1-123" .*neither a served platform nor a neighbor$/));
+    expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.KR-1-P153\.down: "KR-1-123" .*neither a served platform nor a neighbor$/));
   });
 
   it("refuses four upstream platforms with the server's schema, naming the direction's list", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
     const data = topology();
-    data.platforms["KR-1-0153"]!.up.upstreamPlatformIds.push("KR-1-1716");
+    data.platforms["KR-1-P153"]!.up.upstreamPlatformIds.push("KR-1-1716");
 
     // Act
     const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
 
     // Assert
-    expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.up\.upstreamPlatformIds: /)]);
+    expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.KR-1-P153\.up\.upstreamPlatformIds: /)]);
   });
 });
 
@@ -1165,19 +1165,19 @@ describe("loadCatalog subway-timetables", () => {
     expect(lines).toEqual([expect.stringMatching(/^subway-timetables: KR-1-weekday\.json\.trains\.2\.trainNo: /)]);
   });
 
-  it("Train outside the service window: refuses a KR-1-weekday table whose train reaches KR-1-0153 at 04:59, naming the table, platform and train", () => {
+  it("Train outside the service window: refuses a KR-1-weekday table whose train reaches KR-1-P153 at 04:59, naming the table, platform and train", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
     const tables = files();
     const weekday = tables.find(({ file }) => file === "KR-1-weekday.json")!.data;
-    const early = weekday.trains.find((train: any) => train.stops.some((stop: any) => stop.station === "KR-1-0153"));
-    early.stops = early.stops.map((stop: any) => (stop.station === "KR-1-0153" ? { ...stop, arr: 17940, dep: 17970 } : stop));
+    const early = weekday.trains.find((train: any) => train.stops.some((stop: any) => stop.station === "KR-1-P153"));
+    early.stops = early.stops.map((stop: any) => (stop.station === "KR-1-P153" ? { ...stop, arr: 17940, dep: 17970 } : stop));
 
     // Act
     const checked = checkParts(catalog, "subway-timetables", tables, {});
 
     // Assert
-    expect(issueLines(checked.issues)).toEqual([`subway-timetables: KR-1-weekday.KR-1-0153: 2 stop time(s) outside the service window: ${early.trainNo} 17940 s, ${early.trainNo} 17970 s`]);
+    expect(issueLines(checked.issues)).toEqual([`subway-timetables: KR-1-weekday.KR-1-P153: 2 stop time(s) outside the service window: ${early.trainNo} 17940 s, ${early.trainNo} 17970 s`]);
     expect(checked.parts).toEqual([]);
     expect(issueLines(checked.warnings).filter((line) => line.includes("service window"))).toEqual([]);
   });

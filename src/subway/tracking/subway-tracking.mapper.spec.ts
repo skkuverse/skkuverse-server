@@ -35,11 +35,11 @@ const documented = (train: TrainArrival, passedPlatformIds: readonly string[] = 
 describe("toArrivalsDoc", () => {
   it("keys the document by the station id and stamps it with the tick's time and service day", () => {
     // Act
-    const doc = toArrivalsDoc({ _id: "KR-1-0153", generatedAt: NOW, serviceDate: "2026-10-16" }, { up: [], down: [documented(arrival())] });
+    const doc = toArrivalsDoc({ _id: "KR-1-P153", generatedAt: NOW, serviceDate: "2026-10-16" }, { up: [], down: [documented(arrival())] });
 
     // Assert
     expect(doc).toEqual({
-      _id: "KR-1-0153",
+      _id: "KR-1-P153",
       generatedAt: NOW,
       serviceDate: "2026-10-16",
       directions: {
@@ -64,7 +64,7 @@ describe("toArrivalsDoc", () => {
 
   it("keeps a train with no position as one with none", () => {
     // Act
-    const doc = toArrivalsDoc({ _id: "KR-1-0153", generatedAt: NOW, serviceDate: "2026-10-16" }, { up: [documented(arrival({ direction: "up", position: null, source: "scheduled" }))], down: [] });
+    const doc = toArrivalsDoc({ _id: "KR-1-P153", generatedAt: NOW, serviceDate: "2026-10-16" }, { up: [documented(arrival({ direction: "up", position: null, source: "scheduled" }))], down: [] });
 
     // Assert
     expect(doc.directions.up).toEqual([expect.objectContaining({ position: null, source: "scheduled" })]);
@@ -76,7 +76,7 @@ describe("toArrivalsDoc", () => {
     const express = documented(arrival({ trainNo: "1913", express: true, isLastRun: true }), ["KR-1-P152", "KR-1-P151"]);
 
     // Act
-    const doc = toArrivalsDoc({ _id: "KR-1-0153", generatedAt: NOW, serviceDate: "2026-10-16" }, { up: [], down: [express, documented(arrival())] });
+    const doc = toArrivalsDoc({ _id: "KR-1-P153", generatedAt: NOW, serviceDate: "2026-10-16" }, { up: [], down: [express, documented(arrival())] });
 
     // Assert
     expect(doc.directions.down[0]).toMatchObject({ trainNo: "1913", isLastRun: true, passedPlatformIds: ["KR-1-P152", "KR-1-P151"] });

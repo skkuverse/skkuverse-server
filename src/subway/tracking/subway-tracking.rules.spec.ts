@@ -25,14 +25,14 @@ import {
 } from "./subway-tracking.rules";
 import type { TrackingTick, TrainHistory } from "./subway-tracking.types";
 
-const DOWN_ROUTE = ["KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154", "KR-1-P155", "KR-1-1715", "KR-1-P157"];
+const DOWN_ROUTE = ["KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-P153", "KR-1-P154", "KR-1-P155", "KR-1-1715", "KR-1-P157"];
 const ROUTES: LineRoutes = { down: DOWN_ROUTE, up: [...DOWN_ROUTE].reverse() };
 const DIRECTION_BY_DESTINATION = toDirectionByDestination([
   { direction: "down", destination: "서동탄" },
   { direction: "up", destination: "광운대" },
 ]);
 const UIWANG = "KR-1-P152";
-const SUNGKYUNKWAN = "KR-1-0153";
+const SUNGKYUNKWAN = "KR-1-P153";
 const HWASEO = "KR-1-P154";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
@@ -530,16 +530,16 @@ describe("toLiveCountdownRows", () => {
 });
 
 describe("toPassedPlatformIds", () => {
-  const SOUTHBOUND = ["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154"];
+  const SOUTHBOUND = ["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-P153", "KR-1-P154"];
 
   it.each([
-    ["a local calling at every station", ["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153"], []],
-    ["the express from 금정, nearest first", ["KR-1-P147", "KR-1-P149", "KR-1-0153"], ["KR-1-P152", "KR-1-P151", "KR-1-P150"]],
-    ["an express passing only 당정", ["KR-1-P149", "KR-1-P150", "KR-1-P152", "KR-1-0153"], ["KR-1-P151"]],
-    ["a train starting at 당정, leaving out the stations before it", ["KR-1-P151", "KR-1-P152", "KR-1-0153"], []],
+    ["a local calling at every station", ["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-P153"], []],
+    ["the express from 금정, nearest first", ["KR-1-P147", "KR-1-P149", "KR-1-P153"], ["KR-1-P152", "KR-1-P151", "KR-1-P150"]],
+    ["an express passing only 당정", ["KR-1-P149", "KR-1-P150", "KR-1-P152", "KR-1-P153"], ["KR-1-P151"]],
+    ["a train starting at 당정, leaving out the stations before it", ["KR-1-P151", "KR-1-P152", "KR-1-P153"], []],
   ] as const)("lists the upstream platforms within reach that %s passes", (_label, stopPlatformIds, passed) => {
     // Act
-    const passedPlatformIds = toPassedPlatformIds(SOUTHBOUND, "KR-1-0153", stopPlatformIds);
+    const passedPlatformIds = toPassedPlatformIds(SOUTHBOUND, "KR-1-P153", stopPlatformIds);
 
     // Assert
     expect(passedPlatformIds).toEqual(passed);

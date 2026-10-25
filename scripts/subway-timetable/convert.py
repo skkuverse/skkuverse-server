@@ -145,7 +145,7 @@ LINE1_STATIONS = (
     ("KR-1-1715", "세류"),
     ("KR-1-P155", "수원"),
     ("KR-1-P154", "화서"),
-    ("KR-1-0153", "성균관"),
+    ("KR-1-P153", "성균관"),
     ("KR-1-P152", "의왕"),
     ("KR-1-P151", "당정"),
     ("KR-1-P150", "군포"),
@@ -212,7 +212,7 @@ LINE1 = {
     "source": "korail",
     "stations": LINE1_STATIONS,
     "up_order": "listed",
-    "served": ("KR-1-0153", "KR-1-P149", "S1-1-154"),
+    "served": ("KR-1-P153", "KR-1-P149", "S1-1-154"),
     # 구로 ends trains from 병점 northbound and from 회기 southbound, 서울 underground ones from 회기 and the 서울급행 at
     # ground level from 병점 (2026-08-28 weekday file); every number is even up and odd down, so the tracker reads parity.
     "two_direction_destinations": ("구로", "서울"),

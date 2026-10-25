@@ -63,7 +63,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
 
     // Assert
     expect(schedules.map((s) => [s.platform.id, s.serviceDate, s.dayType])).toEqual([
-      ["KR-1-0153", "2026-10-17", "holiday"],
+      ["KR-1-P153", "2026-10-17", "holiday"],
       ["S1-4-420", "2026-10-17", "saturday"],
       ["DX-D1-4312", "2026-10-17", "holiday"],
       ["KR-K1-K230", "2026-10-17", "holiday"],
@@ -108,7 +108,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
 
     // Assert
     expect([sungkyunkwan?.serviceDate, sungkyunkwan?.dayType]).toEqual(["2026-10-16", "weekday"]);
-    const arrivals = sungkyunkwan?.trains.flatMap((t) => t.stops.filter((s) => s.platformId === "KR-1-0153").map((s) => s.arrivalAt));
+    const arrivals = sungkyunkwan?.trains.flatMap((t) => t.stops.filter((s) => s.platformId === "KR-1-P153").map((s) => s.arrivalAt));
     expect(arrivals).toContainEqual(new Date("2026-10-16T15:13:00Z"));
   });
 
@@ -122,7 +122,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     } = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
 
     // Assert
-    expect(sungkyunkwan?.lineRoutes.down.slice(-11, -4)).toEqual(["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153"]);
+    expect(sungkyunkwan?.lineRoutes.down.slice(-11, -4)).toEqual(["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-P153"]);
     expect(hyehwa?.lineRoutes.up.slice(22, 29)).toEqual(["S1-4-426", "S1-4-425", "S1-4-424", "S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
   });
 
@@ -504,8 +504,8 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
 
     // Assert
     expect(repository.tableReads.slice(7)).toEqual([partIdOf("KR-1-weekday")]);
-    const shifted = arrivalsAt(before.schedules[0] ?? null, "KR-1-0153").map((iso) => iso && new Date(Date.parse(iso) + 120_000).toISOString());
-    expect(arrivalsAt(after.schedules[0] ?? null, "KR-1-0153")).toEqual(shifted);
+    const shifted = arrivalsAt(before.schedules[0] ?? null, "KR-1-P153").map((iso) => iso && new Date(Date.parse(iso) + 120_000).toISOString());
+    expect(arrivalsAt(after.schedules[0] ?? null, "KR-1-P153")).toEqual(shifted);
   });
 
   it("Invalid table in a new revision: keeps serving the held KR-1-weekday for 24 h, reading the new part once a minute, then has none", async () => {
@@ -513,14 +513,14 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     const tables = subwayTimetablesFixture();
     const { repository, service, advanceTo, partIdOf } = setupStored(tables);
     const pushedAt = Date.parse("2026-10-20T01:00:00.000Z");
-    const held = await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt)));
+    const held = await service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt)));
     const invalid = tables.map((t) => (t === tableOf(tables, "KR-1-weekday") ? { ...t, trains: [{ ...t.trains[0]!, trainNo: "K602" }] } : t));
     repository.storeTables(invalid);
 
     // Act
-    const served = await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + 1)));
-    await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + 30_000)));
-    const late = service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + DAY_MS + 1)));
+    const served = await service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt + MINUTE_MS + 1)));
+    await service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt + MINUTE_MS + 30_000)));
+    const late = service.findPlatformSchedule("KR-1-P153", advanceTo(new Date(pushedAt + MINUTE_MS + DAY_MS + 1)));
 
     // Assert
     expect(served?.trains).toEqual(held?.trains.map((train) => ({ ...train, stops: train.stops })));
@@ -588,7 +588,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     const listed = await service.listPlatformSchedules(new Date("2026-10-20T01:00:00.000Z"));
 
     // Assert
-    expect(listed.schedules.map((schedule) => schedule.platform.id)).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((p) => p.id)).filter((id) => !["KR-1-0153", "KR-1-P149", "S1-1-154"].includes(id)));
+    expect(listed.schedules.map((schedule) => schedule.platform.id)).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((p) => p.id)).filter((id) => !["KR-1-P153", "KR-1-P149", "S1-1-154"].includes(id)));
     expect(listed.unavailable).toMatchObject({ code: "SUBWAY_TIMETABLES_UNAVAILABLE", httpStatus: 503, keys: ["KR-1-weekday"] });
   });
 

@@ -1,8 +1,8 @@
 {
-  "_about": "Synthetic, hand-written for the subway-topology characterization: one fresh subway_arrivals document per served platform, generated 6 s before the test clock. Per platform its up trains stand at the station, at its first upstream platform and at its last, and its down trains at its second upstream platform, at no position, and at its next platform, so every stopsAway rule is exercised. Never captured: the stored state of a moment cannot be replayed against fixed instants. Changed 2026-10-24: each train gained isFirstTrain, false, as the tracker now stores it (app ADR 0022, D4).",
+  "_about": "Synthetic, hand-written for the subway-topology characterization: one fresh subway_arrivals document per served platform, generated 6 s before the test clock. Per platform its up trains stand at the station, at its first upstream platform and at its last, and its down trains at its second upstream platform, at no position, and at its next platform, so every stopsAway rule is exercised. Never captured: the stored state of a moment cannot be replayed against fixed instants. Changed 2026-10-24: each train gained isFirstTrain, false, as the tracker now stores it (app ADR 0022, D4). Renamed 2026-10-25 (owner decision): 성균관대's platform id KR-1-0153 became its KRIC code KR-1-P153 wherever it appears; no other value changed.",
   "docs": [
     {
-      "_id": "KR-1-0153",
+      "_id": "KR-1-P153",
       "generatedAt": "2026-10-20T01:12:40.000Z",
       "serviceDate": "2026-10-20",
       "directions": {
@@ -15,7 +15,7 @@
             "source": "live",
             "isFirstTrain": false,
             "position": {
-              "stationId": "KR-1-0153",
+              "stationId": "KR-1-P153",
               "state": "arrived"
             }
           },

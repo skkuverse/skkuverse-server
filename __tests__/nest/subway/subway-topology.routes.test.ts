@@ -165,7 +165,7 @@ describe("GET /subway/stations/:stationId/arrivals with the stored topology", ()
 
     // Assert
     expect(res.status).toBe(200);
-    expect(directionsOf(res.body, "KR-1-0153")?.map(({ direction, name, previousStation, nextStation }) => [direction, name, previousStation, nextStation])).toEqual([
+    expect(directionsOf(res.body, "KR-1-P153")?.map(({ direction, name, previousStation, nextStation }) => [direction, name, previousStation, nextStation])).toEqual([
       ["up", "Toward Seoul", { id: "KR-1-P154", name: "Hwaseo" }, { id: "KR-1-P152", name: "Uiwang" }],
       ["down", "Toward Cheonan / Seodongtan", { id: "KR-1-P152", name: "Uiwang" }, { id: "KR-1-P154", name: "Hwaseo" }],
     ]);
@@ -186,8 +186,8 @@ describe("GET /subway/stations/:stationId/arrivals with the stored topology", ()
     const after = await arrivalsOf(app, "sungkyunkwan", "en");
 
     // Assert
-    expect(directionsOf(withinTtl.body, "KR-1-0153")?.[0]?.previousStation).toEqual({ id: "KR-1-P154", name: "Hwaseo" });
-    expect(directionsOf(after.body, "KR-1-0153")?.[0]?.previousStation).toEqual({ id: "KR-1-P154", name: "Hwaseo Stn." });
+    expect(directionsOf(withinTtl.body, "KR-1-P153")?.[0]?.previousStation).toEqual({ id: "KR-1-P154", name: "Hwaseo" });
+    expect(directionsOf(after.body, "KR-1-P153")?.[0]?.previousStation).toEqual({ id: "KR-1-P154", name: "Hwaseo Stn." });
   });
 
   it("Fresh replica, database down: answers 503 SUBWAY_TOPOLOGY_UNAVAILABLE with no Cache-Control", async () => {
@@ -266,7 +266,7 @@ describe("GET /subway/stations/:stationId/arrivals with the stored topology", ()
   it("Topology pushed ahead of a deploy: answers Sungkyunkwan 200, its previous station up and next station down null, when a push promotes neighbor KR-1-P154 to a platform", async () => {
     // Arrange
     const ahead = subwayTopologyFixture();
-    ahead.platforms["KR-1-P154"] = ahead.platforms["KR-1-0153"]!;
+    ahead.platforms["KR-1-P154"] = ahead.platforms["KR-1-P153"]!;
     delete ahead.neighbors["KR-1-P154"];
     const app = await boot(storesHolding(ahead));
 
@@ -275,7 +275,7 @@ describe("GET /subway/stations/:stationId/arrivals with the stored topology", ()
 
     // Assert
     expect(res.status).toBe(200);
-    expect(directionsOf(res.body, "KR-1-0153")?.map(({ direction, previousStation, nextStation }) => [direction, previousStation, nextStation])).toEqual([
+    expect(directionsOf(res.body, "KR-1-P153")?.map(({ direction, previousStation, nextStation }) => [direction, previousStation, nextStation])).toEqual([
       ["up", null, { id: "KR-1-P152", name: "Uiwang" }],
       ["down", { id: "KR-1-P152", name: "Uiwang" }, null],
     ]);

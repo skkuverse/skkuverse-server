@@ -44,7 +44,7 @@ const DAYS_180_SEC = 15_552_000;
 const EVENT: SubwayEventDoc = {
   at: at("21:05:50"),
   meta: { line: "1", trainNo: "0692" },
-  stationId: "KR-1-0153",
+  stationId: "KR-1-P153",
   state: "arrived",
   source: "seoul-subway-api",
 };
@@ -52,7 +52,7 @@ const EVENT: SubwayEventDoc = {
 const PREDICTION: SubwayPredictionDoc = {
   serviceDate: "2026-10-16",
   trainNo: "0692",
-  stationId: "KR-1-0153",
+  stationId: "KR-1-P153",
   horizonMin: 3,
   direction: "up",
   source: "estimated",
@@ -140,7 +140,7 @@ describe("SubwayHistoryRepository.upsertPredictions", () => {
       [
         {
           updateOne: {
-            filter: { serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-0153", horizonMin: 3 },
+            filter: { serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-P153", horizonMin: 3 },
             update: { $setOnInsert: PREDICTION },
             upsert: true,
           },
@@ -176,7 +176,7 @@ describe("SubwayHistoryRepository.updateObservedArrival", () => {
   it("resolves, in one update, the train's records at the station made before the tick that saw the arrived row, open or resolved by an approaching row", async () => {
     // Act
     await repository.updateObservedArrival(
-      { serviceDate: "2026-10-16", trainNo: "0692", platformId: "KR-1-0153", observedAt, observedState: "arrived" },
+      { serviceDate: "2026-10-16", trainNo: "0692", platformId: "KR-1-P153", observedAt, observedState: "arrived" },
       at("21:05:51"),
     );
 
@@ -185,7 +185,7 @@ describe("SubwayHistoryRepository.updateObservedArrival", () => {
       {
         serviceDate: "2026-10-16",
         trainNo: "0692",
-        stationId: "KR-1-0153",
+        stationId: "KR-1-P153",
         status: { $in: ["open", "resolved"] },
         observedState: { $in: [null, "approaching"] },
         madeAt: { $lt: at("21:05:51") },
@@ -198,7 +198,7 @@ describe("SubwayHistoryRepository.updateObservedArrival", () => {
   it("resolves by an approaching row only the open records made before the tick that saw it", async () => {
     // Act
     await repository.updateObservedArrival(
-      { serviceDate: "2026-10-16", trainNo: "0692", platformId: "KR-1-0153", observedAt, observedState: "approaching" },
+      { serviceDate: "2026-10-16", trainNo: "0692", platformId: "KR-1-P153", observedAt, observedState: "approaching" },
       at("21:05:51"),
     );
 
@@ -206,7 +206,7 @@ describe("SubwayHistoryRepository.updateObservedArrival", () => {
     expect(updateMany.mock.calls[0]?.[0]).toEqual({
       serviceDate: "2026-10-16",
       trainNo: "0692",
-      stationId: "KR-1-0153",
+      stationId: "KR-1-P153",
       status: { $in: ["open", "resolved"] },
       observedState: { $in: [null] },
       madeAt: { $lt: at("21:05:51") },
@@ -231,7 +231,7 @@ describe("SubwayHistoryRepository.updateUnresolvedPredictions", () => {
 describe("SubwayHistoryRepository.listAccuracyGroups", () => {
   it("aggregates the range's resolved and unresolved records by service date, bounded", async () => {
     // Arrange
-    const groups = [{ stationId: "KR-1-0153", count: 1 }];
+    const groups = [{ stationId: "KR-1-P153", count: 1 }];
     toArray.mockResolvedValueOnce(groups);
     const range = { from: "2026-10-10", to: "2026-10-16" };
 

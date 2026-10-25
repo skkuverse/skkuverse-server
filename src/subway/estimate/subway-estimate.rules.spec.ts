@@ -15,7 +15,7 @@ import { toDelaySec, toStationArrivals } from "./subway-estimate.rules";
 import type { EstimateInput, TrainArrival } from "./subway-estimate.types";
 
 const UIWANG = "KR-1-P152";
-const SUNGKYUNKWAN = "KR-1-0153";
+const SUNGKYUNKWAN = "KR-1-P153";
 const HWASEO = "KR-1-P154";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);

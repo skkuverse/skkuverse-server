@@ -69,7 +69,7 @@ diff of subway-timetables (revision 1 -> 2):
   removed    S1-9-holiday  {"source":{...},"trainCount":250}
 ```
 
-A train counts by its whole row, so a train whose times moved is listed as both added and removed. Check that only the tables you rebuilt changed, and that each train count is plausible. A refusal names the table and the path, such as `S1-4-saturday: no table for S1-4-420 saturday`, `KR-1-weekday.KR-1-0153: 1 stop time(s) outside the service window: 0409 17940 s` or `KR-1-weekday.json.trains.2.trainNo: ...`, and writes nothing. A train outside the service window needs the window widened first: change `SERVICE_WINDOW_OPENS_SEC` or `SERVICE_WINDOW_CLOSES_SEC` in `src/subway/timetable/subway-timetable.constants.ts`, deploy, then push.
+A train counts by its whole row, so a train whose times moved is listed as both added and removed. Check that only the tables you rebuilt changed, and that each train count is plausible. A refusal names the table and the path, such as `S1-4-saturday: no table for S1-4-420 saturday`, `KR-1-weekday.KR-1-P153: 1 stop time(s) outside the service window: 0409 17940 s` or `KR-1-weekday.json.trains.2.trainNo: ...`, and writes nothing. A train outside the service window needs the window widened first: change `SERVICE_WINDOW_OPENS_SEC` or `SERVICE_WINDOW_CLOSES_SEC` in `src/subway/timetable/subway-timetable.constants.ts`, deploy, then push.
 
 Warnings follow the table lines and refuse nothing; `check` prints them too:
 
