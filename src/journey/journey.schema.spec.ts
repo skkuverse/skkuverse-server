@@ -2,7 +2,9 @@
  * journeyRoutesDataset, the shape of the `journey-routes` dataset (ADR 0013, D5; ADR 0022, D4): revision 1 passes as
  * it is; a copy missing any field of the dataset, a line, a route, an option or a leg of each kind fails at its path;
  * an id outside `[a-z0-9-]{1,128}`, a place ref of an unknown kind, an empty evidence, minutes that are not a positive
- * whole number and a catch margin past five minutes fail. storedJourneyRoutes needs its revision and data.
+ * whole number and a catch margin past five minutes fail. A ride's optional time-of-day minutes pass per day type as
+ * bands starting at strictly later `HH:mm` times; a band out of order, at the same time, at a malformed time, or a day
+ * type other than weekday and weekend fails. storedJourneyRoutes needs its revision and data.
  */
 import { journeyRoutesFixture } from "../../__tests__/helpers/journey/journey-routes";
 import { journeyRoutesDataset, storedJourneyRoutes } from "./journey.schema";
@@ -67,6 +69,39 @@ describe("journeyRoutesDataset", () => {
 
     // Act & Assert
     expect(messagesOf(data)).toEqual([]);
+  });
+});
+
+describe("journeyRoutesDataset rideMinutesBands", () => {
+  const BANDS = { weekday: [{ from: "05:00", minutes: 31 }, { from: "17:00", minutes: 48 }, { from: "20:30", minutes: 32 }], weekend: [{ from: "15:30", minutes: 39 }] };
+  const withBands = (bands: unknown) => {
+    const data = journeyRoutesFixture();
+    firstOption(data).legs[1].rideMinutesBands = bands;
+    return data;
+  };
+
+  it("passes weekday and weekend bands, and either alone, as they are", () => {
+    // Arrange
+    const cases = [BANDS, { weekday: BANDS.weekday }, { weekend: BANDS.weekend }].map(withBands);
+
+    // Act
+    const parsed = cases.map((data) => journeyRoutesDataset.parse(data));
+
+    // Assert
+    expect(parsed.map((data) => data.routes[0]?.options[0]?.legs[1])).toEqual(cases.map((data) => firstOption(data).legs[1]));
+  });
+
+  it.each([
+    ["bands out of order", { weekday: [{ from: "17:00", minutes: 48 }, { from: "05:00", minutes: 31 }] }, "routes.0.options.0.legs.1.rideMinutesBands.weekday: must start at strictly later times, in order"],
+    ["two bands at one time", { weekday: [{ from: "17:00", minutes: 48 }, { from: "17:00", minutes: 31 }] }, "routes.0.options.0.legs.1.rideMinutesBands.weekday: must start at strictly later times, in order"],
+    ["a time past 23:59", { weekday: [{ from: "24:00", minutes: 48 }] }, "routes.0.options.0.legs.1.rideMinutesBands.weekday.0.from: must be HH:mm, 00:00 to 23:59"],
+    ["an unpadded time", { weekday: [{ from: "7:00", minutes: 48 }] }, "routes.0.options.0.legs.1.rideMinutesBands.weekday.0.from: must be HH:mm, 00:00 to 23:59"],
+    ["fractional minutes", { weekend: [{ from: "07:00", minutes: 36.5 }] }, expect.stringMatching(/^routes\.0\.options\.0\.legs\.1\.rideMinutesBands\.weekend\.0\.minutes: /)],
+    ["no band of a day type", { weekday: [] }, expect.stringMatching(/^routes\.0\.options\.0\.legs\.1\.rideMinutesBands\.weekday: /)],
+    ["another day type", { saturday: [{ from: "07:00", minutes: 36 }] }, expect.stringMatching(/^routes\.0\.options\.0\.legs\.1\.rideMinutesBands: /)],
+  ])("fails %s", (_case, bands, message) => {
+    // Act & Assert
+    expect(messagesOf(withBands(bands))).toEqual([message]);
   });
 });
 
