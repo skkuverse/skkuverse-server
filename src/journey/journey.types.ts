@@ -51,4 +51,6 @@ export interface JourneyCatalog {
   sequencesByService: Readonly<Record<string, Readonly<Record<string, readonly SequenceStopRef[]>>>> | null;
   /** WHY: why the stored `subway-timetables` refuse a subway ride, null when they accept it; null when none is stored. */
   subwayRideIssueOf: ((ride: { lineId: string; boardPlatformId: string; alightPlatformId: string }) => string | null) | null;
+  /** WHY: why the stored registry refuses a TOPIS ride (a stop off the route, or the alight not after the board), null when it accepts it; null when unread. */
+  topisRideIssueOf: ((ride: { lineId: string; boardStopId: string; alightStopId: string }) => string | null) | null;
 }

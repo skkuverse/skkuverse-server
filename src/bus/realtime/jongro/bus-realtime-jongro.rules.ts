@@ -1,4 +1,4 @@
-import type { BusCacheKey, JongroBusType } from "../../cache/bus-cache.document";
+import type { BusCacheKey, JongroArrivalDoc, JongroBusType } from "../../cache/bus-cache.document";
 import { BUS_TYPE_BY_CODE, DWELL_RESET_MINUTES, MAX_STATIONARY_MOVE_METERS } from "./bus-realtime-jongro.constants";
 import type { JongroBusDwell, JongroBusSighting, JongroVehicleObservation } from "./bus-realtime-jongro.types";
 
@@ -60,6 +60,14 @@ export function toObservedAt(dataTm: string | null | undefined): string | null {
   if (!match) return null;
   const [, year, month, day, hour, minute, second] = match;
   return `${year}-${month}-${day}T${hour}:${minute}:${second}+09:00`;
+}
+
+// WHY: a headway or run time TOPIS sends malformed (7800's origin rows read 2026102500) is no information, left out.
+export function toServiceHours(row: { term?: string; firstTm?: string; lastTm?: string }): Pick<JongroArrivalDoc, "term" | "firstTm" | "lastTm"> {
+  const term = toTopisInteger(row.term);
+  const firstTm = toObservedAt(row.firstTm);
+  const lastTm = toObservedAt(row.lastTm);
+  return { ...(term !== null && term > 0 && { term }), ...(firstTm !== null && { firstTm }), ...(lastTm !== null && { lastTm }) };
 }
 
 // WHY: TOPIS repeats an observation across polls, so only an advanced observation time is new evidence;

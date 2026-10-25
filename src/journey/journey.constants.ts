@@ -1,7 +1,7 @@
 export const JOURNEY_ROUTES_DATASET = "journey-routes";
 
 // WHY: each id names a door the registry maps; a source added here fails `tsc` until the registry maps it.
-export const JOURNEY_SOURCE_IDS = ["busTimetable", "subway"] as const;
+export const JOURNEY_SOURCE_IDS = ["busTimetable", "subway", "topis"] as const;
 
 // WHY: the kinds a stored leg may cite (ADR 0022, D4); the rider's own location is never stored.
 export const JOURNEY_PLACE_KINDS = ["bus_stop", "bus_stop_area", "subway_station", "skku_building"] as const;

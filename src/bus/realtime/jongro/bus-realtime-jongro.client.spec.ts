@@ -12,6 +12,10 @@
  * TOPIS id and SEOUL_BUS_SERVICE_KEY at the call, so importing the route config
  * needs no key, and a role that does not poll refuses to build one (ADR 0012, D4).
  * 7800, which TOPIS answers by its GBIS route id, reads the same way.
+ * Each arrival row keeps the route's headway (`term`, minutes) and the station's
+ * first and last run (`firstTm`, `lastTm`) as instants at +09:00, a last run after
+ * midnight on the next day as TOPIS dates it; a value that is no number or no
+ * 14-digit time is left out rather than guessed (ADR 0022, D7).
  * An answer saying the key's daily quota is spent, in TOPIS's envelope or the
  * data.go.kr gateway's (code 22), rejects like any refusal and also logs
  * `bus.topis.quota_exceeded` with the data.go.kr operation, at most once a
@@ -26,7 +30,9 @@ import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jong
 import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import positions7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-positions.json";
 import busTypesFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-bus-types.json";
+import serviceHoursFixture from "../../../../__tests__/nest/bus/fixtures/topis-arrivals-service-hours.json";
 import { ROUTE_7800, arrivalDocs7800, sightings7800 } from "../../../../__tests__/helpers/bus/topis-7800";
+import { serviceHoursDocs } from "../../../../__tests__/helpers/bus/topis-service-hours";
 import logger from "../../../infra/logger";
 import { JONGRO_ROUTES } from "../../bus.constants";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
@@ -720,3 +726,51 @@ describe("BusRealtimeJongroClient over a spent daily quota", () => {
   });
 });
 
+
+describe("BusRealtimeJongroClient.fetchArrivals service hours", () => {
+  it("keeps each captured row's headway and its station's first and last run, a last run after midnight on the next day", async () => {
+    // Arrange
+    respond(serviceHoursFixture.gyeonggi7800);
+
+    // Act
+    const arrivals = await new BusRealtimeJongroClient().fetchArrivals({ code: "7800", busRouteId: "200000150" });
+
+    // Assert
+    expect(arrivals.map(({ sequence, term, firstTm, lastTm }) => [sequence, term, firstTm, lastTm])).toEqual([
+      ["1", 10, undefined, undefined],
+      ["24", 10, "2026-10-25T05:37:00+09:00", "2026-10-25T23:21:00+09:00"],
+      ["39", 10, "2026-10-25T05:48:00+09:00", "2026-10-25T23:46:00+09:00"],
+      ["41", 10, "2026-10-25T05:52:00+09:00", "2026-10-25T23:50:00+09:00"],
+      ["58", 10, "2026-10-25T06:26:00+09:00", "2026-10-26T00:23:00+09:00"],
+    ]);
+  });
+
+  it("leaves out a headway that is no positive number, and adds no key a row without the fields lacks", async () => {
+    // Arrange
+    const [row] = serviceHoursFixture.jongro08.msgBody.itemList;
+    axios.get
+      .mockResolvedValueOnce({ data: { ...serviceHoursFixture.jongro08, msgBody: { itemList: [{ ...row, term: "0" }, { ...row, term: "" }] } } })
+      .mockResolvedValueOnce({ data: busTypesFixture.arrivals });
+
+    // Act
+    const [zero, blank] = await new BusRealtimeJongroClient().fetchArrivals(route07);
+    const [withoutFields] = await new BusRealtimeJongroClient().fetchArrivals(route07);
+
+    // Assert
+    expect([zero!.term, blank!.term, zero!.firstTm]).toEqual([undefined, undefined, "2026-10-25T06:00:00+09:00"]);
+    expect(Object.keys(withoutFields!).filter((key) => ["term", "firstTm", "lastTm"].includes(key))).toEqual([]);
+  });
+});
+
+describe("BusRealtimeJongroClient over the service-hours capture", () => {
+  it.each([["jongro08"], ["gyeonggi7800"]] as const)("reads %s's rows as the docs the journey route tests seed bus_cache with", async (route) => {
+    // Arrange
+    respond(serviceHoursFixture[route]);
+
+    // Act
+    const arrivals = await new BusRealtimeJongroClient().fetchArrivals({ code: route, busRouteId: "0" });
+
+    // Assert
+    expect(arrivals).toEqual(serviceHoursDocs(route));
+  });
+});

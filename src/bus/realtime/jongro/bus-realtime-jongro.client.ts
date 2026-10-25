@@ -8,7 +8,7 @@ import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.d
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "../bus-realtime.mapper";
 import { toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
-import { isNoResultHeaderCd, isQuotaExceeded, isUsableHeaderCd, toBusType, toObservedAt, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
+import { isNoResultHeaderCd, isQuotaExceeded, isUsableHeaderCd, toBusType, toObservedAt, toServiceHours, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -31,7 +31,7 @@ type TopisArrivalRow = { [K in `${TopisBusField}${BusSlot}`]: string } & {
   stNm: string;
   mkTm: string;
   arsId: string;
-};
+} & Partial<Record<"term" | "firstTm" | "lastTm", string>>;
 
 const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
@@ -119,7 +119,7 @@ export class BusRealtimeJongroClient {
       eventDate: row.mkTm,
       stationNumber: row.arsId,
       eta: row.arrmsg1,
-      buses: BUS_SLOTS.map((slot) => this.toArrivalBus(row, slot, what)),
+      ...{ buses: BUS_SLOTS.map((slot) => this.toArrivalBus(row, slot, what)), ...toServiceHours(row) },
     };
   }
 

@@ -9,7 +9,7 @@ audience: internal
 
 # Transit Route Planner
 
-> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-10-25: (a) to (e) are in production; (f) is on `dev`, its `journey-routes` revision 2 pushed to `_dev` only.
+> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-10-25: (a) to (e) are in production; (f) and (g) are on `dev`. `journey-routes` revision 2 is in `_dev` and production; revision 3, (g)'s options, passed a production dry run and waits for the (g) deploy, and `_dev` refuses it until `bus_campus_dev` stores 7800's registry route.
 
 ## Scope
 
@@ -221,7 +221,7 @@ export interface DepartureSource {
 | Door | Folder | Reads | Lands |
 | --- | --- | --- | --- |
 | `BusDeparturesTimetableService` | `bus/departures/timetable/` | `BusEtaSmartService.listRuns`, the service's `bus-stops` sequence | (e) |
-| `BusDeparturesTopisService` | `bus/departures/topis/` | `BusRealtimeGroupService.findJongroReading` (arrivals, `term`, `firstTm`/`lastTm`, vehicles), `BusStopIndexService` (stop id to station index), the GBIS seats | (g) |
+| `BusDeparturesTopisService` | `bus/departures/topis/` | `BusLiveGroupService.findLiveGroup` (the calls, vehicles and GBIS seats `/bus/live` serves), `BusRealtimeJongroService.findArrivalsEntry` (the stored row's `term`, `firstTm`, `lastTm`), `BusStopIndexService` (stop id to station index) | (g) |
 | `BusDeparturesHsscService` | `bus/departures/hssc/` | ADR 0018's engine | with the HSSC first-mile option |
 | `SubwayTimetableDeparturesService` | `subway/timetable/departures/` | `SubwayTimetableService` for both platforms, `CalendarService` for the day type; from (h), `subway_arrivals` through the subway root repository | (f), (h) |
 | `JourneyDeparturesService` (the registry) | `journey/departures/` | the doors, by the line's `source` | (e) |
@@ -306,8 +306,8 @@ Both routes, four options each, in data order. Stop ids exist in production toda
 | --- | --- | --- |
 | `inja` 인자셔틀 | walk → `bus_stop:hssc-bus-lot`; ride `inja` (`busTimetable`, `campus-inja`) `hssc-bus-lot` → `bus_stop:nsc-n-center`; walk → `skku_building:7` | (e) |
 | `line4-line1` 4호선 · 1호선 | walk → `subway_station:hyehwa`; ride `line4` (`subway`, `4`) `hyehwa` `S1-4-420` → `subway_station:geumjeong` `KR-4-443`; transfer at `geumjeong` to `KR-1-P149` (1 min, across one island); ride `line1` (`subway`, `1`) `geumjeong` `KR-1-P149` → `subway_station:sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (f) |
-| `jongro08-line1` 종로08 · 1호선 | walk → `bus_stop:100900046` (명륜시장.성대후문); ride `jongro08` (`topis`, `jongro08`) → `bus_stop:100900191` (종로5가역.광장시장); walk → `subway_station:jongno5ga` (platform: to be filled by (b)); ride `line1` → `sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (g) |
-| `line4-7800` 4호선 · 7800 | walk → `hyehwa`; ride `line4` `S1-4-420` → `subway_station:sadang` (line 4 platform: to be filled by (b)); walk → `bus_stop:sadang-exit9`; ride `bus7800` (`topis`, `gyeonggi7800`, mode `expressBus`) → `bus_stop:nsc-skku-to-suwon`; walk → `skku_building:7` | (g) |
+| `jongro08-line1` 종로 08 · 1호선 | walk → `bus_stop:100900046` (명륜시장.성대후문); ride `jongro08` (`topis`, `jongro08`) → `bus_stop:100900191` (종로5가역.광장시장); walk → `subway_station:jongno-5-ga`; ride `line1` `S1-1-154` → `sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (g) |
+| `line4-7800` 4호선 · 7800 | walk → `hyehwa`; ride `line4` `S1-4-420` → `subway_station:sadang` `S1-4-433`; walk → `bus_stop:119000302` (sadang-exit9); ride `bus7800` (`topis`, `gyeonggi7800`, mode `expressBus`) → `bus_stop:200000159` (nsc-skku-to-suwon); walk → `skku_building:7` | (g) |
 
 ### 자과캠 → 인사캠 (`nsc-to-hssc`: `skku_building:7` → `skku_building:1`)
 
@@ -315,14 +315,14 @@ Both routes, four options each, in data order. Stop ids exist in production toda
 | --- | --- | --- |
 | `inja` 인자셔틀 | walk → `bus_stop:nsc-opposite`; ride `jain` (`busTimetable`, `campus-jain`) → `bus_stop:hssc-600th`; walk → `skku_building:1` | (e) |
 | `line1-line4` 1호선 · 4호선 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `geumjeong` `KR-1-P149`; transfer at `geumjeong` to `KR-4-443` (1 min, across one island); ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (f) |
-| `line1-jongro08` 1호선 · 종로08 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `jongno5ga`; walk → `bus_stop:100900107` (종로5가역.중부교육지원청); ride `jongro08` → `bus_stop:100900004` (명륜시장.성대후문); walk → `skku_building:1` | (g) |
-| `7800-line4` 7800 · 4호선 | walk → `bus_stop:nsc-skku-to-sadang`; ride `bus7800` → `bus_stop:sadang-median`; walk → `sadang`; ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (g) |
+| `line1-jongro08` 1호선 · 종로 08 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `jongno-5-ga` `S1-1-154`; walk → `bus_stop:100900107` (종로5가역.중부교육지원청); ride `jongro08` → `bus_stop:100900004` (명륜시장.성대후문); walk → `skku_building:1` | (g) |
+| `7800-line4` 7800 · 4호선 | walk → `bus_stop:200000162` (nsc-skku-to-sadang); ride `bus7800` → `bus_stop:121001315` (sadang-median); walk → `sadang`; ride `line4` `S1-4-433` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (g) |
 
 - **Lines.** `inja` and `jain` (`busTimetable`, every route type of `campus-inja` and `campus-jain`, D7), `line1` and `line4` (`subway`), `jongro08` and `bus7800` (`topis`). Colors and names follow the boards: 1호선 `0052A4` and 4호선 `00A5DE` as `SUBWAY_LINES` has them.
-- **Station slugs.** `sadang`, `geumjeong` and `jongno5ga` are proposals; (b) fixes them in `SUBWAY_STATIONS`, and the dataset cites what it fixes.
+- **Station slugs.** (b) fixed `sadang`, `geumjeong` and `jongno-5-ga` in `SUBWAY_STATIONS`, and the dataset cites them.
 - **The 종로08 poles** come from the stored registry (captured 2026-10-17, `__tests__/nest/bus/fixtures/jongro-registry-routes.json`): outbound seq 4 to 17, back seq 18 to 29.
-- **The 7800 poles** are the local stops aliasing TOPIS ids (7800 plan PR 3): toward 수원, board `sadang-exit9` (seq 41) and alight `nsc-skku-to-suwon` (seq 58); toward 사당, board `nsc-skku-to-sadang` (seq 24) and alight `sadang-median` (seq 39).
-- **Fallback ride minutes** start from the app mock's values with `placeholder:` in their evidence; a door that places the run at the alight stop never reads them.
+- **The 7800 poles** are cited by station id, each resolving through the local stop aliasing it (7800 plan PR 3): toward 수원, board `119000302` (`sadang-exit9`, seq 41) and alight `200000159` (`nsc-skku-to-suwon`, seq 58); toward 사당, board `200000162` (`nsc-skku-to-sadang`, seq 24) and alight `121001315` (`sadang-median`, seq 39).
+- **Fallback ride minutes** come from the stored timetables (subway) and TOPIS's own times (the captured `traTime` of one vehicle along the ride, and the poles' `firstTm`/`lastTm`), each with its evidence; a door that places the run at the alight stop never reads them. A TOPIS ride reads them whenever TOPIS names the boarded vehicle at only one of its two poles, which is most of the time.
 
 ## Subway coverage
 
