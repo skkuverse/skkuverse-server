@@ -28,7 +28,7 @@ import * as rateLimitPolicyContract from "../helpers/perimeter/rate-limit-policy
 import * as requestAuthenticatorContract from "../helpers/perimeter/request-authenticator.contract";
 import { ROOT } from "../helpers/architecture/ratchet";
 import { LOCAL_DEV_CLASSES } from "../../src/perimeter/local-dev/perimeter-classes";
-import { PORT_TOKENS, type PortName } from "../../src/perimeter/perimeter.ports";
+import { PORT_NAMES, PORT_TOKENS, type PortName } from "../../src/perimeter/perimeter.ports";
 
 type ModuleExports = Readonly<Record<string, unknown>>;
 
@@ -58,7 +58,6 @@ const CONTRACTS: { readonly [K in PortName]: ModuleExports } = {
 
 const CONTRACT_RUNNERS = ["src/perimeter/local-dev/perimeter-classes.spec.ts", "src/perimeter/current/private-file"];
 
-const PORT_NAMES = Object.keys(PORT_TOKENS) as PortName[];
 const kebab = (name: string): string => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const pascal = (name: string): string => name.charAt(0).toUpperCase() + name.slice(1);
 const exists = (file: string): boolean => fs.existsSync(path.join(ROOT, file));

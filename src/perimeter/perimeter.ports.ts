@@ -171,6 +171,8 @@ export const PORT_TOKENS: { readonly [K in PortName]: PortToken<PerimeterPorts[K
   abuseSignals: AbuseSignals,
 };
 
+export const PORT_NAMES = Object.keys(PORT_TOKENS) as readonly PortName[];
+
 export const PORT_LABELS: { readonly [K in PortName]: string } = {
   requestAuthenticator: "REQUEST_AUTHENTICATOR",
   rateLimitPolicy: "RATE_LIMIT_POLICY",

@@ -4,19 +4,21 @@
  */
 import { Writable } from "node:stream";
 import pino from "pino";
+import { toCounterWindow } from "../../../src/perimeter/perimeter-counters.rules";
 import type { InternalScopeName, PerimeterCounters, PerimeterDeps, PerimeterRequest } from "../../../src/perimeter/perimeter.ports";
 
 export const CONTRACT_NOW = new Date("2026-10-19T16:30:00Z");
 
-/** Counts in memory, one count per key and window, as the shared counters do across processes. */
+/** Counts in memory, one count per key and window of the deps' clock, as the shared counters do across processes. */
 export class MemoryPerimeterCounters implements PerimeterCounters {
   readonly counts = new Map<string, number>();
 
+  constructor(private readonly now: () => Date) {}
+
   increment(key: string, windowSeconds: number): Promise<number> {
-    const windowStart = Math.floor(CONTRACT_NOW.getTime() / 1000 / windowSeconds);
-    const slot = `${key}@${windowStart}`;
-    const count = (this.counts.get(slot) ?? 0) + 1;
-    this.counts.set(slot, count);
+    const { counterId } = toCounterWindow(key, windowSeconds, this.now());
+    const count = (this.counts.get(counterId) ?? 0) + 1;
+    this.counts.set(counterId, count);
     return Promise.resolve(count);
   }
 }
@@ -38,13 +40,14 @@ export function throwingTokenReader(scope: InternalScopeName): string {
 }
 
 export function perimeterTestDeps(overrides: Partial<PerimeterDeps> = {}): PerimeterDeps {
+  const now = overrides.now ?? (() => CONTRACT_NOW);
   return {
     logger: pino({ level: "silent" }),
-    now: () => CONTRACT_NOW,
+    now,
     host: "127.0.0.1",
     firebaseProjectId: "demo-perimeter-contract",
     settings: undefined,
-    counters: new MemoryPerimeterCounters(),
+    counters: new MemoryPerimeterCounters(now),
     internalToken: throwingTokenReader,
     ...overrides,
   };

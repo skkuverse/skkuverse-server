@@ -1,7 +1,7 @@
 // SEE: docs/decisions/0023-perimeter-ports.md ("D4. One opaque overlay entry")
 // WHY: imports nothing from src/infra/: config.ts resolves the entry while it is itself loading.
 import path from "node:path";
-import { PERIMETER_PORTS_VERSION, PORT_LABELS, PORT_TOKENS, type PerimeterOverlay, type PortName } from "./perimeter.ports";
+import { PERIMETER_PORTS_VERSION, PORT_LABELS, PORT_NAMES, PORT_TOKENS, type PerimeterOverlay, type PortName } from "./perimeter.ports";
 
 // WHY: no extension: Node resolves the compiled `.js` under dist/, Jest the `.ts` under src/.
 export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");
@@ -24,7 +24,7 @@ function extendsPort(name: PortName, value: unknown): boolean {
 }
 
 function classErrors(classes: Record<string, unknown>): string[] {
-  return (Object.keys(PORT_TOKENS) as PortName[])
+  return PORT_NAMES
     .filter((name) => !extendsPort(name, classes[name]))
     .map((name) => `${PORT_LABELS[name]}: the entry has no class that extends the port`);
 }
