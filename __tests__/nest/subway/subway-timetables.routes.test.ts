@@ -58,6 +58,8 @@ import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedSubwayTimetableRepository, subwayTimetableFixtureFiles } from "../../helpers/subway/timetables";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 import seeded from "./fixtures/subway-arrivals-seed.json";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 type Tick = () => Promise<unknown>;
 
@@ -117,6 +119,7 @@ async function boot(stores: Stores): Promise<NestExpressApplication> {
       SubwayArrivalsModule,
     ],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: SubwayRepository, useValue: stores.state },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },

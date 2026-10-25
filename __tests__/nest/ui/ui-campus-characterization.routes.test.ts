@@ -35,6 +35,8 @@ import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const store = require("../../../scripts/lib/datasets/store");
@@ -124,12 +126,12 @@ beforeAll(async () => {
   const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   capturedApp = await buildTestApp({
     imports: appModulesUnder("src/ui/campus/"),
-    overrides: [{ provide: Clock, useValue: CAPTURED_AT }],
+    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: CAPTURED_AT }],
     role: "api",
   });
   openApp = await buildTestApp({
     imports: appModulesUnder("src/ui/campus/"),
-    overrides: [{ provide: Clock, useValue: BANNERS_OPEN }],
+    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: BANNERS_OPEN }],
     role: "api",
   });
 }, APP_BOOT_TIMEOUT_MS);

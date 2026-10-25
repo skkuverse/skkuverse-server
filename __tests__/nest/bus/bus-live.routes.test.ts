@@ -40,6 +40,8 @@ import { storedRouteAttributesRepository } from "../../helpers/bus/route-attribu
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const busCache = new FakeBusCacheRepository();
@@ -69,6 +71,7 @@ beforeAll(async () => {
       BusLiveGroupModule,
     ],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: busCache },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },

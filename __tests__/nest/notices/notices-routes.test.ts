@@ -27,12 +27,13 @@ import type { NoticeDoc } from "../../../src/notices/notices.document";
 import { NoticesModule } from "../../../src/notices/notices.module";
 import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
 import { noticeTabs } from "../../../src/notices/tabs/notices-tabs.wire";
-import { RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
+import { RateLimitPolicy, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeNoticesDetailRepository } from "../../helpers/fakes/notices/notices-detail.repository.fake";
 import { FakeNoticesListRepository } from "../../helpers/fakes/notices/notices-list.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const NOW = new Date("2026-04-11T03:00:00.000Z");
 const fakeClock: Clock = { now: () => NOW };
@@ -67,6 +68,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [NoticesModule, NoticesTabsModule, NoticesListModule, NoticesAttachmentModule, NoticesDetailModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: RequestAuthenticator, useValue: new FakeRequestAuthenticator() },
       { provide: NoticesListRepository, useValue: listRepository },
       { provide: NoticesDetailRepository, useValue: detailRepository },

@@ -53,6 +53,8 @@ import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.re
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import logger from "../../../src/infra/logger";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
 const ENTRY = { index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null };
@@ -73,6 +75,7 @@ async function bootApp(content = storedScheduleContentRepository(), holidays = s
   const app = await buildTestApp({
     imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusEtaModule, BusEtaSmartModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusScheduleRepository, useValue: timetable },
       { provide: BusScheduleContentRepository, useValue: content },
       { provide: BusEtaRepository, useValue: estimates },
@@ -859,6 +862,7 @@ describe("GET /bus/config across a content push", () => {
     const withConfig = await buildTestApp({
       imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusConfigModule],
       overrides: [
+        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: BusScheduleRepository, useValue: new FakeBusScheduleRepository() },
         { provide: BusScheduleContentRepository, useValue: stored },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },

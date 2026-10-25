@@ -57,6 +57,8 @@ import { withLineDirections, withoutLineDirections } from "../../helpers/bus/lin
 import captured from "./fixtures/jongro-attributes-production.capture.json";
 import pinnedLive from "./fixtures/jongro-live-pinned.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const store = require("../../../scripts/lib/datasets/store");
@@ -205,7 +207,7 @@ beforeAll(async () => {
   const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   app = await buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/", "src/ui/transit-list/", "src/ui/transit/"),
-    overrides: [{ provide: Clock, useValue: CLOCK }],
+    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: CLOCK }],
     role: "api",
   });
 }, APP_BOOT_TIMEOUT_MS);

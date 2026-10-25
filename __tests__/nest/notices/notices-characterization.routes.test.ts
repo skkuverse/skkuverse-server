@@ -29,12 +29,13 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { InternalAuthorizer, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
+import { InternalAuthorizer, RateLimitPolicy, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
@@ -169,6 +170,7 @@ function bootApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/notices/"),
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: RequestAuthenticator, useValue: new FakeRequestAuthenticator() },
       { provide: Clock, useValue: CLOCK },
       { provide: InternalAuthorizer, useValue: new FakeInternalAuthorizer() },
@@ -183,7 +185,7 @@ async function ensureIndexesAsThePoller(): Promise<void> {
   const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller").mockImplementation(() => undefined);
   const poller = await buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/notices/"),
-    overrides: [{ provide: Clock, useValue: CLOCK }],
+    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: CLOCK }],
     role: "poller",
   });
   try {

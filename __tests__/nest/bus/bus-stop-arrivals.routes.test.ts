@@ -75,6 +75,8 @@ import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.reposi
 import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: Tuesday 2026-10-20 14:10 KST, the "Boarding stop" test's instant.
 const AT_14_10_KST = new Date("2026-10-20T05:10:00.000Z");
@@ -149,6 +151,7 @@ async function boot(stores: Stores, now = AT_14_10_KST): Promise<import("http").
       BusStopArrivalsModule,
     ],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: stores.busCache },
       { provide: BusRegistryRepository, useValue: stores.registry },
       { provide: BusRouteAttributesRepository, useValue: stores.attributes },

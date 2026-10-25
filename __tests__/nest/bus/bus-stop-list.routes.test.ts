@@ -67,6 +67,8 @@ import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.reposi
 import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const NOW = new Date("2026-10-23T05:00:00.000Z");
 
@@ -84,6 +86,7 @@ async function boot(stores: Stores): Promise<import("http").Server> {
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, BusRegistryModule, BusRouteAttributesModule, BusRoutePathModule, BusStopsModule, BusConfigModule, BusStopIndexModule, BusStopListModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusRegistryRepository, useValue: stores.registry },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
@@ -127,6 +130,7 @@ async function bootWithStopPage(stores: Stores): Promise<import("http").Server> 
       BusStopListModule,
     ],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: new FakeBusCacheRepository() },
       { provide: BusRegistryRepository, useValue: stores.registry },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },

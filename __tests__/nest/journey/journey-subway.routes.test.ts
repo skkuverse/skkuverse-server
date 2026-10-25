@@ -85,6 +85,8 @@ import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: Tuesday 2026-10-20 07:40 KST, inside the trimmed fixture's weekday morning on both lines.
 const AT_07_40_KST = new Date("2026-10-19T22:40:00.000Z");
@@ -114,6 +116,7 @@ async function boot(now: Date, subwayArrivals = new FakeSubwayRepository()): Pro
       ...[BusDeparturesTimetableModule, JourneyModule, JourneyDeparturesModule, JourneyPlacesModule, JourneyRoutesModule],
     ],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: new FakeBusCacheRepository() },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },

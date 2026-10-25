@@ -39,6 +39,8 @@ import { storedRouteAttributesRepository } from "../../helpers/bus/route-attribu
 import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: 12:00 KST on 2026-10-20, so the commute card is open and the answer does not depend on the day the suite runs.
 const CLOCK: Clock = { now: () => new Date("2026-10-20T03:00:00.000Z") };
@@ -65,6 +67,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, UiModule, UiTransitModule, UiTransitTabModule],
     overrides: [
+      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
@@ -254,6 +257,7 @@ describe("GET /ui/home/transit over other stored layouts", () => {
     other = await buildTestApp({
       imports: [SchedulingModule, BusModule, UiModule, UiTransitModule, UiTransitTabModule],
       overrides: [
+        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: Clock, useValue: CLOCK },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
