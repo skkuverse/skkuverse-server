@@ -25,7 +25,7 @@ export interface TopisStopOverlay {
 export interface StopArea {
   id: string;
   name: I18n;
-  /** WHY: catalog stop slugs and `seoul-<ARS>` poles; a pole a local stop aliases is that stop. */
+  /** WHY: catalog stop slugs and poles by station id or `seoul-<ARS>` alias; a pole a local stop aliases is that stop. */
   stopIds: string[];
 }
 

@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written pin, not captured from production: what GET /bus/live/jongro02, jongro07 and jongro08 and the stop pages of seoul-01619, seoul-01525, seoul-01618 and seoul-01520 answered in ko, en and zh at commit 64062a50 (2026-10-24), before the TOPIS route list gave each route an explicit code and capabilities, over the bus_cache rows jongro-attributes-characterization.routes.test.ts seeds. `<cacheWrittenAt>` stands for the seeded rows' write time, which that test sets from the wall clock. Changed on purpose twice since: every vehicle gained seatsLeft (ADR 0019, D17), null on these routes, right after occupancy; then each stop page's stop gained stopAreaId (ADR 0022, D4), null here since no stop area is stored, after its other fields; nothing else changed. Changed on purpose again (ADR 0022, D2, D3): every arrival became the call, in the call's key order, gaining runId, headsign (null here, since no route line is stored), isFirstRun and isExpress, all null, and taking isLastRun in place of isLastBus; every vehicle lost isLastBus; nothing else changed.",
+  "_about": "Hand-written pin, not captured from production: what GET /bus/live/jongro02, jongro07 and jongro08 and the stop pages of seoul-01619, seoul-01525, seoul-01618 and seoul-01520 (now 100000424, 100900045, 100900221 and 100900021) answered in ko, en and zh at commit 64062a50 (2026-10-24), before the TOPIS route list gave each route an explicit code and capabilities, over the bus_cache rows jongro-attributes-characterization.routes.test.ts seeds. `<cacheWrittenAt>` stands for the seeded rows' write time, which that test sets from the wall clock. Changed on purpose three times since: every vehicle gained seatsLeft (ADR 0019, D17), null on these routes, right after occupancy; then each stop page's stop gained stopAreaId (ADR 0022, D4), null here since no stop area is stored, after its other fields; then every pole's stop id, each live station's stopId and each stop page's stop.id and key, became its national station id instead of seoul-<ARS> (owner, 2026-10-25; ADR 0019, D5); nothing else changed. Changed on purpose again (ADR 0022, D2, D3): every arrival became the call, in the call's key order, gaining runId, headsign (null here, since no route line is stored), isFirstRun and isExpress, all null, and taking isLastRun in place of isLastBus; every vehicle lost isLastBus; nothing else changed.",
   "live": {
     "ko": {
       "jongro02": {
@@ -54,7 +54,7 @@
           "stations": [
             {
               "stationIndex": 0,
-              "stopId": "seoul-01881",
+              "stopId": "100900204",
               "arsId": "01881",
               "operation": "running",
               "arrivals": [
@@ -94,7 +94,7 @@
             },
             {
               "stationIndex": 2,
-              "stopId": "seoul-01525",
+              "stopId": "100900045",
               "arsId": "01525",
               "operation": "running",
               "arrivals": [
@@ -134,7 +134,7 @@
             },
             {
               "stationIndex": 3,
-              "stopId": "seoul-01536",
+              "stopId": "100900069",
               "arsId": "01536",
               "operation": "running",
               "arrivals": [
@@ -227,7 +227,7 @@
           "stations": [
             {
               "stationIndex": 1,
-              "stopId": "seoul-01618",
+              "stopId": "100900221",
               "arsId": "01618",
               "operation": "running",
               "arrivals": [
@@ -267,7 +267,7 @@
             },
             {
               "stationIndex": 2,
-              "stopId": "seoul-01619",
+              "stopId": "100000424",
               "arsId": "01619",
               "operation": "running",
               "arrivals": [
@@ -389,7 +389,7 @@
           "stations": [
             {
               "stationIndex": 1,
-              "stopId": "seoul-01511",
+              "stopId": "100900032",
               "arsId": "01511",
               "operation": "running",
               "arrivals": [
@@ -429,7 +429,7 @@
             },
             {
               "stationIndex": 3,
-              "stopId": "seoul-01531",
+              "stopId": "100900046",
               "arsId": "01531",
               "operation": "running",
               "arrivals": [
@@ -524,7 +524,7 @@
           "stations": [
             {
               "stationIndex": 0,
-              "stopId": "seoul-01881",
+              "stopId": "100900204",
               "arsId": "01881",
               "operation": "running",
               "arrivals": [
@@ -564,7 +564,7 @@
             },
             {
               "stationIndex": 2,
-              "stopId": "seoul-01525",
+              "stopId": "100900045",
               "arsId": "01525",
               "operation": "running",
               "arrivals": [
@@ -604,7 +604,7 @@
             },
             {
               "stationIndex": 3,
-              "stopId": "seoul-01536",
+              "stopId": "100900069",
               "arsId": "01536",
               "operation": "running",
               "arrivals": [
@@ -697,7 +697,7 @@
           "stations": [
             {
               "stationIndex": 1,
-              "stopId": "seoul-01618",
+              "stopId": "100900221",
               "arsId": "01618",
               "operation": "running",
               "arrivals": [
@@ -737,7 +737,7 @@
             },
             {
               "stationIndex": 2,
-              "stopId": "seoul-01619",
+              "stopId": "100000424",
               "arsId": "01619",
               "operation": "running",
               "arrivals": [
@@ -859,7 +859,7 @@
           "stations": [
             {
               "stationIndex": 1,
-              "stopId": "seoul-01511",
+              "stopId": "100900032",
               "arsId": "01511",
               "operation": "running",
               "arrivals": [
@@ -899,7 +899,7 @@
             },
             {
               "stationIndex": 3,
-              "stopId": "seoul-01531",
+              "stopId": "100900046",
               "arsId": "01531",
               "operation": "running",
               "arrivals": [
@@ -994,7 +994,7 @@
           "stations": [
             {
               "stationIndex": 0,
-              "stopId": "seoul-01881",
+              "stopId": "100900204",
               "arsId": "01881",
               "operation": "running",
               "arrivals": [
@@ -1034,7 +1034,7 @@
             },
             {
               "stationIndex": 2,
-              "stopId": "seoul-01525",
+              "stopId": "100900045",
               "arsId": "01525",
               "operation": "running",
               "arrivals": [
@@ -1074,7 +1074,7 @@
             },
             {
               "stationIndex": 3,
-              "stopId": "seoul-01536",
+              "stopId": "100900069",
               "arsId": "01536",
               "operation": "running",
               "arrivals": [
@@ -1167,7 +1167,7 @@
           "stations": [
             {
               "stationIndex": 1,
-              "stopId": "seoul-01618",
+              "stopId": "100900221",
               "arsId": "01618",
               "operation": "running",
               "arrivals": [
@@ -1207,7 +1207,7 @@
             },
             {
               "stationIndex": 2,
-              "stopId": "seoul-01619",
+              "stopId": "100000424",
               "arsId": "01619",
               "operation": "running",
               "arrivals": [
@@ -1329,7 +1329,7 @@
           "stations": [
             {
               "stationIndex": 1,
-              "stopId": "seoul-01511",
+              "stopId": "100900032",
               "arsId": "01511",
               "operation": "running",
               "arrivals": [
@@ -1369,7 +1369,7 @@
             },
             {
               "stationIndex": 3,
-              "stopId": "seoul-01531",
+              "stopId": "100900046",
               "arsId": "01531",
               "operation": "running",
               "arrivals": [
@@ -1414,14 +1414,14 @@
   },
   "stopArrivals": {
     "ko": {
-      "seoul-01619": {
+      "100000424": {
         "meta": {
           "lang": "ko",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01619",
+            "id": "100000424",
             "name": "비천당",
             "arsIds": [
               "01619"
@@ -1517,14 +1517,46 @@
           ]
         }
       },
-      "seoul-01525": {
+      "100900021": {
         "meta": {
           "lang": "ko",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01525",
+            "id": "100900021",
+            "name": "양현관",
+            "arsIds": [
+              "01520"
+            ],
+            "stopAreaId": null
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro08",
+              "label": "종로 08",
+              "stationIndex": 2,
+              "towards": "명륜시장.성대후문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "52e82cc449046288",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "noData",
+              "vehicles": [],
+              "arrivals": []
+            }
+          ]
+        }
+      },
+      "100900045": {
+        "meta": {
+          "lang": "ko",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "100900045",
             "name": "통일부",
             "arsIds": [
               "01525"
@@ -1620,14 +1652,14 @@
           ]
         }
       },
-      "seoul-01618": {
+      "100900221": {
         "meta": {
           "lang": "ko",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01618",
+            "id": "100900221",
             "name": "학생회관",
             "arsIds": [
               "01618"
@@ -1722,49 +1754,17 @@
             }
           ]
         }
-      },
-      "seoul-01520": {
-        "meta": {
-          "lang": "ko",
-          "serverNow": "2026-10-20T09:08:42+09:00"
-        },
-        "data": {
-          "stop": {
-            "id": "seoul-01520",
-            "name": "양현관",
-            "arsIds": [
-              "01520"
-            ],
-            "stopAreaId": null
-          },
-          "routes": [
-            {
-              "kind": "live",
-              "groupId": "jongro08",
-              "label": "종로 08",
-              "stationIndex": 2,
-              "towards": "명륜시장.성대후문",
-              "direction": null,
-              "action": "board",
-              "stationsVersion": "52e82cc449046288",
-              "updatedAt": "<cacheWrittenAt>",
-              "operation": "noData",
-              "vehicles": [],
-              "arrivals": []
-            }
-          ]
-        }
       }
     },
     "en": {
-      "seoul-01619": {
+      "100000424": {
         "meta": {
           "lang": "en",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01619",
+            "id": "100000424",
             "name": "비천당",
             "arsIds": [
               "01619"
@@ -1860,14 +1860,46 @@
           ]
         }
       },
-      "seoul-01525": {
+      "100900021": {
         "meta": {
           "lang": "en",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01525",
+            "id": "100900021",
+            "name": "양현관",
+            "arsIds": [
+              "01520"
+            ],
+            "stopAreaId": null
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro08",
+              "label": "Jongro 08",
+              "stationIndex": 2,
+              "towards": "명륜시장.성대후문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "52e82cc449046288",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "noData",
+              "vehicles": [],
+              "arrivals": []
+            }
+          ]
+        }
+      },
+      "100900045": {
+        "meta": {
+          "lang": "en",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "100900045",
             "name": "통일부",
             "arsIds": [
               "01525"
@@ -1963,14 +1995,14 @@
           ]
         }
       },
-      "seoul-01618": {
+      "100900221": {
         "meta": {
           "lang": "en",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01618",
+            "id": "100900221",
             "name": "학생회관",
             "arsIds": [
               "01618"
@@ -2065,49 +2097,17 @@
             }
           ]
         }
-      },
-      "seoul-01520": {
-        "meta": {
-          "lang": "en",
-          "serverNow": "2026-10-20T09:08:42+09:00"
-        },
-        "data": {
-          "stop": {
-            "id": "seoul-01520",
-            "name": "양현관",
-            "arsIds": [
-              "01520"
-            ],
-            "stopAreaId": null
-          },
-          "routes": [
-            {
-              "kind": "live",
-              "groupId": "jongro08",
-              "label": "Jongro 08",
-              "stationIndex": 2,
-              "towards": "명륜시장.성대후문",
-              "direction": null,
-              "action": "board",
-              "stationsVersion": "52e82cc449046288",
-              "updatedAt": "<cacheWrittenAt>",
-              "operation": "noData",
-              "vehicles": [],
-              "arrivals": []
-            }
-          ]
-        }
       }
     },
     "zh": {
-      "seoul-01619": {
+      "100000424": {
         "meta": {
           "lang": "zh",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01619",
+            "id": "100000424",
             "name": "비천당",
             "arsIds": [
               "01619"
@@ -2203,14 +2203,46 @@
           ]
         }
       },
-      "seoul-01525": {
+      "100900021": {
         "meta": {
           "lang": "zh",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01525",
+            "id": "100900021",
+            "name": "양현관",
+            "arsIds": [
+              "01520"
+            ],
+            "stopAreaId": null
+          },
+          "routes": [
+            {
+              "kind": "live",
+              "groupId": "jongro08",
+              "label": "钟路 08",
+              "stationIndex": 2,
+              "towards": "명륜시장.성대후문",
+              "direction": null,
+              "action": "board",
+              "stationsVersion": "52e82cc449046288",
+              "updatedAt": "<cacheWrittenAt>",
+              "operation": "noData",
+              "vehicles": [],
+              "arrivals": []
+            }
+          ]
+        }
+      },
+      "100900045": {
+        "meta": {
+          "lang": "zh",
+          "serverNow": "2026-10-20T09:08:42+09:00"
+        },
+        "data": {
+          "stop": {
+            "id": "100900045",
             "name": "통일부",
             "arsIds": [
               "01525"
@@ -2306,14 +2338,14 @@
           ]
         }
       },
-      "seoul-01618": {
+      "100900221": {
         "meta": {
           "lang": "zh",
           "serverNow": "2026-10-20T09:08:42+09:00"
         },
         "data": {
           "stop": {
-            "id": "seoul-01618",
+            "id": "100900221",
             "name": "학생회관",
             "arsIds": [
               "01618"
@@ -2405,38 +2437,6 @@
                   "providerText": "출발대기"
                 }
               ]
-            }
-          ]
-        }
-      },
-      "seoul-01520": {
-        "meta": {
-          "lang": "zh",
-          "serverNow": "2026-10-20T09:08:42+09:00"
-        },
-        "data": {
-          "stop": {
-            "id": "seoul-01520",
-            "name": "양현관",
-            "arsIds": [
-              "01520"
-            ],
-            "stopAreaId": null
-          },
-          "routes": [
-            {
-              "kind": "live",
-              "groupId": "jongro08",
-              "label": "钟路 08",
-              "stationIndex": 2,
-              "towards": "명륜시장.성대후문",
-              "direction": null,
-              "action": "board",
-              "stationsVersion": "52e82cc449046288",
-              "updatedAt": "<cacheWrittenAt>",
-              "operation": "noData",
-              "vehicles": [],
-              "arrivals": []
             }
           ]
         }

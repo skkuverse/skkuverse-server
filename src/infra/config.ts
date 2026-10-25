@@ -73,6 +73,7 @@ const config = {
 
     // CONTRACT(skkuverse-ai): skkuverse-ai/docs/notice-overview-api.md owns this API.
     overview: {
+      enabled: switches.noticeOverviewEnabled,
       get aiApiUrl(): string {
         return roleScoped("AI_API_URL");
       },
@@ -296,6 +297,7 @@ const config = {
     shuttle: string;
     regionalBus: string;
     gbis: string;
+    noticeOverview: string;
   } {
     return {
       push: switches.pushDelivery,
@@ -306,6 +308,7 @@ const config = {
       shuttle: switches.shuttleEnabled ? "on" : "off",
       regionalBus: switches.regionalBusEnabled ? "on" : "off",
       gbis: switches.gbisEnabled ? "on" : "off",
+      noticeOverview: switches.noticeOverviewEnabled ? "on" : "off",
     };
   },
 };

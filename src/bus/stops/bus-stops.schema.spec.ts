@@ -333,6 +333,41 @@ describe("busStopsDataset: stop area ids", () => {
   });
 });
 
+// WHY: a TOPIS pole's stop id is its nine-digit station id (owner, 2026-10-25), so a slug that holds a letter can never
+// take one; the read parses the same schema, so a stored revision breaking the rule is refused there too.
+describe("busStopsDataset: a slug holds a letter", () => {
+  const LETTER_MESSAGE = "must hold a letter, so it is never a TOPIS pole's numeric stop id";
+
+  it.each([["100900075"], ["01592"], ["2026-10"]])("fails a stop id %j with no letter, naming its path", (id) => {
+    // Act & Assert
+    expect(messagesOf(withStop(0, { id }))).toEqual([`stops.0.id: ${LETTER_MESSAGE}`]);
+  });
+
+  it("fails a stop area id with no letter, naming its path", () => {
+    // Arrange
+    const data = { ...fixture(), stopAreas: [{ id: "100900075", name: { ko: "혜화" }, stopIds: ["hssc-hyehwa-exit1", "100900075"] }] };
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([`stopAreas.0.id: ${LETTER_MESSAGE}`]);
+  });
+
+  it("passes stop area members named by a station id, a legacy id and a slug", () => {
+    // Arrange
+    const data = { ...fixture(), stopAreas: [{ id: "hyehwa", name: { ko: "혜화" }, stopIds: ["100900075", "seoul-01592", "hssc-hyehwa-exit1"] }] };
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([]);
+  });
+
+  it("refuses at read a stored revision whose stop id has no letter", () => {
+    // Act
+    const parsed = storedBusStops.safeParse({ revision: 1, data: withStop(0, { id: "100900075" }) });
+
+    // Assert
+    expect(parsed.error?.issues.map((issue) => issue.message)).toEqual([LETTER_MESSAGE]);
+  });
+});
+
 describe("storedBusStops", () => {
   it("passes the stored document of revision 1", () => {
     // Act

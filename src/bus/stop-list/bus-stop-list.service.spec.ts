@@ -53,7 +53,7 @@ describe("BusStopListService.listStops", () => {
     expect(nameOf("jeongja-exit3")).toEqual({ ko: "정자역 3번 출구", en: "Jeongja Stn. Exit 3", zh: "亭子站 3号出口" });
     // WHY: the HSSC stops have no Chinese name, and a zh request is served the English one.
     expect(nameOf("hssc-hyehwa-exit1")).toEqual({ ko: "혜화역 1번출구", en: "Hyehwa Station (Shuttle Bus Stop)", zh: "Hyehwa Station (Shuttle Bus Stop)" });
-    expect(nameOf("seoul-01881")).toEqual({ ko: "성균관대학교", en: "성균관대학교", zh: "성균관대학교" });
+    expect(nameOf("100900204")).toEqual({ ko: "성균관대학교", en: "성균관대학교", zh: "성균관대학교" });
   });
 
   it("is public for five minutes, tagged by its body", async () => {
@@ -80,7 +80,7 @@ describe("BusStopListService.listStops", () => {
 
     // Assert
     expect(list.cacheControl).toBe("public, max-age=60");
-    expect(list.data.stops.map((stop) => stop.id)).not.toContain("seoul-01616");
+    expect(list.data.stops.map((stop) => stop.id)).not.toContain("100900219");
   });
 
   it("moves its ETag once a push files a stop under a campus", async () => {
@@ -117,7 +117,7 @@ describe("BusStopListService.listStops", () => {
 
     // Assert
     const areaOf = (list: typeof before, stopId: string) => list.data.stops.find((stop) => stop.id === stopId)!.stopAreaId;
-    expect([areaOf(before, "seoul-01592"), areaOf(grouped, "seoul-01592"), areaOf(renamed, "hssc-hyehwa-exit1"), areaOf(renamed, "hssc-bus-lot")]).toEqual([null, "hyehwa-exit1", "hyehwa", null]);
+    expect([areaOf(before, "100900075"), areaOf(grouped, "100900075"), areaOf(renamed, "hssc-hyehwa-exit1"), areaOf(renamed, "hssc-bus-lot")]).toEqual([null, "hyehwa-exit1", "hyehwa", null]);
     expect(new Set([before.etag, grouped.etag, renamed.etag]).size).toBe(3);
   });
 

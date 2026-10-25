@@ -1,8 +1,9 @@
 /**
  * The bus module's shared rules: a parsed config is frozen deep so no request
  * can change it, a service id resolves only to SERVICE_CONFIG's own keys, and
- * a TOPIS pole's stop id is the local stop aliasing it, else `seoul-<arsId>`,
- * and none for a virtual stop, which
+ * a TOPIS pole's stop id is the local stop aliasing it, else its national
+ * nine-digit station id (owner, 2026-10-25; it was `seoul-<arsId>` before,
+ * now a legacy alias), and none for a virtual stop, which
  * the stop index and the realtime stations of `/bus/config` both serve. Ported
  * (old → new): `toTopisStopId` "prefixes the ARS number" of
  * src/bus/stop-index/bus-stop-index.rules.spec.ts is the first case below.
@@ -170,19 +171,20 @@ describe("toServedArsId", () => {
 
 describe("toPoleStopId", () => {
   const NO_ALIASES = new Map<string, string>();
+  const pole = (arsId: string | null, topisId = "100900075") => ({ arsId, topisId });
 
   it.each([
-    ["01592", "seoul-01592"],
-    ["00001", "seoul-00001"],
+    ["01592", "100900075"],
+    ["00001", "100900075"],
     ["0", null],
     ["00000", null],
     ["", null],
     ["1592", null],
     ["015920", null],
     [null, null],
-  ])("gives the ARS number %s the stop id %s", (arsId, stopId) => {
+  ])("gives the pole 100900075 with the ARS number %s the stop id %s", (arsId, stopId) => {
     // Act & Assert
-    expect(toPoleStopId(arsId, NO_ALIASES)).toBe(stopId);
+    expect(toPoleStopId(pole(arsId), NO_ALIASES)).toBe(stopId);
   });
 
   it("gives an aliased pole its local stop's id, and every other pole its own", () => {
@@ -190,8 +192,8 @@ describe("toPoleStopId", () => {
     const aliases = new Map([["01618", "hssc-bus-lot"]]);
 
     // Act & Assert
-    expect(toPoleStopId("01618", aliases)).toBe("hssc-bus-lot");
-    expect(toPoleStopId("01616", aliases)).toBe("seoul-01616");
+    expect(toPoleStopId(pole("01618", "100900221"), aliases)).toBe("hssc-bus-lot");
+    expect(toPoleStopId(pole("01616", "100900219"), aliases)).toBe("100900219");
   });
 
   it("gives a virtual stop no id even when an alias names it", () => {
@@ -199,7 +201,7 @@ describe("toPoleStopId", () => {
     const aliases = new Map([["00000", "hssc-bus-lot"]]);
 
     // Act & Assert
-    expect(toPoleStopId("00000", aliases)).toBeNull();
+    expect(toPoleStopId(pole("00000"), aliases)).toBeNull();
   });
 });
 
@@ -219,7 +221,7 @@ describe("toStationStopId", () => {
     ["a TOPIS alias of a pole with no ARS number", "0", "200000162", true, "nsc-skku-to-sadang"],
     ["a TOPIS alias over another stop's ARS alias", "01618", "100900221", true, "hssc-bus-lot"],
     ["an ARS alias", "20253", "119000302", true, "sadang-exit9"],
-    ["an unaliased pole of a listed route", "27113", "203000101", true, "seoul-27113"],
+    ["an unaliased pole of a listed route", "27113", "203000101", true, "203000101"],
     ["a virtual stop of a listed route", "0", "201000404", true, null],
     ["a TOPIS alias on an unlisted route", "0", "200000162", false, "nsc-skku-to-sadang"],
     ["an ARS alias on an unlisted route", "20253", "119000302", false, "sadang-exit9"],
@@ -227,6 +229,23 @@ describe("toStationStopId", () => {
   ])("gives %s the stop id %s", (_case, arsId, topisId, isListed, stopId) => {
     // Act & Assert
     expect(toStationStopId({ arsId, topisId }, aliases, isListed)).toBe(stopId);
+  });
+});
+
+describe("toStationStopId by national station id", () => {
+  const NO_ALIASES = { stopIdByArsId: new Map<string, string>(), stopIdByTopisId: new Map<string, string>() };
+
+  it("names an unaliased pole of a listed route by its nine-digit station id, never by its ARS number", () => {
+    // Act & Assert
+    expect(toStationStopId({ arsId: "01592", topisId: "100900075" }, NO_ALIASES, true)).toBe("100900075");
+  });
+
+  it("keeps two poles that share an ARS number apart, as 01013 is both 종로2가 and 수원 성균관대학교", () => {
+    // Act
+    const stopIds = [toStationStopId({ arsId: "01013", topisId: "100000013" }, NO_ALIASES, true), toStationStopId({ arsId: "01013", topisId: "200000104" }, NO_ALIASES, true)];
+
+    // Assert
+    expect(stopIds).toEqual(["100000013", "200000104"]);
   });
 });
 
@@ -266,7 +285,7 @@ describe("toStopAreaMembership", () => {
     ["hssc-bus-lot", "hssc-bus-lot"],
     ["seoul-01618", "hssc-bus-lot"],
     ["hssc-600th", "hssc-600th"],
-    ["seoul-01592", "seoul-01592"],
+    ["seoul-01592", "100900075"],
   ]);
   const stopIdOf = (memberId: string): string | null => stopIdByMemberId.get(memberId) ?? null;
 
@@ -299,7 +318,7 @@ describe("toStopAreaMembership", () => {
     // Assert
     expect([...membership.stopAreaIdByStopId]).toEqual([
       ["hssc-bus-lot", "first"],
-      ["seoul-01592", "second"],
+      ["100900075", "second"],
     ]);
     expect(membership.heldMembers.map(({ areaIndex, memberIndex }) => [areaIndex, memberIndex])).toEqual([
       [0, 0],

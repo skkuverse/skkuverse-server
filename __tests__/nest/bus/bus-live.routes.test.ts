@@ -127,7 +127,7 @@ describe("GET /bus/live/:groupId for a Jongno route", () => {
     expect(res.body.data.stations).toEqual([
       {
         stationIndex: 0,
-        stopId: "seoul-01617",
+        stopId: "100900220",
         arsId: "01617",
         operation: "running",
         arrivals: [

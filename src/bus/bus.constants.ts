@@ -19,9 +19,10 @@ export const REGIONAL_ROUTES: ReadonlyArray<JongroRoute> = Object.freeze([Object
 // WHY: every route the TOPIS pollers keep and /bus/live serves, the Jongno routes first.
 export const TOPIS_ROUTES: ReadonlyArray<JongroRoute> = Object.freeze([...JONGRO_ROUTES, ...REGIONAL_ROUTES]);
 
-// SEE: docs/explanation/bus-architecture.md ("Glossary"): a stop id names one pole, a TOPIS pole's derived from its ARS number.
+// SEE: docs/explanation/bus-architecture.md ("Glossary"): a pole's stop id is its national station id; a slug holds a letter.
 export const STOP_ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-export const TOPIS_STOP_ID_PREFIX = "seoul-";
+export const SLUG_LETTER_PATTERN = /[a-z]/;
+export const LEGACY_POLE_ID_PREFIX = "seoul-";
 export const ARS_ID_PATTERN = /^\d{5}$/;
 
 // WHY: the groups that serve stop sequences, their services in /bus/config's order, which the stop page follows.

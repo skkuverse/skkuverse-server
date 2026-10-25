@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
+import config from "../../infra/config";
 import { KeyedCache } from "../../infra/keyed-cache";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
@@ -57,6 +58,7 @@ export class NoticesOverviewService {
   }
 
   private async resolve(searchText: string, sourceIds: readonly string[], request: { lang: SupportedLang; now: Date }): Promise<Resolved> {
+    if (!config.notices.overview.enabled) return { result: UNAVAILABLE, candidates: 0, aiStatus: "disabled" };
     if (request.now.getTime() < this.pausedUntil) return { result: UNAVAILABLE, candidates: 0, aiStatus: "paused" };
     let ranked: OverviewCandidate[];
     try {

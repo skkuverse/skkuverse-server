@@ -177,8 +177,8 @@ describe("GET /bus/stops", () => {
     expect(res.headers["cache-control"]).toBe("public, max-age=300");
     expect(res.headers.etag).toMatch(/^"stops-[0-9a-f]{32}"$/);
     expect(res.body.meta).toEqual({});
-    expect(stopIn(res.body, "seoul-01592")).toEqual({
-      id: "seoul-01592",
+    expect(stopIn(res.body, "100900075")).toEqual({
+      id: "100900075",
       name: { ko: "혜화역1번출구", en: "혜화역1번출구", zh: "혜화역1번출구" },
       coords: { lat: 37.5834729904, lng: 127.0017632862 },
       arsIds: ["01592"],
@@ -249,9 +249,9 @@ describe("GET /bus/stops", () => {
       "hssc-600th-hall",
       "hssc-bus-lot",
     ]);
-    expect(ids.findIndex((id) => id.startsWith("seoul-"))).toBeGreaterThan(ids.lastIndexOf("jeongja-exit3"));
+    expect(ids.findIndex((id) => /^\d{9}$/.test(id))).toBeGreaterThan(ids.lastIndexOf("jeongja-exit3"));
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.filter((id) => id === "seoul-01881")).toHaveLength(1);
+    expect(ids.filter((id) => id === "100900204")).toHaveLength(1);
   });
 
   it("If-None-Match with the ETag: 304 with no body", async () => {
@@ -279,8 +279,8 @@ describe("GET /bus/stops", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("public, max-age=60");
-    expect(stopIn(res.body, "seoul-01616")).toBeUndefined();
-    expect((stopIn(res.body, "seoul-01592")!.routes as Array<{ groupId: string }>).map((route) => route.groupId)).toEqual(["jongro08"]);
+    expect(stopIn(res.body, "100900219")).toBeUndefined();
+    expect((stopIn(res.body, "100900075")!.routes as Array<{ groupId: string }>).map((route) => route.groupId)).toEqual(["jongro08"]);
     expectWire(busStopList, res.body.data);
   });
 
@@ -341,7 +341,7 @@ describe("GET /bus/stops and /bus/config's stop ids", () => {
 
     // Assert
     expect(stopIdsIn(config.body.data)).toContain("hssc-bus-lot");
-    expect(stopIn(res.body, "seoul-01618")).toBeUndefined();
+    expect(stopIn(res.body, "100900221")).toBeUndefined();
     expect(stopIn(res.body, "hssc-bus-lot")).toMatchObject({ arsIds: ["01618"], campus: "hssc" });
     expect((stopIn(res.body, "hssc-bus-lot")!.routes as Array<{ groupId: string }>).map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
     expectWire(busStopList, res.body.data);
@@ -355,7 +355,7 @@ describe("GET /bus/stops and the stop page", () => {
     // Arrange
     const server = await bootWithStopPage(freshStores());
     const list = await request(server).get("/bus/stops");
-    const stops = stopsOf(list.body).filter((stop) => stop.id.startsWith("hssc-") || stop.id === "seoul-01592" || stop.id === "seoul-01881");
+    const stops = stopsOf(list.body).filter((stop) => stop.id.startsWith("hssc-") || stop.id === "100900075" || stop.id === "100900204");
 
     // Act
     const pages = await Promise.all(
@@ -401,7 +401,7 @@ describe("GET /bus/stops and the stop page", () => {
     const grouped = stopsOf(res.body).filter((stop) => stop.stopAreaId !== null);
     expect(grouped.map((stop) => [stop.id, stop.stopAreaId])).toEqual([
       ["hssc-hyehwa-exit1", "hyehwa-exit1"],
-      ["seoul-01592", "hyehwa-exit1"],
+      ["100900075", "hyehwa-exit1"],
     ]);
     expect(stopsOf(res.body).every((stop) => "stopAreaId" in stop)).toBe(true);
     expect(page.body.data.stop.stopAreaId).toBe("hyehwa-exit1");

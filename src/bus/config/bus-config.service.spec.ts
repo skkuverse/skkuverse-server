@@ -618,7 +618,7 @@ describe("BusConfigService stop ids on realtime stations", () => {
     // Assert
     for (const stations of [group, all]) {
       expect(stations.find((station) => station.stationNumber === "01618")!.stopId).toBe("hssc-bus-lot");
-      expect(stations.find((station) => station.stationNumber === "01616")!.stopId).toBe("seoul-01616");
+      expect(stations.find((station) => station.stationNumber === "01616")!.stopId).toBe("100900219");
     }
     expect(await after.computeEtag("ko")).not.toBe(etags.config);
     expect(await after.computeGroupEtag("jongro07", "ko")).not.toBe(etags.jongro07);

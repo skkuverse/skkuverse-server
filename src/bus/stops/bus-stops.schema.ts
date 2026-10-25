@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { campus } from "../../shared/campus.wire";
-import { ARS_ID_PATTERN, HSSC_POSITION_COUNT, STOP_ID_PATTERN, TOPIS_STOP_ID_PREFIX } from "../bus.constants";
+import { ARS_ID_PATTERN, HSSC_POSITION_COUNT, LEGACY_POLE_ID_PREFIX, SLUG_LETTER_PATTERN, STOP_ID_PATTERN } from "../bus.constants";
 import { TOPIS_STATION_ID_PATTERN } from "./bus-stops.constants";
 import type { BusStopsData, StopArea, StoredBusStops } from "./bus-stops.document";
 import type { ScheduleStop, SequenceStop } from "./bus-stops.types";
@@ -10,8 +10,9 @@ const topisStationId = z.string().regex(TOPIS_STATION_ID_PATTERN, "must be a nin
 
 const stopId = z
   .string()
-  .regex(STOP_ID_PATTERN, "must be lower-case letters and digits in words joined by single hyphens")
-  .refine((id) => !id.startsWith(TOPIS_STOP_ID_PREFIX), `must not start with "${TOPIS_STOP_ID_PREFIX}", which a TOPIS pole's stop id takes`);
+  .regex(STOP_ID_PATTERN, { error: "must be lower-case letters and digits in words joined by single hyphens", abort: true })
+  .regex(SLUG_LETTER_PATTERN, "must hold a letter, so it is never a TOPIS pole's numeric stop id")
+  .refine((id) => !id.startsWith(LEGACY_POLE_ID_PREFIX), `must not start with "${LEGACY_POLE_ID_PREFIX}", which a TOPIS pole's stop id takes`);
 
 // WHY: the catalog checks name each stop and sequence in their own words at push (bus-stops.rules.ts), so the
 // structure here stops at what they need: a stop keeps every field it has, and a sequence stop is any value.

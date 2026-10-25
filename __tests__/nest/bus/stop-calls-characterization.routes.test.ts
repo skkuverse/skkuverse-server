@@ -84,7 +84,7 @@ const SHUTTLE_PATHS = [...SERVICE_IDS.map((serviceId) => `/bus/schedule/data/${s
 // WHY: the HSSC engine reads the clock, so the line is pinned with its buses fresh and again an afternoon later.
 const HSSC_PATHS = ["/bus/live/hssc", "/bus/stops/hssc-basketball-court/arrivals", "/bus/stops/hssc-olympic-hall/arrivals"];
 // WHY: a TOPIS arrival's instants are its row's, whatever the clock, so the Jongno and 7800 answers are pinned once.
-const JONGRO_PATHS = ["/bus/live/jongro02", "/bus/live/jongro07", "/bus/stops/seoul-01619/arrivals"];
+const JONGRO_PATHS = ["/bus/live/jongro02", "/bus/live/jongro07", "/bus/stops/100000424/arrivals"];
 const ROUTE_7800_PATHS = ["/bus/live/gyeonggi7800", ...["nsc-skku-to-sadang", "nsc-skku-to-suwon", "sadang-exit9", "sadang-median"].map((stopId) => `/bus/stops/${stopId}/arrivals`)];
 
 const PATHS_BY_INSTANT: Record<InstantName, string[]> = {

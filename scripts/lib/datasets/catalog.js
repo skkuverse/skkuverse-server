@@ -194,7 +194,7 @@ function loadCatalog(load) {
   const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
   const { toBusStopsSnapshot } = load("bus/stops/bus-stops.mapper");
   const { toRegistryRoute } = load("bus/registry/bus-registry.mapper");
-  const { toPoleArsId, toStopIndex } = load("bus/stop-index/bus-stop-index.rules");
+  const { toCanonicalStopId, toStopIndex } = load("bus/stop-index/bus-stop-index.rules");
   const { toPoleCoords } = load("bus/stop-index/bus-stop-index.mapper");
   const { LANE_STRATEGIES } = load("bus/eta/lane/bus-eta-lane.constants");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
@@ -259,15 +259,15 @@ function loadCatalog(load) {
       : asWarnings(toRouteIssues(topology, routesOf(tables)), ["subway-topology"]);
 
   // The stop index a bus-stops push resolves its stop areas' members through, built as the server builds it from the
-  // target's stored registry and route lines: a catalog stop is itself, a `seoul-` pole the stop a listed route serves it as.
+  // target's stored registry and route lines: a catalog stop is itself, a pole (by station id or `seoul-` alias) the
+  // stop a listed route serves it as.
   const stopAreaResolutionOf = (data, registryDocs, routePathDocs) => {
     const routes = TOPIS_ROUTES.flatMap((route) => registryDocs.filter((doc) => doc._id === route.id).map((doc) => toRegistryRoute(route, doc)));
     const index = toStopIndex(toBusStopsSnapshot({ revision: 0, data: JSON.parse(JSON.stringify(data)) }), routes);
     const catalogStops = new Map(data.stops.map((stop) => [stop.id, stop]));
     const stopIdOf = (memberId) => {
-      const arsId = toPoleArsId(memberId);
-      if (arsId === null) return catalogStops.has(memberId) ? memberId : null;
-      return index.stopIdByArsId.get(arsId) ?? null;
+      const stopId = toCanonicalStopId(index, memberId);
+      return stopId !== undefined && (catalogStops.has(stopId) || index.stopById.has(stopId)) ? stopId : null;
     };
     const coordsOf = (stopId) => catalogStops.get(stopId)?.coords ?? toPoleCoords(index.stopById.get(stopId)?.poles ?? [], routePathDocs);
     return { stopIdOf, coordsOf };
