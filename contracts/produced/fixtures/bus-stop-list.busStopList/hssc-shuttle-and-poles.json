@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: GET /bus/stops on 2026-10-23 over the stores of __tests__/nest/bus/bus-stop-list.routes.test.ts (revision 1 of bus-stops, the Jongno registry and route lines production stored), trimmed from 94 stops to five in served order: an HSSC stop with no coordinates, two shuttle stops, the 종로02 loop terminal listed once and a pole 종로07 and 종로08 share. Each stop's stopAreaId (ADR 0022, D4) is added by hand as null, since no stop area is stored.",
+  "_about": "Synthetic: GET /bus/stops on 2026-10-23 over the stores of __tests__/nest/bus/bus-stop-list.routes.test.ts (revision 1 of bus-stops, the Jongno registry and route lines production stored), trimmed from 94 stops to five in served order: an HSSC stop with no coordinates, two shuttle stops, the 종로02 loop terminal listed once and a pole 종로07 and 종로08 share. Each stop's stopAreaId (ADR 0022, D4) is added by hand as null, since no stop area is stored. Each pole's stop id is its national station id since 2026-10-25 (owner; ADR 0019, D5), where it was seoul-<ARS>, now an alias that still answers its stop page.",
   "data": {
     "stops": [
       {
@@ -103,7 +103,7 @@
         ]
       },
       {
-        "id": "seoul-01881",
+        "id": "100900204",
         "name": {
           "ko": "성균관대학교",
           "en": "성균관대학교",
@@ -138,7 +138,7 @@
         ]
       },
       {
-        "id": "seoul-01592",
+        "id": "100900075",
         "name": {
           "ko": "혜화역1번출구",
           "en": "혜화역1번출구",

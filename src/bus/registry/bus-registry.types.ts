@@ -10,6 +10,7 @@ export interface JongroStation {
   sequence: string;
   stationName: string;
   stationNumber: string | null;
+  topisId: string;
   isFirstStation: boolean;
   isLastStation: boolean;
   isRotationStation: boolean;

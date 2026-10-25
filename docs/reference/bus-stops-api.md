@@ -26,15 +26,17 @@ audience: internal
 
 ## Stop ids
 
-A stop id names one physical pole, never a place, and is opaque to clients. It matches `^[a-z0-9]+(-[a-z0-9]+)*$`.
+A stop id names one physical pole, never a place, and is opaque to clients. It matches `^[a-z0-9]+(-[a-z0-9]+)*$`. A slug holds at least one letter, so it never takes a pole's all-digit id.
 
 | Kind | Id | Example | Where it comes from |
 | --- | --- | --- | --- |
-| Jongno pole | `seoul-<ARS number>` | `seoul-01592` (혜화역1번출구, served by 종로07 and 종로08) | Derived from the stored registry station; never stored. A station whose ARS number is empty or `0` has none |
+| Jongno pole | its national nine-digit station id (TOPIS `stId`, the registry's `topisId`) | `100900075` (혜화역1번출구, ARS `01592`, served by 종로07 and 종로08) | Derived from the stored registry station; never stored. A station whose ARS number is empty or `0` has none |
 | Shuttle stop | the dataset's slug | `hssc-bus-lot`, `nsc-n-center`, `jeongja-exit3` | `bus-stops` `stops[].id`, as `/bus/config` serves it in `screen.stops[].id` and `stopSequences[].stopId` |
 | HSSC stop | the dataset's slug | `hssc-hyehwa-exit1` | `bus-stops` `hssc.stations[].stopId`; the two non-stop 혜화동로터리 positions have none |
 
-A pole a local stop aliases (`arsIds` in `bus-stops`, or `topisIds` for a pole TOPIS gives no ARS number; pushed only after an on-site confirmation) resolves to that local stop: `seoul-<ARS number>` answers the local stop's page, whose `stop.id` is the slug. Without an alias two sources stay two stops, however close: `hssc-600th` and `seoul-01616` are two pages. A route that lists a pole twice, as 종로02 lists its terminal `01881` first and last, serves it at its first index only. A route `/bus/config` does not list (7800) adds only the poles a local stop aliases.
+A pole's id was `seoul-<ARS number>` until 2026-10-25 ([ADR 0019, D5](../decisions/0019-bus-live-api.md)): ARS numbers collide, stand at `0` and are reassigned, while a station id is never reused and survives a rename. That form is a legacy alias that never retires: `GET /bus/stops/seoul-01592/arrivals` answers the page of `100900075`, whose `stop.id` is `100900075`, and answers `404` or `503` exactly as the station id would. `GET /bus/stops` and every served `stopId` carry only the canonical id.
+
+A pole a local stop aliases (`topisIds` in `bus-stops`, or `arsIds`; pushed only after an on-site confirmation) resolves to that local stop: its station id and its `seoul-<ARS number>` alias both answer the local stop's page, whose `stop.id` is the slug. Without an alias two sources stay two stops, however close: `hssc-600th` and `100900219` (ARS `01616`) are two pages. A route that lists a pole twice, as 종로02 lists its terminal `01881` first and last, serves it at its first index only. A route `/bus/config` does not list (7800) adds only the poles a local stop aliases.
 
 ## Stop ids on the realtime stations
 
@@ -43,17 +45,17 @@ Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in
 | Station | `stopId` |
 | --- | --- |
 | An HSSC position | The `bus-stops` `hssc.stations[].stopId`; no key at the two non-stop 혜화동로터리 positions (indexes 5 and 7) |
-| A Jongno station | `seoul-<stationNumber>`, or the local stop aliasing that ARS number; no key for a virtual stop (ARS number empty or `0`). A pole a route lists twice (종로02's `01881`) carries its id at both indexes |
+| A Jongno station | Its pole's station id, or the local stop aliasing that pole by station id or ARS number; no key for a virtual stop (ARS number empty or `0`). A pole a route lists twice (종로02's `01881`, `100900204`) carries its id at both indexes |
 
 ```json
-{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "isPassThrough": false, "isAlightOnly": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
+{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "isPassThrough": false, "isAlightOnly": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "100900075" }
 ```
 
 Every other field keeps its value and order, and the schedule groups and `stationEtas[]` gain nothing: removing every `stopId` key leaves the body served before the field, which is what installed apps parse (`parseRealtimeStation` reads named fields only). The field is `stopId` in `busGroup` (`src/bus/config/bus-config.wire.ts`), optional in `contracts/produced/bus-config.busGroup.schema.json`, with the fixtures `realtime-hssc-stop-ids.json` and `realtime-jongro07-stop-ids.json`.
 
 | | |
 | --- | --- |
-| ETag | Each realtime group's and the all-groups ETag changed once when the field shipped, in every language; an alias push changes the ETags of the groups whose stations it renames and the all-groups ETag, and no other |
+| ETag | Each realtime group's and the all-groups ETag changed once when the field shipped, in every language, and once more when the poles' ids became station ids (2026-10-25); an alias push changes the ETags of the groups whose stations it renames and the all-groups ETag, and no other |
 | Never read | While a replica has never read a good `bus-stops`, the Jongro groups answer `503 BUS_STOPS_UNAVAILABLE` with no `Cache-Control`, like `/bus/config` and the `hssc`, `campus` and `commute` groups; `fasttrack` and the realtime data routes still serve |
 | Following one | `/bus/stops/<stopId>/arrivals` answers its page, or `404 BUS_STOP_NOT_FOUND` once the stop is gone (a pole TOPIS removed, a slug retired by a later alias): a client reads that as "stop gone" |
 
@@ -88,7 +90,7 @@ The stop list: every stop a served route stops at, once, with where it is and wh
         "routes": [{ "kind": "timetable", "groupId": "commute", "label": { "ko": "정자", "en": "Jeongja", "zh": "亭子" }, "serviceId": "commute-jeongja", "routeType": "up", "action": "board" }]
       },
       {
-        "id": "seoul-01592",
+        "id": "100900075",
         "name": { "ko": "혜화역1번출구", "en": "혜화역1번출구", "zh": "혜화역1번출구" },
         "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"], "campus": "hssc", "stopAreaId": null,
         "routes": [
@@ -142,7 +144,7 @@ Every read goes through the caches the stop page already uses (the `bus-stops` d
 {
   "meta": { "lang": "ko", "serverNow": "2026-10-20T14:10:00+09:00" },
   "data": {
-    "stop": { "id": "seoul-01592", "name": "혜화역1번출구", "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"], "stopAreaId": null },
+    "stop": { "id": "100900075", "name": "혜화역1번출구", "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"], "stopAreaId": null },
     "routes": [
       {
         "kind": "live", "groupId": "jongro07", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "direction": { "id": "100900220", "label": "성균관대운동장 방면" }, "action": "board",
@@ -161,13 +163,13 @@ Every read goes through the caches the stop page already uses (the `bus-stops` d
 }
 ```
 
-The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busStopArrivals/seoul-01592.json`, its vehicle's position trimmed. Beside it, `hssc-bus-lot.json` is a shuttle stop with timetable entries and a 종로07 live entry, served over a test store in which it aliases 종로07's pole `01618`: an illustration of an alias only, since production aliases no pole (none is confirmed on site, [edit-bus-stops.md](../how-to/edit-bus-stops.md#add-an-alias)). `hssc-hyehwa-exit1.json` is an HSSC stop with two buses on their way, and `hssc-olympic-hall.json` a drop-off-only HSSC stop, whose live entry's `action` is `alight`.
+The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busStopArrivals/100900075.json`, its vehicle's position trimmed. Beside it, `hssc-bus-lot.json` is a shuttle stop with timetable entries and a 종로07 live entry, served over a test store in which it aliases 종로07's pole `01618`: an illustration of an alias only, since production aliases no pole (none is confirmed on site, [edit-bus-stops.md](../how-to/edit-bus-stops.md#add-an-alias)). `hssc-hyehwa-exit1.json` is an HSSC stop with two buses on their way, and `hssc-olympic-hall.json` a drop-off-only HSSC stop, whose live entry's `action` is `alight`.
 
 ### The stop
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `stop.id` | string | The canonical stop id: the slug of an aliased pole's local stop, else the id asked for |
+| `stop.id` | string | The canonical stop id: the slug of an aliased pole's local stop, else the pole's station id (also when asked by its `seoul-<ARS number>` alias), else the slug asked for |
 | `stop.name` | string | A local stop's name in the request language, falling back to English, then Korean; a Jongno pole's stored TOPIS name, which is Korean in every language |
 | `stop.detail` | string, optional | A local stop's detail, as `/bus/config` serves it |
 | `stop.coords` | object, optional | `{ lat, lng }`: the stop's own, else its pole's on the stored route line; left out while it has neither, where the stop list serves `coords: null` |
@@ -197,7 +199,7 @@ A live entry's `towards` is the next station with a stop, so a client tells a li
 
 `null` means the stop is the line's last station: the bus ends its run there, so a client shows 종점 in place of a direction.
 
-A live entry's `direction` is the line's 방면 the station lies on, `{ id, label }` exactly as the group's `/bus/config` station names it (`directionId`) with that direction's `label` in the request language ([bus-live-api.md](bus-live-api.md#directions), [ADR 0019, D16](../decisions/0019-bus-live-api.md)): at `seoul-01592` 종로07 heads to `성균관대운동장 방면` and 종로08 to `명륜3가 방면`; at `hssc-olympic-hall` the HSSC line is `하교`. It is `null` where the station has none: a Jongno route with no stored route line or one not yet synced with directions, a config placed by another stations version than the page's entry, or a group config that cannot be built (another route's registry missing), while the entry and the rest of the page still serve. `towards` is the next stop and `direction` the terminal side of the line; a client shows both, or `direction` alone as the tab name.
+A live entry's `direction` is the line's 방면 the station lies on, `{ id, label }` exactly as the group's `/bus/config` station names it (`directionId`) with that direction's `label` in the request language ([bus-live-api.md](bus-live-api.md#directions), [ADR 0019, D16](../decisions/0019-bus-live-api.md)): at `100900075` 종로07 heads to `성균관대운동장 방면` and 종로08 to `명륜3가 방면`; at `hssc-olympic-hall` the HSSC line is `하교`. It is `null` where the station has none: a Jongno route with no stored route line or one not yet synced with directions, a config placed by another stations version than the page's entry, or a group config that cannot be built (another route's registry missing), while the entry and the rest of the page still serve. `towards` is the next stop and `direction` the terminal side of the line; a client shows both, or `direction` alone as the tab name.
 
 A timetable entry lists up to three runs, each an arrival, ADR 0022's call ([bus-live-api.md](bus-live-api.md#arrivals)), with `status: "scheduled"`, `stopsAway`, `vehicleId`, `isExpress` and `providerText` null, and one more field:
 
@@ -217,15 +219,15 @@ A run is listed while its time at this stop is not before the current minute in 
 
 | Status | `error.code` | When |
 | --- | --- | --- |
-| `404` | `BUS_STOP_NOT_FOUND` | The id is malformed, or no served route stops at it (`seoul-99999`, a pole TOPIS removed) |
+| `404` | `BUS_STOP_NOT_FOUND` | The id is malformed, or no served route stops at it (`100999999`, `seoul-99999`, a pole TOPIS removed) |
 | `503` | `BUS_STOPS_UNAVAILABLE` | This replica has never read a good `bus-stops` value; no `Cache-Control` |
-| `503` | `JONGRO_REGISTRY_UNAVAILABLE` | While a Jongno route's stored registry cannot be read: a `seoul-` pole that neither a readable route nor an alias names, or a local stop that aliases a pole (`arsIds`) and that no readable route serves |
+| `503` | `JONGRO_REGISTRY_UNAVAILABLE` | While a Jongno route's stored registry cannot be read: a pole, by station id or `seoul-` alias, that neither a readable route nor an alias names, or a local stop that aliases a pole and that no readable route serves |
 
 A Jongno route whose stored registry cannot be read is left out of the stop index, logged at error as `bus.stop_index.registry_unread` at most once a minute, and read again at most every `REGISTRY_RETRY_MS`; an aliased pole on it still answers its local stop's page. A route whose other source cannot be read (its attributes for a Jongno entry, the timetable for a shuttle entry) is left out of `routes` and logged at error as `bus.stop_arrivals.route_left_out`, at most once a minute per route. Either way the rest of the page is served with `200`. A Jongno entry whose live answer was placed by another stations version than the index (a TOPIS sync between the two reads) is left out of that one response.
 
 ## Stop areas
 
-A stop area groups the stops a rider would call one place, such as the poles on both sides of one subway exit, so that a journey planner can offer it as one place to pick ([ADR 0022, D4](../decisions/0022-journey-and-call-spec.md)). It is for picking only: the stop list still lists each stop once with its own pin, and each stop keeps its own page. `stopAreaId` on a listed stop and on a page's `stop` is the area's id, which no stop id ever takes, or `null`. An area's coordinates are its members' centroid, derived and never served here. Areas are stored in `bus-stops` (`stopAreas`, [edit-bus-stops.md](../how-to/edit-bus-stops.md#add-a-stop-area)); none is stored yet. A member TOPIS drops at runtime is left out of its area and logged at warn as `bus.stop_index.stop_area_member_unmatched`, at most once a minute, while the rest is served.
+A stop area groups the stops a rider would call one place, such as the poles on both sides of one subway exit, so that a journey planner can offer it as one place to pick ([ADR 0022, D4](../decisions/0022-journey-and-call-spec.md)). It is for picking only: the stop list still lists each stop once with its own pin, and each stop keeps its own page. `stopAreaId` on a listed stop and on a page's `stop` is the area's id, which no stop id ever takes and which holds a letter, or `null`. A member may name a pole by its station id or its `seoul-<ARS number>` alias, or a stop by its slug; each resolves to the canonical stop. An area's coordinates are its members' centroid, derived and never served here. Areas are stored in `bus-stops` (`stopAreas`, [edit-bus-stops.md](../how-to/edit-bus-stops.md#add-a-stop-area)); none is stored yet. A member TOPIS drops at runtime is left out of its area and logged at warn as `bus.stop_index.stop_area_member_unmatched`, at most once a minute, while the rest is served.
 
 ## Freshness and cost
 

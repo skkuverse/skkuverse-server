@@ -1483,6 +1483,23 @@ describe("loadCatalog bus-stops stop areas against the target's stored TOPIS reg
     expect(linesOf(data)).toEqual([]);
   });
 
+  // WHY: a pole's stop id is its national station id (owner, 2026-10-25), which a member may name as it may the legacy id.
+  it("resolves a member named by a pole's station id, and refuses one no stored listed route serves", () => {
+    // Arrange
+    const only7800 = registryDoc7800().stations.find((station) => /^\d{5}$/.test(station.arsId) && Number(station.arsId) !== 0 && !station.stationName.includes("미정차"))!;
+    const accepted = withAreas({ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "100900075"] });
+    const repeated = withAreas({ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "100900075", "seoul-01592"] });
+    const refused = withAreas({ id: "far", stopIds: ["hssc-600th", "100999999", only7800.topisId] });
+
+    // Act & Assert
+    expect(linesOf(accepted)).toEqual([]);
+    expect(linesOf(repeated)).toEqual(['bus-stops: stopAreas.0.stopIds.2: "seoul-01592" is the stop 100900075, which this area lists already']);
+    expect(linesOf(refused)).toEqual([
+      'bus-stops: stopAreas.0.stopIds.1: "100999999" is neither a stop of this dataset nor a pole a listed TOPIS route serves',
+      `bus-stops: stopAreas.0.stopIds.2: "${only7800.topisId}" is neither a stop of this dataset nor a pole a listed TOPIS route serves`,
+    ]);
+  });
+
   it("refuses a pole no stored listed route serves: an unknown one, and one only the unlisted 7800 serves", () => {
     // Arrange
     const only7800 = registryDoc7800().stations.find((station) => /^\d{5}$/.test(station.arsId) && Number(station.arsId) !== 0 && !station.stationName.includes("미정차"))!;
@@ -1514,7 +1531,7 @@ describe("loadCatalog bus-stops stop areas against the target's stored TOPIS reg
     // Assert
     expect(lines).toEqual([
       expect.stringMatching(/^bus-stops: stopAreas\.0\.stopIds\.0: stop hssc-bus-lot is \d+ m from the area's centroid, farther than 150 m$/),
-      expect.stringMatching(/^bus-stops: stopAreas\.0\.stopIds\.1: stop seoul-01881 is \d+ m from the area's centroid, farther than 150 m$/),
+      expect.stringMatching(/^bus-stops: stopAreas\.0\.stopIds\.1: stop 100900204 is \d+ m from the area's centroid, farther than 150 m$/),
     ]);
   });
 

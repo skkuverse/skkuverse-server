@@ -26,6 +26,7 @@ x-api-dev-env: &api-dev-env
   - SHUTTLE=off
   - REGIONAL_BUS=off
   - GBIS=off
+  - NOTICE_OVERVIEW=off
 
 services:
   poller:

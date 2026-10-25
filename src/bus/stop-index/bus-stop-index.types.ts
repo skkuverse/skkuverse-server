@@ -1,4 +1,5 @@
 import type { LatLng } from "../../shared/lat-lng.types";
+import type { StopAliases } from "../bus.types";
 import type { BusStopsSnapshot, ScheduleStop, SequenceStop } from "../stops/bus-stops.types";
 
 /** WHY: a TOPIS pole a stop stands for, as its stored registry station names it. */
@@ -45,11 +46,10 @@ export interface IndexedStop {
   stopAreaId?: string;
 }
 
-export interface StopIndex {
+/** WHY: its alias maps hold every ARS number and station id a served route stops at, to the stop that pole is. */
+export interface StopIndex extends StopAliases {
   snapshot: BusStopsSnapshot;
   stopById: ReadonlyMap<string, IndexedStop>;
-  /** WHY: every ARS number a served route stops at, to its stop id: `seoul-<arsId>` or the local stop aliasing it. */
-  stopIdByArsId: ReadonlyMap<string, string>;
   /** WHY: aliased ARS numbers no stored station has, or whose pole another stop's TOPIS alias claims, which serve nothing. */
   unmatchedArsIds: readonly string[];
   unmatchedTopisIds: readonly string[];

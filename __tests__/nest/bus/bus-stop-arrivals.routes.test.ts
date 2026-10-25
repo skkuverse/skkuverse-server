@@ -231,7 +231,7 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
     // WHY: serverNow is what ADR 0019 adds to meta, a deliberate change of this pin.
     expect(res.body.meta).toEqual({ lang: "ko", serverNow: "2026-10-20T14:10:00+09:00" });
-    expect(res.body.data.stop).toEqual({ id: "seoul-01592", name: "혜화역1번출구", coords: { lat: 37.5834729904, lng: 127.0017632862 }, arsIds: ["01592"], stopAreaId: null });
+    expect(res.body.data.stop).toEqual({ id: "100900075", name: "혜화역1번출구", coords: { lat: 37.5834729904, lng: 127.0017632862 }, arsIds: ["01592"], stopAreaId: null });
     expect(routesOf(res.body).map((route) => [route.groupId, route.kind, route.stationIndex, route.towards])).toEqual([
       ["jongro07", "live", 16, "혜화동로터리"],
       ["jongro08", "live", 22, "혜화동로터리"],
@@ -348,7 +348,7 @@ describe("GET /bus/stops/:stopId/arrivals: routes in configuration order", () =>
     expectWire(busStopArrivals, byPole.body.data);
   });
 
-  it("Nearby but not confirmed: hssc-600th and seoul-01616 are two stops with two pages", async () => {
+  it("Nearby but not confirmed: hssc-600th and 100900219 are two stops with two pages", async () => {
     // Arrange
     const server = await boot(freshStores());
 
@@ -359,7 +359,7 @@ describe("GET /bus/stops/:stopId/arrivals: routes in configuration order", () =>
     // Assert
     expect(routesOf(local.body).map((route) => route.groupId)).toEqual(["campus", "campus"]);
     expect(routesOf(pole.body).map((route) => route.groupId)).toEqual(["jongro07"]);
-    expect(pole.body.data.stop.id).toBe("seoul-01616");
+    expect(pole.body.data.stop.id).toBe("100900219");
   });
 });
 
@@ -464,7 +464,7 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.stop.id).toBe("seoul-01592");
+    expect(res.body.data.stop.id).toBe("100900075");
     expect(res.body.data.routes).toEqual([]);
     expectWire(busStopArrivals, res.body.data);
   });
@@ -944,5 +944,68 @@ describe("GET /bus/stops/:stopId/arrivals and GET /bus/live/:groupId serve the c
     expect(headsignsAt(3)).toEqual(["하교", "하교"]);
     expect(headsignsAt(6)).toEqual(["등교", "등교"]);
     expectWire(liveGroup, live.body.data);
+  });
+});
+
+// WHY: the owner's decision of 2026-10-25: a pole's stop id is its national nine-digit station id, and `seoul-<arsId>`
+// a legacy alias that never retires, which answers the canonical stop's page (ADR 0019, D5).
+describe("GET /bus/stops/:stopId/arrivals: national station ids and legacy ids", () => {
+  it("Station id: 200 with the pole's page, and its legacy id answers the same page under the station id", async () => {
+    // Arrange
+    const server = await boot(freshStores());
+
+    // Act
+    const byStationId = await request(server).get("/bus/stops/100900075/arrivals");
+    const byLegacyId = await request(server).get("/bus/stops/seoul-01592/arrivals");
+
+    // Assert
+    expect([byStationId.status, byLegacyId.status]).toEqual([200, 200]);
+    expect(byStationId.body.data.stop).toEqual({ id: "100900075", name: "혜화역1번출구", coords: { lat: 37.5834729904, lng: 127.0017632862 }, arsIds: ["01592"], stopAreaId: null });
+    expect(byLegacyId.body.data).toEqual(byStationId.body.data);
+    expectWire(busStopArrivals, byStationId.body.data);
+  });
+
+  it("Aliased pole: its station id and its legacy id both answer the local stop's page", async () => {
+    // Arrange
+    const stores = freshStores();
+    stores.stops.storeStops(aliased("hssc-bus-lot", ["01618"]));
+    const server = await boot(stores);
+
+    // Act
+    const byStationId = await request(server).get("/bus/stops/100900221/arrivals");
+    const byLegacyId = await request(server).get("/bus/stops/seoul-01618/arrivals");
+
+    // Assert
+    expect([byStationId.body.data.stop.id, byLegacyId.body.data.stop.id]).toEqual(["hssc-bus-lot", "hssc-bus-lot"]);
+    expectWire(busStopArrivals, byStationId.body.data);
+  });
+
+  it.each([
+    ["100999999", "Bus stop 100999999 is not served"],
+    ["seoul-99999", "Bus stop seoul-99999 is not served"],
+  ])("Unknown %s → 404 BUS_STOP_NOT_FOUND", async (stopId, message) => {
+    // Arrange
+    const server = await boot(freshStores());
+
+    // Act
+    const res = await request(server).get(`/bus/stops/${stopId}/arrivals`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: { code: "BUS_STOP_NOT_FOUND", message } });
+  });
+
+  it.each(["100900075", "seoul-01592"])("Registry unread: %s → 503 JONGRO_REGISTRY_UNAVAILABLE", async (stopId) => {
+    // Arrange
+    const stores = freshStores();
+    stores.registry.failWith = new Error("connection timed out");
+    const server = await boot(stores);
+
+    // Act
+    const res = await request(server).get(`/bus/stops/${stopId}/arrivals`);
+
+    // Assert
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe("JONGRO_REGISTRY_UNAVAILABLE");
   });
 });

@@ -7,7 +7,7 @@ import type { SupportedLang } from "../../infra/types";
 import type { LatLng } from "../../shared/lat-lng.types";
 import type { JongroRoute } from "../bus.types";
 import type { ServedStop } from "../bus.wire";
-import { TOPIS_ROUTES } from "../bus.constants";
+import { SLUG_LETTER_PATTERN, TOPIS_ROUTES } from "../bus.constants";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusRoutePathService } from "../route-path/bus-route-path.service";
@@ -15,7 +15,7 @@ import type { RoutePaths } from "../route-path/bus-route-path.types";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { REGISTRY_RETRY_MS, STOP_INDEX_LOG_INTERVAL_MS } from "./bus-stop-index.constants";
 import { toPoleCoords } from "./bus-stop-index.mapper";
-import { hasPoleAliases, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
+import { hasPoleAliases, toCanonicalStopId, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
 import type { FoundStop, IndexedStop, StopIndex, StopList } from "./bus-stop-index.types";
 
 interface BuiltIndex {
@@ -43,11 +43,10 @@ export class BusStopIndexService {
 
   async findStop(stopId: string): Promise<FoundStop | null> {
     const index = await this.current();
-    const arsId = toPoleArsId(stopId);
-    const canonicalId = arsId === null ? stopId : (index.stopIdByArsId.get(arsId) ?? this.aliasOwnerWhileUnread(index, arsId));
+    const canonicalId = toCanonicalStopId(index, stopId) ?? this.aliasOwnerWhileUnread(index, stopId);
     const stop = canonicalId === undefined ? undefined : index.stopById.get(canonicalId);
     if (stop) return { ...stop, snapshot: index.snapshot, coords: stop.localStop?.coords ?? (await this.poleCoordsOf(stop)) };
-    if (index.registryFailure !== undefined && this.isPoleOrAliasing(index, stopId, arsId)) throw this.toRegistryUnavailable(index.registryFailure);
+    if (index.registryFailure !== undefined && this.isPoleOrAliasing(index, stopId)) throw this.toRegistryUnavailable(index.registryFailure);
     return null;
   }
 
@@ -104,13 +103,14 @@ export class BusStopIndexService {
   }
 
   // WHY: an aliased pole is the dataset's, so its local stop still serves while the registry that lists it cannot be read.
-  private aliasOwnerWhileUnread(index: StopIndex, arsId: string): string | undefined {
-    return index.registryFailure === undefined ? undefined : index.snapshot.stopIdByArsId.get(arsId);
+  private aliasOwnerWhileUnread(index: StopIndex, stopId: string): string | undefined {
+    return index.registryFailure === undefined ? undefined : toCanonicalStopId(index.snapshot, stopId);
   }
 
-  // WHY: only a pole, or a local stop standing for one, may be served by a route the index left out; any other id is gone.
-  private isPoleOrAliasing(index: StopIndex, stopId: string, arsId: string | null): boolean {
-    return arsId !== null || hasPoleAliases(index.snapshot, stopId);
+  // WHY: only a pole (its `seoul-<arsId>` alias, or an id with no letter, which no slug is), or a local stop standing for one, may be
+  // served by a route the index left out; any other id is gone.
+  private isPoleOrAliasing(index: StopIndex, stopId: string): boolean {
+    return toPoleArsId(stopId) !== null || !SLUG_LETTER_PATTERN.test(stopId) || hasPoleAliases(index.snapshot, stopId);
   }
 
   private toRegistryUnavailable(failure: unknown): AppError {

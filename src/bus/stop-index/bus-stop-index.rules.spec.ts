@@ -1,7 +1,8 @@
 /**
  * The stop index: which served routes stop at each
  * stop, derived from one `bus-stops` snapshot and the stored Jongno registry, and never stored. A TOPIS pole's stop
- * id is `seoul-<arsId>` of its stored station, a virtual stop (ARS `0` or empty) has none, a pole two routes share is
+ * id is the national station id of its stored station (it was `seoul-<arsId>` until the owner's decision of 2026-10-25,
+ * now a legacy alias), a virtual stop (ARS `0` or empty) has none, a pole two routes share is
  * one stop, a route that lists a pole twice serves it at its first index, an alias makes a pole part of its local
  * stop, each HSSC position and sequence stop maps to its entry, and the routes follow the order of `/bus/config`.
  *
@@ -11,14 +12,14 @@
  * number" → src/bus/bus.rules.spec.ts `toPoleStopId`.
  *
  * Each stop names the stop area that holds it (ADR 0022, D4): a member is the stop the index serves under its id, a
- * `seoul-` member the stop its pole is (a local stop when one aliases it), and a member the index cannot find is left
+ * pole's station id or `seoul-` member the stop its pole is (a local stop when one aliases it), and a member the index cannot find is left
  * out and named, never failing the build.
  */
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
-import { hasPoleAliases, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
+import { hasPoleAliases, toCanonicalStopId, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
 
 type FixtureStop = { id: string; arsIds?: string[]; topisIds?: string[] };
 
@@ -81,7 +82,7 @@ describe("hasPoleAliases", () => {
 });
 
 describe("toStopIndex", () => {
-  it("maps each stored station with an ARS number to its route and index, and 07 and 08 share seoul-01592", async () => {
+  it("maps each stored station with an ARS number to its route and index, and 07 and 08 share 100900075", async () => {
     // Arrange
     const [snapshot, routes] = await Promise.all([snapshotOf(), routesOf()]);
 
@@ -89,12 +90,12 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01592")).toEqual([
+    expect(routesAt(index, "100900075")).toEqual([
       { kind: "jongro", groupId: "jongro07", stationIndex: 16, towards: "혜화동로터리", stationsVersion: versionOf(routes, "jongro07") },
       { kind: "jongro", groupId: "jongro08", stationIndex: 22, towards: "혜화동로터리", stationsVersion: versionOf(routes, "jongro08") },
     ]);
-    expect(index.stopById.get("seoul-01592")).toMatchObject({ id: "seoul-01592", localStop: null, poles: [{ arsId: "01592", topisId: "100900075", stationName: "혜화역1번출구" }] });
-    expect(index.stopIdByArsId.get("01592")).toBe("seoul-01592");
+    expect(index.stopById.get("100900075")).toMatchObject({ id: "100900075", localStop: null, poles: [{ arsId: "01592", topisId: "100900075", stationName: "혜화역1번출구" }] });
+    expect(index.stopIdByArsId.get("01592")).toBe("100900075");
   });
 
   it("keeps two poles of one name across a road apart", async () => {
@@ -105,8 +106,8 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01722")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 3, towards: "유림회관앞", stationsVersion: versionOf(routes, "jongro07") }]);
-    expect(routesAt(index, "seoul-01615")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 19, towards: "비천당", stationsVersion: versionOf(routes, "jongro07") }]);
+    expect(routesAt(index, "100900110")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 3, towards: "유림회관앞", stationsVersion: versionOf(routes, "jongro07") }]);
+    expect(routesAt(index, "100900218")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 19, towards: "비천당", stationsVersion: versionOf(routes, "jongro07") }]);
   });
 
   it("serves 02's repeated terminal 01881 at index 0 only", async () => {
@@ -117,7 +118,7 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01881")).toEqual([{ kind: "jongro", groupId: "jongro02", stationIndex: 0, towards: "서울성곽.성대후문", stationsVersion: versionOf(routes, "jongro02") }]);
+    expect(routesAt(index, "100900204")).toEqual([{ kind: "jongro", groupId: "jongro02", stationIndex: 0, towards: "서울성곽.성대후문", stationsVersion: versionOf(routes, "jongro02") }]);
   });
 
   it("names nothing at the last index of a route", async () => {
@@ -128,7 +129,7 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01616")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 21, towards: null, stationsVersion: versionOf(routes, "jongro07") }]);
+    expect(routesAt(index, "100900219")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 21, towards: null, stationsVersion: versionOf(routes, "jongro07") }]);
   });
 
   it.each(["0", "", "00000", "1592", "015920"])("gives a station with the ARS number %p no stop", async (arsId) => {
@@ -142,8 +143,8 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(index.stopById.has("seoul-01226")).toBe(false);
-    expect([...index.stopById.keys()].filter((id) => id.startsWith("seoul-") && !/^seoul-\d{5}$/.test(id))).toEqual([]);
+    expect(index.stopById.has("100000130")).toBe(false);
+    expect([...index.stopById.keys()].filter((id) => !/[a-z]/.test(id) && !/^\d{9}$/.test(id))).toEqual([]);
     expect(index.stopById.has(`seoul-${arsId}`)).toBe(false);
   });
 
@@ -155,7 +156,7 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect([...index.stopById.keys()].filter((id) => id.startsWith("seoul-"))).toHaveLength(69);
+    expect([...index.stopById.keys()].filter((id) => /^\d{9}$/.test(id))).toHaveLength(69);
   });
 
   it("maps each HSSC position with a stop to its index, and the non-stop positions to nothing", async () => {
@@ -211,7 +212,7 @@ describe("toStopIndex", () => {
 
     // Assert
     expect(index.stopIdByArsId.get("01618")).toBe("hssc-bus-lot");
-    expect(index.stopById.has("seoul-01618")).toBe(false);
+    expect(index.stopById.has("100900221")).toBe(false);
     expect(index.stopById.get("hssc-bus-lot")).toMatchObject({ localStop: { id: "hssc-bus-lot" }, poles: [{ arsId: "01618", topisId: "100900221", stationName: "학생회관" }] });
     expect(routesAt(index, "hssc-bus-lot")?.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
     expect(index.unmatchedArsIds).toEqual([]);
@@ -226,7 +227,7 @@ describe("toStopIndex", () => {
 
     // Assert
     expect(routesAt(index, "hssc-600th")?.map((route) => route.groupId)).toEqual(["campus", "campus"]);
-    expect(routesAt(index, "seoul-01616")?.map((route) => route.groupId)).toEqual(["jongro07"]);
+    expect(routesAt(index, "100900219")?.map((route) => route.groupId)).toEqual(["jongro07"]);
   });
 
   it("serves nothing for an alias no stored station has, and names it", async () => {
@@ -258,8 +259,8 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01999")).toEqual([{ kind: "jongro", groupId: "jongro08", stationIndex: 30, towards: null, stationsVersion: versionOf(routes, "jongro08") }]);
-    expect(index.stopById.has("seoul-01543")).toBe(false);
+    expect(routesAt(index, "NEW")).toEqual([{ kind: "jongro", groupId: "jongro08", stationIndex: 30, towards: null, stationsVersion: versionOf(routes, "jongro08") }]);
+    expect(index.stopById.has("100900063")).toBe(false);
   });
 
   it("resolves a pole aliased by its TOPIS station to its local stop, whose ARS number then names that stop too", async () => {
@@ -274,7 +275,7 @@ describe("toStopIndex", () => {
 
     // Assert
     expect(index.stopIdByArsId.get("01618")).toBe("hssc-bus-lot");
-    expect(index.stopById.has("seoul-01618")).toBe(false);
+    expect(index.stopById.has("100900221")).toBe(false);
     expect(index.stopById.get("hssc-bus-lot")).toMatchObject({ localStop: { id: "hssc-bus-lot" }, poles: [{ arsId: "01618", topisId: "100900221", stationName: "학생회관" }] });
     expect(routesAt(index, "hssc-bus-lot")?.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
     expect(index.unmatchedTopisIds).toEqual([]);
@@ -359,8 +360,8 @@ describe("toStopIndex", () => {
     // Assert
     expect(routesAt(index, "hssc-bus-lot")?.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
     expect(routesAt(index, "hssc-600th")?.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
-    expect(routesAt(index, "seoul-01592")?.map((route) => route.groupId)).toEqual(["jongro08"]);
-    expect(index.stopById.has("seoul-01616")).toBe(false);
+    expect(routesAt(index, "100900075")?.map((route) => route.groupId)).toEqual(["jongro08"]);
+    expect(index.stopById.has("100900219")).toBe(false);
     expect(index.stopIdByArsId.has("01616")).toBe(false);
     expect([...index.stopById.values()].flatMap((stop) => stop.routes).filter((route) => route.groupId === "jongro07")).toHaveLength(2);
   });
@@ -373,8 +374,8 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes.filter((route) => route.id !== "jongro07"));
 
     // Assert
-    expect(routesAt(index, "seoul-01592")?.map((route) => route.groupId)).toEqual(["jongro08"]);
-    expect(index.stopById.has("seoul-01616")).toBe(false);
+    expect(routesAt(index, "100900075")?.map((route) => route.groupId)).toEqual(["jongro08"]);
+    expect(index.stopById.has("100900219")).toBe(false);
   });
 });
 
@@ -399,7 +400,7 @@ describe("toStopIndex stop areas", () => {
 
     // Assert
     const areaOf = (stopId: string) => index.stopById.get(stopId)?.stopAreaId;
-    expect(["hssc-hyehwa-exit1", "seoul-01592", "hssc-bus-lot", "hssc-600th", "seoul-01722"].map(areaOf)).toEqual(["hyehwa-exit1", "hyehwa-exit1", "hssc-lot", "hssc-lot", undefined]);
+    expect(["hssc-hyehwa-exit1", "100900075", "hssc-bus-lot", "hssc-600th", "100900110"].map(areaOf)).toEqual(["hyehwa-exit1", "hyehwa-exit1", "hssc-lot", "hssc-lot", undefined]);
     expect(index.unmatchedStopAreaMembers).toEqual([]);
   });
 
@@ -414,5 +415,109 @@ describe("toStopIndex stop areas", () => {
     // Assert
     expect(index.stopById.get("hssc-hyehwa-exit1")?.stopAreaId).toBe("hyehwa-exit1");
     expect(index.unmatchedStopAreaMembers).toEqual([{ stopAreaId: "hyehwa-exit1", memberId: "seoul-99999" }]);
+  });
+});
+
+// WHY: the owner's decision of 2026-10-25: a pole's stop id is its national nine-digit station id, never reused and kept
+// through a rename; `seoul-<arsId>` stays a legacy alias that never retires (ADR 0019, D5).
+describe("toStopIndex by national station id", () => {
+  it("names a pole no local stop aliases by its station id, and maps its ARS number and station id to it", async () => {
+    // Arrange
+    const [snapshot, routes] = await Promise.all([snapshotOf(), routesOf()]);
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.stopById.get("100900075")).toMatchObject({ id: "100900075", localStop: null, poles: [{ arsId: "01592", topisId: "100900075" }] });
+    expect(index.stopById.has("seoul-01592")).toBe(false);
+    expect(index.stopIdByArsId.get("01592")).toBe("100900075");
+    expect(index.stopIdByTopisId.get("100900075")).toBe("100900075");
+  });
+
+  it("maps an aliased pole's station id to its local stop", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.arsIds = ["01618"];
+    });
+    const routes = await routesOf();
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(index.stopIdByTopisId.get("100900221")).toBe("hssc-bus-lot");
+    expect(index.stopById.has("100900221")).toBe(false);
+  });
+
+  it("keeps two poles of one ARS number on two routes apart by their station ids", async () => {
+    // Arrange
+    const snapshot = await snapshotOf();
+    const routes = await routesOf((repository) => {
+      repository.routes.get("jongro08")!.stations[22]!.topisId = "200000104";
+    });
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    expect(routesAt(index, "100900075")?.map((route) => route.groupId)).toEqual(["jongro07"]);
+    expect(routesAt(index, "200000104")?.map((route) => route.groupId)).toEqual(["jongro08"]);
+  });
+
+  it("files a stop area member named by its station id, its legacy id or its slug under the canonical stop", async () => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      data.stops.find((stop) => stop.id === "hssc-bus-lot")!.arsIds = ["01618"];
+      Object.assign(data, {
+        stopAreas: [
+          { id: "hyehwa-exit1", name: { ko: "혜화역" }, stopIds: ["hssc-hyehwa-exit1", "100900075"] },
+          { id: "hssc-lot", name: { ko: "학생회관" }, stopIds: ["100900221", "hssc-600th"] },
+          { id: "jongro07-gate", name: { ko: "정문" }, stopIds: ["seoul-01722", "100900218"] },
+        ],
+      });
+    });
+    const routes = await routesOf();
+
+    // Act
+    const index = toStopIndex(snapshot, routes);
+
+    // Assert
+    const areaOf = (stopId: string) => index.stopById.get(stopId)?.stopAreaId;
+    expect(["hssc-hyehwa-exit1", "100900075", "hssc-bus-lot", "hssc-600th", "100900110", "100900218"].map(areaOf)).toEqual([
+      "hyehwa-exit1",
+      "hyehwa-exit1",
+      "hssc-lot",
+      "hssc-lot",
+      "jongro07-gate",
+      "jongro07-gate",
+    ]);
+    expect(index.unmatchedStopAreaMembers).toEqual([]);
+  });
+});
+
+describe("toCanonicalStopId", () => {
+  const aliases = {
+    stopIdByArsId: new Map([
+      ["01592", "100900075"],
+      ["01618", "hssc-bus-lot"],
+    ]),
+    stopIdByTopisId: new Map([
+      ["100900075", "100900075"],
+      ["100900221", "hssc-bus-lot"],
+    ]),
+  };
+
+  it.each([
+    ["a pole's station id", "100900075", "100900075"],
+    ["an aliased pole's station id", "100900221", "hssc-bus-lot"],
+    ["a pole's legacy id", "seoul-01592", "100900075"],
+    ["an aliased pole's legacy id", "seoul-01618", "hssc-bus-lot"],
+    ["a slug", "hssc-600th", "hssc-600th"],
+    ["a station id no pole has", "100999999", undefined],
+    ["a legacy id no pole has", "seoul-99999", undefined],
+  ])("resolves %s, %s, to %s", (_case, stopId, expected) => {
+    // Act & Assert
+    expect(toCanonicalStopId(aliases, stopId)).toBe(expected);
   });
 });

@@ -1,4 +1,4 @@
-import { ARS_ID_PATTERN, SERVICE_CONFIG, TOPIS_STOP_ID_PREFIX } from "./bus.constants";
+import { ARS_ID_PATTERN, SERVICE_CONFIG } from "./bus.constants";
 import type { ServiceConfigEntry, StopAliases, StopAreaMembership } from "./bus.types";
 
 // WHY: own keys only, so a service id that names an Object.prototype member (`toString`) is unknown.
@@ -56,20 +56,20 @@ export function toServedArsId(arsId: string | null): string | null {
   return arsId !== null && ARS_ID_PATTERN.test(arsId) && Number(arsId) !== 0 ? arsId : null;
 }
 
-/** WHY: the stop a TOPIS pole is: the local stop aliasing its ARS number, else `seoul-<arsId>`; a virtual stop is none. */
-export function toPoleStopId(arsId: string | null, stopIdByArsId: ReadonlyMap<string, string>): string | null {
+/** WHY: the stop a TOPIS pole is: the local stop aliasing its ARS number, else its national station id; a virtual stop is none. */
+export function toPoleStopId({ arsId, topisId }: { arsId: string | null; topisId: string }, stopIdByArsId: ReadonlyMap<string, string>): string | null {
   const poleArsId = toServedArsId(arsId);
   if (poleArsId === null) return null;
-  return stopIdByArsId.get(poleArsId) ?? `${TOPIS_STOP_ID_PREFIX}${poleArsId}`;
+  return stopIdByArsId.get(poleArsId) ?? topisId;
 }
 
 // WHY: a TOPIS station's stop: the local stop aliasing its station id, else its ARS number, else its pole's own; a
-// route /bus/config does not list names only an aliased pole, so it adds no `seoul-` stop (ADR 0019, D5).
-export function toStationStopId({ arsId, topisId }: { arsId: string | null; topisId: string }, aliases: StopAliases, isListed: boolean): string | null {
-  const servedArsId = toServedArsId(arsId);
-  const aliasedStopId = aliases.stopIdByTopisId.get(topisId) ?? (servedArsId === null ? undefined : aliases.stopIdByArsId.get(servedArsId));
+// route /bus/config does not list names only an aliased pole, so it adds no stop of its own (ADR 0019, D5).
+export function toStationStopId(station: { arsId: string | null; topisId: string }, aliases: StopAliases, isListed: boolean): string | null {
+  const servedArsId = toServedArsId(station.arsId);
+  const aliasedStopId = aliases.stopIdByTopisId.get(station.topisId) ?? (servedArsId === null ? undefined : aliases.stopIdByArsId.get(servedArsId));
   if (aliasedStopId !== undefined) return aliasedStopId;
-  return isListed ? toPoleStopId(arsId, aliases.stopIdByArsId) : null;
+  return isListed ? toPoleStopId(station, aliases.stopIdByArsId) : null;
 }
 
 /** WHY: each stop's area, held by the first area that lists it (ADR 0022, D4); a member is left out when it is no stop or a held one. */

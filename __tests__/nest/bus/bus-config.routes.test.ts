@@ -415,7 +415,7 @@ describe("GET /bus/config realtime station stop ids", () => {
   type Station = { index: number; stationNumber: string | null; stopId?: string };
   type Group = { id: string; screen: { stations: Station[] } };
 
-  it("Jongno station: serves 종로07's station 01592 with stopId seoul-01592 after transferLines", async () => {
+  it("Jongno station: serves 종로07's station 01592 with stopId 100900075 after transferLines", async () => {
     // Act
     const res = await request(httpServer).get("/bus/config/jongro07");
 
@@ -423,7 +423,7 @@ describe("GET /bus/config realtime station stop ids", () => {
     expect(res.status).toBe(200);
     expectWire(busGroup, res.body.data);
     const station = (res.body.data as Group).screen.stations.find((candidate) => candidate.stationNumber === "01592")!;
-    expect(station.stopId).toBe("seoul-01592");
+    expect(station.stopId).toBe("100900075");
     expect(Object.keys(station).slice(-2)).toEqual(["transferLines", "stopId"]);
   });
 
@@ -604,5 +604,44 @@ describe("GET /bus/config/:groupId directions", () => {
     expect(config.body.data.groups.find((group: { id: string }) => group.id === "hssc").screen.directions).toEqual((hssc.body.data.screen as Screen).directions);
     expectWire(busGroup, hssc.body.data);
     expectWire(busConfig, config.body.data);
+  });
+});
+
+// WHY: the owner's decision of 2026-10-25: a pole's stop id is its national nine-digit station id, and a pole a local stop
+// aliases, by its station id or its ARS number, is that stop, the id the stop page serves it under.
+describe("GET /bus/config realtime station stop ids by national station id", () => {
+  type Station = { stationNumber: string | null; stopId?: string };
+  let aliasedApp: NestExpressApplication;
+
+  beforeAll(async () => {
+    const data = busStopsFixture() as { stops: Array<{ id: string; arsIds?: string[]; topisIds?: string[] }> };
+    data.stops.find((stop) => stop.id === "hssc-bus-lot")!.topisIds = ["100900221"];
+    data.stops.find((stop) => stop.id === "hssc-600th")!.arsIds = ["01616"];
+    aliasedApp = await buildTestApp({
+      imports: [SchedulingModule, BusStopsModule, BusConfigModule],
+      overrides: [
+        { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+        { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+        { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },
+        { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
+        { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
+      ],
+      role: "api",
+    });
+  });
+
+  afterAll(async () => {
+    await aliasedApp.close();
+  });
+
+  it("serves an unaliased pole its station id, and a pole aliased by station id or ARS number its local stop's id", async () => {
+    // Act
+    const res = await request(aliasedApp.getHttpServer()).get("/bus/config/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(busGroup, res.body.data);
+    const stopIdOf = (arsId: string) => (res.body.data.screen.stations as Station[]).find((station) => station.stationNumber === arsId)!.stopId;
+    expect(["01592", "01618", "01616"].map(stopIdOf)).toEqual(["100900075", "hssc-bus-lot", "hssc-600th"]);
   });
 });
