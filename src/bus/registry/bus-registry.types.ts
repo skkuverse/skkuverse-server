@@ -5,6 +5,7 @@ export type ObservedStation = Omit<RegistryStation, "sequence">;
 
 /** WHY: what a sync reads from a cached arrival row. */
 export type ArrivalRowStation = Record<"stationId" | "sequence" | "stationName" | "stationNumber", string>;
+export type ArrivalRowHours = { sequence: string; firstTm?: string; lastTm?: string };
 
 export interface JongroStation {
   sequence: string;

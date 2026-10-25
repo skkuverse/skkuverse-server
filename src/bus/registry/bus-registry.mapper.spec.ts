@@ -2,12 +2,13 @@
  * The route the registry derives from a stored document and the route's
  * identity in code: served stations with their ends and the turnaround stop,
  * and the TOPIS id → first ord mapping that places a bus. The transfer lines
- * are stored attributes the config view joins (ADR 0013, D2).
+ * are stored attributes the config view joins (ADR 0013, D2). An arrival row's
+ * first and last run become a stop's service hours by its ord.
  */
 import { JONGRO_ROUTES } from "../bus.constants";
 import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument } from "./bus-registry.document";
-import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
+import { toRegistryRoute, toRegistryStations, toStationServiceHours } from "./bus-registry.mapper";
 
 
 const committed: JongroRoute = JONGRO_ROUTES.find((route) => route.id === "jongro07")!;
@@ -91,6 +92,21 @@ describe("toRegistryRoute", () => {
   it("derives no pass-through ord on a route that stops everywhere", () => {
     // Act & Assert
     expect(toRegistryRoute(committed, documentOf(["A", "B", "C"])).passThroughOrds.size).toBe(0);
+  });
+});
+
+describe("toStationServiceHours", () => {
+  it("is each row's first and last run by its ord, leaving out a row without both", () => {
+    // Arrange
+    const rows = [
+      { sequence: "4", firstTm: "2026-10-20T06:00:00+09:00", lastTm: "2026-10-20T22:40:00+09:00" },
+      { sequence: "5", firstTm: "2026-10-20T06:01:00+09:00" },
+      { sequence: "6", lastTm: "2026-10-20T22:42:00+09:00" },
+      { sequence: "7" },
+    ];
+
+    // Act & Assert
+    expect(toStationServiceHours(rows)).toEqual([{ sequence: 4, firstTm: "2026-10-20T06:00:00+09:00", lastTm: "2026-10-20T22:40:00+09:00" }]);
   });
 });
 

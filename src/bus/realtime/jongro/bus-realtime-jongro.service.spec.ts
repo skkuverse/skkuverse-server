@@ -4,7 +4,8 @@
  * its arrivals and its bus positions under the route's code, places each bus
  * on the registry's stop (sequence and name), times its dwell at that stop,
  * hands the arrival list and turnaround stops to the registry sync (applied at
- * the third identical tick, never blocking the cache writes), and rejects on
+ * the third identical tick, never blocking the cache writes) and each stop's
+ * first and last run to the registry, kept through a tick with no rows, and rejects on
  * any failure, so the poller registry counts it. A route with no registry
  * document writes no bus_cache key: its tick hands both lists to the
  * registry's bootstrap and rejects until the tick that inserts the route
@@ -351,6 +352,24 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
     expect(busCache.values.get("jongro_locations_07")).toEqual([]);
   });
 
+  it("Overnight: keeps each stop's last-known first and last run on the route while TOPIS lists no rows", async () => {
+    // Arrange
+    const hours = { firstTm: "2026-10-20T06:00:00+09:00", lastTm: "2026-10-20T22:40:00+09:00" };
+    client.arrivals = arrivalsOf(storedIdsOf("jongro08")).map((row) => ({ ...row, ...hours }));
+    await service.refresh(route("08"));
+    client.arrivals = [];
+
+    // Act
+    await service.refresh(route("08"));
+
+    // Assert
+    expect(busCache.values.get("jongro_stations_08")).toEqual([]);
+    expect((await service.listServiceHours("jongro08")).slice(0, 2)).toEqual([
+      { sequence: 1, ...hours },
+      { sequence: 2, ...hours },
+    ]);
+    expect(registryRepository.serviceHoursWrites).toBe(1);
+  });
 });
 
 // WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (ADR 0012, D3).

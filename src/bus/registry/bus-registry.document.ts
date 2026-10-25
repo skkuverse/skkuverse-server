@@ -7,6 +7,15 @@ export interface RegistryStation {
   sequence: number;
 }
 
+/** WHY: one stop's first and last run as TOPIS last stated them, kept through a night whose polls answer no rows. */
+export interface StationServiceHours {
+  /** WHY: the station's TOPIS ord, as the arrival rows number it. */
+  sequence: number;
+  /** QUIRK(topis): at +09:00, dated by TOPIS's own service day, so only the time of day is read. */
+  firstTm: string;
+  lastTm: string;
+}
+
 export interface JongroRouteDocument {
   /** WHY: a route id of JONGRO_ROUTES (`jongro07`). */
   _id: string;
@@ -14,4 +23,6 @@ export interface JongroRouteDocument {
   turnaroundTopisId: string;
   stationsVersion: string;
   syncedAt: Date;
+  /** WHY: absent on a route the poller has not stated hours for since this field was added. */
+  serviceHours?: StationServiceHours[];
 }

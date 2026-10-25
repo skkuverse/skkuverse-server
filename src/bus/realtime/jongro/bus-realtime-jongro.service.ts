@@ -4,6 +4,7 @@ import logger from "../../../infra/logger";
 import type { BusCacheEntry, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { JongroRoute } from "../../bus.types";
+import type { StationServiceHours } from "../../registry/bus-registry.document";
 import { BusRegistryService } from "../../registry/bus-registry.service";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
@@ -30,6 +31,12 @@ export class BusRealtimeJongroService {
     if (registryRoute === null) return this.bootstrapRegistry(route);
     const [arrivals, sightings] = await Promise.all([this.refreshArrivals(registryRoute), this.refreshPositions(registryRoute)]);
     await this.registry.observe(registryRoute, arrivals, sightings.map((sighting) => sighting.turnaroundStationId));
+    await this.registry.observeServiceHours(registryRoute, arrivals);
+  }
+
+  // WHY: each stop's last-known first and last run, which the stored rows lack overnight (TOPIS answers none then).
+  listServiceHours(routeId: string): Promise<StationServiceHours[]> {
+    return this.registry.listServiceHours(routeId);
   }
 
   // WHY: the realtime group places a route's rows by the stations this flow polls with.
