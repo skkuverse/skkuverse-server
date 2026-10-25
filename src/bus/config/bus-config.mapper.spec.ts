@@ -12,7 +12,7 @@
  *
  * Each station carries its stop as its last field, `stopId`:
  * an HSSC position its stored stop, a Jongno station the stop its pole
- * resolves to (the local stop aliasing it, else `seoul-<arsId>`), and a
+ * resolves to (the local stop aliasing it, else its national station id), and a
  * station with none no key. The two HSSC stations pinned before stop ids
  * gained exactly their stop ids, on purpose, then `isPassThrough` (false at
  * both, after `isRotationStation`) when the field shipped, and then
@@ -46,7 +46,8 @@ import { mapStations, toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 import { toHsscDirections, toJongroDirections } from "./bus-config.rules";
 
 const NO_STOPS = { sequences: {}, stops: [] };
-const NO_ALIASES = new Map<string, string>();
+const ROUTE_IDS = ["jongro02", "jongro07", "jongro08"];
+const NO_ALIASES = { stopIdByArsId: new Map<string, string>(), stopIdByTopisId: new Map<string, string>() };
 const HSSC_DIRECTION_IDS = toHsscDirections("ko").directionIds;
 
 // WHY: the HSSC line of the stored bus-stops revision 1, which the HSSC group serves.
@@ -65,14 +66,14 @@ beforeAll(async () => {
 });
 
 const jongroGroupOf = (routes: AttributedJongroRoute[], id: string) =>
-  toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!;
+  toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!;
 
 type JongroScreen = { refreshInterval: number; stations: Array<{ name: string; stationNumber: string | null; transferLines: Array<{ line: string; color: string }> }> };
 
 type ScheduleService = { serviceId: string; refresh?: unknown };
 
 function scheduleServicesById(): Map<string, ScheduleService> {
-  const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+  const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
   const services = groups.flatMap((g) => ("services" in g.screen ? (g.screen.services as ScheduleService[]) : []));
   return new Map(services.map((s) => [s.serviceId, s]));
 }
@@ -154,7 +155,7 @@ describe("toBusGroupIds", () => {
 describe("toBusGroups", () => {
   it("orders hssc, campus, fasttrack, commute, then the Jongro routes", () => {
     // Act
-    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     expect(groups.map((g) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
@@ -162,7 +163,7 @@ describe("toBusGroups", () => {
 
   it("leaves out `stops` when a schedule group references none", () => {
     // Act
-    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     expect(groups[1]!.screen).not.toHaveProperty("stops");
@@ -219,7 +220,7 @@ describe("toBusGroups for a Jongro route", () => {
   // WHY: the live route's fields follow it (ADR 0019), a deliberate change of this pin.
   it("appends the route's stations version to its realtime screen, before the live route's fields", () => {
     // Act
-    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     const screen = groups.find((g) => g.id === "jongro07")!.screen as Record<string, unknown>;
@@ -293,26 +294,26 @@ describe("toBusGroups for a Jongro route", () => {
 
 describe("toBusGroups stop ids on a Jongro route's stations", () => {
   type Station = { stationNumber: string | null; transferLines: unknown[]; stopId?: string };
-  const stationsOf = (routes: AttributedJongroRoute[], id: string, stopIdByArsId: ReadonlyMap<string, string> = NO_ALIASES) =>
-    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
+  const stationsOf = (routes: AttributedJongroRoute[], id: string, stopIdByArsId: ReadonlyMap<string, string> = NO_ALIASES.stopIdByArsId) =>
+    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: { ...NO_ALIASES, stopIdByArsId }, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
       .find((g) => g.id === id)!.screen as unknown as { stations: Station[] }).stations;
 
-  it("Jongno station: gives 종로07's station 01592 the stop id seoul-01592 after its transfer lines", () => {
+  it("Jongno station: gives 종로07's station 01592 the stop id 100900075 after its transfer lines", () => {
     // Act
     const station = stationsOf(jongroRoutes, "jongro07").find((candidate) => candidate.stationNumber === "01592")!;
 
     // Assert
-    expect(station.stopId).toBe("seoul-01592");
+    expect(station.stopId).toBe("100900075");
     expect(Object.keys(station).slice(-2)).toEqual(["transferLines", "stopId"]);
   });
 
-  it("gives every stored station of each route `seoul-<arsId>`, the terminal 종로02 lists twice at both its indexes", () => {
+  it("gives every stored station of each route its station id, the terminal 종로02 lists twice at both its indexes", () => {
     // Act
-    const byRoute = ["jongro02", "jongro07", "jongro08"].map((id) => stationsOf(jongroRoutes, id));
+    const byRoute = ROUTE_IDS.map((id) => stationsOf(jongroRoutes, id));
 
     // Assert
-    for (const stations of byRoute) expect(stations.map((s) => s.stopId)).toEqual(stations.map((s) => `seoul-${s.stationNumber}`));
-    expect([byRoute[0]![0]!.stopId, byRoute[0]!.at(-1)!.stopId]).toEqual(["seoul-01881", "seoul-01881"]);
+    byRoute.forEach((stations, routeIndex) => expect(stations.map((s) => s.stopId)).toEqual(jongroRoutes.find(({ route }) => route.id === ROUTE_IDS[routeIndex])!.route.stations.map((s) => s.topisId)));
+    expect([byRoute[0]![0]!.stopId, byRoute[0]!.at(-1)!.stopId]).toEqual(["100900204", "100900204"]);
   });
 
   it("gives an aliased pole its local stop's id, and the other poles their own", () => {
@@ -324,7 +325,7 @@ describe("toBusGroups stop ids on a Jongro route's stations", () => {
 
     // Assert
     expect(stations.find((s) => s.stationNumber === "01618")!.stopId).toBe("hssc-bus-lot");
-    expect(stations.find((s) => s.stationNumber === "01616")!.stopId).toBe("seoul-01616");
+    expect(stations.find((s) => s.stationNumber === "01616")!.stopId).toBe("100900219");
   });
 
   it.each(["0", ""])("gives a virtual stop (ARS number %j) no stopId key", (arsId) => {
@@ -337,7 +338,7 @@ describe("toBusGroups stop ids on a Jongro route's stations", () => {
 
     // Assert
     expect(stations[0]).not.toHaveProperty("stopId");
-    expect(stations[1]!.stopId).toBe(`seoul-${route.stations[1]!.stationNumber}`);
+    expect(stations[1]!.stopId).toBe(route.stations[1]!.topisId);
   });
 });
 
@@ -346,7 +347,7 @@ describe("toBusGroups stop ids on a Jongro route's stations", () => {
 describe("toBusGroups pass-through stations", () => {
   type Station = Record<string, unknown> & { isPassThrough?: unknown; stationNumber: string | null };
   const stationsOf = (routes: AttributedJongroRoute[], id: string) =>
-    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
+    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
       .find((g) => g.id === id)!.screen as unknown as { stations: Station[] }).stations;
 
   it("marks the two non-stop 혜화동로터리 HSSC positions (indexes 5 and 7) as pass-through, and every other HSSC position not", () => {
@@ -384,7 +385,7 @@ describe("toBusGroups pass-through stations", () => {
 describe("toBusGroups drop-off-only stations", () => {
   type Station = Record<string, unknown> & { isAlightOnly?: unknown };
   const stationsOf = (hsscStations: BusStopsData["hssc"]["stations"], id: string, routes = jongroRoutes) =>
-    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
+    (toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations, aliases: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN })
       .find((g) => g.id === id)!.screen as unknown as { stations: Station[] }).stations;
   const flaggedLine = (flags: Record<number, boolean>) => HSSC_LINE.map((station, index) => (index in flags ? { ...station, isAlightOnly: flags[index]! } : station));
 
@@ -427,7 +428,7 @@ describe("toBusGroups directions", () => {
   type Station = Record<string, unknown> & { directionId?: unknown };
   type Screen = Record<string, unknown> & { stations: Station[]; directions?: unknown };
   const screenOf = (id: string, lang: "ko" | "en" | "zh" = "ko", routes = jongroRoutes) =>
-    toBusGroups({ lang, stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!
+    toBusGroups({ lang, stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!
       .screen as unknown as Screen;
 
   it("serves the HSSC line's 하교 (positions 0 to 5) and 등교 (6 to 10), each station on its own", () => {
@@ -496,7 +497,7 @@ describe("toBusGroups directions", () => {
 // so a route the TOPIS list states differently is served differently, and the three Jongro routes as before.
 describe("toBusGroups per-route facts", () => {
   const groupsOf = (routes: AttributedJongroRoute[]) =>
-    toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN });
+    toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, aliases: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN });
   const restated = (id: string, facts: Partial<AttributedJongroRoute["route"]>) =>
     jongroRoutes.map((jongroRoute) => (jongroRoute.route.id === id ? { ...jongroRoute, route: { ...jongroRoute.route, ...facts } } : jongroRoute));
 
@@ -529,11 +530,12 @@ describe("mapStations on a TOPIS route with virtual stations", () => {
     sequence: row.staOrd,
     stationName: row.stNm,
     stationNumber: row.arsId,
+    topisId: row.stId,
     isFirstStation: index === 0,
     isLastStation: index === rows.length - 1,
     isRotationStation: row.stId === "121001315",
     transferLines: [],
-    stopId: toPoleStopId(row.arsId, NO_ALIASES),
+    stopId: toPoleStopId({ arsId: row.arsId, topisId: row.stId }, NO_ALIASES.stopIdByArsId),
   }));
 
   it("serves 7800's 19 …(미정차) stations isPassThrough true and every other station false", () => {

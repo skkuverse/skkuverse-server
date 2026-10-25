@@ -1,8 +1,8 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
 import { ESTIMATES_MAX_AGE_S, HSSC_POSITION_COUNT } from "../bus.constants";
-import { isTopisPassThrough, serviceConfigOf, toPoleStopId } from "../bus.rules";
-import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
+import { isTopisPassThrough, serviceConfigOf, toStationStopId } from "../bus.rules";
+import type { JongroRoute, JongroRouteAttributes, StopAliases } from "../bus.types";
 import type { JongroStation } from "../registry/bus-registry.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
 import type { BusGroup, ServiceRefresh } from "./bus-config.wire";
@@ -54,11 +54,11 @@ const withTransferLines = (station: JongroStation, { transferLinesByArsId: byArs
   return { ...station, transferLines: lines.map((transfer) => ({ line: transfer.line, color: transfer.color })) };
 };
 
-const withStopId = (station: AttributedJongroStation, stopIdByArsId: ReadonlyMap<string, string>): AttributedJongroStation => ({ ...station, stopId: toPoleStopId(station.stationNumber, stopIdByArsId) });
+const withStopId = (station: AttributedJongroStation, aliases: StopAliases): AttributedJongroStation => ({ ...station, stopId: toStationStopId({ arsId: station.stationNumber, topisId: station.topisId }, aliases, true) });
 
 // WHY: the field order is the ETag's input (md5 of the JSON), so it never changes for an unchanged group; the live
 // route's fields come last, after stationsVersion, for the same reason.
-function toJongroGroup({ route, attributes, directions }: AttributedJongroRoute, stopIdByArsId: ReadonlyMap<string, string>, lang: SupportedLang) {
+function toJongroGroup({ route, attributes, directions }: AttributedJongroRoute, aliases: StopAliases, lang: SupportedLang) {
   return {
     id: route.id,
     screenType: "realtime" as const,
@@ -74,7 +74,7 @@ function toJongroGroup({ route, attributes, directions }: AttributedJongroRoute,
       dataEndpoint: `/bus/realtime/data/${route.id}`,
       refreshInterval: attributes.refreshInterval,
       lastStationIndex: route.stations.length - 1,
-      stations: mapStations(route.stations.map((station) => withStopId(withTransferLines(station, attributes), stopIdByArsId)), directions.directionIds),
+      stations: mapStations(route.stations.map((station) => withStopId(withTransferLines(station, attributes), aliases)), directions.directionIds),
       directions: directions.directions,
       features: [],
       stationsVersion: route.stationsVersion,
@@ -194,12 +194,12 @@ export function toBusGroupIds(routes: ReadonlyArray<Pick<JongroRoute, "id" | "is
 }
 
 /** WHY: the bus groups in the order the app lists them: hssc, campus, fasttrack, commute, then every listed Jongro route. */
-export function toBusGroups({ lang, stops, hsscStations, stopIdByArsId, jongroRoutes, webviewOrigin }: BusGroupSources): BusGroup[] {
+export function toBusGroups({ lang, stops, hsscStations, aliases, jongroRoutes, webviewOrigin }: BusGroupSources): BusGroup[] {
   return [
     toHsscGroup(lang, hsscStations, webviewOrigin),
     toCampusGroup(lang, stops.campus, webviewOrigin),
     toFasttrackGroup(lang),
     toCommuteGroup(lang, stops.commute, webviewOrigin),
-    ...jongroRoutes.filter(({ route }) => route.isListed).map((jongroRoute) => toJongroGroup(jongroRoute, stopIdByArsId, lang)),
+    ...jongroRoutes.filter(({ route }) => route.isListed).map((jongroRoute) => toJongroGroup(jongroRoute, aliases, lang)),
   ];
 }

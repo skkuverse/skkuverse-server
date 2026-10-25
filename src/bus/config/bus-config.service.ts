@@ -135,7 +135,7 @@ export class BusConfigService {
       ...jongroRoute,
       directions: toJongroDirections(jongroRoute.route.registryStations, pathStationsByRouteId.get(jongroRoute.route.id), lang),
     }));
-    return toBusGroups({ lang, stops: served, hsscStations: stops.hssc, stopIdByArsId: stops.stopIdByArsId, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    return toBusGroups({ lang, stops: served, hsscStations: stops.hssc, aliases: stops, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
   }
 
   // WHY: a route without stored attributes is left out (BusRouteAttributesService logs the gap once per revision).

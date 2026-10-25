@@ -145,12 +145,12 @@ describe("the 7800 stops proposed for bus-stops", () => {
       ["sadang-exit9", null],
       ["nsc-skku-to-suwon", "nsc"],
     ]);
-    expect(stops.some((stop) => ["seoul-27113", "seoul-22026", "seoul-37034"].includes(stop.id))).toBe(false);
+    expect(stops.some((stop) => ["226000039", "120000671", "220000020"].includes(stop.id))).toBe(false);
   });
 
   it("answers no page for a 7800 pole no local stop aliases", async () => {
     // Act
-    const res = await pageOf("seoul-27113");
+    const res = await pageOf("226000039");
 
     // Assert
     expect([res.status, res.body.error.code]).toEqual([404, "BUS_STOP_NOT_FOUND"]);

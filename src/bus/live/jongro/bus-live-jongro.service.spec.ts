@@ -62,7 +62,7 @@ describe("BusLiveJongroService.findLiveGroup", () => {
     // Assert
     expect(group).toMatchObject({ groupId: "jongro07", operation: "running", updatedAt: "2026-10-20T10:00:00+09:00" });
     expect(group!.vehicles.map(({ id, plateNumber }) => [id, plateNumber])).toEqual([["100000103", "서울74사5537"]]);
-    expect(group!.stations.map(({ stationIndex, stopId, arsId }) => [stationIndex, stopId, arsId])).toEqual([[0, "seoul-01617", "01617"]]);
+    expect(group!.stations.map(({ stationIndex, stopId, arsId }) => [stationIndex, stopId, arsId])).toEqual([[0, "100900220", "01617"]]);
   });
 
   it("names a pole a local stop aliases by that stop", async () => {

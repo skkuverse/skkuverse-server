@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: GET /bus/config/jongro07 (Accept-Language ko) as the server serves it since 2026-10-23 over the stores of __tests__/nest/bus/bus-config.routes.test.ts (the registry stored 2026-10-17, revision 1 of bus-stops and jongro-route-attributes, and the route lines stored 2026-10-18 with the directions TOPIS getStaionByRoute named on 2026-10-23); stations cut to indexes 11 to 14 around the turnaround 방송통신대앞 (index 12, still 이화사거리 방면), so the split after it shows (ADR 0019, D16).",
+  "_about": "Synthetic, never captured: GET /bus/config/jongro07 (Accept-Language ko) as the server serves it since 2026-10-23 over the stores of __tests__/nest/bus/bus-config.routes.test.ts (the registry stored 2026-10-17, revision 1 of bus-stops and jongro-route-attributes, and the route lines stored 2026-10-18 with the directions TOPIS getStaionByRoute named on 2026-10-23); stations cut to indexes 11 to 14 around the turnaround 방송통신대앞 (index 12, still 이화사거리 방면), so the split after it shows (ADR 0019, D16). Each pole's stop id is its national station id since 2026-10-25 (owner; ADR 0019, D5), where it was seoul-<ARS>, now an alias that still answers its stop page.",
   "data": {
     "id": "jongro07",
     "screenType": "realtime",
@@ -35,7 +35,7 @@
               "color": "00A5DE"
             }
           ],
-          "stopId": "seoul-01221"
+          "stopId": "100000125"
         },
         {
           "index": 12,
@@ -54,7 +54,7 @@
               "color": "00A5DE"
             }
           ],
-          "stopId": "seoul-01877"
+          "stopId": "100900028"
         },
         {
           "index": 13,
@@ -68,7 +68,7 @@
           "isPassThrough": false,
           "isAlightOnly": false,
           "transferLines": [],
-          "stopId": "seoul-01886"
+          "stopId": "100900043"
         },
         {
           "index": 14,
@@ -82,7 +82,7 @@
           "isPassThrough": false,
           "isAlightOnly": false,
           "transferLines": [],
-          "stopId": "seoul-01219"
+          "stopId": "100000123"
         }
       ],
       "directions": [

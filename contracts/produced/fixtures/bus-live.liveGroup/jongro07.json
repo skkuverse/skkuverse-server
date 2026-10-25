@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: GET /bus/live/jongro07 at 10:00 KST on 2026-10-20 over bus_cache seeded in the shapes the pollers write (one tracked bus, whose position row carries busType lowFloor as 종로07's 서울70사5538 did on 2026-10-23, and two arrival rows, the first with TOPIS's 출발대기 second slot), the stored jongro_routes, jongro-route-attributes and bus-stops fixtures of __tests__/nest/bus/fixtures; the route has no production traffic to capture yet. Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus.",
+  "_about": "Synthetic: GET /bus/live/jongro07 at 10:00 KST on 2026-10-20 over bus_cache seeded in the shapes the pollers write (one tracked bus, whose position row carries busType lowFloor as 종로07's 서울70사5538 did on 2026-10-23, and two arrival rows, the first with TOPIS's 출발대기 second slot), the stored jongro_routes, jongro-route-attributes and bus-stops fixtures of __tests__/nest/bus/fixtures; the route has no production traffic to capture yet. Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus. Each pole's stop id is its national station id since 2026-10-25 (owner; ADR 0019, D5), where it was seoul-<ARS>, now an alias that still answers its stop page.",
   "data": {
     "groupId": "jongro07",
     "stationsVersion": "0346768f2b776f45",
@@ -44,7 +44,7 @@
     "stations": [
       {
         "stationIndex": 0,
-        "stopId": "seoul-01617",
+        "stopId": "100900220",
         "arsId": "01617",
         "operation": "running",
         "arrivals": [
@@ -76,7 +76,7 @@
       },
       {
         "stationIndex": 1,
-        "stopId": "seoul-01618",
+        "stopId": "100900221",
         "arsId": "01618",
         "operation": "running",
         "arrivals": [
