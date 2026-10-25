@@ -249,15 +249,15 @@ describe("toMiniAppRegistry sender credentials", () => {
 
   it("answers a sender with the status, scopes and signing keys its entry carries", () => {
     // Act
-    const registry = registryWith({ status: "active", scopes: ["push.send"], signingKeys: [SIGNING_KEY] });
+    const registry = registryWith({ sender: { status: "active", scopes: ["push.send"], signingKeys: [SIGNING_KEY] } });
 
     // Assert
     expect(registry.senderCredentialsOf("mukja")).toEqual({ status: "active", scopes: ["push.send"], signingKeys: [SIGNING_KEY] });
     expect(registry.senderCredentialsOf("hssc")).toEqual({ status: "pending", scopes: [], signingKeys: [] });
   });
 
-  it("answers a sender that sets only its status with no scopes and no signing keys", () => {
+  it("answers a suspended sender with no scopes and no signing keys as its entry carries it", () => {
     // Act & Assert
-    expect(registryWith({ status: "suspended" }).senderCredentialsOf("mukja")).toEqual({ status: "suspended", scopes: [], signingKeys: [] });
+    expect(registryWith({ sender: { status: "suspended", scopes: [], signingKeys: [] } }).senderCredentialsOf("mukja")).toEqual({ status: "suspended", scopes: [], signingKeys: [] });
   });
 });

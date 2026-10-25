@@ -47,9 +47,7 @@ const detailRaw = miniAppDetail
     relatedLinks: z.array(z.strictObject({ label: z.string().optional(), url: z.string().regex(HTTP_URL_RE) })),
     noticeBanner: miniAppDetail.shape.noticeBanner.unwrap().strict().optional(),
     shell: miniAppDetail.shape.shell.extend({ background: z.string().regex(SHELL_BACKGROUND_RE) }).partial().strict().optional(),
-    status: z.enum(SENDER_STATUSES).optional(),
-    scopes: z.array(z.enum(PUSH_SCOPES)).optional(),
-    signingKeys: signingKeys.optional(),
+    sender: z.strictObject({ status: z.enum(SENDER_STATUSES), scopes: z.array(z.enum(PUSH_SCOPES)), signingKeys }).optional(),
   })
   .strict();
 
