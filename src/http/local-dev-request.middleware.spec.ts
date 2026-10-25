@@ -26,7 +26,7 @@ function run(headers: Record<string, string>): { status: number | undefined; bod
 }
 
 describe("LocalDevRequestMiddleware.use", () => {
-  it.each(["localhost:3000", "localhost", "127.0.0.1:3000", "127.0.0.2", "[::1]:3000"])("passes a request for %s", (host) => {
+  it.each(["localhost:3000", "localhost", "127.0.0.1:3000", "127.0.0.2", "[::1]:3000", "[::1]", "[0:0:0:0:0:0:0:1]:3000", "[::ffff:127.0.0.1]:3000"])("passes a request for %s", (host) => {
     // Act
     const outcome = run({ host });
 
@@ -52,7 +52,7 @@ describe("LocalDevRequestMiddleware.use", () => {
     expect(outcome.body).toEqual({ error: { code: "LOCAL_DEV_ONLY", message: "A local-development server answers requests from this machine only" } });
   });
 
-  it.each(["rebind.example:3000", "192.168.0.10:3000", "localhost.evil.test", "0.0.0.0:3000", "[::]:3000", ""])("refuses a request for the host %j", (host) => {
+  it.each(["rebind.example:3000", "192.168.0.10:3000", "localhost.evil.test", "0.0.0.0:3000", "[::]:3000", "[::ffff:192.168.0.10]:3000", "127.0.0.1:3000@rebind.example", ""])("refuses a request for the host %j", (host) => {
     // Act
     const outcome = run({ host });
 
