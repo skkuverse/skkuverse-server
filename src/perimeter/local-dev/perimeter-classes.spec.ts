@@ -19,10 +19,8 @@ import { describePushContentPolicyContract } from "../../../__tests__/helpers/pe
 import { describeRateLimitPolicyContract } from "../../../__tests__/helpers/perimeter/rate-limit-policy.contract";
 import { describeRequestAuthenticatorContract } from "../../../__tests__/helpers/perimeter/request-authenticator.contract";
 import { OutboundBlockedError } from "../../shared/outbound-blocked.error";
-import { INTERNAL_SCOPES, PORT_LABELS, RATE_LIMIT_CLASSES, type PortName } from "../perimeter.ports";
+import { INTERNAL_SCOPES, PORT_LABELS, PORT_NAMES, RATE_LIMIT_CLASSES } from "../perimeter.ports";
 import { LOCAL_DEV_CLASSES } from "./perimeter-classes";
-
-const PORT_NAMES = Object.keys(LOCAL_DEV_CLASSES) as PortName[];
 
 describe("LOCAL_DEV_CLASSES", () => {
   describeRequestAuthenticatorContract((deps) => new LOCAL_DEV_CLASSES.requestAuthenticator(deps));
