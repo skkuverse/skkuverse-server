@@ -338,7 +338,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
     const keptHours = (): StationServiceHours[] =>
       serviceHoursDocs("jongro08", "2026-10-19").flatMap(({ sequence, firstTm, lastTm }) => (firstTm && lastTm ? [{ sequence: Number(sequence), firstTm, lastTm }] : []));
 
-    it("names today's first run at the pole from the hours kept on the route, not started yet", async () => {
+    it("names the morning's first run at the pole from the hours kept on the route, ended before 03:00", async () => {
       // Arrange
       const server = await boot(at("02:00:00"), { jongro08: [] }, [], keptHours());
 
@@ -346,7 +346,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
       const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
 
       // Assert
-      expect(option).toMatchObject({ status: "notRunning", reason: "notStarted", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
+      expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
     });
 
     it("names no next service with no hours kept on the route", async () => {
@@ -372,7 +372,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
       const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
 
       // Assert
-      expect(option).toMatchObject({ status: "notRunning", reason: "notStarted", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
+      expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
     });
 
     it("boards the pole's first run from TOPIS's published time once it falls inside the window", async () => {
@@ -394,7 +394,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
   // options ride beside the TOPIS pole itself (above): the subway timetable as a first ride, and a TOPIS ride after one.
   describe("No service, from every source a ride reads", () => {
     it.each([
-      ["the 1호선 timetable, after its last train to 종로5가, later the same date", "nsc-to-hssc", "line1-jongro08", at("01:30:00", "2026-10-21"), "notStarted", "2026-10-21T06:05:30+09:00"],
+      ["the 1호선 timetable, after its last train to 종로5가, before 03:00", "nsc-to-hssc", "line1-jongro08", at("01:30:00", "2026-10-21"), "ended", "2026-10-21T06:05:30+09:00"],
       ["the 7800 pole's last run, a ride after 4호선, by the 4호선 boarding that reaches it", "hssc-to-nsc", "line4-7800", at("23:40:00"), "ended", "2026-10-21T05:35:30+09:00"],
     ])("names the next service for %s", async (_case, routeId, optionId, now, reason, nextServiceAt) => {
       // Arrange

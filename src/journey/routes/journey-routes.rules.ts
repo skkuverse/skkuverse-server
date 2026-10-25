@@ -3,7 +3,7 @@ import { toAlightTime, toBoardTime } from "../../shared/call.util";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
 import { toKstDate } from "../../shared/kst-date.util";
 import type { JourneyOption, RideLeg } from "../journey.document";
-import { ESTIMATE_UNCERTAINTY_SEC, MAX_LATER_CALLS, TIGHT_TRANSFER_SEC } from "./journey-routes.constants";
+import { ESTIMATE_UNCERTAINTY_SEC, MAX_LATER_CALLS, SERVICE_DAY_START_MS, TIGHT_TRANSFER_SEC } from "./journey-routes.constants";
 import type { PlanContext, PlannedLeg, PlannedOption, PlannedRide, PlannedStep, PlannedWarning } from "./journey-routes.types";
 
 const MINUTE_MS = 60_000;
@@ -84,10 +84,10 @@ function toConnectionWarnings({ board, waitSec }: PlannedRide, arrivingUncertain
   return codes.map((code) => ({ code, legIndex }));
 }
 
-// WHY: an option whose next run falls later today has not started; one whose next run is another day, or unknown, has ended.
+// WHY: an option whose next run falls later in this service day has not started; one whose next run is in another, or unknown, has ended.
 function toNoService(nextServiceAt: Date | null, now: Date): PlannedOption {
-  const isLaterToday = nextServiceAt !== null && toKstDate(nextServiceAt) === toKstDate(now);
-  return { status: "notRunning", reason: isLaterToday ? "notStarted" : "ended", nextServiceAt };
+  const [nextDate, nowDate] = [nextServiceAt, now].map((at) => at && toKstDate(new Date(at.getTime() - SERVICE_DAY_START_MS)));
+  return { status: "notRunning", reason: nextDate !== null && nextDate === nowDate ? "notStarted" : "ended", nextServiceAt };
 }
 
 /** WHY: each ride boards the first run catchable a catch margin after the legs before it (ADR 0022, D5 and D7). */

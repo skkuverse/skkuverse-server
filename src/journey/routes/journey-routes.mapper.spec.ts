@@ -134,7 +134,7 @@ describe("toServedRoute", () => {
     expect(ko?.[0]).toEqual({ code: "tightTransfer", message: "bus_stop:hssc-bus-lot에서 갈아탈 시간이 빠듯해요" });
   });
 
-  it("serves a not-started option's reason and its next service later today", () => {
+  it("serves a not-started option's reason and its next service later this service day", () => {
     // Arrange
     const notStarted: PlannedOption = { status: "notRunning", reason: "notStarted", nextServiceAt: kst("06:00") };
 

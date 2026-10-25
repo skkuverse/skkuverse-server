@@ -10,6 +10,10 @@ export const PLAN_HORIZON_MS = 3 * 60 * 60_000;
 // WHY: the owner's two later departures per ride leg (ADR 0022, D5).
 export const MAX_LATER_CALLS = 2;
 
+// WHY: a service day runs from 03:00 KST, so from the last run to then reads 운행종료, as Korean transit apps show it
+// (owner, 2026-10-25); every PoC line's night ends before it: 7800's last bus reaches 호매실 about 02:00 (ADR 0019).
+export const SERVICE_DAY_START_MS = 3 * 60 * 60_000;
+
 // WHY: a door or a place that fails stays so on every poll; one line a minute, as docs/reference/logging.md asks.
 export const PLAN_LOG_INTERVAL_MS = 60_000;
 
