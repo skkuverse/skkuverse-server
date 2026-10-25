@@ -6,6 +6,8 @@ export const SHELL_STATUS_BARS = ["dark", "light"] as const;
 
 export const SHELL_BACKGROUND_RE = /^#[0-9A-Fa-f]{6}$/;
 
+export const SIGNING_KEY_MESSAGE = "a signing key is a 43-character base64url Ed25519 public key and its keyId, the first 16 hex characters of its SHA-256";
+
 /**
  * WHY: at most one Mongo read per replica per TTL when a push sends every subscriber here at once, and
  * short with no stale window, so the person who tapped the push waits for the new row instead of the old.

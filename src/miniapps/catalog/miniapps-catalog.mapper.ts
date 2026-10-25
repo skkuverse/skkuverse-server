@@ -14,8 +14,18 @@ export function parseManifest(value: unknown): Manifest {
   return { shell: mergeShell(DEFAULT_SHELL, shell) };
 }
 
-// WHY: the defaults, under the registry's own fields, under the mini app's manifest: the manifest wins.
+// WHY: the defaults, under the registry's own fields, under the mini app's manifest: the manifest wins. Named
+// fields, so a sender's status, scopes and signing keys never reach the app.
 export function toDetailResponse(detail: Readonly<MiniAppDetailRaw>, manifestFields: Partial<ShellConfig>): MiniAppDetail {
   const shell = mergeShell(mergeShell(DEFAULT_SHELL, parseShellFields(detail.shell)), manifestFields);
-  return { ...detail, shell };
+  return {
+    version: detail.version,
+    id: detail.id,
+    startUrl: detail.startUrl,
+    verified: detail.verified,
+    ...(detail.description !== undefined ? { description: detail.description } : {}),
+    relatedLinks: detail.relatedLinks,
+    ...(detail.noticeBanner !== undefined ? { noticeBanner: detail.noticeBanner } : {}),
+    shell,
+  };
 }
