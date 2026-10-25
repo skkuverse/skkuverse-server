@@ -3,6 +3,7 @@ import type { SentNotificationDoc } from "../miniapps.document";
 import { LOG_TITLE_CHARS, NO_RECORDED_OUTCOME_ERROR } from "./miniapps-notifications.constants";
 import type { PushMapTarget } from "./miniapps-notifications.schema";
 import type { NotificationContent } from "../../perimeter/perimeter.ports";
+import type { PushSender } from "../sender/miniapps-sender.types";
 import type { SendTrace } from "./miniapps-notifications.types";
 import type { MiniAppNotificationHistoryEntry, SendOutcome } from "./miniapps-notifications.wire";
 import type { MiniAppFeedEntry } from "./miniapps-notifications.wire";
@@ -44,9 +45,10 @@ export function toReplayedOutcome({ _id: notificationId, delivery, deliveryError
   return { notificationId, delivery: null, outcome: "unknown", error: NO_RECORDED_OUTCOME_ERROR };
 }
 
-export function toSendTrace(doc: SentNotificationDoc): SendTrace {
+export function toSendTrace(doc: SentNotificationDoc, { keyId }: Pick<PushSender, "keyId">): SendTrace {
   return {
     miniAppId: doc.miniAppId,
+    keyId,
     notificationId: doc._id,
     title: doc.title_ko.slice(0, LOG_TITLE_CHARS),
     ...(doc.actionType ? { actionType: doc.actionType, actionValue: doc.actionValue } : {}),

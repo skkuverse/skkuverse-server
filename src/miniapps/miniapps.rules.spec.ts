@@ -3,7 +3,8 @@
  * src/shared/miniapp-target.util.spec.ts). Also the two checks the registry
  * schema refines with: one emoji per logo,
  * counted in graphemes, and a startUrl on the web view that addresses a page.
- * And the one 404 both flows answer an unregistered id with, and a signing key's
+ * And the one 404 both flows answer an unregistered id with, the 429 both push routes answer a spent quota with,
+ * and a signing key's
  * format: a key the key tool issues, never one of the 8 small-order points.
  *
  * toRegistryIssues, the push check of who may start where (ADR 0013, D2):
@@ -18,7 +19,8 @@ import { WEBVIEW_ORIGIN } from "../shared/webview-origin.constants";
 import { toMiniAppRegistry } from "./miniapps.mapper";
 import { createHash } from "node:crypto";
 import { newSigningKey } from "../../__tests__/helpers/miniapps/signing-keys";
-import { isIssuedSigningKey, isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, toMiniAppNotFound, toRegistryIssues } from "./miniapps.rules";
+import { RATE_LIMITED_BODY } from "../perimeter/perimeter.ports";
+import { isIssuedSigningKey, isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, toMiniAppNotFound, toQuotaRefusal, toRegistryIssues } from "./miniapps.rules";
 import { checkedRegistry } from "./miniapps.schema";
 
 describe("isKnownMiniAppTarget", () => {
@@ -103,6 +105,16 @@ describe("toMiniAppNotFound", () => {
       message: "Unknown mini-app id: no-such-app",
       status: 404,
     });
+  });
+});
+
+describe("toQuotaRefusal", () => {
+  it("answers 429 with the public rate-limit code and message", () => {
+    // Act
+    const refusal = toQuotaRefusal();
+
+    // Assert
+    expect([refusal.httpStatus, { error: { code: refusal.code, message: refusal.message } }]).toEqual([429, RATE_LIMITED_BODY]);
   });
 });
 

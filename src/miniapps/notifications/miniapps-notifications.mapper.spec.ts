@@ -151,16 +151,22 @@ describe("toReplayedOutcome", () => {
 });
 
 describe("toSendTrace", () => {
-  it("cuts the title to the log's length and says whether English was sent", () => {
+  it("cuts the title to the log's length, says whether English was sent and names the key that signed", () => {
     // Act & Assert
-    expect(toSendTrace({ ...DOC, title_ko: "가".repeat(100) })).toEqual({
+    expect(toSendTrace({ ...DOC, title_ko: "가".repeat(100) }, { keyId: "0123456789abcdef" })).toEqual({
       miniAppId: "eskara-2026",
+      keyId: "0123456789abcdef",
       notificationId: "n1",
       title: "가".repeat(80),
       actionType: "route",
       actionValue: "/campus",
       hasEn: true,
     });
+  });
+
+  it("names no key for a send signed by none", () => {
+    // Act & Assert
+    expect(toSendTrace(DOC, { keyId: null }).keyId).toBeNull();
   });
 });
 
