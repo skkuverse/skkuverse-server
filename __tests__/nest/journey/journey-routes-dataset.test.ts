@@ -10,7 +10,9 @@
  * no stored timetables the train order is a warning, not a refusal. Against the stored registry and route lines with
  * 7800's, and the four 7800 stops `bus-stops` aliases, revision 3's 종로 08 and 7800 options pass, each pole cited by its
  * station id; a TOPIS ride is refused at a pole its route does not call at and when it alights before it boards; a
- * `bus-stops` push that drops the alias a cited 7800 pole needs is refused.
+ * `bus-stops` push that drops the alias a cited 7800 pole needs is refused. Revision 4, its walks read from Naver and
+ * its 7800 rides' minutes by time of day, passes; bands out of order are refused; 7800 at the 삼성1차아파트 and 삼성아파트
+ * poles is refused until `bus-stops` aliases each by its station id, and passes once it does.
  */
 import path from "path";
 import { storedJongroRouteDocuments } from "../../helpers/bus/bus-registry";
@@ -350,5 +352,80 @@ describe("loadCatalog journey-routes with the TOPIS options", () => {
         'journey-routes: routes.0.options.3.legs.3.board.place: "119000302" is not a stop of bus-stops',
       ]),
     );
+  });
+});
+
+describe("loadCatalog journey-routes revision 4", () => {
+  const revision4 = () => datasetFixture("./fixtures/journey-routes-revision-4.dataset.json");
+  const proposal = (require("../bus/fixtures/bus-stops-7800-proposal.json") as { stops: Array<Record<string, unknown>> }).stops;
+  const storedTables = () => ({ parts: subwayTimetablesFixture().map((table) => ({ key: `${table.operator}-${table.line}-${table.dayType}`, data: table })) });
+  const withStops = (extra: Array<Record<string, unknown>> = []) => ({
+    ...stored(),
+    "subway-timetables": storedTables(),
+    "bus-stops": { ...stored()["bus-stops"], stops: [...stored()["bus-stops"].stops, ...structuredClone(proposal), ...extra] },
+  });
+  const topis = () => ({ jongroRoutes: [...storedJongroRouteDocuments(), registryDoc7800()], jongroRoutePaths: storedJongroRoutePathDocuments(), buildings: BUILDINGS });
+  const check4 = (data: unknown, extra: Array<Record<string, unknown>> = []) => issueLines(checkData(loadCatalog(srcLoader), "journey-routes", data, withStops(extra), topis()));
+  const legsOf = (data: any, routeIndex: number, optionId: string) => data.routes[routeIndex].options.find((option: { id: string }) => option.id === optionId).legs;
+
+  it("accepts revision 4, its walks read from Naver and its 7800 rides' minutes by time of day", () => {
+    // Act
+    const lines = check4(revision4());
+
+    // Assert
+    expect(lines).toEqual([]);
+    expect(legsOf(revision4(), 0, "line4-7800")[3].rideMinutesBands.weekday.length).toBeGreaterThan(1);
+  });
+
+  it("Bands out of order: refuses a 7800 ride whose weekday bands do not start later in order", () => {
+    // Arrange
+    const data = revision4();
+    legsOf(data, 0, "line4-7800")[3].rideMinutesBands.weekday.reverse();
+
+    // Act
+    const lines = check4(data);
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^journey-routes: routes\.0\.options\.3\.legs\.3\.rideMinutesBands\.weekday: .*must start at strictly later times, in order/)]);
+  });
+
+  describe("Campus-end poles: 7800 at 삼성1차아파트 (200000305) towards campus and 삼성아파트 (200000163) away from it", () => {
+    const atSamsungPoles = () => {
+      const data = revision4();
+      const [toNsc, toHssc] = [legsOf(data, 0, "line4-7800"), legsOf(data, 1, "7800-line4")];
+      [toNsc[3].alight.place, toNsc[4].from] = ["bus_stop:200000305", "bus_stop:200000305"];
+      [toHssc[0].to, toHssc[1].board.place] = ["bus_stop:200000163", "bus_stop:200000163"];
+      return data;
+    };
+    const samsungStop = (id: string, ko: string, en: string, topisId: string, lat: number, lng: number) => ({ id, name: { ko, en, zh: en }, coords: { lat, lng }, topisIds: [topisId], campus: "nsc" });
+
+    it("refuses them while bus-stops aliases neither pole, as their ARS number is 0 on an unlisted route", () => {
+      // Act
+      const lines = check4(atSamsungPoles());
+
+      // Assert
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          "journey-routes: routes.0.options.3.legs.3: gyeonggi7800 does not call at 200000305",
+          'journey-routes: routes.0.options.3.legs.3.alight.place: "200000305" is not a stop of bus-stops',
+          "journey-routes: routes.1.options.3.legs.1: gyeonggi7800 does not call at 200000163",
+          'journey-routes: routes.1.options.3.legs.1.board.place: "200000163" is not a stop of bus-stops',
+        ]),
+      );
+    });
+
+    it("accepts them once bus-stops aliases each pole by its station id", () => {
+      // Arrange
+      const poles = [
+        samsungStop("nsc-samsung1-apt-to-suwon", "삼성1차아파트", "Samsung 1st Apt.", "200000305", 37.2930276, 126.9698566),
+        samsungStop("nsc-samsung-apt-to-sadang", "삼성아파트", "Samsung Apt.", "200000163", 37.2924932, 126.9701571),
+      ];
+
+      // Act
+      const lines = check4(atSamsungPoles(), poles);
+
+      // Assert
+      expect(lines).toEqual([]);
+    });
   });
 });

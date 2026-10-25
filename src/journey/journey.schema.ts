@@ -28,7 +28,21 @@ const transferLeg = z.strictObject({ kind: z.literal("transfer"), at: placeRef, 
 
 const legStop = z.strictObject({ place: placeRef, platformId: platformId.optional() });
 
-const rideLeg = z.strictObject({ kind: z.literal("ride"), line: id, board: legStop, alight: legStop, rideMinutes: minutes, evidence });
+const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be HH:mm, 00:00 to 23:59");
+const rideMinutesBands = z
+  .array(z.strictObject({ from: timeOfDay, minutes }))
+  .min(1)
+  .refine((bands) => bands.every((band, index) => index === 0 || (bands[index - 1]?.from ?? "") < band.from), "must start at strictly later times, in order");
+
+const rideLeg = z.strictObject({
+  kind: z.literal("ride"),
+  line: id,
+  board: legStop,
+  alight: legStop,
+  rideMinutes: minutes,
+  rideMinutesBands: z.strictObject({ weekday: rideMinutesBands.optional(), weekend: rideMinutesBands.optional() }).optional(),
+  evidence,
+});
 
 const line = z.strictObject({
   id,

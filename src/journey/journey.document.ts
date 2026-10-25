@@ -44,13 +44,21 @@ export interface LegStop {
   platformId?: string;
 }
 
+/** WHY: from `from` (KST `HH:mm`) until the next band's start, or midnight for the last. */
+export interface RideMinutesBand {
+  from: string;
+  minutes: number;
+}
+
 export interface RideLeg {
   kind: "ride";
   line: string;
   board: LegStop;
   alight: LegStop;
-  /** WHY: read only when the door cannot place the run at the alight stop. */
+  /** WHY: read only when the door cannot place the run at the alight stop, outside every band of the board's day type. */
   rideMinutes: number;
+  /** WHY: by the board's day type, a public holiday's being weekend; each list in order of `from`. */
+  rideMinutesBands?: { weekday?: RideMinutesBand[]; weekend?: RideMinutesBand[] };
   evidence: string;
 }
 
