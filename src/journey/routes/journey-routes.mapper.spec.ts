@@ -117,6 +117,17 @@ describe("toServedRoute", () => {
     expect(served.name).toBe("인사캠 → 자과캠");
   });
 
+  it("serves a not-started option's reason and its next service later today", () => {
+    // Arrange
+    const notStarted: PlannedOption = { status: "notRunning", reason: "notStarted", nextServiceAt: kst("06:00") };
+
+    // Act
+    const served = toServedRoute(ROUTE, { planned: [notStarted, RUNNING], order: [1, 0] }, { places: PLACES, lang: "ko" });
+
+    // Assert
+    expect(served.options[1]).toMatchObject({ id: "inja", status: "notRunning", reason: "notStarted", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
+  });
+
   it("throws for a running option citing a place that was not resolved", () => {
     // Arrange
     const places = new Map([...PLACES].filter(([key]) => !key.startsWith("bus_stop:nsc-n-center")));

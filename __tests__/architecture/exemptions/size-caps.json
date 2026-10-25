@@ -51,6 +51,10 @@
     "max": 58,
     "reason": "ADR 0010 D9, no domain seam: `ScheduleStop`, `SequenceStop`, `ScheduleStopCatalog` and the guide, photo and panorama pieces describe one stored `bus-stops` stop catalog, and `BusStopsSnapshot` is the frozen revision of that catalog every reader takes; the TOPIS alias (`topisIds`, ADR 0019 D5) took it past the types cap, and moving catalog pieces into another role file of src/bus/stops/ would spill, which ADR 0010 D9 forbids (docs/plans/private-file)."
   },
+  "src/journey/routes/journey-routes.rules.ts": {
+    "max": 94,
+    "reason": "ADR 0010 D9, no reachable seam: `planOption` times every ride of an option in one pass over its legs, and its no-service reason and connection warnings read that pass's rides, boards and chain; a sibling sub-module cannot hold them, since `JourneyRoutesService` is at the four-dependency constructor cap in eslint.config.js and a parent never imports a child (sub-modules.test.ts)."
+  },
   "src/map/layer-set/map-layer-set.rules.ts": {
     "max": 163,
     "reason": "ADR 0010 D9, no domain seam: one operator-edited layer set reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`), `checkedLayerSet` the cross-reference and served-chip checks at push and at read, and `MapLayerSetService` the base chips' checks (`assertValidChipSpecs`, `assertValidLinkChips`) when Nest builds it; the checks are not flows, so a sub-module would hold rules and nothing else."

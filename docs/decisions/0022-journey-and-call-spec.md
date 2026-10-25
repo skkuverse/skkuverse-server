@@ -183,7 +183,7 @@ A stored field a new release adds is optional on read, because api replicas depl
 - **Full buses.** A vehicle with `seatsLeft: 0` is skipped. Null seats count as boardable, because 7800 seats no standing riders.
 - **Departure time.** "Now" only; the departure query already takes a `from` for a later picker.
 - **No service.** An option with no run left reports `notRunning` with `reason: ended` and the next first departure (`nextServiceAt`). The timetable gives it for shuttles and the subway. The stored TOPIS `firstTm` gives it for buses.
-- **Walk minutes.** `journey-routes` values with evidence, measured at data-authoring time from TMAP pedestrian routes. That is a one-off call by a person, never one the api makes. Key walks can be replaced by on-site measurements later.
+  - Amended 2026-10-25 (PR (h)): when that next departure falls later the same KST date as now (before the day's first run, or past a gap longer than the plan's window), the reason is `notStarted`; on a later date, or unknown, it stays `ended`. The value is additive: the app draws a reason it does not know as `ended`.- **Walk minutes.** `journey-routes` values with evidence, measured at data-authoring time from TMAP pedestrian routes. That is a one-off call by a person, never one the api makes. Key walks can be replaced by on-site measurements later.
 - **Language and taxi.** Labels come in ko, en and zh, like the stop catalog. Taxi stays out of the PoC.
 - **Fares.** None in the PoC. Summing leg fares would be wrong under 수도권 통합환승, so a per-option `fare` is added later as data.
 - **New subway stations are listed.** 사당, 금정 and 종로5가 appear in `/subway/stations` and app search like any served station, with no campus.
