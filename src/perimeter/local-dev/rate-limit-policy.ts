@@ -4,7 +4,8 @@ import { skipWhenRateLimitOff } from "../../infra/rate-limit-keys";
 import { RATE_LIMITED_BODY, RateLimitPolicy, type PerimeterDeps } from "../perimeter.ports";
 import { announceLocalDev } from "./local-dev-banner";
 
-// WHY: one limit for every class, high enough for a developer's own screens and low enough to see a 429 by hand.
+// WHY: one limit for every class, high enough for a developer's own screens. Development defaults RATE_LIMIT=off,
+// which skips it: run `npm run dev` with RATE_LIMIT=on to see a 429.
 const LOCAL_DEV_REQUESTS_PER_MINUTE = 300;
 
 export class LocalDevRateLimitPolicy extends RateLimitPolicy {
