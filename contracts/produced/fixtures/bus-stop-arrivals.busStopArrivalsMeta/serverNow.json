@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/seoul-01592/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (its meta, lang left out as the response interceptor adds it); untrimmed.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/100900075/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (its meta, lang left out as the response interceptor adds it); untrimmed. Each pole's stop id is its national station id since 2026-10-25 (owner; ADR 0019, D5), where it was seoul-<ARS>, now an alias that still answers its stop page.",
   "data": {
     "serverNow": "2026-10-20T14:10:00+09:00"
   }

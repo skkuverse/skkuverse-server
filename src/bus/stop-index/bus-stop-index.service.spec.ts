@@ -137,7 +137,7 @@ describe("BusStopIndexService.findStop", () => {
     const stop = await service.findStop("seoul-01592");
 
     // Assert
-    expect(stop).toMatchObject({ id: "seoul-01592", localStop: null, coords: { lat: 37.5834729904, lng: 127.0017632862 } });
+    expect(stop).toMatchObject({ id: "100900075", localStop: null, coords: { lat: 37.5834729904, lng: 127.0017632862 } });
     expect(stop?.snapshot.revision).toBe(1);
   });
 
@@ -203,7 +203,7 @@ describe("BusStopIndexService.findStop", () => {
     const stop = await service.findStop("seoul-01592");
 
     // Assert
-    expect(stop).toMatchObject({ id: "seoul-01592", coords: null });
+    expect(stop).toMatchObject({ id: "100900075", coords: null });
   });
 
   it.each(["seoul-99999", "hssc-nowhere", "seoul-0159"])("answers null for %s, which no served route stops at", async (stopId) => {
@@ -223,6 +223,65 @@ describe("BusStopIndexService.findStop", () => {
     await expect(service.findStop("seoul-01616")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
     expect((await service.findStop("seoul-01592"))?.routes.map((route) => route.groupId)).toEqual(["jongro08"]);
     expect((await service.findStop("hssc-bus-lot"))?.id).toBe("hssc-bus-lot");
+  });
+});
+
+// WHY: the owner's decision of 2026-10-25: a pole's stop id is its national nine-digit station id; `seoul-<arsId>`
+// is a legacy alias that never retires, answered as the canonical stop with the same 503 and 404 (ADR 0019, D5).
+describe("BusStopIndexService.findStop by national station id and by legacy id", () => {
+  it("finds a pole by its station id, and by its legacy id as that same stop", async () => {
+    // Arrange
+    const { service } = setup();
+
+    // Act
+    const [byStationId, byLegacyId] = [await service.findStop("100900075"), await service.findStop("seoul-01592")];
+
+    // Assert
+    expect(byStationId).toMatchObject({ id: "100900075", localStop: null, coords: { lat: 37.5834729904, lng: 127.0017632862 } });
+    expect(byLegacyId?.id).toBe("100900075");
+    expect(byLegacyId?.routes).toEqual(byStationId?.routes);
+  });
+
+  it("resolves an aliased pole's station id to its local stop", async () => {
+    // Arrange
+    const { service } = setup({ aliases: { "hssc-bus-lot": ["01618"] } });
+
+    // Act
+    const stop = await service.findStop("100900221");
+
+    // Assert
+    expect(stop?.id).toBe("hssc-bus-lot");
+  });
+
+  it.each(["100999999", "seoul-99999"])("answers null for %s, which names no served pole", async (stopId) => {
+    // Arrange
+    const { service } = setup();
+
+    // Act & Assert
+    expect(await service.findStop(stopId)).toBeNull();
+  });
+
+  it.each(["100900219", "seoul-01616"])("answers the unread route's 503 for %s, a pole only it names", async (stopId) => {
+    // Arrange
+    const { service, registryRepository } = setup();
+    registryRepository.routes.delete("jongro07");
+
+    // Act & Assert
+    await expect(service.findStop(stopId)).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
+  });
+
+  it("serves a local stop by its pole's station id while the route that lists the pole cannot be read", async () => {
+    // Arrange
+    const { service, data, stopsRepository, registryRepository } = setup();
+    (data.stops.find((stop) => stop.id === "hssc-bus-lot") as FixtureStop & { topisIds?: string[] }).topisIds = ["100900221"];
+    stopsRepository.storeStops(data);
+    registryRepository.routes.delete("jongro07");
+
+    // Act
+    const stop = await service.findStop("100900221");
+
+    // Assert
+    expect(stop?.id).toBe("hssc-bus-lot");
   });
 });
 
@@ -368,7 +427,7 @@ describe("BusStopIndexService stop areas", () => {
     expect(found?.stopAreaId).toBe("hyehwa-exit1");
     expect(list.stops.filter((stop) => stop.stopAreaId !== undefined).map((stop) => [stop.id, stop.stopAreaId])).toEqual([
       ["hssc-hyehwa-exit1", "hyehwa-exit1"],
-      ["seoul-01592", "hyehwa-exit1"],
+      ["100900075", "hyehwa-exit1"],
     ]);
     expect(memberWarnings()).toEqual([]);
   });
@@ -422,9 +481,9 @@ describe("BusStopIndexService.listStops", () => {
     expect(ids[HSSC_LINE_STOP_IDS.length]).toBe("hssc-bus-lot");
     expect(new Set(ids).size).toBe(ids.length);
     // WHY: 02's loop lists its terminal 01881 twice; 07 and 08 share 01592, which 07 reaches first.
-    expect(ids.filter((id) => id === "seoul-01881")).toHaveLength(1);
-    expect(ids.indexOf("seoul-01881")).toBeLessThan(ids.indexOf("seoul-01592"));
-    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.routes.map((route) => route.groupId)).toEqual(["jongro07", "jongro08"]);
+    expect(ids.filter((id) => id === "100900204")).toHaveLength(1);
+    expect(ids.indexOf("100900204")).toBeLessThan(ids.indexOf("100900075"));
+    expect(list.stops.find((stop) => stop.id === "100900075")!.routes.map((route) => route.groupId)).toEqual(["jongro07", "jongro08"]);
     expect(list.snapshot.revision).toBe(1);
   });
 
@@ -436,7 +495,7 @@ describe("BusStopIndexService.listStops", () => {
     const list = await service.listStops();
 
     // Assert
-    expect(idsOf(list)).not.toContain("seoul-01618");
+    expect(idsOf(list)).not.toContain("100900221");
     expect(list.stops.find((stop) => stop.id === "hssc-bus-lot")!.routes.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
   });
 
@@ -455,7 +514,7 @@ describe("BusStopIndexService.listStops", () => {
     // Assert
     const coordsOf = (stopId: string) => list.stops.find((stop) => stop.id === stopId)!.coords;
     expect(coordsOf("jeongja-exit3")).toEqual({ lat: 37.365499, lng: 127.107906 });
-    expect(coordsOf("seoul-01592")).toEqual({ lat: 37.5834729904, lng: 127.0017632862 });
+    expect(coordsOf("100900075")).toEqual({ lat: 37.5834729904, lng: 127.0017632862 });
     expect(coordsOf("hssc-student-center")).toEqual({ lat: 37.5874203934, lng: 126.9936746328 });
     expect(coordsOf("hssc-hyehwa-exit1")).toBeNull();
     expect(list.isPartial).toBe(false);
@@ -470,8 +529,8 @@ describe("BusStopIndexService.listStops", () => {
     const list = await service.listStops();
 
     // Assert
-    expect(idsOf(list)).not.toContain("seoul-01616");
-    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.routes.map((route) => route.groupId)).toEqual(["jongro08"]);
+    expect(idsOf(list)).not.toContain("100900219");
+    expect(list.stops.find((stop) => stop.id === "100900075")!.routes.map((route) => route.groupId)).toEqual(["jongro08"]);
     expect(list.isPartial).toBe(true);
   });
 
@@ -484,7 +543,7 @@ describe("BusStopIndexService.listStops", () => {
     const list = await service.listStops();
 
     // Assert
-    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.coords).toBeNull();
+    expect(list.stops.find((stop) => stop.id === "100900075")!.coords).toBeNull();
     expect(list.stops.find((stop) => stop.id === "jeongja-exit3")!.coords).toEqual({ lat: 37.365499, lng: 127.107906 });
     expect(list.isPartial).toBe(true);
     expect(jest.mocked(logger.warn).mock.calls.filter((call) => (call[0] as { event?: string }).event === "bus.stop_index.coords_unavailable")).toHaveLength(1);
@@ -500,7 +559,7 @@ describe("BusStopIndexService.listStops", () => {
 
     // Assert
     expect(list.isPartial).toBe(true);
-    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.coords).toEqual({ lat: 37.5834729904, lng: 127.0017632862 });
+    expect(list.stops.find((stop) => stop.id === "100900075")!.coords).toEqual({ lat: 37.5834729904, lng: 127.0017632862 });
   });
 
   it("answers the stops' 503 when they were never read", async () => {

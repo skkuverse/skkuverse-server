@@ -121,7 +121,7 @@ describe("toLiveJongroGroup", () => {
       stations: [
         {
           stationIndex: 1,
-          stopId: "seoul-01618",
+          stopId: "100900221",
           arsId: "01618",
           operation: "running",
           arrivals: [
