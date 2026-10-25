@@ -1,9 +1,10 @@
 import type { StopCall } from "../../shared/call.types";
-import { toCallTime } from "../../shared/call.util";
+import { toAlightTime, toBoardTime } from "../../shared/call.util";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
+import { toKstDate } from "../../shared/kst-date.util";
 import type { JourneyOption, RideLeg } from "../journey.document";
-import { MAX_LATER_CALLS } from "./journey-routes.constants";
-import type { PlanContext, PlannedLeg, PlannedOption, PlannedRide, PlannedStep } from "./journey-routes.types";
+import { ESTIMATE_UNCERTAINTY_SEC, MAX_LATER_CALLS, SERVICE_DAY_START_MS, TIGHT_TRANSFER_SEC } from "./journey-routes.constants";
+import type { PlanContext, PlannedLeg, PlannedOption, PlannedRide, PlannedStep, PlannedWarning } from "./journey-routes.types";
 
 const MINUTE_MS = 60_000;
 const BASIS_RANK: Readonly<Record<StopCall["basis"], number>> = { timetable: 0, provider: 1, estimate: 2 };
@@ -16,12 +17,7 @@ export function toLegBasis(board: StopCall, alight: StopCall): StopCall["basis"]
   return BASIS_RANK[alight.basis] > BASIS_RANK[board.basis] ? alight.basis : board.basis;
 }
 
-const timeMsOf = (call: StopCall): number => toCallTime(call)?.getTime() ?? Number.NaN;
-
-// SEE: docs/decisions/0022-journey-and-call-spec.md ("D5. Legs, options and routes"): a rider leaves a run when it arrives.
-export function toAlightTime(call: StopCall): Date | null {
-  return call.expectedArrivalAt ?? call.scheduledArrivalAt ?? call.expectedDepartureAt ?? call.scheduledDepartureAt;
-}
+const timeMsOf = (call: StopCall): number => toBoardTime(call)?.getTime() ?? Number.NaN;
 
 // WHY: a vehicle with no seat left is skipped; unknown seats count as boardable, as 7800 seats no standing riders (ADR 0022, D7).
 function isCatchable({ board }: Departure, readyAtMs: number, { vehicles }: DepartureBoard): boolean {
@@ -72,11 +68,35 @@ function toChainNextServiceAt(first: FirstRide | null, endedNextAt: Date | null,
   return new Date(Math.max(endedNextAt.getTime() - (readyAtMs - first.boardAtMs), first.nextServiceAt?.getTime() ?? 0));
 }
 
+// WHY: an estimated arrival may come this much later: by the estimate's error, and by half the headway for a ride boarded on one.
+function toArrivalUncertaintySec({ board, alight }: PlannedRide, { continuation }: DepartureBoard): number {
+  if (toLegBasis(board, alight) !== "estimate") return 0;
+  const headwaySec = continuation.kind === "headway" && board.runId === null && board.vehicleId === null ? continuation.headwaySec : 0;
+  return ESTIMATE_UNCERTAINTY_SEC + headwaySec / 2;
+}
+
+// WHY: a named run's estimated board may come early by its error; a headway names no run to miss, a first ride no ride before it.
+function toConnectionWarnings({ board, waitSec }: PlannedRide, arrivingUncertaintySec: number | null, legIndex: number): PlannedWarning[] {
+  if (arrivingUncertaintySec === null) return [];
+  const isNamedEstimate = board.basis === "estimate" && (board.runId !== null || board.vehicleId !== null);
+  const riskSec = Math.max(arrivingUncertaintySec, isNamedEstimate ? ESTIMATE_UNCERTAINTY_SEC : 0);
+  const codes = [...(waitSec < TIGHT_TRANSFER_SEC ? ["tightTransfer" as const] : []), ...(waitSec < riskSec ? ["connectionAtRisk" as const] : [])];
+  return codes.map((code) => ({ code, legIndex }));
+}
+
+// WHY: an option whose next run falls later in this service day has not started; one whose next run is in another, or unknown, has ended.
+function toNoService(nextServiceAt: Date | null, now: Date): PlannedOption {
+  const [nextDate, nowDate] = [nextServiceAt, now].map((at) => at && toKstDate(new Date(at.getTime() - SERVICE_DAY_START_MS)));
+  return { status: "notRunning", reason: nextDate !== null && nextDate === nowDate ? "notStarted" : "ended", nextServiceAt };
+}
+
 /** WHY: each ride boards the first run catchable a catch margin after the legs before it (ADR 0022, D5 and D7). */
 export function planOption(option: JourneyOption, { now, catchMarginSec, lineById, boards }: PlanContext): PlannedOption {
   const [marginMs, legs]: [number, PlannedLeg[]] = [catchMarginSec * 1000, []];
   let atMs = now.getTime();
   let first: FirstRide | null = null;
+  const warnings: PlannedWarning[] = [];
+  let arrivingUncertaintySec: number | null = null;
   for (const [index, leg] of option.legs.entries()) {
     if (leg.kind !== "ride") {
       legs.push({ leg, startAt: new Date(atMs), endAt: new Date(atMs + leg.minutes * MINUTE_MS) });
@@ -86,16 +106,18 @@ export function planOption(option: JourneyOption, { now, catchMarginSec, lineByI
     const [board, line] = [boards.get(index), lineById.get(leg.line)];
     if (!board || board instanceof Error || !line) return { status: "notRunning", reason: "unavailable", nextServiceAt: null };
     const ride = toRide(leg, board, { arrivedAtMs: atMs, readyAtMs: atMs + marginMs, line });
-    if (!ride) return { status: "notRunning", reason: "ended", nextServiceAt: toChainNextServiceAt(first, board.nextServiceAt, atMs + marginMs) };
+    if (!ride) return toNoService(toChainNextServiceAt(first, board.nextServiceAt, atMs + marginMs), now);
     if (first === null) {
       first = { leaveAtMs: Math.max(now.getTime(), ride.boardAtMs - (atMs - now.getTime()) - marginMs), boardAtMs: ride.boardAtMs, nextServiceAt: board.nextServiceAt };
       legs.splice(0, legs.length, ...timedBack(legs as PlannedStep[], first.leaveAtMs));
       ride.planned.waitSec = Math.round((ride.boardAtMs - (first.leaveAtMs + atMs - now.getTime())) / 1000);
     }
+    warnings.push(...toConnectionWarnings(ride.planned, arrivingUncertaintySec, index));
+    arrivingUncertaintySec = toArrivalUncertaintySec(ride.planned, board);
     legs.push(ride.planned);
     atMs = ride.alightAtMs;
   }
-  return { status: "running", leaveAt: new Date(first === null ? now.getTime() : first.leaveAtMs), arriveAt: new Date(atMs), legs };
+  return { status: "running", leaveAt: new Date(first === null ? now.getTime() : first.leaveAtMs), arriveAt: new Date(atMs), legs, warnings };
 }
 
 /** WHY: no "fastest" flag: running options by arrival, data order breaking a tie, then the rest in data order (ADR 0022, D7). */

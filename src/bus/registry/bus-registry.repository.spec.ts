@@ -3,7 +3,9 @@
  * an upsert of `$setOnInsert` on the route id, so it inserts once and never
  * overwrites; the read is bounded, projects the stored fields and parses the
  * document; and replacing the stations is guarded by the stations version the
- * caller read, so a stale writer changes nothing.
+ * caller read, so a stale writer changes nothing. A route's last-known service
+ * hours are read on their own, bounded, projected and parsed, empty when none
+ * are stored, and set without touching the stations.
  */
 
 const mockUpdateOne = jest.fn();
@@ -122,5 +124,54 @@ describe("BusRegistryRepository.updateStations", () => {
 
     // Act & Assert
     expect(await repository.updateStations("jongro07", "stale", next)).toBe(false);
+  });
+});
+
+describe("BusRegistryRepository.listServiceHours", () => {
+  const HOURS = [{ sequence: 4, firstTm: "2026-10-20T06:00:00+09:00", lastTm: "2026-10-20T22:40:00+09:00" }];
+
+  it("reads one route's last-known service hours, bounded, with a literal projection, and parses them", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValue({ _id: "jongro08", serviceHours: HOURS });
+
+    // Act
+    const hours = await repository.listServiceHours("jongro08");
+
+    // Assert
+    expect(hours).toEqual(HOURS);
+    expect(mockFindOne).toHaveBeenCalledWith({ _id: "jongro08" }, { projection: { serviceHours: 1 }, maxTimeMS: 3000 });
+  });
+
+  it("is empty for a route stored before the hours, and for no route", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValueOnce({ _id: "jongro08" }).mockResolvedValueOnce(null);
+
+    // Act
+    const [before, missing] = [await repository.listServiceHours("jongro08"), await repository.listServiceHours("jongro99")];
+
+    // Assert
+    expect([before, missing]).toEqual([[], []]);
+  });
+
+  it("rejects hours that do not parse", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValue({ _id: "jongro08", serviceHours: [{ sequence: "4" }] });
+
+    // Act & Assert
+    await expect(repository.listServiceHours("jongro08")).rejects.toThrow(/sequence/);
+  });
+});
+
+describe("BusRegistryRepository.updateServiceHours", () => {
+  it("sets the route's service hours, leaving its stations and their version alone", async () => {
+    // Arrange
+    mockUpdateOne.mockResolvedValue({ matchedCount: 1 });
+    const hours = [{ sequence: 4, firstTm: "2026-10-20T06:00:00+09:00", lastTm: "2026-10-20T22:40:00+09:00" }];
+
+    // Act
+    await repository.updateServiceHours("jongro08", hours);
+
+    // Assert
+    expect(mockUpdateOne).toHaveBeenCalledWith({ _id: "jongro08" }, { $set: { serviceHours: hours } });
   });
 });

@@ -4,10 +4,13 @@
  * own order whatever order the producer built them in, and nothing a producer
  * carries beside the call (a run's departure) served. It replaces the bus
  * module's toArrival (src/bus/bus.mapper.spec.ts), which kept each producer's
- * key order.
+ * key order. A rider boards a call at its time, or at its expected arrival when
+ * that is later, since a run running late leaves no earlier than it arrives
+ * (toBoardTime), and leaves a run at its arrival, expected first (toAlightTime,
+ * ADR 0022 D5 amended).
  */
 import type { StopCall } from "./call.types";
-import { toCall, toCallTime, toTimetabledCall } from "./call.util";
+import { toAlightTime, toBoardTime, toCall, toCallTime, toTimetabledCall } from "./call.util";
 import { call as callWire } from "./call.wire";
 
 const WIRE_KEYS = Object.keys(callWire.shape);
@@ -140,5 +143,43 @@ describe("toTimetabledCall", () => {
 
     // Assert
     expect(unknown).toMatchObject({ expectedArrivalAt: null, scheduledArrivalAt: null, basis: "timetable" });
+  });
+});
+
+describe("toBoardTime", () => {
+  const at = (clock: string) => new Date(`2026-10-20T${clock}+09:00`);
+  const NONE = { expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null };
+  const LIVE_TRAIN = { ...NONE, scheduledArrivalAt: at("08:03:00"), scheduledDepartureAt: at("08:03:30") };
+
+  it.each([
+    ["one second before its scheduled departure", "08:03:29", "08:03:30"],
+    ["at its scheduled departure", "08:03:30", "08:03:30"],
+    ["one second after it, running late", "08:03:31", "08:03:31"],
+  ])("boards a train expected to arrive %s at %s", (_case, expectedAt, boardAt) => {
+    // Act
+    const time = toBoardTime({ ...LIVE_TRAIN, expectedArrivalAt: at(expectedAt) });
+
+    // Assert
+    expect(time).toEqual(at(boardAt));
+  });
+
+  it("is the call's time when it has no expected arrival, and null with no instant", () => {
+    // Act & Assert
+    expect([toBoardTime(LIVE_TRAIN), toBoardTime({ ...NONE, expectedDepartureAt: at("08:10:00") }), toBoardTime(NONE)]).toEqual([at("08:03:30"), at("08:10:00"), null]);
+  });
+});
+
+describe("toAlightTime", () => {
+  const at = (clock: string) => new Date(`2026-10-20T${clock}+09:00`);
+  const NONE = { expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null };
+
+  it.each([
+    ["the expected arrival first", { expectedArrivalAt: at("08:58:40"), scheduledArrivalAt: at("08:58:00"), scheduledDepartureAt: at("08:58:30") }, at("08:58:40")],
+    ["then the scheduled arrival", { scheduledArrivalAt: at("08:58:00"), expectedDepartureAt: at("08:58:50"), scheduledDepartureAt: at("08:58:30") }, at("08:58:00")],
+    ["then the expected departure", { expectedDepartureAt: at("08:58:50"), scheduledDepartureAt: at("08:58:30") }, at("08:58:50")],
+    ["then the scheduled departure", { scheduledDepartureAt: at("08:58:30") }, at("08:58:30")],
+  ])("reads %s", (_case, instants, expected) => {
+    // Act & Assert
+    expect(toAlightTime({ ...NONE, ...instants })).toEqual(expected);
   });
 });

@@ -29,6 +29,17 @@ export function toCallTime(call: Pick<StopCall, CallInstantKey>): Date | null {
   return call.expectedDepartureAt ?? call.scheduledDepartureAt ?? call.expectedArrivalAt ?? call.scheduledArrivalAt;
 }
 
+// WHY: a run running late leaves no earlier than it arrives, so a live train past its scheduled departure boards then.
+export function toBoardTime(call: Pick<StopCall, CallInstantKey>): Date | null {
+  const at = toCallTime(call);
+  return at && call.expectedArrivalAt && call.expectedArrivalAt > at ? call.expectedArrivalAt : at;
+}
+
+// SEE: docs/decisions/0022-journey-and-call-spec.md ("D5. Legs, options and routes"): a rider leaves a run when it arrives.
+export function toAlightTime(call: Pick<StopCall, CallInstantKey>): Date | null {
+  return call.expectedArrivalAt ?? call.scheduledArrivalAt ?? call.expectedDepartureAt ?? call.scheduledDepartureAt;
+}
+
 // WHY: an estimate shown at the stop is the expected time, beside the timetable's own there, if any (ADR 0022, D2).
 export function toTimetabledCall({ shownAt, timetableAt, isEstimated }: TimetabledStopTime, side: CallSide, run: RunIdentity): StopCall {
   const isShownEstimate = shownAt !== null && isEstimated;

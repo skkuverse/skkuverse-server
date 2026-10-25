@@ -6,7 +6,9 @@
  * subway option walks to 혜화, rides line 4 to 금정, transfers, rides line 1 to 성균관대 and walks to 정문, each ride
  * on the first train catchable a catch margin after the legs before it, and ending at its train's arrival; and each ride's board and alight calls equal the
  * calls the station boards serve for the same run at both platforms, read when each board lists that train (ADR 0022,
- * D1 and D2).
+ * D1 and D2). With 혜화's line 4 platform tracked live, the first ride boards the late train by the very call
+ * `/subway/stations/hyehwa/arrivals` serves for its run, at its expected arrival, carries its delay to 금정 as an
+ * estimate, and lists the next two trains of the ride from the timetable as later calls (ADR 0022 PR (h)).
  *
  * Every store is in memory, as in journey-routes.routes.test.ts; the pollers never start (ROLE=api), and each clock
  * instant boots its own app.
@@ -96,7 +98,7 @@ const gate = (id: number, campus: "hssc" | "nsc", lng: number, lat: number) =>
 
 const apps: NestExpressApplication[] = [];
 
-async function boot(now: Date): Promise<import("http").Server> {
+async function boot(now: Date, subwayArrivals = new FakeSubwayRepository()): Promise<import("http").Server> {
   const journey = new FakeJourneyRepository();
   journey.storeRoutes(revision2);
   const buildings = new FakeBuildingRepository();
@@ -124,7 +126,7 @@ async function boot(now: Date): Promise<import("http").Server> {
       { provide: BusEtaRepository, useValue: new FakeBusEtaRepository() },
       { provide: CalendarRepository, useValue: storedCalendarRepository() },
       { provide: BuildingRepository, useValue: buildings },
-      { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
+      { provide: SubwayRepository, useValue: subwayArrivals },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
       { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository() },
       { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
@@ -206,5 +208,43 @@ describe("GET /journey/routes with the subway options", () => {
     // Assert
     expect(boards).toEqual([line4!.board, line4!.alight, line1!.board, line1!.alight]);
     expect(line4!.alight).toMatchObject({ runId: line4!.board.runId, basis: "timetable", status: "scheduled", scheduledArrivalAt: "2026-10-20T08:46:00+09:00" });
+  });
+});
+
+describe("GET /journey/routes with 혜화's line 4 platform tracked live", () => {
+  // WHY: train 4305 is due at 혜화 at 07:53:00 and leaves at 07:53:30; the tracker has it two minutes late, two stops out.
+  const LATE_4305 = {
+    ...{ trainNo: "4305", destination: "안산", express: false, arrivalAt: new Date("2026-10-20T07:55:00+09:00"), source: "live" as const, isFirstTrain: false },
+    ...{ position: { stationId: "S1-4-418", state: "departed" as const }, isLastRun: false },
+    ...{ scheduledArrivalAt: new Date("2026-10-20T07:53:00+09:00"), scheduledDepartureAt: new Date("2026-10-20T07:53:30+09:00") },
+  };
+
+  function trackedHyehwa(): FakeSubwayRepository {
+    const repository = new FakeSubwayRepository();
+    repository.docs.set("S1-4-420", { _id: "S1-4-420", generatedAt: new Date(AT_07_40_KST.getTime() - 10_000), serviceDate: "2026-10-20", directions: { up: [], down: [LATE_4305] } });
+    return repository;
+  }
+
+  it("boards the first subway leg by the call /subway/stations/hyehwa/arrivals serves for the same run, later by the timetable", async () => {
+    // Arrange
+    const server = await boot(AT_07_40_KST, trackedHyehwa());
+
+    // Act
+    const option = await subwayOption(server, "hssc-to-nsc", "line4-line1");
+    const station = await request(server).get("/subway/stations/hyehwa/arrivals");
+
+    // Assert
+    const line4 = option.legs.find((leg) => leg.kind === "ride")!;
+    const trains = (station.body.data.lines as Array<{ directions: Array<{ trains: Array<Call & { trainNo: string }> }> }>)[0]!.directions.flatMap((direction) => direction.trains);
+    const boardCall: Partial<Call & { trainNo: string }> = { ...trains.find((train) => train.runId === "4/2026-10-20/4305") };
+    delete boardCall.trainNo;
+    expect(line4.board).toEqual(boardCall);
+    expect(line4.board).toMatchObject({ basis: "provider", expectedArrivalAt: "2026-10-20T07:55:00+09:00", stopsAway: 2 });
+    expect([option.leaveAt, line4.startAt, line4.endAt, line4.basis]).toEqual(["2026-10-20T07:46:00+09:00", "2026-10-20T07:55:00+09:00", "2026-10-20T08:48:00+09:00", "estimate"]);
+    expect(line4.alight).toMatchObject({ runId: "4/2026-10-20/4305", scheduledArrivalAt: "2026-10-20T08:46:00+09:00", expectedArrivalAt: "2026-10-20T08:48:00+09:00", basis: "estimate" });
+    expect(line4.later.map((call: Call) => [call.runId, call.basis])).toEqual([
+      ["4/2026-10-20/4539", "timetable"],
+      ["4/2026-10-20/4541", "timetable"],
+    ]);
   });
 });

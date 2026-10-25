@@ -8,7 +8,9 @@
  * identical tick, held over 30%, an empty list ignored, every applied change
  * logged with its diff; and a route with no document is inserted from the
  * third identical observation with an agreed turnaround stop, never over a
- * document another writer stored first.
+ * document another writer stored first. Each stop's first and last run TOPIS
+ * states is kept on the route, written only when it changes (once after a
+ * restart), and kept through ticks that answer no rows (ADR 0022 PR (h)).
  */
 jest.mock("../../infra/logger", () => ({
   info: jest.fn(),
@@ -282,6 +284,70 @@ describe("BusRegistryService.observe", () => {
     // Assert
     expect(storedStationsOf("jongro08")).toEqual(captured08());
     expect(callsOf("warn", "bus.jongro.registry_sync_conflict")).toHaveLength(1);
+  });
+});
+
+describe("BusRegistryService.observeServiceHours", () => {
+  const row = (sequence: string, firstTm?: string, lastTm?: string) => ({ sequence, ...(firstTm && { firstTm }), ...(lastTm && { lastTm }) });
+  const ROWS = [row("4", "2026-10-20T06:00:00+09:00", "2026-10-20T22:40:00+09:00"), row("5", "2026-10-20T06:01:00+09:00", "2026-10-20T22:41:00+09:00")];
+
+  beforeEach(() => {
+    storeRoutes();
+  });
+
+  it("keeps each stop's first and last run TOPIS states, writing only when they change", async () => {
+    // Arrange
+    const route = await service.routeOf("jongro08");
+    const nextDay = ROWS.map((each) => ({ ...each, firstTm: each.firstTm!.replace("10-20", "10-21") }));
+
+    // Act
+    for (const rows of [ROWS, ROWS, nextDay]) await service.observeServiceHours(route, rows);
+
+    // Assert
+    expect(repository.serviceHoursWrites).toBe(2);
+    expect(repository.routes.get("jongro08")?.serviceHours).toEqual([
+      { sequence: 4, firstTm: "2026-10-21T06:00:00+09:00", lastTm: "2026-10-20T22:40:00+09:00" },
+      { sequence: 5, firstTm: "2026-10-21T06:01:00+09:00", lastTm: "2026-10-20T22:41:00+09:00" },
+    ]);
+  });
+
+  it("keeps the last-known hours through a night whose ticks answer no rows, and leaves out a row without both", async () => {
+    // Arrange
+    const route = await service.routeOf("jongro08");
+    await service.observeServiceHours(route, [...ROWS, row("6", "2026-10-20T06:02:00+09:00")]);
+
+    // Act
+    await service.observeServiceHours(route, []);
+
+    // Assert
+    expect(repository.serviceHoursWrites).toBe(1);
+    expect(await service.listServiceHours("jongro08")).toEqual([
+      { sequence: 4, firstTm: "2026-10-20T06:00:00+09:00", lastTm: "2026-10-20T22:40:00+09:00" },
+      { sequence: 5, firstTm: "2026-10-20T06:01:00+09:00", lastTm: "2026-10-20T22:41:00+09:00" },
+    ]);
+  });
+
+  it("writes once after a restart, which remembers no hours written, then only on a change", async () => {
+    // Arrange
+    const route = await service.routeOf("jongro08");
+    await service.observeServiceHours(route, ROWS);
+    const restarted = new BusRegistryService(asReal<BusRegistryRepository>(repository), clock);
+
+    // Act
+    for (let i = 0; i < 3; i++) await restarted.observeServiceHours(route, ROWS);
+
+    // Assert
+    expect(repository.serviceHoursWrites).toBe(2);
+  });
+});
+
+describe("BusRegistryService.listServiceHours", () => {
+  it("is empty for a route stored before the hours", async () => {
+    // Arrange
+    storeRoutes();
+
+    // Act & Assert
+    expect(await service.listServiceHours("jongro08")).toEqual([]);
   });
 });
 

@@ -8,8 +8,12 @@
  * scheduled instants, the destination as headsign, run id `<line>/<serviceDate>/<trainNo>`), its first and last flags
  * taken across the trains that serve the ride, a time past midnight on the service day it belongs to; the window from
  * the query's instant to its end, at each edge; the next service; and the push check that a ride's platforms are on
- * its line and that every day type's tables run a train from one to the other.
+ * its line and that every day type's tables run a train from one to the other. A train the board platform's stored
+ * arrivals list (live or estimated) boards by the call the station board serves for its run, keeping the ride's first
+ * and last flags, is listed by when it boards (a late train past its scheduled departure still is), and carries its
+ * delay past the timetable there to its alight call as an estimate (ADR 0022 PR (h)).
  */
+import type { StopCall } from "../../../shared/call.types";
 import { SUBWAY_STATIONS } from "../../subway.constants";
 import type { NetworkPlatform } from "../../subway.types";
 import { toLineRoutes, toScheduledTrains } from "../subway-timetable.rules";
@@ -183,6 +187,65 @@ describe("toTimetableDepartureBoard", () => {
     expect(board.departures.map(({ board: call, alight }) => [call.runId, call.scheduledDepartureAt, alight?.scheduledArrivalAt])).toEqual([
       ["4/2026-10-20/4599", kst("2026-10-21", "00:01:00"), kst("2026-10-21", "00:54:00")],
     ]);
+  });
+});
+
+describe("toTimetableDepartureBoard with the board platform's stored calls", () => {
+  const RUN_4501 = "4/2026-10-20/4501";
+  const live = (expectedAt: string, extra: Partial<StopCall> = {}): StopCall => ({
+    ...{ status: "enRoute", expectedArrivalAt: kst(SERVICE_DATE, expectedAt), expectedDepartureAt: null },
+    ...{ scheduledArrivalAt: kst(SERVICE_DATE, "08:03:00"), scheduledDepartureAt: kst(SERVICE_DATE, "08:03:30"), basis: "provider" },
+    ...{ stopsAway: 2, runId: RUN_4501, vehicleId: null, headsign: "오이도", isFirstRun: false, isLastRun: null, isExpress: false, providerText: null },
+    ...extra,
+  });
+  const boardOf = (liveCalls: StopCall[], from = kst(SERVICE_DATE, "08:00:00")) => toTimetableDepartureBoard(...LINE4_RIDE, { ...query(from, kst(SERVICE_DATE, "09:00:00")), liveCalls });
+
+  it("boards a train the stored calls list by the station board's call for its run, with the ride's first and last flags", () => {
+    // Arrange
+    const call = live("08:05:00");
+
+    // Act
+    const [first] = boardOf([call]).departures;
+
+    // Assert
+    expect(first?.board).toEqual({ ...call, isFirstRun: true, isLastRun: false });
+    expect(first?.alight).toMatchObject({ runId: RUN_4501, status: "scheduled", scheduledArrivalAt: kst(SERVICE_DATE, "08:56:00"), expectedArrivalAt: kst(SERVICE_DATE, "08:58:00"), basis: "estimate" });
+  });
+
+  it.each([
+    ["one second before its scheduled arrival", "08:02:59", null],
+    ["at its scheduled arrival", "08:03:00", null],
+    ["one second after it", "08:03:01", kst(SERVICE_DATE, "08:56:01")],
+  ])("carries a delay to the alight only for a train expected %s at the board platform", (_case, expectedAt, alightExpectedAt) => {
+    // Act
+    const [first] = boardOf([live(expectedAt)]).departures;
+
+    // Assert
+    expect(first?.alight).toMatchObject({ expectedArrivalAt: alightExpectedAt, basis: alightExpectedAt === null ? "timetable" : "estimate" });
+  });
+
+  it("keeps the timetable's call for a train the stored calls hold from the timetable alone, or for another run", () => {
+    // Arrange
+    const timetableOnly = live("08:05:00", { basis: "timetable", status: "scheduled", expectedArrivalAt: null });
+    const otherRun = live("08:05:00", { runId: "4/2026-10-20/4999" });
+
+    // Act
+    const boards = [boardOf([timetableOnly]), boardOf([otherRun]), boardOf([])];
+
+    // Assert
+    expect(boards.map((each) => each.departures[0])).toEqual([boards[2]!.departures[0], boards[2]!.departures[0], boards[2]!.departures[0]]);
+    expect(boards[2]!.departures[0]?.board.basis).toBe("timetable");
+  });
+
+  it.each([
+    ["one second before the query's instant", "08:04:59", ["4505"]],
+    ["at the query's instant", "08:05:00", ["4501", "4505"]],
+  ])("lists a late train expected %s, whose scheduled departure has passed", (_case, expectedAt, trainNos) => {
+    // Act
+    const board = boardOf([live(expectedAt)], kst(SERVICE_DATE, "08:05:00"));
+
+    // Assert
+    expect(board.departures.map((departure) => departure.board.runId?.split("/")[2])).toEqual(trainNos);
   });
 });
 
