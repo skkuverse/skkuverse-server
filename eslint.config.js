@@ -864,7 +864,7 @@ module.exports = [
         "error",
         {
           selector: "ImportDeclaration[source.value=/^firebase-admin\\//]",
-          message: "Use the firebase-admin namespace through src/infra/private-file: its subpath entry points reach services that need a credential.",
+          message: "Use the firebase-admin namespace through src/perimeter/current/private-file: its subpath entry points reach services that need a credential.",
         },
         {
           selector: `:matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=${FIREBASE_REEXPORT}]`,

@@ -27,6 +27,8 @@ import type { NoticeDoc } from "../../../src/notices/notices.document";
 import { NoticesModule } from "../../../src/notices/notices.module";
 import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
 import { noticeTabs } from "../../../src/notices/tabs/notices-tabs.wire";
+import { RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
+import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeNoticesDetailRepository } from "../../helpers/fakes/notices/notices-detail.repository.fake";
 import { FakeNoticesListRepository } from "../../helpers/fakes/notices/notices-list.repository.fake";
@@ -65,6 +67,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [NoticesModule, NoticesTabsModule, NoticesListModule, NoticesAttachmentModule, NoticesDetailModule],
     overrides: [
+      { provide: RequestAuthenticator, useValue: new FakeRequestAuthenticator() },
       { provide: NoticesListRepository, useValue: listRepository },
       { provide: NoticesDetailRepository, useValue: detailRepository },
       { provide: Clock, useValue: fakeClock },

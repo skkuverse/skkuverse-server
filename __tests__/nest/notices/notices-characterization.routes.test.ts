@@ -29,7 +29,8 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { InternalAuthorizer } from "../../../src/perimeter/perimeter.ports";
+import { InternalAuthorizer, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
+import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
@@ -168,6 +169,7 @@ function bootApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/notices/"),
     overrides: [
+      { provide: RequestAuthenticator, useValue: new FakeRequestAuthenticator() },
       { provide: Clock, useValue: CLOCK },
       { provide: InternalAuthorizer, useValue: new FakeInternalAuthorizer() },
     ],
