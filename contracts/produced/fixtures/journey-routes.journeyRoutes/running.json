@@ -14,7 +14,10 @@
             "lng": 126.997131
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:1"
+          }
         },
         "to": {
           "kind": "skku_building",
@@ -25,7 +28,10 @@
             "lng": 126.974074
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:7"
+          }
         },
         "options": [
           {
@@ -51,7 +57,10 @@
                     "lng": 126.997131
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:1"
+                  }
                 },
                 "to": {
                   "kind": "bus_stop",
@@ -62,7 +71,10 @@
                     "lng": 126.993643
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:hssc-bus-lot"
+                  }
                 },
                 "startAt": "2026-10-20T14:23:00+09:00",
                 "endAt": "2026-10-20T14:29:00+09:00",
@@ -95,7 +107,10 @@
                     "lng": 126.993643
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:hssc-bus-lot"
+                  }
                 },
                 "to": {
                   "kind": "bus_stop",
@@ -106,7 +121,10 @@
                     "lng": 126.975057
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:nsc-n-center"
+                  }
                 },
                 "startAt": "2026-10-20T14:30:00+09:00",
                 "endAt": "2026-10-20T15:45:00+09:00",
@@ -202,7 +220,10 @@
                     "lng": 126.975057
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:nsc-n-center"
+                  }
                 },
                 "to": {
                   "kind": "skku_building",
@@ -213,7 +234,10 @@
                     "lng": 126.974074
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:7"
+                  }
                 },
                 "startAt": "2026-10-20T15:45:00+09:00",
                 "endAt": "2026-10-20T15:49:00+09:00",
@@ -250,7 +274,10 @@
             "lng": 126.974074
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:7"
+          }
         },
         "to": {
           "kind": "skku_building",
@@ -261,7 +288,10 @@
             "lng": 126.997131
           },
           "platformId": null,
-          "action": null
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:1"
+          }
         },
         "options": [
           {
@@ -287,7 +317,10 @@
                     "lng": 126.974074
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:7"
+                  }
                 },
                 "to": {
                   "kind": "bus_stop",
@@ -298,7 +331,10 @@
                     "lng": 126.975077
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:nsc-opposite"
+                  }
                 },
                 "startAt": "2026-10-20T14:25:00+09:00",
                 "endAt": "2026-10-20T14:29:00+09:00",
@@ -331,7 +367,10 @@
                     "lng": 126.975077
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:nsc-opposite"
+                  }
                 },
                 "to": {
                   "kind": "bus_stop",
@@ -342,7 +381,10 @@
                     "lng": 126.993904
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:hssc-600th"
+                  }
                 },
                 "startAt": "2026-10-20T14:30:00+09:00",
                 "endAt": "2026-10-20T15:52:00+09:00",
@@ -422,7 +464,10 @@
                     "lng": 126.993904
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:hssc-600th"
+                  }
                 },
                 "to": {
                   "kind": "skku_building",
@@ -433,7 +478,10 @@
                     "lng": 126.997131
                   },
                   "platformId": null,
-                  "action": null
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:1"
+                  }
                 },
                 "startAt": "2026-10-20T15:52:00+09:00",
                 "endAt": "2026-10-20T15:58:00+09:00",

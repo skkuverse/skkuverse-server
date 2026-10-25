@@ -94,8 +94,7 @@ describe("GET /app/config", () => {
     // be caught after deploy, because a missing origin produces no error on
     // either side, just a page whose buttons stop doing anything.
     //
-    // The webview host, the standalone ESKARA site whose pages open ticket
-    // links through `link.open`, the 음식 룰렛 roulette, whose results open the
+    // The webview host, the 음식 룰렛 roulette, whose results open the
     // map through `map.openPlace`, the 선물상자 box, whose links go out through
     // `share.open`, 플리 예습, whose
     // song buttons open YouTube and Spotify, and 인자셔틀, whose night boarding
@@ -103,10 +102,11 @@ describe("GET /app/config", () => {
     // nothing of its own yet. Exact equality rather than `toContain`,
     // because the other direction matters just as much — an origin added here
     // hands `Linking.openURL` and the map-select channel to every page that host
-    // serves, so it has to be written down in this test too.
+    // serves, so it has to be written down in this test too. The standalone
+    // ESKARA site is left out since the festival closed on 2026-10-09: its
+    // origin still names the eskara-2026 shell below, but no longer the bridge.
     expect(origins).toEqual([
       "https://webview.skkuverse.com",
-      "https://eskara.miniapp.skkuverse.com",
       "https://mukja.mini.skkuverse.com",
       "https://playlist.mini.skkuverse.com",
       "https://booth-box.mini.skkuverse.com",
