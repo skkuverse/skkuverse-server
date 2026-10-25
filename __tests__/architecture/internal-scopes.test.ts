@@ -1,7 +1,7 @@
 /**
  * Every handler of an `internal/` route asks INTERNAL_AUTHORIZER before it runs (ADR 0023, D8): it carries
- * `@InternalScope(<scope>)` with a scope of `INTERNAL_SCOPES` and `@UseGuards(InternalScopeGuard)`, both on the
- * handler itself, so a new internal route without them fails here instead of answering anyone.
+ * `@InternalRoute(<scope>)` with a scope of `INTERNAL_SCOPES` on the handler itself, which sets the scope and binds
+ * `InternalScopeGuard` in one decorator, so a new internal route without it fails here instead of answering anyone.
  */
 import ts from "typescript";
 import { INTERNAL_SCOPES } from "../../src/perimeter/perimeter.ports";
@@ -10,28 +10,23 @@ import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const SCOPES: ReadonlySet<string> = new Set(INTERNAL_SCOPES);
 
-function decoratorCalls(handler: ts.MethodDeclaration, name: string): ts.CallExpression[] {
-  return (ts.getDecorators(handler) ?? [])
+const isInternalRoute = (handler: ts.MethodDeclaration): boolean =>
+  (ts.getDecorators(handler) ?? [])
     .map((d) => d.expression)
-    .filter((e): e is ts.CallExpression => ts.isCallExpression(e) && ts.isIdentifier(e.expression) && e.expression.text === name);
-}
+    .some((e) => ts.isCallExpression(e) && ts.isIdentifier(e.expression) && e.expression.text === "InternalRoute" && isDeclaredScope(e.arguments[0]));
 
-const isScoped = (handler: ts.MethodDeclaration): boolean =>
-  decoratorCalls(handler, "InternalScope").some(({ arguments: [scope] }) => scope !== undefined && ts.isStringLiteral(scope) && SCOPES.has(scope.text));
+const isDeclaredScope = (scope: ts.Expression | undefined): boolean => scope !== undefined && ts.isStringLiteral(scope) && SCOPES.has(scope.text);
 
-const isGuarded = (handler: ts.MethodDeclaration): boolean =>
-  decoratorCalls(handler, "UseGuards").some((call) => call.arguments.some((guard) => ts.isIdentifier(guard) && guard.text === "InternalScopeGuard"));
-
-/** `<file>: <METHOD> /<path>` for each internal handler missing its scope or its guard. */
+/** `<file>: <METHOD> /<path>` for each internal handler without `@InternalRoute(<declared scope>)`. */
 export function unscopedInternalHandlers(file: string, source: string): string[] {
   return routeHandlersIn(file, source)
     .filter(({ path }) => path === "internal" || path.startsWith("internal/"))
-    .filter(({ handler }) => !isScoped(handler) || !isGuarded(handler))
+    .filter(({ handler }) => !isInternalRoute(handler))
     .map(({ method, path }) => `${file}: ${method} /${path}`);
 }
 
 describe("internal scopes", () => {
-  it("put @InternalScope and InternalScopeGuard on every internal handler under src/", () => {
+  it("put @InternalRoute on every internal handler under src/", () => {
     // Act
     const unscoped = sourceFiles()
       .filter((file) => file.endsWith(".controller.ts"))
@@ -43,10 +38,9 @@ describe("internal scopes", () => {
 
   it.each([
     ["no decorator", "", ["src/x/x.controller.ts: POST /internal/x/run"]],
-    ["the scope alone", '@InternalScope("notices.dispatch")', ["src/x/x.controller.ts: POST /internal/x/run"]],
-    ["the guard alone", "@UseGuards(InternalScopeGuard)", ["src/x/x.controller.ts: POST /internal/x/run"]],
-    ["a scope the ports do not declare", '@InternalScope("x.run") @UseGuards(InternalScopeGuard)', ["src/x/x.controller.ts: POST /internal/x/run"]],
-    ["both", '@InternalScope("notices.dispatch") @UseGuards(InternalScopeGuard)', []],
+    ["a scope the ports do not declare", '@InternalRoute("x.run")', ["src/x/x.controller.ts: POST /internal/x/run"]],
+    ["no scope", "@InternalRoute()", ["src/x/x.controller.ts: POST /internal/x/run"]],
+    ["a declared scope", '@InternalRoute("notices.dispatch")', []],
   ])("reads a handler with %s", (_case, decorators, expected) => {
     // Arrange
     const source = `@Controller("internal/x") export class XController { ${decorators} @Post("run") run() {} }`;
