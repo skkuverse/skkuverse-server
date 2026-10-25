@@ -14,8 +14,9 @@ export function parseManifest(value: unknown): Manifest {
   return { shell: mergeShell(DEFAULT_SHELL, shell) };
 }
 
-// WHY: the defaults, under the registry's own fields, under the mini app's manifest: the manifest wins.
-export function toDetailResponse(detail: Readonly<MiniAppDetailRaw>, manifestFields: Partial<ShellConfig>): MiniAppDetail {
-  const shell = mergeShell(mergeShell(DEFAULT_SHELL, parseShellFields(detail.shell)), manifestFields);
-  return { ...detail, shell };
+// WHY: the defaults, under the registry's own fields, under the mini app's manifest: the manifest wins. A sender's
+// credentials are the push routes' business, never the app's.
+export function toDetailResponse({ sender: _sender, ...served }: Readonly<MiniAppDetailRaw>, manifestFields: Partial<ShellConfig>): MiniAppDetail {
+  const shell = mergeShell(mergeShell(DEFAULT_SHELL, parseShellFields(served.shell)), manifestFields);
+  return { ...served, shell };
 }

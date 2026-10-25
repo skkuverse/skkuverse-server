@@ -1,0 +1,29 @@
+{
+  "_about": "Synthetic, 2026-10-26: a sender's history as docs/reference/miniapps-api.md (5.3) describes it, one delivered row and one whose call was refused, written by hand when the signed history route made the shape public; no user data",
+  "data": [
+    {
+      "id": "5b0f3f5e-8a8c-4a63-9a43-1f1a4f3c2d10",
+      "title_ko": "우천 안내",
+      "body_ko": "공연이 30분 지연됩니다.",
+      "title_en": "Rain notice",
+      "body_en": "The show starts 30 minutes late.",
+      "actionType": "route",
+      "actionValue": "/miniapp-feed/eskara-2026",
+      "sentAt": "2026-10-02T11:37:39.571Z",
+      "delivery": { "sent": 1024, "failed": 3, "cleanedUp": 2 },
+      "deliveryError": null,
+      "idempotencyKey": "rain-2026-10-02"
+    },
+    {
+      "id": "0d6f5a7e-2c1b-4f3e-9b8a-7c6d5e4f3a21",
+      "title_ko": "공지",
+      "body_ko": "본문",
+      "title_en": null,
+      "body_en": null,
+      "sentAt": "2026-10-02T11:19:25.221Z",
+      "delivery": null,
+      "deliveryError": { "outcome": "not_sent", "error": "Cloud Function answered 400" },
+      "idempotencyKey": null
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "title_ko": {
+        "type": "string"
+      },
+      "body_ko": {
+        "type": "string"
+      },
+      "title_en": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "body_en": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "actionType": {
+        "type": "string",
+        "enum": [
+          "miniapp",
+          "external",
+          "webview",
+          "route"
+        ]
+      },
+      "actionValue": {
+        "type": "string"
+      },
+      "sentAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      },
+      "delivery": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "sent": {
+                "type": "number"
+              },
+              "failed": {
+                "type": "number"
+              },
+              "cleanedUp": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "sent",
+              "failed",
+              "cleanedUp"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "deliveryError": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "not_sent",
+                  "unknown"
+                ]
+              },
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "outcome",
+              "error"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "idempotencyKey": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "title_ko",
+      "body_ko",
+      "title_en",
+      "body_en",
+      "sentAt",
+      "delivery",
+      "deliveryError",
+      "idempotencyKey"
+    ]
+  }
+}

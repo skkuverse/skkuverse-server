@@ -1,11 +1,5 @@
 /**
- * MiniappsSenderService.authorize, the push routes' sender binding (ADR 0023, D1 and D6), over the registry door on
- * an in-memory dataset and a scripted MINIAPP_PUSH_AUTHORIZER. What it guards: the authorizer is asked with the
- * sender in the path, the scope, the request, the raw body and the registry's credentials for that sender; its
- * refusal answers before an unknown sender's 404, so an unauthenticated caller learns no slug; a signed decision
- * over a body the route cannot vouch for is refused whatever the authorizer said; an allowed, registered sender is
- * answered with the registry snapshot it was checked against. checkDraft and takeQuota are pinned where a send
- * uses them, in src/miniapps/notifications/miniapps-notifications.service.spec.ts.
+ * (A perimeter detail is left out of the public history.)
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -84,6 +78,20 @@ describe("MiniappsSenderService.authorize", () => {
     expect(await refusalOf(senders.authorize({ senderId, scope: "push.send", request: SEND, rawBody: BODY }))).toEqual(answer);
   });
 
+  it.each<[string, PushAuthorization, string | null]>([
+    ["a call signed by a key", { allowed: true, keyId: "key-1" }, "key-1"],
+    ["a call signed by no key", { allowed: true, keyId: null }, null],
+  ])("answers %s with the key that signed it", async (_label, authorization, keyId) => {
+    // Arrange
+    authorizer.authorization = authorization;
+
+    // Act
+    const sender = await senders.authorize({ senderId: "hssc", scope: "push.send", request: SEND, rawBody: BODY });
+
+    // Assert
+    expect(sender.keyId).toBe(keyId);
+  });
+
   it("refuses a decision signed by a key over a body sent with a Content-Encoding, as unauthenticated", async () => {
     // Arrange
     authorizer.authorization = { allowed: true, keyId: "key-1" };
@@ -91,5 +99,25 @@ describe("MiniappsSenderService.authorize", () => {
 
     // Act & Assert
     expect(await refusalOf(senders.authorize({ senderId: "hssc", scope: "push.send", request: gzipped, rawBody: BODY }))).toEqual([401, "UNAUTHORIZED"]);
+  });
+});
+
+// WHY: the internal routes' binding, after INTERNAL_AUTHORIZER took the token under miniapps.push; until deploy 2.
+describe("MiniappsSenderService.authorizeTrusted", () => {
+  it("answers a registered sender with no key and the registry snapshot, never asking MINIAPP_PUSH_AUTHORIZER", async () => {
+    // Arrange
+    authorizer.authorization = { allowed: false, reason: "unauthenticated" };
+
+    // Act
+    const sender = await senders.authorizeTrusted("hssc");
+
+    // Assert
+    expect([sender.miniAppId, sender.keyId, sender.registry.isKnownMiniAppTarget("hssc")]).toEqual(["hssc", null, true]);
+    expect(authorizer.calls).toEqual([]);
+  });
+
+  it("answers an id the registry does not hold with 404", async () => {
+    // Act & Assert
+    expect(await refusalOf(senders.authorizeTrusted("no-such-app"))).toEqual([404, "MINIAPP_NOT_FOUND"]);
   });
 });

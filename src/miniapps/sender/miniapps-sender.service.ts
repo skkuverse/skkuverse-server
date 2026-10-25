@@ -33,10 +33,19 @@ export class MiniappsSenderService {
     const registry = await this.miniApps.current();
     const credentials = registry.senderCredentialsOf(senderId);
     const call: PushCall = { ...received, credentials };
-    const refusal = toPushRefusal(call, await this.pushAuthorizer.authorize(call));
+    const decision = await this.pushAuthorizer.authorize(call);
+    const refusal = toPushRefusal(call, decision);
     if (refusal !== null) throw refusal;
     if (credentials === null) throw toMiniAppNotFound(senderId);
-    return { miniAppId: senderId, registry };
+    return { miniAppId: senderId, keyId: decision.allowed ? decision.keyId : null, registry };
+  }
+
+  // WHY: for the internal routes only, whose INTERNAL_AUTHORIZER guard already took the shared push token; deleted in
+  // deploy 2 (docs/decisions/0020-miniapp-push-link-policy.md, D6).
+  async authorizeTrusted(senderId: string): Promise<PushSender> {
+    const registry = await this.miniApps.current();
+    if (registry.senderCredentialsOf(senderId) === null) throw toMiniAppNotFound(senderId);
+    return { miniAppId: senderId, keyId: null, registry };
   }
 
   checkDraft({ miniAppId, registry }: PushSender, draft: NotificationDraft): Promise<DraftCheck> {

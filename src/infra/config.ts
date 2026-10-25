@@ -1,5 +1,6 @@
 import "./env-file";
 import { perimeterModeErrors } from "../perimeter/perimeter-mode.rules";
+import { perimeterSettingsOf } from "../perimeter/perimeter-overlay.rules";
 import type { PerimeterMode } from "../perimeter/perimeter.ports";
 import logger from "./logger";
 import * as requiredEnv from "./required-env";
@@ -52,7 +53,7 @@ const config = {
 
   perimeter: {
     mode: process.env.PERIMETER_MODE as PerimeterMode,
-    settings: process.env.PERIMETER_SETTINGS || undefined,
+    settings: perimeterSettingsOf(process.env),
   },
 
   mongo: {
@@ -192,6 +193,9 @@ const config = {
     enabled: switches.subwayEnabled,
     get seoulApiKey(): string {
       return roleScoped("SEOUL_SUBWAY_API_KEY");
+    },
+    get accuracyToken(): string {
+      return roleScoped("SUBWAY_ACCURACY_TOKEN");
     },
     apiDailyCap: 260_000,
     trainMapDailyCap: 10_000,

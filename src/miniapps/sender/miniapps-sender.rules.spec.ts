@@ -42,7 +42,7 @@ describe("toPushRefusal", () => {
     expect(refusal?.httpStatus ?? null).toBe(status);
   });
 
-  it("lets an unsigned call through whatever its encoding, as the shared push token signs nothing", () => {
+  it("lets a call allowed with no key through whatever its encoding, as local-dev allows every call", () => {
     // Act & Assert
     expect(toPushRefusal(call("POST", { "content-encoding": "gzip" }, undefined), { allowed: true, keyId: null })).toBeNull();
   });

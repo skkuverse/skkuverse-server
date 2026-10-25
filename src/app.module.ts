@@ -73,6 +73,7 @@ import { NoticesDispatchModule } from "./notices/dispatch/notices-dispatch.modul
 import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsSenderModule } from "./miniapps/sender/miniapps-sender.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
+import { MiniappsPushModule } from "./miniapps/push/miniapps-push.module";
 import { MiniappsManifestModule } from "./miniapps/manifest/miniapps-manifest.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
 import { GamesModule } from "./games/games.module";
@@ -183,6 +184,7 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     MiniappsModule,
     MiniappsSenderModule,
     MiniappsNotificationsModule,
+    MiniappsPushModule,
     MiniappsManifestModule,
     MiniappsCatalogModule,
     GamesModule,

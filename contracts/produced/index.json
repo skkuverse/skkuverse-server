@@ -305,6 +305,22 @@
       "GET miniapps/:id/notifications"
     ]
   },
+  "miniapps-notifications.miniAppNotificationHistory": {
+    "source": "src/miniapps/notifications/miniapps-notifications.wire.ts",
+    "export": "miniAppNotificationHistory",
+    "routes": [
+      "GET internal/miniapps/:id/notifications",
+      "GET miniapps/:id/notifications/history"
+    ]
+  },
+  "miniapps-notifications.sendOutcome": {
+    "source": "src/miniapps/notifications/miniapps-notifications.wire.ts",
+    "export": "sendOutcome",
+    "routes": [
+      "POST internal/miniapps/:id/notifications",
+      "POST miniapps/:id/notifications"
+    ]
+  },
   "miniapps.miniAppDetail": {
     "source": "src/miniapps/miniapps.wire.ts",
     "export": "miniAppDetail",

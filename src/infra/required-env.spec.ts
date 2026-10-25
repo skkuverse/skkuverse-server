@@ -229,6 +229,7 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       FCM_API_KEY: "all",
       INTERNAL_DISPATCH_TOKEN: "api",
       MINIAPP_PUSH_TOKEN: "api",
+      SUBWAY_ACCURACY_TOKEN: "api",
       AI_API_URL: "api",
       NAVER_API_KEY_ID: "poller",
       NAVER_API_KEY: "poller",
@@ -429,7 +430,7 @@ describe("validateEnv loads the overlay entry in overlay mode", () => {
 
   it("refuses settings the entry's own check refuses, naming PERIMETER_SETTINGS", () => {
     // Arrange
-    const settingsErrors = (settings: string | undefined) => (settings === "bad" ? ["not base64url JSON"] : []);
+    const settingsErrors = (settings: Record<string, string>) => (settings.PERIMETER_SETTINGS === "bad" ? ["PERIMETER_SETTINGS: not base64url JSON"] : []);
 
     // Act & Assert
     expect(() => validateWithEntry({ settingsErrors }, { ...overlayTest, PERIMETER_SETTINGS: "bad" })).toThrow(
@@ -468,9 +469,37 @@ describe("requiredValues PERIMETER_SETTINGS", () => {
   it.each(["api", "poller"])("refuses a production overlay boot of ROLE=%s whose settings the overlay refuses", (role) => {
     // Arrange
     const env = production({ PERIMETER_MODE: "overlay", ROLE: role, PERIMETER_SETTINGS: "refused" });
-    const settingsErrors = (settings: string | undefined) => (settings === "refused" ? ["a limit is missing"] : []);
+    const settingsErrors = (settings: Record<string, string>) => (settings.PERIMETER_SETTINGS === "refused" ? ["PERIMETER_SETTINGS: a limit is missing"] : []);
 
     // Act & Assert
     expect(() => validateWithEntry({ settingsErrors }, env)).toThrow(/Invalid perimeter[\s\S]*PERIMETER_SETTINGS: a limit is missing/);
+  });
+});
+
+describe("requiredValues PERIMETER_SETTINGS_QUOTAS", () => {
+  // WHY: the overlay's push quota reads this section, and every role constructs every class (ADR 0023, D4).
+  const production = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...process.env, NODE_ENV: "production", SENTRY_DSN: "disabled", HOST: "0.0.0.0", ...env });
+
+  it.each(["api", "poller", "combined"])("is required in overlay mode for ROLE=%s", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role });
+    delete env.PERIMETER_SETTINGS_QUOTAS;
+
+    // Act & Assert
+    expect(listMissingRequired(env).map((v) => v.env)).toEqual(["PERIMETER_SETTINGS_QUOTAS"]);
+  });
+
+  it.each(["local-dev", "test"])("is not required in %s mode, which reads no quotas", (mode) => {
+    // Act & Assert
+    expect(requiredValues({ NODE_ENV: "development", PERIMETER_MODE: mode }).map((v) => v.env)).not.toContain("PERIMETER_SETTINGS_QUOTAS");
+  });
+
+  it.each(["api", "poller"])("refuses a production overlay boot of ROLE=%s whose quotas the overlay refuses", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role, PERIMETER_SETTINGS_QUOTAS: "refused" });
+    const settingsErrors = (settings: Record<string, string>) => (settings.PERIMETER_SETTINGS_QUOTAS === "refused" ? ["PERIMETER_SETTINGS_QUOTAS: a quota is missing"] : []);
+
+    // Act & Assert
+    expect(() => validateWithEntry({ settingsErrors }, env)).toThrow(/Invalid perimeter[\s\S]*PERIMETER_SETTINGS_QUOTAS: a quota is missing/);
   });
 });

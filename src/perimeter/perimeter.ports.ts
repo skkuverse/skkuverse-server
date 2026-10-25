@@ -54,15 +54,12 @@ export abstract class InternalAuthorizer {
 export const PUSH_SCOPES = ["push.send", "push.history"] as const;
 export type PushScope = (typeof PUSH_SCOPES)[number];
 
-export interface SigningKey {
-  readonly keyId: string;
-  readonly publicKey: string;
-}
+export const SENDER_STATUSES = ["pending", "active", "suspended"] as const;
 
 export interface SenderCredentials {
-  readonly status: "pending" | "active" | "suspended";
+  readonly status: (typeof SENDER_STATUSES)[number];
   readonly scopes: readonly PushScope[];
-  readonly signingKeys: readonly SigningKey[];
+  readonly signingKeys: ReadonlyArray<{ readonly keyId: string; readonly publicKey: string }>;
 }
 
 export interface PushCall {
@@ -191,20 +188,24 @@ export const PORT_LABELS: { readonly [K in PortName]: string } = {
   abuseSignals: "ABUSE_SIGNALS",
 };
 
-// WHY: shared by every process of the cluster, for low-volume quotas; never one write per request.
+// WHY: shared by every process, for low-volume quotas, never per request; `release` undoes a count in its own window.
 export interface PerimeterCounters {
-  increment(key: string, windowSeconds: number): Promise<number>;
+  increment(key: string, windowSeconds: number): Promise<{ readonly count: number; release(): Promise<void> }>;
 }
 
+// WHY: one settings section each, base64url JSON only the overlay reads: a new kind of number is a new section, never
+// a change to one an older image reads. `PerimeterDeps.settings` holds every set one, by name.
+export const PERIMETER_SETTINGS_RE = /^PERIMETER_SETTINGS(_[A-Z]+)*$/;
+
 // WHY: what an implementation gets instead of importing config, the logger or the clock. A constructor reads only
-// `logger`, `now`, `host` and `settings`: the poller constructs every class too, and `internalToken` throws there.
+// `logger`, `now`, `host` (null on the poller, which listens on nothing) and `settings`: the poller constructs every
+// class too, and `internalToken` throws there.
 export interface PerimeterDeps {
   readonly logger: Logger;
   readonly now: () => Date;
-  // WHY: null on the poller, which listens on nothing.
   readonly host: string | null;
   readonly firebaseProjectId: string;
-  readonly settings: string | undefined;
+  readonly settings: Readonly<Record<string, string>>;
   readonly counters: PerimeterCounters;
   internalToken(scope: InternalScopeName): string;
 }
@@ -215,5 +216,5 @@ export type PerimeterClasses = { readonly [K in PortName]: new (deps: PerimeterD
 export interface PerimeterOverlay {
   readonly portsVersion: number;
   readonly classes: PerimeterClasses;
-  settingsErrors(settings: string | undefined): string[];
+  settingsErrors(settings: PerimeterDeps["settings"]): string[];
 }

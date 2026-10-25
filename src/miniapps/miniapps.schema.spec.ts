@@ -15,6 +15,7 @@
  */
 import type { z } from "zod";
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
+import { newSigningKey } from "../../__tests__/helpers/miniapps/signing-keys";
 import { checkedRegistry, registryFile, storedRegistry } from "./miniapps.schema";
 
 const DETAIL = { version: 1, id: "a", startUrl: "https://a.test/", verified: true, relatedLinks: [] };
@@ -325,5 +326,65 @@ describe("storedRegistry", () => {
   it("refuses stored data that fails checkedRegistry", () => {
     // Act & Assert
     expect(storedRegistry.safeParse({ revision: 1, data: minimal({}, { id: "b" }) }).success).toBe(false);
+  });
+});
+
+// SEE: docs/how-to/register-a-miniapp.md — a sender's status, scopes and signing keys under one optional `sender`,
+// in the format of the key tool.
+describe("checkedRegistry sender credentials", () => {
+  const key = newSigningKey();
+  const SIGNING_KEY = { keyId: key.keyId, publicKey: key.publicKey };
+  const SENDER = { status: "active", scopes: ["push.send", "push.history"], signingKeys: [SIGNING_KEY] };
+  const withCredentials = (credentials: Record<string, unknown>) => minimal({}, { sender: { ...SENDER, ...credentials } });
+  const otherKeyId = key.keyId.startsWith("0") ? `1${key.keyId.slice(1)}` : `0${key.keyId.slice(1)}`;
+  // WHY: the last of 43 characters carries 4 bits that the 32 bytes do not use; setting one decodes to the same key.
+  const lastChar = key.publicKey.at(-1)!;
+  const nonCanonical = `${key.publicKey.slice(0, 42)}${lastChar === "B" ? "C" : "B"}`;
+
+  it("accepts an active sender with both scopes and a key the key tool issued", () => {
+    // Act & Assert
+    expect(issuesOf(withCredentials({}))).toEqual([]);
+  });
+
+  it.each(["status", "scopes", "signingKeys"])("refuses a sender without %s, at the detail's sender", (field) => {
+    // Arrange
+    const sender: Record<string, unknown> = { ...SENDER };
+    delete sender[field];
+
+    // Act & Assert
+    expect(pathsOf(minimal({}, { sender }))).toEqual([[...DETAIL_A, "sender", field]]);
+  });
+
+  it.each([
+    ["an unknown sender field", { sender: { ...SENDER, alg: "Ed25519" } }],
+    ["the sender's fields on the detail itself, outside sender", { status: "active", scopes: ["push.send"], signingKeys: [SIGNING_KEY] }],
+  ])("refuses %s", (_label, detail) => {
+    // Act & Assert
+    expect(pathsOf(minimal({}, detail)).length).toBeGreaterThan(0);
+  });
+
+  it.each(["pending", "active", "suspended"])("accepts the status %s with no scopes and no keys", (status) => {
+    // Act & Assert
+    expect(issuesOf(withCredentials({ status, scopes: [], signingKeys: [] }))).toEqual([]);
+  });
+
+  it.each<[string, Record<string, unknown>, PropertyKey[]]>([
+    ["an unknown status", { status: "enabled" }, ["status"]],
+    ["an unknown scope", { scopes: ["push.read"] }, ["scopes", 0]],
+    ["a key of 42 characters", { signingKeys: [{ ...SIGNING_KEY, publicKey: key.publicKey.slice(0, 42) }] }, ["signingKeys", 0]],
+    ["a key padded with =", { signingKeys: [{ ...SIGNING_KEY, publicKey: `${key.publicKey}=` }] }, ["signingKeys", 0]],
+    ["a key in standard base64", { signingKeys: [{ ...SIGNING_KEY, publicKey: `+${key.publicKey.slice(1)}` }] }, ["signingKeys", 0]],
+    ["a key whose unused bits are set", { signingKeys: [{ ...SIGNING_KEY, publicKey: nonCanonical }] }, ["signingKeys", 0]],
+    ["a key id that is not the key's SHA-256 prefix", { signingKeys: [{ ...SIGNING_KEY, keyId: otherKeyId }] }, ["signingKeys", 0]],
+    ["an upper-case key id", { signingKeys: [{ ...SIGNING_KEY, keyId: key.keyId.toUpperCase() }] }, ["signingKeys", 0]],
+    ["an unknown key field", { signingKeys: [{ ...SIGNING_KEY, alg: "Ed25519" }] }, ["signingKeys", 0]],
+    ["the same key twice", { signingKeys: [SIGNING_KEY, SIGNING_KEY] }, ["signingKeys", 1]],
+  ])("refuses %s at the sender's field", (_label, credentials, field) => {
+    // Act
+    const paths = pathsOf(withCredentials(credentials));
+
+    // Assert
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.every((path) => [...DETAIL_A, "sender", ...field].every((segment, i) => path[i] === segment))).toBe(true);
   });
 });
