@@ -74,6 +74,12 @@ export interface PushCall {
   readonly credentials: SenderCredentials | null;
 }
 
+// SEE: docs/decisions/0023-perimeter-ports.md ("D6. Signed calls") — a signature covers the bytes sent, so a body
+// the parser decoded, or a POST whose bytes were not kept, cannot be verified.
+export function isVerifiableSignedBody({ request, rawBody }: PushCall): boolean {
+  return request.header("content-encoding") === undefined && !(request.method === "POST" && rawBody === undefined);
+}
+
 export type PushAuthorization =
   | { readonly allowed: true; readonly keyId: string | null }
   | { readonly allowed: false; readonly reason: "unauthenticated" | "forbidden" };
