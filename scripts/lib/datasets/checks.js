@@ -15,7 +15,13 @@
  *   3. outgoing references: each identity it names is in the target's stored
  *      `idsOf` (the same `storedOf`), or in a code-held source of the catalog;
  *   4. incoming references: each stored dataset that names this one still
- *      resolves against the data being checked.
+ *      resolves against the data being checked;
+ *   5. rechecks: each stored dataset whose entry names this one in its
+ *      `recheckTriggers` runs its own `issuesOf` again over its stored data,
+ *      with `storedOf(<this one>)` the data being checked and its own declared
+ *      collections; its refusing issues refuse this one, reported as its own,
+ *      and its warnings are left out. It catches a change that removes no id
+ *      the other cites but still breaks it, such as an alias it relies on.
  *
  * Two checks may flag the same value (home-layout's registry issue and its
  * reference to `miniapps` name the same tile id), so issues are kept once per
@@ -41,7 +47,9 @@
  *
  * A dataset whose check reads a collection outside the content database
  * declares its key in its entry's `collections`, and the catalog's
- * `collections` names each one.
+ * `collections` names each one. `readStored` and `readCollections` read for a
+ * dataset that a checked one triggers a recheck of as for a checked one, its
+ * own parts included.
  * `readCollections(catalog, names, readCollection)` reads every collection the
  * datasets `names` declare, once each, through the caller's
  * `readCollection(key, spec)`, which picks the target environment's database
@@ -110,6 +118,31 @@ function resolves(catalog, ref, context) {
   return { ok: target.idsOf(data).includes(ref.id) };
 }
 
+/** The datasets whose entries name `name` in their `recheckTriggers`. */
+function recheckersOf(catalog, name) {
+  return Object.keys(catalog.datasets).filter((other) => other !== name && (catalog.datasets[other].recheckTriggers ?? []).includes(name));
+}
+
+/** `names` and each dataset a check of one of them rechecks. */
+function withRecheckers(catalog, names) {
+  return [...new Set([...names, ...names.flatMap((name) => recheckersOf(catalog, name))])];
+}
+
+/** Each stored rechecker's refusing issues over its stored data, with the data being checked as `storedOf(name)`. */
+function recheckIssues(catalog, { name, parsed, stored, collections }) {
+  return recheckersOf(catalog, name).flatMap((other) => {
+    const entry = catalog.datasets[other];
+    const data = parsedStored(catalog, other, stored);
+    if (data === null || !entry.issuesOf) return [];
+    const context = { name: other, parsed: data, stored, collections };
+    const storedOfOther = (dataset) => (dataset === name ? parsed : storedOf(catalog, context, dataset));
+    return entry
+      .issuesOf(data, { storedOf: storedOfOther, collectionOf: (key) => collectionOf(entry, context, key) })
+      .filter((issue) => !issue.warning)
+      .map((issue) => ({ dataset: other, ...issue }));
+  });
+}
+
 function outgoingIssues(catalog, context) {
   const refs = entryOf(catalog, context.name).referencesOf(context.parsed);
   return refs.flatMap((ref) => {
@@ -166,7 +199,7 @@ function contentIssues(catalog, entry, context) {
   const own = entry.issuesOf
     ? entry.issuesOf(context.parsed, { storedOf: storedOfContext, collectionOf: collectionOfContext }).map((issue) => ({ dataset: context.name, ...issue }))
     : [];
-  const found = [...own, ...outgoingIssues(catalog, context), ...incomingIssues(catalog, context)];
+  const found = [...own, ...outgoingIssues(catalog, context), ...incomingIssues(catalog, context), ...recheckIssues(catalog, context)];
   return { issues: onePerPath(found.filter((issue) => !issue.warning)), warnings: found.filter((issue) => issue.warning) };
 }
 
@@ -214,7 +247,7 @@ async function withPartData(db, manifest) {
 
 /**
  * Every catalog dataset's stored `data`, by name, and its revision, plus the part data of each parted dataset
- * that the checks of `names` read (their entries' `reads`). Reads only.
+ * that the checks of `names` read (their entries' `reads`), and of each dataset they recheck and its `reads`. Reads only.
  */
 async function readStored(db, catalog, names = []) {
   const docs = await db
@@ -222,14 +255,15 @@ async function readStored(db, catalog, names = []) {
     .find({ _id: { $in: Object.keys(catalog.datasets) } }, { projection: { revision: 1, data: 1 } })
     .toArray();
   const stored = Object.fromEntries(docs.map((doc) => [doc._id, doc.data]));
-  const read = new Set(names.flatMap((name) => entryOf(catalog, name).reads ?? []));
+  const recheckers = withRecheckers(catalog, names).filter((name) => !names.includes(name));
+  const read = new Set([...recheckers, ...[...names, ...recheckers].flatMap((name) => entryOf(catalog, name).reads ?? [])]);
   for (const name of read) if (stored[name] !== undefined && entryOf(catalog, name).parts) stored[name] = await withPartData(db, stored[name]);
   return { stored, revisions: Object.fromEntries(docs.map((doc) => [doc._id, doc.revision])) };
 }
 
-/** Each collection the datasets `names` declare, by key, read once through `readCollection(key, spec)`. Reads only. */
+/** Each collection the datasets `names`, and those they recheck, declare, by key, read once through `readCollection(key, spec)`. Reads only. */
 async function readCollections(catalog, names, readCollection) {
-  const keys = [...new Set(names.flatMap((name) => entryOf(catalog, name).collections ?? []))];
+  const keys = [...new Set(withRecheckers(catalog, names).flatMap((name) => entryOf(catalog, name).collections ?? []))];
   const collections = {};
   for (const key of keys) {
     const spec = catalog.collections?.[key];
