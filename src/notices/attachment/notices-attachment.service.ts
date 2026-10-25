@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { AppError } from "../../http/app.error";
-import { parseAllowedUrl } from "../../infra/outbound-guard";
-import { ALLOWED_ATTACHMENT_DOMAINS, MAX_ATTACHMENT_BYTES, UPSTREAM_USER_AGENT } from "./notices-attachment.constants";
+import { OutboundPolicy } from "../../perimeter/perimeter.ports";
+import { MAX_ATTACHMENT_BYTES, UPSTREAM_USER_AGENT } from "./notices-attachment.constants";
 import { NoticesAttachmentClient } from "./notices-attachment.client";
 import { toAttachmentFilename, toAttachmentHeaders } from "./notices-attachment.rules";
 import type { AttachmentRequest } from "./notices-attachment.schema";
@@ -9,13 +9,16 @@ import type { AttachmentDownload, AttachmentLog, AttachmentUpstream } from "./no
 
 @Injectable()
 export class NoticesAttachmentService {
-  constructor(private readonly client: NoticesAttachmentClient) {}
+  constructor(
+    private readonly client: NoticesAttachmentClient,
+    private readonly outbound: OutboundPolicy,
+  ) {}
 
-  // WHY: a referer only on an allowed host: clients send the notice's sourceUrl, and anything else is refused
-  // before any outbound request (security fix).
+  // WHY: a referer only where the outbound policy allows a fetch: clients send the notice's sourceUrl, and anything
+  // else is refused before any outbound request (security fix).
   async fetchDownload({ url, referer, mode, name }: AttachmentRequest, log: AttachmentLog): Promise<AttachmentDownload> {
-    if (!parseAllowedUrl(url, ALLOWED_ATTACHMENT_DOMAINS)) throw new AppError("FORBIDDEN", "host not allowed", 403);
-    if (referer && !parseAllowedUrl(referer, ALLOWED_ATTACHMENT_DOMAINS)) throw new AppError("INVALID_PARAMS", "referer not allowed", 400);
+    if (!this.outbound.allows("notice-attachment", url)) throw new AppError("FORBIDDEN", "host not allowed", 403);
+    if (referer && !this.outbound.allows("notice-attachment", referer)) throw new AppError("INVALID_PARAMS", "referer not allowed", 400);
     const headers: Record<string, string> = { "User-Agent": UPSTREAM_USER_AGENT };
     if (referer) await this.primeSession(headers, referer, { log, fresh: false });
     const upstream = await this.client.fetchAttachment(url, headers);

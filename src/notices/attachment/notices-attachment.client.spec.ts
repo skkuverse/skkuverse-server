@@ -1,19 +1,25 @@
 /**
- * NoticesAttachmentClient over a mocked axios: every request goes through the guarded config, a session is
- * cached per host until its TTL or a fresh fetch, an upstream failure becomes 403 (policy), 502 (the school's
- * server) or the error itself, and an answer is translated to its content type, declared length and body.
+ * NoticesAttachmentClient over a mocked axios and FakeOutboundPolicy: every request carries the outbound policy's
+ * request config, a session is cached per host until its TTL or a fresh fetch, an upstream failure becomes 403 (a
+ * refusal the policy recognizes), 502 (the school's server) or the error itself, and an answer is translated to its
+ * content type, declared length and body.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 
 import { Readable } from "stream";
 import axios from "axios";
+import { FakeOutboundPolicy, FakeOutboundRefusal } from "../../../__tests__/helpers/fakes/perimeter/outbound-policy.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
-import { OutboundBlockedError } from "../../infra/outbound-guard";
+import type { OutboundPolicy } from "../../perimeter/perimeter.ports";
 import { NoticesAttachmentClient } from "./notices-attachment.client";
 
 const get = axios.get as unknown as jest.Mock;
 let nowMs = Date.parse("2026-10-14T00:00:00Z");
 const clock: Clock = { now: () => new Date(nowMs) };
+// WHY: the shape of the production request config, so the assertions read what the client hands axios.
+const outbound = new FakeOutboundPolicy();
+outbound.config = { proxy: false, maxRedirects: 5 };
 
 function session(id: string) {
   return { headers: { "set-cookie": [`PHPSESSID=${id}; path=/`] }, data: Readable.from([]) };
@@ -23,13 +29,13 @@ let client: NoticesAttachmentClient;
 
 beforeEach(() => {
   get.mockReset();
-  client = new NoticesAttachmentClient(clock);
+  client = new NoticesAttachmentClient(clock, asReal<OutboundPolicy>(outbound));
 });
 
 afterEach(() => client.onModuleDestroy());
 
 describe("NoticesAttachmentClient.fetchSessionId", () => {
-  it("fetches through the guarded config and caches the session per host for its TTL", async () => {
+  it("fetches through the policy's request config and caches the session per host for its TTL", async () => {
     // Arrange
     get.mockResolvedValueOnce(session("first")).mockResolvedValueOnce(session("second"));
 
@@ -88,7 +94,7 @@ describe("NoticesAttachmentClient.fetchAttachment", () => {
   });
 
   it.each([
-    ["a policy rejection", Object.assign(new Error("x"), { cause: new OutboundBlockedError("blocked") }), { code: "FORBIDDEN", httpStatus: 403 }],
+    ["a policy rejection", new FakeOutboundRefusal("blocked"), { code: "FORBIDDEN", httpStatus: 403 }],
     ["a non-2xx", Object.assign(new Error("404"), { response: { status: 404 } }), { code: "UPSTREAM_ERROR", httpStatus: 502 }],
     ["a timeout", Object.assign(new Error("timeout"), { code: "ECONNABORTED" }), { code: "UPSTREAM_ERROR", httpStatus: 502 }],
   ])("maps %s", async (_label, err, expected) => {

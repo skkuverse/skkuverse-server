@@ -4,15 +4,9 @@ import { Readable } from "stream";
 import { AppError } from "../../http/app.error";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { guardedRequestConfig, isOutboundBlocked } from "../../infra/outbound-guard";
+import { OutboundPolicy } from "../../perimeter/perimeter.ports";
 import { isRecord } from "../../shared/object.util";
-import {
-  ALLOWED_ATTACHMENT_DOMAINS,
-  SESSION_CACHE_TTL_MS,
-  SESSION_TIMEOUT_MS,
-  UPSTREAM_TIMEOUT_MS,
-  UPSTREAM_USER_AGENT,
-} from "./notices-attachment.constants";
+import { SESSION_CACHE_TTL_MS, SESSION_TIMEOUT_MS, UPSTREAM_TIMEOUT_MS, UPSTREAM_USER_AGENT } from "./notices-attachment.constants";
 import { toSessionId } from "./notices-attachment.rules";
 import type { AttachmentUpstream } from "./notices-attachment.types";
 
@@ -23,7 +17,10 @@ export class NoticesAttachmentClient implements OnModuleDestroy {
   private readonly sessions = new Map<string, { sessionId: string; fetchedAt: number }>();
   private readonly sweep = setInterval(() => this.dropExpiredSessions(), SESSION_CACHE_TTL_MS).unref();
 
-  constructor(private readonly clock: Clock) {}
+  constructor(
+    private readonly clock: Clock,
+    private readonly outbound: OutboundPolicy,
+  ) {}
 
   onModuleDestroy(): void {
     clearInterval(this.sweep);
@@ -35,7 +32,7 @@ export class NoticesAttachmentClient implements OnModuleDestroy {
     if (fresh) this.sessions.delete(host);
     else if (cached && this.clock.now().getTime() - cached.fetchedAt < SESSION_CACHE_TTL_MS) return cached.sessionId;
     const resp = await axios.get<Readable>(refererUrl, {
-      ...guardedRequestConfig(ALLOWED_ATTACHMENT_DOMAINS),
+      ...this.outbound.requestConfig("notice-attachment"),
       headers: { "User-Agent": UPSTREAM_USER_AGENT },
       timeout: SESSION_TIMEOUT_MS,
       responseType: "stream",
@@ -48,7 +45,7 @@ export class NoticesAttachmentClient implements OnModuleDestroy {
 
   async fetchAttachment(url: string, headers: Record<string, string>): Promise<AttachmentUpstream> {
     try {
-      const resp = await axios.get<Readable>(url, { ...guardedRequestConfig(ALLOWED_ATTACHMENT_DOMAINS), headers, responseType: "stream", timeout: UPSTREAM_TIMEOUT_MS });
+      const resp = await axios.get<Readable>(url, { ...this.outbound.requestConfig("notice-attachment"), headers, responseType: "stream", timeout: UPSTREAM_TIMEOUT_MS });
       return this.toUpstream(resp.headers, resp.data);
     } catch (err: unknown) {
       throw this.toUpstreamError(err, url);
@@ -67,7 +64,7 @@ export class NoticesAttachmentClient implements OnModuleDestroy {
 
   private toUpstreamError(err: unknown, url: string): unknown {
     const response = this.releaseErrorBody(err);
-    if (isOutboundBlocked(err)) return new AppError("FORBIDDEN", "host not allowed", 403);
+    if (this.outbound.isBlocked(err)) return new AppError("FORBIDDEN", "host not allowed", 403);
     const code = isRecord(err) ? err.code : undefined;
     // WHY: the school's server failing is a dead link or an outage there: a 502 and a warning, not a 500 and an Issue.
     if (typeof response?.status === "number" || typeof code === "string") {
