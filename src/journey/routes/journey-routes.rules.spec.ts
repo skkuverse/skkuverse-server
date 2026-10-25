@@ -6,7 +6,8 @@
  * calls are kept; the alight is the door's call for the same run, else the boarding plus the leg's ride minutes as an
  * estimate; past a source's listed vehicles a headway boards half a headway after the rider is ready, as an estimate;
  * an option with no run left is not running, ended, with the board's next service, and one whose door failed is
- * unavailable; a ride ends at its alight call's arrival, before the run leaves that stop, so the next leg starts
+ * unavailable; when a later ride has no run left, the option is ended too, its next service the boarding of the first
+ * ride that reaches that ride's next first run, never before the first ride's own next run; a ride ends at its alight call's arrival, before the run leaves that stop, so the next leg starts
  * there (ADR 0022, D5, amended 2026-10-25); a leg's basis is the weaker of its calls; options run by arrival, data
  * order breaking a tie, then the ones not running in data order.
  */
@@ -151,6 +152,50 @@ describe("planOption", () => {
 
     // Assert
     expect(planned).toEqual({ status: "notRunning", reason: "ended", nextServiceAt: new Date("2026-10-21T08:00:00+09:00") });
+  });
+
+  describe("Ended later leg: 4호선 still runs, the last 7800 has left 사당 by the time the rider gets there", () => {
+    const at = (clock: string, day = "20") => new Date(`2026-10-${day}T${clock}:00+09:00`);
+    const line4: JourneyLine = { id: "line4", source: "subway", sourceLineId: "4", mode: "subway", name: { ko: "4호선", en: "Line 4", zh: "4号线" }, color: "00A5DE", icon: "subway" };
+    const bus7800: JourneyLine = { id: "bus7800", source: "topis", sourceLineId: "gyeonggi7800", mode: "expressBus", name: { ko: "7800", en: "7800", zh: "7800" }, color: "E60012", icon: "expressBus" };
+    const option: JourneyOption = {
+      id: "line4-7800",
+      name: { ko: "4호선 · 7800", en: "Line 4 · 7800", zh: "4号线 · 7800" },
+      mode: "expressBus",
+      legs: [
+        { kind: "walk", from: "skku_building:1", to: "subway_station:hyehwa", minutes: 8, distanceM: 568, evidence: "TMAP" },
+        { kind: "ride", line: "line4", board: { place: "subway_station:hyehwa", platformId: "S1-4-420" }, alight: { place: "subway_station:sadang", platformId: "S1-4-433" }, rideMinutes: 28, evidence: "timetable" },
+        { kind: "walk", from: "subway_station:sadang", to: "bus_stop:119000302", minutes: 2, distanceM: 101, evidence: "TMAP" },
+        { kind: "ride", line: "bus7800", board: { place: "bus_stop:119000302" }, alight: { place: "bus_stop:200000159" }, rideMinutes: 34, evidence: "TOPIS" },
+        { kind: "walk", from: "bus_stop:200000159", to: "skku_building:7", minutes: 15, distanceM: 1063, evidence: "TMAP" },
+      ],
+    };
+    // The 23:30 train from Hyehwa reaches Sadang at 23:58; the rider is at the 7800 pole, a margin ahead, at 00:01.
+    const subway = (nextServiceAt: Date | null) => board([{ lineId: "4", board: call(at("23:30")), alight: call(at("23:58")), observedAt: null }], { nextServiceAt });
+    const plan = (subwayNext: Date | null, busNext: Date | null) =>
+      planOption(option, { now: at("23:20"), catchMarginSec: 60, lineById: new Map([["line4", line4], ["bus7800", bus7800]]), boards: new Map([[1, subway(subwayNext)], [3, board([], { nextServiceAt: busNext })]]) });
+
+    it("is ended, its next service the 4호선 boarding that reaches 7800's next first run", () => {
+      // Act
+      const planned = plan(at("05:00", "21"), at("05:52", "21"));
+
+      // Assert
+      expect(planned).toEqual({ status: "notRunning", reason: "ended", nextServiceAt: at("05:21", "21") });
+    });
+
+    it.each([
+      ["one minute before", "05:20", "05:21"],
+      ["at that boarding", "05:21", "05:21"],
+      ["one minute after", "05:22", "05:22"],
+    ])("never names a next service before the first ride's own next run, %s", (_case, subwayNext, expected) => {
+      // Act & Assert
+      expect(plan(at(subwayNext, "21"), at("05:52", "21"))).toMatchObject({ nextServiceAt: at(expected, "21") });
+    });
+
+    it("names no next service when the ended leg knows none", () => {
+      // Act & Assert
+      expect(plan(at("05:00", "21"), null)).toEqual({ status: "notRunning", reason: "ended", nextServiceAt: null });
+    });
   });
 
   it("Alight time: ends a 1호선 ride at its alight call's arrival, not its departure, and starts the walk after it there", () => {
