@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords; extended 2026-10-24 for the first-train flag, no other value changed: each train's isFirstTrain, false, as none was its service day's first train.",
+  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords; extended 2026-10-24 for the first-train flag, no other value changed: each train's isFirstTrain, false, as none was its service day's first train. Reshaped by hand 2026-10-25 to ADR 0022's call (D2, D3), as the server serves it since: each train became the call plus its trainNo, in the call's key order, arrivalAt its expectedArrivalAt (scheduledArrivalAt for a scheduled train), source its basis (live provider, estimated estimate, scheduled timetable), destination its headsign, express isExpress, isFirstTrain isFirstRun; runId <line>/<service date>/<trainNo>; vehicleId, providerText, expectedDepartureAt and, not captured, the scheduled pair and isLastRun null; stopsAway kept, no position having been captured, and status read from it (0 arriving, more enRoute); every instant, generatedAt included, at +09:00 to the second.",
   "data": {
     "station": {
       "id": "jeongja",
@@ -21,7 +21,7 @@
           }
         },
         "platformId": "DX-D1-4312",
-        "generatedAt": "2026-10-18T08:02:59.442Z",
+        "generatedAt": "2026-10-18T17:02:59+09:00",
         "directions": [
           {
             "direction": "up",
@@ -36,31 +36,55 @@
             },
             "trains": [
               {
-                "trainNo": "1172",
-                "destination": "신사",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:07:59.442Z",
+                "status": "enRoute",
+                "expectedArrivalAt": "2026-10-18T17:07:59+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": 2,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "D1/2026-10-18/1172",
+                "vehicleId": null,
+                "headsign": "신사",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "1172"
               },
               {
-                "trainNo": "1174",
-                "destination": "신사",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:16:59.442Z",
+                "status": "unknown",
+                "expectedArrivalAt": "2026-10-18T17:16:59+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": null,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "D1/2026-10-18/1174",
+                "vehicleId": null,
+                "headsign": "신사",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "1174"
               },
               {
-                "trainNo": "1176",
-                "destination": "신사",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:21:24.000Z",
+                "status": "unknown",
+                "expectedArrivalAt": "2026-10-18T17:21:24+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": null,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "D1/2026-10-18/1176",
+                "vehicleId": null,
+                "headsign": "신사",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "1176"
               }
             ]
           },
@@ -77,31 +101,55 @@
             },
             "trains": [
               {
-                "trainNo": "1163",
-                "destination": "광교",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:01:49.000Z",
+                "status": "arriving",
+                "expectedArrivalAt": "2026-10-18T17:01:49+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": 0,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "D1/2026-10-18/1163",
+                "vehicleId": null,
+                "headsign": "광교",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "1163"
               },
               {
-                "trainNo": "1165",
-                "destination": "광교",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:12:07.000Z",
+                "status": "enRoute",
+                "expectedArrivalAt": "2026-10-18T17:12:07+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": 2,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "D1/2026-10-18/1165",
+                "vehicleId": null,
+                "headsign": "광교",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "1165"
               },
               {
-                "trainNo": "1167",
-                "destination": "광교",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:18:59.442Z",
+                "status": "unknown",
+                "expectedArrivalAt": "2026-10-18T17:18:59+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": null,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "D1/2026-10-18/1167",
+                "vehicleId": null,
+                "headsign": "광교",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "1167"
               }
             ]
           }
@@ -118,7 +166,7 @@
           }
         },
         "platformId": "KR-K1-K230",
-        "generatedAt": "2026-10-18T08:02:59.442Z",
+        "generatedAt": "2026-10-18T17:02:59+09:00",
         "directions": [
           {
             "direction": "up",
@@ -133,31 +181,55 @@
             },
             "trains": [
               {
-                "trainNo": "6136",
-                "destination": "왕십리",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:05:40.000Z",
+                "status": "enRoute",
+                "expectedArrivalAt": "2026-10-18T17:05:40+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": 1,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "K1/2026-10-18/6136",
+                "vehicleId": null,
+                "headsign": "왕십리",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "6136"
               },
               {
-                "trainNo": "6138",
-                "destination": "왕십리",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:16:30.000Z",
+                "status": "enRoute",
+                "expectedArrivalAt": null,
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": "2026-10-18T17:16:30+09:00",
+                "scheduledDepartureAt": null,
+                "basis": "timetable",
                 "stopsAway": 3,
-                "source": "scheduled",
-                "isFirstTrain": false
+                "runId": "K1/2026-10-18/6138",
+                "vehicleId": null,
+                "headsign": "왕십리",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "6138"
               },
               {
-                "trainNo": "6544",
-                "destination": "왕십리",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:26:10.000Z",
+                "status": "unknown",
+                "expectedArrivalAt": "2026-10-18T17:26:10+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": null,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "K1/2026-10-18/6544",
+                "vehicleId": null,
+                "headsign": "왕십리",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "6544"
               }
             ]
           },
@@ -174,31 +246,55 @@
             },
             "trains": [
               {
-                "trainNo": "6117",
-                "destination": "죽전",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:08:59.442Z",
+                "status": "enRoute",
+                "expectedArrivalAt": "2026-10-18T17:08:59+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": 3,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "K1/2026-10-18/6117",
+                "vehicleId": null,
+                "headsign": "죽전",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "6117"
               },
               {
-                "trainNo": "6549",
-                "destination": "인천",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:14:29.442Z",
+                "status": "unknown",
+                "expectedArrivalAt": "2026-10-18T17:14:29+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": null,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "K1/2026-10-18/6549",
+                "vehicleId": null,
+                "headsign": "인천",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "6549"
               },
               {
-                "trainNo": "6119",
-                "destination": "죽전",
-                "express": false,
-                "arrivalAt": "2026-10-18T08:19:05.000Z",
+                "status": "unknown",
+                "expectedArrivalAt": "2026-10-18T17:19:05+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": null,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "K1/2026-10-18/6119",
+                "vehicleId": null,
+                "headsign": "죽전",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "6119"
               }
             ]
           }

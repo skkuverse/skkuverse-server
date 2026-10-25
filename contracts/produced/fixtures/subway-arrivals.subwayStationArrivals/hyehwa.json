@@ -1,5 +1,5 @@
 {
-  "_about": "GET /subway/stations/S1-4-420/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire (GET /subway/stations/hyehwa/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords; extended 2026-10-24 for the first-train flag, no other value changed: each train's isFirstTrain, false, as none was its service day's first train.",
+  "_about": "GET /subway/stations/S1-4-420/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire (GET /subway/stations/hyehwa/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords; extended 2026-10-24 for the first-train flag, no other value changed: each train's isFirstTrain, false, as none was its service day's first train. Reshaped by hand 2026-10-25 to ADR 0022's call (D2, D3), as the server serves it since: each train became the call plus its trainNo, in the call's key order, arrivalAt its expectedArrivalAt (scheduledArrivalAt for a scheduled train), source its basis (live provider, estimated estimate, scheduled timetable), destination its headsign, express isExpress, isFirstTrain isFirstRun; runId <line>/<service date>/<trainNo>; vehicleId, providerText, expectedDepartureAt and, not captured, the scheduled pair and isLastRun null; stopsAway kept, no position having been captured, and status read from it (0 arriving, more enRoute); every instant, generatedAt included, at +09:00 to the second.",
   "data": {
     "station": {
       "id": "hyehwa",
@@ -21,7 +21,7 @@
           }
         },
         "platformId": "S1-4-420",
-        "generatedAt": "2026-10-17T02:39:07.605Z",
+        "generatedAt": "2026-10-17T11:39:07+09:00",
         "directions": [
           {
             "direction": "up",
@@ -36,13 +36,21 @@
             },
             "trains": [
               {
-                "trainNo": "4548",
-                "destination": "불암산",
-                "express": false,
-                "arrivalAt": "2026-10-17T02:42:30.000Z",
+                "status": "enRoute",
+                "expectedArrivalAt": "2026-10-17T11:42:30+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "provider",
                 "stopsAway": 2,
-                "source": "live",
-                "isFirstTrain": false
+                "runId": "4/2026-10-17/4548",
+                "vehicleId": null,
+                "headsign": "불암산",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "4548"
               }
             ]
           },
@@ -59,13 +67,21 @@
             },
             "trains": [
               {
-                "trainNo": "4565",
-                "destination": "오이도",
-                "express": false,
-                "arrivalAt": "2026-10-17T02:55:30.000Z",
+                "status": "unknown",
+                "expectedArrivalAt": "2026-10-17T11:55:30+09:00",
+                "expectedDepartureAt": null,
+                "scheduledArrivalAt": null,
+                "scheduledDepartureAt": null,
+                "basis": "estimate",
                 "stopsAway": null,
-                "source": "estimated",
-                "isFirstTrain": false
+                "runId": "4/2026-10-17/4565",
+                "vehicleId": null,
+                "headsign": "오이도",
+                "isFirstRun": false,
+                "isLastRun": null,
+                "isExpress": false,
+                "providerText": null,
+                "trainNo": "4565"
               }
             ]
           }
