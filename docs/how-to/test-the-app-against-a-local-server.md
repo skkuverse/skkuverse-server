@@ -29,7 +29,7 @@ A local server holds credentials that reach real people. The dev Doppler config 
 
 `CACHE=off` leaves two caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 
-Development also accepts loopback CORS origins (`http://localhost:*`, `http://127.0.0.1:*`), for a web dev server on the same machine. The native app is not subject to CORS.
+CORS follows `PERIMETER_MODE`, not `NODE_ENV`. Under `local-dev`, what `npm run dev` sets, only loopback origins (`http://localhost:*`, `http://127.0.0.1:*`) are trusted, for a web dev server on the same machine. Under `overlay`, the origins production trusts are. The native app is not subject to CORS.
 
 The bus pollers (HSSC, Jongro, station) keep running locally, because the bus screens need them.
 
@@ -55,10 +55,10 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
    | Device | `EXPO_PUBLIC_BASE_URL` |
    | --- | --- |
    | iOS simulator | `http://localhost:3000` |
-   | Android emulator | `http://10.0.2.2:3000`, or `http://localhost:3000` after `adb reverse tcp:3000 tcp:3000` |
+   | Android emulator | `http://localhost:3000`, after `adb reverse tcp:3000 tcp:3000` |
    | Physical phone | `http://<Mac LAN IP>:3000` on the same Wi-Fi, or the https URL from `cloudflared tunnel --url http://localhost:3000`, both in the `overlay` mode below |
 
-   `npm run dev` sets `PERIMETER_MODE=local-dev` and `HOST=127.0.0.1`, so the server listens on loopback only, port `PORT` or 3000. The simulator and the emulator reach it; a phone on the Wi-Fi does not. `local-dev` refuses to start on any other address ([ADR 0023](../decisions/0023-perimeter-ports.md)). Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
+   `npm run dev` sets `PERIMETER_MODE=local-dev` and `HOST=127.0.0.1`, so the server listens on loopback only, port `PORT` or 3000. The simulator and the emulator reach it; a phone on the Wi-Fi does not. `local-dev` refuses to start on any other address, and answers only a request whose `Host` is a loopback name, so the emulator's `10.0.2.2` alias gets a 403 ([ADR 0023](../decisions/0023-perimeter-ports.md)). Run `adb reverse` again after the emulator restarts. Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
 
    A phone or a tunnel needs the `overlay` mode, the perimeter production runs:
 
@@ -104,13 +104,14 @@ Sentry is off locally: the dev keys carry no `SENTRY_DSN`, and `npm run verify:s
 | Symptom | Cause |
 | --- | --- |
 | The app still shows production data | The native build was not redone, or `EAS_BUILD_PROFILE`/`RELEASE_CHANNEL` is `beta`/`production`. On the iOS simulator, check the baked value: `grep -rao '"baseUrl":"[^"]*"' "$(xcrun simctl get_app_container booted com.example.skkumap)/EXConstants.bundle/app.config"` |
-| Android cannot connect to `localhost` | Inside the emulator `localhost` is the emulator. Use `10.0.2.2` or `adb reverse`. |
+| Android cannot connect to `localhost` | Inside the emulator `localhost` is the emulator until `adb reverse tcp:3000 tcp:3000` forwards it. Run it again after the emulator restarts. |
 | A phone cannot connect | The phone is on a different network, or the macOS firewall blocks node. A `cloudflared` tunnel avoids both. |
 | A change in a `_dev` database does not show, and no request reaches the server log | The phone's HTTP cache is answering from an earlier run with `CACHE=on` (`max-age` up to 24 h, kept across app restarts). Clear the app's storage or reinstall it once. |
 | A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
 | Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the three refused combinations. |
 | Boot fails with `config.invalid_role` | `ROLE` is set to a value other than `api`, `poller` or `combined`. Leave it unset for a local run, which boots as `combined`. |
-| A local web page gets no `Access-Control-Allow-Origin` | Only `http://localhost:*` and `http://127.0.0.1:*` are allowed in development, not LAN addresses. |
+| A local web page gets no `Access-Control-Allow-Origin` | Under `PERIMETER_MODE=local-dev`, only `http://localhost:*` and `http://127.0.0.1:*` are trusted, not LAN addresses. |
+| Every request answers 403 with `"code": "LOCAL_DEV_ONLY"` | `local-dev` answers only a request sent straight to a loopback name. A `Host` such as `10.0.2.2` or a LAN address is refused, and so is a request with a forwarding header (`Forwarded`, `X-Forwarded-*`, `X-Real-IP`, `Via`, `CF-Connecting-IP`) from a proxy or a tunnel. Use `localhost` (Android: `adb reverse tcp:3000 tcp:3000`), or the `overlay` mode for a phone or a tunnel. |
 
 ## Related
 
