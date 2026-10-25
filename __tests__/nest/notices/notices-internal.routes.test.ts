@@ -1,7 +1,21 @@
 /**
- * (A perimeter detail is left out of the public history.)
+ * POST /internal/notices/dispatch-pending — exercises the route's
+ * INTERNAL_AUTHORIZER binding (InternalScopeGuard under "notices.dispatch",
+ * 401 before the handler on a refusal), the triggerSource derivation and the
+ * sweep it runs. Which tokens the production authorizer accepts is pinned
+ * beside that implementation (ADR 0023, D7).
  *
+ * The app boots the dispatch module through the production pipeline with the
+ * dispatch repository and push client faked and the clock fixed; the real
+ * NoticesDispatchService sweeps the claim-aware fake, so the response is the
+ * summary of a real sweep. sweepPending is only watched (a spy that calls
+ * through) to see the source it was handed. The returned SweepSummary is
+ * enveloped by the global ResponseInterceptor (the controller returns a value,
+ * NOT @Res()).
  *
+ * INTERNAL_AUTHORIZER is FakeInternalAuthorizer, allowing every call until a
+ * test refuses. The /internal route gets NEITHER FirebaseAuthMiddleware NOR
+ * the rate limiter.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";

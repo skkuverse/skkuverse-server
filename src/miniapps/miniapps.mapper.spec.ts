@@ -200,7 +200,7 @@ describe("toMiniAppRegistry", () => {
     expect(registry.detailOf("no-such-app")).toBeUndefined();
   });
 
-  // (A perimeter detail is left out of the public history.)
+  // WHY: no registry entry carries a status, scopes or signing keys until 2A-3 adds them (docs/decisions/0023-perimeter-ports.md, "Changes during implementation").
   it("answers a sender with no status and no scopes as pending, with no scopes and no signing keys, and an unknown id with null", () => {
     // Act
     const registry = snapshot();
