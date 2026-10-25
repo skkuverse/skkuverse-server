@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { linkActionType } from "../../shared/link-action.wire";
-import { DELIVERY_OUTCOMES, type DELIVERY_COUNTS } from "../miniapps.constants";
+import { DELIVERY_COUNTS, DELIVERY_OUTCOMES } from "../miniapps.constants";
 
 /** WHY: in the request's language, falling back to Korean: a push carries ko and en only. */
 const miniAppFeedEntry = z.object({
@@ -15,8 +15,7 @@ const miniAppFeedEntry = z.object({
 /** CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/miniapps/feed-parse.ts. */
 export const miniAppFeed = z.array(miniAppFeedEntry);
 
-/** WHY: `satisfies` holds the keys to DELIVERY_COUNTS both ways, as the stored row's counts are. */
-const deliveryCounts = z.object({ sent: z.number(), failed: z.number(), cleanedUp: z.number() } satisfies Record<(typeof DELIVERY_COUNTS)[number], z.ZodNumber>);
+const deliveryCounts = z.object(Object.fromEntries(DELIVERY_COUNTS.map((field) => [field, z.number()])) as Record<(typeof DELIVERY_COUNTS)[number], z.ZodNumber>);
 
 const deliveryStatus = z.enum(DELIVERY_OUTCOMES);
 

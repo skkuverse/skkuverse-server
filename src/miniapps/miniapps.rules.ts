@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { AppError } from "../http/app.error";
+import { RATE_LIMITED_BODY } from "../perimeter/perimeter.ports";
 import { parseMiniAppTarget } from "../shared/miniapp-target.util";
 import { isOnWebviewOrigin, toWebviewUrl } from "../shared/webview-url.util";
 import { SMALL_ORDER_PUBLIC_KEYS } from "./miniapps.constants";
@@ -57,6 +58,10 @@ export function toRegistryCrossReferenceIssues({ index, details }: RegistryIds):
 
 export function toMiniAppNotFound(id: string): AppError {
   return new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
+}
+
+export function toQuotaRefusal(): AppError {
+  return new AppError(RATE_LIMITED_BODY.error.code, RATE_LIMITED_BODY.error.message, 429);
 }
 
 // WHY: DNS reads `a.skkuverse.com.` as `a.skkuverse.com`, so a trailing dot must not move a URL off its owner's origin.
