@@ -3,7 +3,7 @@ title: Notices 변경 검증하기
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-08
+last-updated: 2026-10-26
 audience: internal
 ---
 
@@ -46,7 +46,7 @@ npm test            # jest — notices 스위트 포함
 
 `src/notices/dispatch/` (service, poller, internal controller)를 고쳤다면:
 
-- `POST /internal/notices/dispatch-pending`에 `X-Internal-Token`으로 호출 → sweep 카운트 응답. A local run sends nothing: `PUSH_DELIVERY` resolves to `suppressed` in development, so each push is logged as `push.delivery.suppressed` and the claimed `_dev` notices are marked `pushedAt` ([test-the-app-against-a-local-server.md](test-the-app-against-a-local-server.md)).
+- Call `POST /internal/notices/dispatch-pending`; it answers the sweep counts. Under `PERIMETER_MODE=local-dev` (what `npm run dev` sets) `INTERNAL_AUTHORIZER` allows every internal call, so no `X-Internal-Token` is needed; under `overlay` send the dispatch token in it. A local run sends nothing: `PUSH_DELIVERY` resolves to `suppressed` in development, so each push is logged as `push.delivery.suppressed` and the claimed `_dev` notices are marked `pushedAt` ([test-the-app-against-a-local-server.md](test-the-app-against-a-local-server.md)).
 - claim-lease 동시성: 같은 후보를 두 번 sweep해도 두 번 발송 안 됨 (lease 유효).
 - config 변경(dispatch 상수·FCM URL)이면 배포 전 pre-deploy dry-load가 잡는지 확인 ([decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)).
 
