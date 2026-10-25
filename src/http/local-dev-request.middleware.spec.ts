@@ -52,7 +52,7 @@ describe("LocalDevRequestMiddleware.use", () => {
     expect(outcome.body).toEqual({ error: { code: "LOCAL_DEV_ONLY", message: "A local-development server answers requests from this machine only" } });
   });
 
-  it.each(["rebind.example:3000", "192.168.0.10:3000", "localhost.evil.test", "0.0.0.0:3000", "[::]:3000", "[::ffff:192.168.0.10]:3000", "127.0.0.1:3000@rebind.example", ""])("refuses a request for the host %j", (host) => {
+  it.each(["rebind.example:3000", "192.168.0.10:3000", "localhost.evil.test", "0.0.0.0:3000", "[::]:3000", "[::ffff:192.168.0.10]:3000", "127.0.0.1:3000@rebind.example", "127.0.0.1/@rebind.example", "127.0.0.1\\@rebind.example", "127.0.0.1#.rebind.example", "localhost?.rebind.example", ""])("refuses a request for the host %j", (host) => {
     // Act
     const outcome = run({ host });
 
