@@ -1,5 +1,5 @@
 {
- "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh, timetable only (no arrival state stored), at a weekday 08:00 (Wednesday 2026-10-21), a Saturday 14:00 (2026-10-24), a public holiday 11:00 (Friday 2026-12-25) and a weekday 00:20 (Wednesday 2026-10-21, service day Tuesday 2026-10-20) KST, each with its status, Cache-Control, Vary, ETag and body (its bytes are JSON.stringify of it); and the subway_arrivals documents one SubwayTrackingService tick wrote at the weekday 08:00 over the characterization's fixed observations. Generated from the committed timetables at commit 2198cf04, before the timetables moved to the subway-timetables dataset. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes. Changed 2026-10-24 with the behavior it pins (app ADR 0022, D4), no other value changed: each answer's meta gained serverNow, the clock at +09:00, each train gained isFirstTrain, from the earliest train of its direction at its platform in the instant's table, and each ETag was recomputed from the new bytes. Each written train gained isFirstTrain the same way. Changed 2026-10-25 with the behavior it pins (ADR 0022 D4), no other value changed: the tick also writes the documents of 사당 (S1-2-226, S1-4-433), 금정 (KR-1-P149, KR-4-443) and 종로5가 (S1-1-154), served from revision 2 of the tables and the topology; every other document is byte-identical.",
+ "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh, timetable only (no arrival state stored), at a weekday 08:00 (Wednesday 2026-10-21), a Saturday 14:00 (2026-10-24), a public holiday 11:00 (Friday 2026-12-25) and a weekday 00:20 (Wednesday 2026-10-21, service day Tuesday 2026-10-20) KST, each with its status, Cache-Control, Vary, ETag and body (its bytes are JSON.stringify of it); and the subway_arrivals documents one SubwayTrackingService tick wrote at the weekday 08:00 over the characterization's fixed observations. Generated from the committed timetables at commit 2198cf04, before the timetables moved to the subway-timetables dataset. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes. Changed 2026-10-24 with the behavior it pins (app ADR 0022, D4), no other value changed: each answer's meta gained serverNow, the clock at +09:00, each train gained isFirstTrain, from the earliest train of its direction at its platform in the instant's table, and each ETag was recomputed from the new bytes. Each written train gained isFirstTrain the same way. Changed 2026-10-25 with the behavior it pins (ADR 0022 D4), no other value changed: the tick also writes the documents of 사당 (S1-2-226, S1-4-433), 금정 (KR-1-P149, KR-4-443) and 종로5가 (S1-1-154), served from revision 2 of the tables and the topology; every other document is byte-identical. Changed 2026-10-25 with the behavior it pins (ADR 0022, D2), no other value changed: each written train gained isLastRun, from the latest train of its direction at its platform in the tick's table, its timetable arrival and departure at the platform (scheduledArrivalAt, scheduledDepartureAt), and, for a train whose row passes an upstream platform within reach, those platforms (passedPlatformIds).",
  "instants": {
   "2026-10-20T23:00:00.000Z": {
    "sungkyunkwan": {
@@ -16590,7 +16590,10 @@
        "position": {
         "stationId": "DX-D1-4308",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "1038",
@@ -16599,7 +16602,10 @@
        "arrivalAt": "2026-10-20T23:05:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:04:00.000Z"
       },
       {
        "trainNo": "1042",
@@ -16608,7 +16614,10 @@
        "arrivalAt": "2026-10-20T23:10:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:09:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:09:00.000Z"
       }
      ],
      "down": [
@@ -16622,7 +16631,10 @@
        "position": {
         "stationId": "DX-D1-4306",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:00:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:00:00.000Z"
       },
       {
        "trainNo": "1039",
@@ -16631,7 +16643,10 @@
        "arrivalAt": "2026-10-20T23:05:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:04:00.000Z"
       },
       {
        "trainNo": "1041",
@@ -16640,7 +16655,10 @@
        "arrivalAt": "2026-10-20T23:09:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:08:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:08:00.000Z"
       }
      ]
     }
@@ -16658,7 +16676,10 @@
        "arrivalAt": "2026-10-20T23:03:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:00.000Z"
       },
       {
        "trainNo": "1042",
@@ -16667,7 +16688,10 @@
        "arrivalAt": "2026-10-20T23:08:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:07:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:07:00.000Z"
       },
       {
        "trainNo": "1044",
@@ -16676,7 +16700,10 @@
        "arrivalAt": "2026-10-20T23:13:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:12:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:12:00.000Z"
       }
      ],
      "down": [
@@ -16690,7 +16717,10 @@
        "position": {
         "stationId": "DX-D1-4307",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "1037",
@@ -16702,7 +16732,10 @@
        "position": {
         "stationId": "DX-D1-4306",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:00.000Z"
       },
       {
        "trainNo": "1031",
@@ -16711,7 +16744,10 @@
        "arrivalAt": "2026-10-20T23:07:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:50:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:50:00.000Z"
       }
      ]
     }
@@ -16732,7 +16768,10 @@
        "position": {
         "stationId": "DX-D1-D13",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:01:00.000Z"
       },
       {
        "trainNo": "1048",
@@ -16741,7 +16780,10 @@
        "arrivalAt": "2026-10-20T23:07:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:06:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:00.000Z"
       },
       {
        "trainNo": "1050",
@@ -16750,7 +16792,10 @@
        "arrivalAt": "2026-10-20T23:12:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:11:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:11:00.000Z"
       }
      ],
      "down": [
@@ -16764,7 +16809,10 @@
        "position": {
         "stationId": "DX-D1-4311",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:00:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:00:00.000Z"
       },
       {
        "trainNo": "1031",
@@ -16773,7 +16821,10 @@
        "arrivalAt": "2026-10-20T23:06:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:00.000Z"
       },
       {
        "trainNo": "1033",
@@ -16782,7 +16833,10 @@
        "arrivalAt": "2026-10-20T23:11:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:10:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:10:00.000Z"
       }
      ]
     }
@@ -16803,7 +16857,10 @@
        "position": {
         "stationId": "DX-D1-4319",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:58:00.000Z"
       },
       {
        "trainNo": "1048",
@@ -16812,7 +16869,10 @@
        "arrivalAt": "2026-10-20T23:03:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:48:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:48:00.000Z"
       },
       {
        "trainNo": "1050",
@@ -16821,7 +16881,10 @@
        "arrivalAt": "2026-10-20T23:03:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:53:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:53:00.000Z"
       }
      ],
      "down": [
@@ -16835,7 +16898,10 @@
        "position": {
         "stationId": "DX-D1-4317",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:00.000Z"
       },
       {
        "trainNo": "1025",
@@ -16844,7 +16910,10 @@
        "arrivalAt": "2026-10-20T23:09:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:08:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:08:00.000Z"
       },
       {
        "trainNo": "1027",
@@ -16853,7 +16922,10 @@
        "arrivalAt": "2026-10-20T23:14:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:13:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:13:00.000Z"
       }
      ]
     }
@@ -16874,7 +16946,10 @@
        "position": {
         "stationId": "KR-1-P154",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:54:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:55:00.000Z"
       },
       {
        "trainNo": "0428",
@@ -16883,7 +16958,10 @@
        "arrivalAt": "2026-10-20T23:04:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:03:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:04:00.000Z"
       },
       {
        "trainNo": "0614",
@@ -16892,7 +16970,10 @@
        "arrivalAt": "2026-10-20T23:08:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:07:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:07:30.000Z"
       }
      ],
      "down": [
@@ -16906,7 +16987,10 @@
        "position": {
         "stationId": "KR-1-P152",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:55:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:56:00.000Z"
       },
       {
        "trainNo": "1905",
@@ -16915,7 +16999,14 @@
        "arrivalAt": "2026-10-20T23:06:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:30.000Z",
+       "passedPlatformIds": [
+        "KR-1-P151",
+        "KR-1-P150"
+       ]
       },
       {
        "trainNo": "0619",
@@ -16924,7 +17015,10 @@
        "arrivalAt": "2026-10-20T23:09:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:08:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:08:30.000Z"
       }
      ]
     }
@@ -16945,7 +17039,10 @@
        "position": {
         "stationId": "KR-1-P154",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:06:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:30.000Z"
       },
       {
        "trainNo": "0428",
@@ -16954,7 +17051,10 @@
        "arrivalAt": "2026-10-20T23:16:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:15:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:15:30.000Z"
       },
       {
        "trainNo": "0614",
@@ -16963,7 +17063,10 @@
        "arrivalAt": "2026-10-20T23:19:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:18:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:19:00.000Z"
       }
      ],
      "down": [
@@ -16974,7 +17077,10 @@
        "arrivalAt": "2026-10-20T23:07:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:06:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:07:00.000Z"
       },
       {
        "trainNo": "0419",
@@ -16983,7 +17089,10 @@
        "arrivalAt": "2026-10-20T23:11:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:10:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:11:00.000Z"
       },
       {
        "trainNo": "0623",
@@ -16992,7 +17101,10 @@
        "arrivalAt": "2026-10-20T23:18:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:18:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:19:00.000Z"
       }
      ]
     }
@@ -17010,7 +17122,10 @@
        "arrivalAt": "2026-10-20T22:59:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:00:00.000Z"
       },
       {
        "trainNo": "4532",
@@ -17019,7 +17134,10 @@
        "arrivalAt": "2026-10-20T23:03:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:03:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:03:30.000Z"
       },
       {
        "trainNo": "4406",
@@ -17028,7 +17146,14 @@
        "arrivalAt": "2026-10-20T23:09:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:09:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:09:30.000Z",
+       "passedPlatformIds": [
+        "KR-4-445",
+        "KR-4-446"
+       ]
       }
      ],
      "down": [
@@ -17039,7 +17164,10 @@
        "arrivalAt": "2026-10-20T23:02:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:30.000Z"
       },
       {
        "trainNo": "4303",
@@ -17048,7 +17176,10 @@
        "arrivalAt": "2026-10-20T23:09:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:09:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:09:30.000Z"
       },
       {
        "trainNo": "4529",
@@ -17057,7 +17188,10 @@
        "arrivalAt": "2026-10-20T23:16:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:16:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:16:30.000Z"
       }
      ]
     }
@@ -17078,7 +17212,10 @@
        "position": {
         "stationId": "KR-K1-K218",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "6040",
@@ -17087,7 +17224,10 @@
        "arrivalAt": "2026-10-20T23:03:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:30.000Z"
       },
       {
        "trainNo": "6042",
@@ -17096,7 +17236,10 @@
        "arrivalAt": "2026-10-20T23:06:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:00.000Z"
       }
      ],
      "down": [
@@ -17110,7 +17253,10 @@
        "position": {
         "stationId": "KR-K1-K216",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "6529",
@@ -17119,7 +17265,10 @@
        "arrivalAt": "2026-10-20T23:05:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:00.000Z"
       },
       {
        "trainNo": "6041",
@@ -17128,7 +17277,10 @@
        "arrivalAt": "2026-10-20T23:10:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:09:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:10:00.000Z"
       }
      ]
     }
@@ -17149,7 +17301,10 @@
        "position": {
         "stationId": "KR-K1-K231",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:30.000Z"
       },
       {
        "trainNo": "6506",
@@ -17158,7 +17313,10 @@
        "arrivalAt": "2026-10-20T23:05:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:00.000Z"
       },
       {
        "trainNo": "6042",
@@ -17167,7 +17325,10 @@
        "arrivalAt": "2026-10-20T23:07:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:33:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:34:00.000Z"
       }
      ],
      "down": [
@@ -17181,7 +17342,10 @@
        "position": {
         "stationId": "KR-K1-K229",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:00:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:01:00.000Z"
       },
       {
        "trainNo": "6033",
@@ -17190,7 +17354,10 @@
        "arrivalAt": "2026-10-20T23:08:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:07:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:08:00.000Z"
       },
       {
        "trainNo": "6527",
@@ -17199,7 +17366,10 @@
        "arrivalAt": "2026-10-20T23:16:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:15:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:16:00.000Z"
       }
      ]
     }
@@ -17217,7 +17387,10 @@
        "arrivalAt": "2026-10-20T22:59:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:00:00.000Z"
       },
       {
        "trainNo": "0024",
@@ -17226,7 +17399,10 @@
        "arrivalAt": "2026-10-20T23:04:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:00.000Z"
       },
       {
        "trainNo": "0418",
@@ -17235,7 +17411,10 @@
        "arrivalAt": "2026-10-20T23:08:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:08:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:08:30.000Z"
       }
      ],
      "down": [
@@ -17246,7 +17425,10 @@
        "arrivalAt": "2026-10-20T23:01:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:00.000Z"
       },
       {
        "trainNo": "0627",
@@ -17255,7 +17437,10 @@
        "arrivalAt": "2026-10-20T23:05:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:30.000Z"
       },
       {
        "trainNo": "1601",
@@ -17264,7 +17449,10 @@
        "arrivalAt": "2026-10-20T23:08:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:08:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:09:00.000Z"
       }
      ]
     }
@@ -17285,7 +17473,10 @@
        "position": {
         "stationId": "S1-2-215",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:30.000Z"
       },
       {
        "trainNo": "2096",
@@ -17294,7 +17485,10 @@
        "arrivalAt": "2026-10-20T23:02:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:30.000Z"
       },
       {
        "trainNo": "2098",
@@ -17303,7 +17497,10 @@
        "arrivalAt": "2026-10-20T23:06:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:30.000Z"
       }
      ],
      "down": [
@@ -17317,7 +17514,10 @@
        "position": {
         "stationId": "S1-2-217",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "2051",
@@ -17326,7 +17526,10 @@
        "arrivalAt": "2026-10-20T23:02:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:00.000Z"
       },
       {
        "trainNo": "2053",
@@ -17335,7 +17538,10 @@
        "arrivalAt": "2026-10-20T23:05:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:00.000Z"
       }
      ]
     }
@@ -17356,7 +17562,10 @@
        "position": {
         "stationId": "S1-2-221",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "2088",
@@ -17365,7 +17574,10 @@
        "arrivalAt": "2026-10-20T23:02:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:30.000Z"
       },
       {
        "trainNo": "2090",
@@ -17374,7 +17586,10 @@
        "arrivalAt": "2026-10-20T23:06:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:00.000Z"
       }
      ],
      "down": [
@@ -17388,7 +17603,10 @@
        "position": {
         "stationId": "S1-2-223",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "2059",
@@ -17397,7 +17615,10 @@
        "arrivalAt": "2026-10-20T23:02:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:00.000Z"
       },
       {
        "trainNo": "2061",
@@ -17406,7 +17627,10 @@
        "arrivalAt": "2026-10-20T23:05:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:30.000Z"
       }
      ]
     }
@@ -17424,7 +17648,10 @@
        "arrivalAt": "2026-10-20T23:02:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:03:00.000Z"
       },
       {
        "trainNo": "2084",
@@ -17433,7 +17660,10 @@
        "arrivalAt": "2026-10-20T23:05:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:00.000Z"
       },
       {
        "trainNo": "2086",
@@ -17445,7 +17675,10 @@
        "position": {
         "stationId": "S1-2-221",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:08:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:09:00.000Z"
       }
      ],
      "down": [
@@ -17456,7 +17689,10 @@
        "arrivalAt": "2026-10-20T23:01:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:00:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:01:30.000Z"
       },
       {
        "trainNo": "2067",
@@ -17465,7 +17701,10 @@
        "arrivalAt": "2026-10-20T23:04:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:03:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:04:00.000Z"
       },
       {
        "trainNo": "2069",
@@ -17474,7 +17713,10 @@
        "arrivalAt": "2026-10-20T23:06:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:30.000Z"
       }
      ]
     }
@@ -17495,7 +17737,10 @@
        "position": {
         "stationId": "S1-3-333",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:57:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:57:30.000Z"
       },
       {
        "trainNo": "3088",
@@ -17507,7 +17752,10 @@
        "position": {
         "stationId": "S1-3-335",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:01:30.000Z"
       },
       {
        "trainNo": "3090",
@@ -17516,7 +17764,10 @@
        "arrivalAt": "2026-10-20T23:06:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:30.000Z"
       }
      ],
      "down": [
@@ -17530,7 +17781,10 @@
        "position": {
         "stationId": "S1-3-331",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:58:30.000Z"
       },
       {
        "trainNo": "3041",
@@ -17539,7 +17793,10 @@
        "arrivalAt": "2026-10-20T23:03:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:30.000Z"
       },
       {
        "trainNo": "3043",
@@ -17548,7 +17805,10 @@
        "arrivalAt": "2026-10-20T23:06:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:00.000Z"
       }
      ]
     }
@@ -17569,7 +17829,10 @@
        "position": {
         "stationId": "S1-3-335",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:56:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:57:00.000Z"
       },
       {
        "trainNo": "3090",
@@ -17578,7 +17841,10 @@
        "arrivalAt": "2026-10-20T23:01:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:00:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:01:00.000Z"
       },
       {
        "trainNo": "3092",
@@ -17587,7 +17853,10 @@
        "arrivalAt": "2026-10-20T23:05:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:04:30.000Z"
       }
      ],
      "down": [
@@ -17601,7 +17870,10 @@
        "position": {
         "stationId": "S1-3-333",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:58:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:00.000Z"
       },
       {
        "trainNo": "3039",
@@ -17613,7 +17885,10 @@
        "position": {
         "stationId": "S1-3-331",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:03:00.000Z"
       },
       {
        "trainNo": "3041",
@@ -17622,7 +17897,10 @@
        "arrivalAt": "2026-10-20T23:07:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:06:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:07:00.000Z"
       }
      ]
     }
@@ -17643,7 +17921,10 @@
        "position": {
         "stationId": "S1-4-421",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:59:30.000Z"
       },
       {
        "trainNo": "4026",
@@ -17652,7 +17933,10 @@
        "arrivalAt": "2026-10-20T23:03:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:02:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:03:00.000Z"
       },
       {
        "trainNo": "4520",
@@ -17661,7 +17945,10 @@
        "arrivalAt": "2026-10-20T23:07:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:06:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:30.000Z"
       }
      ],
      "down": [
@@ -17675,7 +17962,10 @@
        "position": {
         "stationId": "S1-4-419",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:00:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:00:30.000Z"
       },
       {
        "trainNo": "4541",
@@ -17684,7 +17974,10 @@
        "arrivalAt": "2026-10-20T23:04:00.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:03:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:03:30.000Z"
       },
       {
        "trainNo": "4033",
@@ -17693,7 +17986,10 @@
        "arrivalAt": "2026-10-20T23:07:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:06:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:07:00.000Z"
       }
      ]
     }
@@ -17711,7 +18007,10 @@
        "arrivalAt": "2026-10-20T23:00:30.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:00:30.000Z"
       },
       {
        "trainNo": "4034",
@@ -17720,7 +18019,10 @@
        "arrivalAt": "2026-10-20T23:04:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": null,
+       "scheduledDepartureAt": "2026-10-20T23:04:30.000Z"
       },
       {
        "trainNo": "4528",
@@ -17729,7 +18031,10 @@
        "arrivalAt": "2026-10-20T23:07:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:07:30.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:08:00.000Z"
       }
      ],
      "down": [
@@ -17740,7 +18045,10 @@
        "arrivalAt": "2026-10-20T23:01:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:01:30.000Z"
       },
       {
        "trainNo": "4025",
@@ -17749,7 +18057,10 @@
        "arrivalAt": "2026-10-20T23:04:30.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:30.000Z",
+       "scheduledDepartureAt": null
       },
       {
        "trainNo": "4535",
@@ -17758,7 +18069,10 @@
        "arrivalAt": "2026-10-20T23:08:00.000Z",
        "source": "scheduled",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:08:00.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:08:30.000Z"
       }
      ]
     }
@@ -17779,7 +18093,10 @@
        "position": {
         "stationId": "S1-8-2816",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:59:20.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:00:10.000Z"
       },
       {
        "trainNo": "8060",
@@ -17788,7 +18105,10 @@
        "arrivalAt": "2026-10-20T23:05:50.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:04:50.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:05:40.000Z"
       },
       {
        "trainNo": "8062",
@@ -17797,7 +18117,10 @@
        "arrivalAt": "2026-10-20T23:11:50.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:10:50.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:11:40.000Z"
       }
      ],
      "down": [
@@ -17811,7 +18134,10 @@
        "position": {
         "stationId": "S1-8-2814",
         "state": "departed"
-       }
+       },
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T22:56:20.000Z",
+       "scheduledDepartureAt": "2026-10-20T22:57:10.000Z"
       },
       {
        "trainNo": "8041",
@@ -17820,7 +18146,10 @@
        "arrivalAt": "2026-10-20T23:02:20.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:01:20.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:02:10.000Z"
       },
       {
        "trainNo": "8043",
@@ -17829,7 +18158,10 @@
        "arrivalAt": "2026-10-20T23:06:50.000Z",
        "source": "estimated",
        "isFirstTrain": false,
-       "position": null
+       "position": null,
+       "isLastRun": false,
+       "scheduledArrivalAt": "2026-10-20T23:05:50.000Z",
+       "scheduledDepartureAt": "2026-10-20T23:06:40.000Z"
       }
      ]
     }
