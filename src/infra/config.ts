@@ -53,6 +53,7 @@ const config = {
   perimeter: {
     mode: process.env.PERIMETER_MODE as PerimeterMode,
     settings: process.env.PERIMETER_SETTINGS || undefined,
+    quotas: process.env.PERIMETER_QUOTAS || undefined,
   },
 
   mongo: {

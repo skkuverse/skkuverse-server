@@ -405,7 +405,7 @@ function validateWithEntry(overrides: Record<string, unknown>, env: NodeJS.Proce
     // WHY: the ports and classes from the same registry, so the classes extend the ports validateEnv checks against.
     const ports = require("../perimeter/perimeter.ports") as typeof import("../perimeter/perimeter.ports");
     const localDev = require("../perimeter/local-dev/perimeter-classes") as typeof import("../perimeter/local-dev/perimeter-classes");
-    Object.assign(mockedEntry, { portsVersion: ports.PERIMETER_PORTS_VERSION, classes: localDev.LOCAL_DEV_CLASSES, settingsErrors: () => [] }, overrides);
+    Object.assign(mockedEntry, { portsVersion: ports.PERIMETER_PORTS_VERSION, classes: localDev.LOCAL_DEV_CLASSES, settingsErrors: () => [], quotasErrors: () => [] }, overrides);
     validate = (require("./required-env") as typeof import("./required-env")).validateEnv;
   });
   try {
@@ -473,5 +473,33 @@ describe("requiredValues PERIMETER_SETTINGS", () => {
 
     // Act & Assert
     expect(() => validateWithEntry({ settingsErrors }, env)).toThrow(/Invalid perimeter[\s\S]*PERIMETER_SETTINGS: a limit is missing/);
+  });
+});
+
+describe("requiredValues PERIMETER_QUOTAS", () => {
+  // WHY: the overlay's push quota reads it, and every role constructs every class (ADR 0023, D4).
+  const production = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...process.env, NODE_ENV: "production", SENTRY_DSN: "disabled", HOST: "0.0.0.0", ...env });
+
+  it.each(["api", "poller", "combined"])("is required in overlay mode for ROLE=%s", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role });
+    delete env.PERIMETER_QUOTAS;
+
+    // Act & Assert
+    expect(listMissingRequired(env).map((v) => v.env)).toEqual(["PERIMETER_QUOTAS"]);
+  });
+
+  it.each(["local-dev", "test"])("is not required in %s mode, which reads no quotas", (mode) => {
+    // Act & Assert
+    expect(requiredValues({ NODE_ENV: "development", PERIMETER_MODE: mode }).map((v) => v.env)).not.toContain("PERIMETER_QUOTAS");
+  });
+
+  it.each(["api", "poller"])("refuses a production overlay boot of ROLE=%s whose quotas the overlay refuses", (role) => {
+    // Arrange
+    const env = production({ PERIMETER_MODE: "overlay", ROLE: role, PERIMETER_QUOTAS: "refused" });
+    const quotasErrors = (quotas: string | undefined) => (quotas === "refused" ? ["a quota is missing"] : []);
+
+    // Act & Assert
+    expect(() => validateWithEntry({ quotasErrors }, env)).toThrow(/Invalid perimeter[\s\S]*PERIMETER_QUOTAS: a quota is missing/);
   });
 });

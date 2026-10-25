@@ -197,7 +197,7 @@ export interface PerimeterCounters {
 }
 
 // WHY: what an implementation gets instead of importing config, the logger or the clock. A constructor reads only
-// `logger`, `now`, `host` and `settings`: the poller constructs every class too, and `internalToken` throws there.
+// `logger`, `now`, `host`, `settings` and `quotas`: the poller constructs every class too, and `internalToken` throws there.
 export interface PerimeterDeps {
   readonly logger: Logger;
   readonly now: () => Date;
@@ -205,6 +205,8 @@ export interface PerimeterDeps {
   readonly host: string | null;
   readonly firebaseProjectId: string;
   readonly settings: string | undefined;
+  // WHY: a variable apart from `settings`, so an image that reads only `settings` boots on the same rendered .env.
+  readonly quotas: string | undefined;
   readonly counters: PerimeterCounters;
   internalToken(scope: InternalScopeName): string;
 }
@@ -216,4 +218,5 @@ export interface PerimeterOverlay {
   readonly portsVersion: number;
   readonly classes: PerimeterClasses;
   settingsErrors(settings: string | undefined): string[];
+  quotasErrors(quotas: string | undefined): string[];
 }

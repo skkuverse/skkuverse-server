@@ -39,25 +39,26 @@ function isSettingsCheck(value: unknown): value is PerimeterOverlay["settingsErr
 
 function parseOverlayEntry(entry: unknown): ParsedOverlay {
   if (!isRecordValue(entry)) return { errors: ["the overlay entry exports no object"] };
-  const { portsVersion, classes, settingsErrors } = entry;
+  const { portsVersion, classes, settingsErrors, quotasErrors } = entry;
   if (portsVersion !== PERIMETER_PORTS_VERSION) {
     return { errors: [`the overlay entry is built against ports version ${String(portsVersion)}, this build is ${PERIMETER_PORTS_VERSION}`] };
   }
   if (!isRecordValue(classes)) return { errors: ["the overlay entry exports no classes record"] };
   if (!isSettingsCheck(settingsErrors)) return { errors: ["the overlay entry exports no settingsErrors function"] };
+  if (!isSettingsCheck(quotasErrors)) return { errors: ["the overlay entry exports no quotasErrors function"] };
   if (!isPerimeterClasses(classes)) return { errors: classErrors(classes) };
-  return { overlay: { portsVersion, classes, settingsErrors } };
+  return { overlay: { portsVersion, classes, settingsErrors, quotasErrors } };
 }
 
-function settingsMessages(overlay: PerimeterOverlay, settings: string | undefined): string[] {
-  const problems: unknown = overlay.settingsErrors(settings);
-  if (!Array.isArray(problems)) return ["PERIMETER_SETTINGS: the entry's check returned no list"];
-  return problems.map((problem) => `PERIMETER_SETTINGS: ${String(problem)}`);
+function namedMessages(variable: string, problems: unknown): string[] {
+  if (!Array.isArray(problems)) return [`${variable}: the entry's check returned no list`];
+  return problems.map((problem) => `${variable}: ${String(problem)}`);
 }
 
-export function overlayEntryErrors(entry: unknown, settings: string | undefined): string[] {
+export function overlayEntryErrors(entry: unknown, settings: string | undefined, quotas: string | undefined): string[] {
   const parsed = parseOverlayEntry(entry);
-  return "errors" in parsed ? parsed.errors : settingsMessages(parsed.overlay, settings);
+  if ("errors" in parsed) return parsed.errors;
+  return [...namedMessages("PERIMETER_SETTINGS", parsed.overlay.settingsErrors(settings)), ...namedMessages("PERIMETER_QUOTAS", parsed.overlay.quotasErrors(quotas))];
 }
 
 function requireOverlayEntry(): unknown {
@@ -74,7 +75,7 @@ export function loadOverlayEntry(): PerimeterOverlay {
 export function perimeterOverlayErrors(env: NodeJS.ProcessEnv): string[] {
   if (env.PERIMETER_MODE !== "overlay") return [];
   try {
-    return overlayEntryErrors(requireOverlayEntry(), env.PERIMETER_SETTINGS);
+    return overlayEntryErrors(requireOverlayEntry(), env.PERIMETER_SETTINGS, env.PERIMETER_QUOTAS);
   } catch (err: unknown) {
     return [`the overlay entry failed to load: ${err instanceof Error ? err.message : String(err)}`];
   }
