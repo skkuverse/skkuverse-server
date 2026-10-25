@@ -140,6 +140,8 @@ A ride leg adds:
 
 A ride leg's `startAt` and `endAt` are its calls' times. Its `basis` is the weaker of its two calls, in the order timetable, provider, estimate. Walk legs add an optional `path`; their evidence stays in the dataset. An option is `{ id, name, mode, status, reason, nextServiceAt, leaveAt, arriveAt, legs, warnings }`, with open warning codes. Certainty is shown per leg and through `later` and `warnings`, never as one journey score.
 
+- Amended 2026-10-25 (owner): a ride leg's `startAt` is its board call's time, departure first, as D2 orders it, and its `endAt` is its alight call's arrival first (`expectedArrivalAt`, then `scheduledArrivalAt`), falling back to its departure, since a rider leaves the vehicle when it arrives (GTFS and OTP time a leg the same way). The calls themselves stay as the boards serve them; only the leg's instants, the option's `arriveAt` and the next leg's start follow the arrival.
+
 A new mode adds a kind only when it needs different required fields. Taxi will add `taxi`, its fare and its pickup wait, with times from a travel-time source fed by a poller over fixed pairs ([ADR 0012](0012-runtime-roles.md), D2). The wire carries no reserved, unserved kind.
 
 ### D6. Producers are doors over a shared interface
