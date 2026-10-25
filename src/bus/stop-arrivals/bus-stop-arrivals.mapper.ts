@@ -1,5 +1,5 @@
+import { toCall } from "../../shared/call.util";
 import { toKstInstant } from "../../shared/kst-date.util";
-import { toArrival } from "../bus.mapper";
 import type { ServedStop } from "../bus.wire";
 import type { LiveGroup } from "../live/bus-live.wire";
 import type { FoundStop, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
@@ -38,11 +38,16 @@ export function toLiveEntry(
   };
 }
 
-export function toTimetableEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">): TimetableEntry {
-  return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals };
+export function toTimetableEntry(
+  { groupId, serviceId, routeType, action }: ShuttleStopRoute,
+  { label, headsign }: { label: string; headsign: string },
+  { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">,
+): TimetableEntry {
+  const headed = arrivals.map((arrival) => ({ ...arrival, headsign }));
+  return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals: headed };
 }
 
 /** WHY: a run keeps its departure from the origin on the wire, so a run with no time at this stop still sorts and labels. */
 export function toTimetableArrival(call: RunCall): TimetableArrival {
-  return { ...toArrival(call), runDepartureAt: toKstInstant(call.runDepartureAt.getTime()) };
+  return { ...toCall(call), runDepartureAt: toKstInstant(call.runDepartureAt.getTime()) };
 }

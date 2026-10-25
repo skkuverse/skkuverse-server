@@ -1,0 +1,9 @@
+{
+  "_about": "Synthetic, never captured: the mode-neutral vehicle of ADR 0022 (D2), served only inside a mode's own vehicle: bus.vehicle/gyeonggi7800-seats.json without the bus fields (plate, position, trajectory).",
+  "data": {
+    "id": "200011684",
+    "occupancy": null,
+    "seatsLeft": 37,
+    "isLowFloor": false
+  }
+}

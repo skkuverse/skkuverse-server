@@ -4,12 +4,13 @@
  * for a TOPIS one; a live entry carrying the live route's station entry at its index and the vehicles it names
  * (ADR 0019, D12) with the direction (right after towards) and the action given (board, or alight at a drop-off-only
  * station); and a timetable entry carrying its runs, each a run's stop call served with its departure from the
- * origin. The HSSC line named by its catalog stops moved with
+ * origin and headed by the headsign it is given (ADR 0022, D2). The HSSC line named by its catalog stops moved with
  * toCatalogNamedLine to src/bus/bus.mapper.spec.ts.
  */
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import type { FoundStop } from "../stop-index/bus-stop-index.types";
-import type { Arrival, Vehicle } from "../bus.wire";
+import type { Call } from "../../shared/call.wire";
+import type { Vehicle } from "../bus.wire";
 import type { LiveGroup } from "../live/bus-live.wire";
 import { toLiveEntry, toStopBlock, toTimetableArrival, toTimetableEntry } from "./bus-stop-arrivals.mapper";
 
@@ -73,17 +74,18 @@ describe("toStopBlock stop area", () => {
   });
 });
 
-const arrival = (vehicleId: string | null, providerText: string): Arrival => ({
+const arrival = (vehicleId: string | null, providerText: string): Call => ({
   status: "enRoute",
   expectedArrivalAt: "2026-10-20T14:14:00+09:00",
   ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
   basis: "provider",
   stopsAway: 2,
-  isLastBus: false,
+  runId: null,
   vehicleId,
+  ...{ headsign: null, isFirstRun: null, isLastRun: false, isExpress: null },
   providerText,
 });
-const vehicle = (id: string): Vehicle => ({ id, plateNumber: null, occupancy: null, seatsLeft: null, isLastBus: null, isLowFloor: null, position: null, trajectory: null });
+const vehicle = (id: string): Vehicle => ({ id, plateNumber: null, occupancy: null, seatsLeft: null, isLowFloor: null, position: null, trajectory: null });
 
 describe("toLiveEntry", () => {
   const group: LiveGroup = {
@@ -139,7 +141,7 @@ describe("toTimetableEntry", () => {
     const arrivals = [{ ...arrival(null, ""), status: "scheduled" as const, providerText: null, runDepartureAt: "2026-10-20T14:30:00+09:00" }];
 
     // Act & Assert
-    expect(toTimetableEntry(route, "인사캠 → 자과캠", { operation: "running", arrivals })).toEqual({
+    expect(toTimetableEntry(route, { label: "인사캠 → 자과캠", headsign: "인사캠 → 자과캠" }, { operation: "running", arrivals })).toEqual({
       kind: "timetable",
       groupId: "campus",
       label: "인사캠 → 자과캠",
@@ -148,21 +150,35 @@ describe("toTimetableEntry", () => {
       action: "board",
       operation: "running",
       vehicles: [],
-      arrivals,
+      arrivals: [{ ...arrivals[0], headsign: "인사캠 → 자과캠" }],
     });
+  });
+
+  it("heads each run with the headsign it is given, keeping the call's key order", () => {
+    // Arrange
+    const route = { kind: "shuttle" as const, groupId: "commute", serviceId: "commute-jamsil", routeType: "down", sequenceIndex: 0, action: "board" as const };
+    const run = { ...arrival(null, ""), status: "scheduled" as const, providerText: null, runDepartureAt: "2026-10-20T21:00:00+09:00" };
+
+    // Act
+    const entry = toTimetableEntry(route, { label: "잠실", headsign: "하교" }, { operation: "running", arrivals: [run, run] });
+
+    // Assert
+    expect(entry.label).toBe("잠실");
+    expect(entry.arrivals.map(({ headsign }) => headsign)).toEqual(["하교", "하교"]);
+    expect(Object.keys(entry.arrivals[0]!)).toEqual(Object.keys(run));
   });
 });
 
 describe("toTimetableArrival", () => {
-  it("serves a run's call as the wire arrival with its departure from the origin last, both at +09:00, and no run id", () => {
+  it("serves a run's call as the wire call in its own key order with its departure from the origin last, both at +09:00", () => {
     // Arrange
     const call = {
       status: "scheduled" as const,
       ...{ expectedArrivalAt: new Date("2026-10-22T15:52:00Z"), expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
       basis: "estimate" as const,
       stopsAway: null,
-      isLastBus: true,
-      ...{ vehicleId: null, providerText: null },
+      isLastRun: true,
+      ...{ vehicleId: null, providerText: null, headsign: null, isFirstRun: false, isExpress: null },
       runId: "commute-jamsil|down|2026-10-22|23:30",
       runDepartureAt: new Date("2026-10-22T14:30:00Z"),
     };
@@ -180,8 +196,12 @@ describe("toTimetableArrival", () => {
         scheduledDepartureAt: null,
         basis: "estimate",
         stopsAway: null,
-        isLastBus: true,
+        runId: "commute-jamsil|down|2026-10-22|23:30",
         vehicleId: null,
+        headsign: null,
+        isFirstRun: false,
+        isLastRun: true,
+        isExpress: null,
         providerText: null,
         runDepartureAt: "2026-10-22T23:30:00+09:00",
       }),

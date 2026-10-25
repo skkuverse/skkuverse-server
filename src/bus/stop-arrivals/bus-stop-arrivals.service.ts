@@ -19,7 +19,7 @@ import { BusStopIndexService } from "../stop-index/bus-stop-index.service";
 import type { HsscStopRoute, JongroStopRoute, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
 import { LEFT_OUT_LOG_INTERVAL_MS, NEXT_RUN_COUNT, OPERATION_BY_SCHEDULE_STATUS } from "./bus-stop-arrivals.constants";
 import { toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
-import { toTimetableArrivals } from "./bus-stop-arrivals.rules";
+import { toRunHeadsign, toTimetableArrivals } from "./bus-stop-arrivals.rules";
 import type { StopArrivalsRoute, TimetableArrival } from "./bus-stop-arrivals.types";
 import type { BusStopArrivals, BusStopArrivalsMeta } from "./bus-stop-arrivals.wire";
 
@@ -80,7 +80,9 @@ export class BusStopArrivalsService {
   private async toShuttleEntry(route: ShuttleStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
     const shown = await this.readOnce(reads.shownWeeks, route.serviceId, () => this.smart.listRuns(route.serviceId, { from: reads.now, weekCount: 1 }));
     const arrivals = await this.nextRunsOf(shown, route, reads);
-    return toTimetableEntry(route, t(`busconfig.service.${route.serviceId}`, reads.lang), { operation: OPERATION_BY_SCHEDULE_STATUS[shown.status], arrivals });
+    const label = t(`busconfig.service.${route.serviceId}`, reads.lang);
+    const headsign = toRunHeadsign(route.routeType, label, reads.lang);
+    return toTimetableEntry(route, { label, headsign }, { operation: OPERATION_BY_SCHEDULE_STATUS[shown.status], arrivals });
   }
 
   // WHY: after a week's last run (a Friday evening) the shown week holds none, so the page reads on into the next, whose
@@ -93,7 +95,7 @@ export class BusStopArrivalsService {
   }
 
   private groupOf(groupId: string, reads: PageReads): Promise<LiveGroup> {
-    return this.readOnce(reads.groups, groupId, () => this.live.findLiveGroup(groupId));
+    return this.readOnce(reads.groups, groupId, () => this.live.findLiveGroup(groupId, reads.lang));
   }
 
   private readOnce<T>(reads: Map<string, Promise<T>>, key: string, read: () => Promise<T>): Promise<T> {

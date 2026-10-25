@@ -1,11 +1,10 @@
 {
-  "_about": "Synthetic, never captured: a 7800 vehicle as /bus/live/gyeonggi7800 serves it with a fresh GBIS answer (ADR 0019, D17): the id and plate of 경기70사1724, which GBIS getBusLocationListv2 named by the same vehId with remainSeatCnt 37 on 2026-10-24 20:22 KST; its position and trajectory are taken from jongro-tracked.json.",
+  "_about": "Synthetic, never captured: a 7800 vehicle as /bus/live/gyeonggi7800 serves it with a fresh GBIS answer (ADR 0019, D17): the id and plate of 경기70사1724, which GBIS getBusLocationListv2 named by the same vehId with remainSeatCnt 37 on 2026-10-24 20:22 KST; its position and trajectory are taken from jongro-tracked.json. Reshaped by hand to ADR 0022 (D2): the vehicle loses isLastBus, which is the call's isLastRun.",
   "data": {
     "id": "200011684",
     "plateNumber": "경기70사1724",
     "occupancy": null,
     "seatsLeft": 37,
-    "isLastBus": false,
     "isLowFloor": false,
     "position": {
       "stationIndex": 5,

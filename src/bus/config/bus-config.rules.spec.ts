@@ -15,7 +15,7 @@ import { capturedRoutePathOf } from "../../../__tests__/helpers/bus/bus-route-pa
 import { HSSC_POSITION_COUNT } from "../bus.constants";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { RoutePathStation } from "../route-path/bus-route-path.document";
-import { toHsscDirections, toJongroDirections, toStationDirection } from "./bus-config.rules";
+import { toHsscDirections, toJongroDirections, toLineStationDirections, toStationDirection, toStationDirections } from "./bus-config.rules";
 import type { BusGroup } from "./bus-config.wire";
 
 let routes: RegistryRoute[] = [];
@@ -220,5 +220,42 @@ describe("toStationDirection", () => {
 
     // Act & Assert
     expect([toStationDirection(schedule, 0, null), toStationDirection(null, 0, null)]).toEqual([null, null]);
+  });
+});
+
+// WHY: a live answer heads every station's calls at once (ADR 0022, D2), so each station's direction comes by index.
+describe("toStationDirections", () => {
+  const realtime = (directionIds: Array<string | null>) =>
+    ({
+      id: "jongro07",
+      screenType: "realtime",
+      screen: {
+        stations: directionIds.map((directionId, index) => ({ index, directionId })),
+        directions: [{ id: "100900043", label: "이화사거리 방면", fromIndex: 0, toIndex: 1 }],
+        stationsVersion: "v1",
+      },
+    }) as unknown as BusGroup;
+
+  it("names each station's direction by its index, as toStationDirection names one, null where it has none", () => {
+    // Act & Assert
+    expect(toStationDirections(realtime(["100900043", null]), "v1")).toEqual([{ id: "100900043", label: "이화사거리 방면" }, null]);
+  });
+
+  it("names none for another stations version, a schedule group and no group", () => {
+    // Arrange
+    const schedule = { id: "campus", screenType: "schedule", screen: { services: [] } } as unknown as BusGroup;
+
+    // Act & Assert
+    expect([toStationDirections(realtime(["100900043"]), "v2"), toStationDirections(schedule, null), toStationDirections(null, null)]).toEqual([[null], [], []]);
+  });
+});
+
+describe("toLineStationDirections", () => {
+  it("names each station's direction by its index, null where it joins none", () => {
+    // Arrange
+    const directions = [{ id: "toCampus", label: "등교", fromIndex: 0, toIndex: 0 }];
+
+    // Act & Assert
+    expect(toLineStationDirections({ directions, directionIds: ["toCampus", null, "gone"] })).toEqual([{ id: "toCampus", label: "등교" }, null, null]);
   });
 });

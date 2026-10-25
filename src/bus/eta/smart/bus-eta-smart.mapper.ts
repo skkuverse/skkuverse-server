@@ -22,8 +22,9 @@ function toEstimatedAts({ departureAt, storedAts, sequence }: StoredRun, estimat
 }
 
 type RunEntry = { runId: string; routeType: string; date: string; time: string; stopTimes: ScheduleEntry["stopTimes"] };
+type DayEnds = Pick<ShuttleRun, "isFirstOfDay" | "isLastOfDay">;
 
-function toRun({ runId, routeType, date, time, stopTimes: stored }: RunEntry, isLastOfDay: boolean, inputs: EstimateInputs): ShuttleRun {
+function toRun({ runId, routeType, date, time, stopTimes: stored }: RunEntry, { isFirstOfDay, isLastOfDay }: DayEnds, inputs: EstimateInputs): ShuttleRun {
   const departureAt = toTimetableAt(date, time);
   const storedAts = (Array.isArray(stored) ? stored : []).map((at) => (typeof at === "string" ? toStopAt(departureAt, date, at) : null));
   const sequence = inputs.routeTypes.includes(routeType) ? inputs.sequences[routeType] : undefined;
@@ -35,16 +36,19 @@ function toRun({ runId, routeType, date, time, stopTimes: stored }: RunEntry, is
     shownAt: shownAts && isEstimatedStop(index) ? (shownAts[index] ?? null) : at,
     isEstimated: shownAts !== null && isEstimatedStop(index),
     latestEstimateAt: latestAts && isEstimatedStop(index) ? (latestAts[index] ?? null) : null,
+    timetableAt: at,
   }));
-  return { runId, routeType, date, departureAt, isLastOfDay, stopTimes, estimate: shownAts && served ? { source: served.source, updatedAt: served.updatedAt } : null };
+  return { runId, routeType, date, departureAt, isFirstOfDay, isLastOfDay, stopTimes, estimate: shownAts && served ? { source: served.source, updatedAt: served.updatedAt } : null };
 }
 
-/** WHY: one run per entry of a day, in the entry's place, null for an entry with no route type or departure; the day's last run of a route type is its last bus. */
+/** WHY: one run per entry of a day, in the entry's place, null for an entry with no route type or departure; the day's first and last runs of a route type are its first and last bus. */
 export function toDayRuns(serviceId: string, { date, schedule: entries }: Pick<ScheduleDay, "date" | "schedule">, inputs: EstimateInputs): Array<ShuttleRun | null> {
-  const lastDepartureOf = (routeType: string) => entries.flatMap((entry) => (entry.routeType === routeType && typeof entry.time === "string" ? [entry.time] : [])).sort().at(-1);
+  const departuresOf = (routeType: string) => entries.flatMap((entry) => (entry.routeType === routeType && typeof entry.time === "string" ? [entry.time] : [])).sort();
   return entries.map(({ routeType, time, stopTimes }) => {
     if (typeof routeType !== "string" || typeof time !== "string") return null;
-    return toRun({ runId: runKey({ serviceId, routeType, date, time }), routeType, date, time, stopTimes }, time === lastDepartureOf(routeType), inputs);
+    const departures = departuresOf(routeType);
+    const dayEnds = { isFirstOfDay: time === departures[0], isLastOfDay: time === departures.at(-1) };
+    return toRun({ runId: runKey({ serviceId, routeType, date, time }), routeType, date, time, stopTimes }, dayEnds, inputs);
   });
 }
 

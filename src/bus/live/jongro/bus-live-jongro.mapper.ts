@@ -1,5 +1,5 @@
+import { toCall } from "../../../shared/call.util";
 import { toKstInstant } from "../../../shared/kst-date.util";
-import { toArrival } from "../../bus.mapper";
 import { toServedArsId, toStationStopId } from "../../bus.rules";
 import type { StopAliases } from "../../bus.types";
 import type { Vehicle, VehiclePosition } from "../../bus.wire";
@@ -19,7 +19,7 @@ import {
   toStationOperation,
   toVehicleStates,
 } from "./bus-live-jongro.rules";
-import type { JongroStationContext, JongroVehicleStates } from "./bus-live-jongro.types";
+import type { JongroStationContext } from "./bus-live-jongro.types";
 
 const SECOND_MS = 1000;
 
@@ -32,7 +32,7 @@ function toStation(row: PlacedArrivalRow, { route, aliases, states }: JongroStat
     stopId: station ? toStationStopId(station, aliases, route.isListed) : null,
     arsId: toServedArsId(arsId),
     operation: toStationOperation(row.slots),
-    arrivals: toStationCalls(rowCalls, row.stationIndex, states).map(toArrival),
+    arrivals: toStationCalls(rowCalls, row.stationIndex, states).map(toCall),
   };
 }
 
@@ -50,18 +50,18 @@ function toPosition({ position, tracking, checkedAt }: TrackedPosition): Vehicle
   };
 }
 
-function toNearestFields(nearest: TimedArrival | undefined, lastBusIds: ReadonlySet<string>): Pick<Vehicle, "occupancy" | "seatsLeft" | "isLastBus"> {
-  return nearest ? { occupancy: toOccupancy(nearest.arrival), seatsLeft: null, isLastBus: lastBusIds.has(nearest.bus.vehId) } : { occupancy: null, seatsLeft: null, isLastBus: null };
+function toNearestFields(nearest: TimedArrival | undefined): Pick<Vehicle, "occupancy" | "seatsLeft"> {
+  return { occupancy: nearest ? toOccupancy(nearest.arrival) : null, seatsLeft: null };
 }
 
 // WHY: low-floor is the vehicle's own, so its position row alone decides it and its rows never give two answers (ADR 0019, D13).
-function toTrackedVehicle(tracked: TrackedPosition, namedSlots: readonly TimedArrival[], lastBusIds: ReadonlySet<string>): Vehicle {
+function toTrackedVehicle(tracked: TrackedPosition, namedSlots: readonly TimedArrival[]): Vehicle {
   const { position, tracking } = tracked;
   const trajectory = tracking.trajectory.map(({ atMs, s }) => ({ at: toKstInstant(atMs), s }));
   return {
     id: position.vehicleId,
     plateNumber: toPlateNumber(position.plainNo),
-    ...toNearestFields(toNearestSlot(namedSlots, Number(position.sequence)), lastBusIds),
+    ...toNearestFields(toNearestSlot(namedSlots, Number(position.sequence))),
     isLowFloor: toLowFloor(position.busType),
     position: toPosition(tracked),
     trajectory: trajectory.length > 0 ? trajectory : null,
@@ -70,19 +70,19 @@ function toTrackedVehicle(tracked: TrackedPosition, namedSlots: readonly TimedAr
 
 // WHY: TOPIS can name a bus its position rows lack (ADR 0019, D6); it is served once, with no position, its plate and
 // low-floor flag from the one row nearest ahead of it.
-function toUntrackedVehicle(vehicleId: string, namedSlots: readonly TimedArrival[], lastBusIds: ReadonlySet<string>): Vehicle {
+function toUntrackedVehicle(vehicleId: string, namedSlots: readonly TimedArrival[]): Vehicle {
   const nearest = toNearestSlot(namedSlots, null);
   const plateNumber = nearest ? toPlateNumber(nearest.bus.plainNo) : null;
-  return { id: vehicleId, plateNumber, ...toNearestFields(nearest, lastBusIds), isLowFloor: toLowFloor(nearest?.bus.busType), position: null, trajectory: null };
+  return { id: vehicleId, plateNumber, ...toNearestFields(nearest), isLowFloor: toLowFloor(nearest?.bus.busType), position: null, trajectory: null };
 }
 
-function toVehicles(reading: JongroReading, stations: readonly LiveStation[], { lastBusIds }: JongroVehicleStates): Vehicle[] {
+function toVehicles(reading: JongroReading, stations: readonly LiveStation[]): Vehicle[] {
   const slots = reading.rows.flatMap((row) => row.slots);
   const slotsOf = (vehicleId: string) => slots.filter(({ bus, arrival }) => arrival.stopsAway !== null && bus.vehId === vehicleId);
-  const tracked = reading.positions.map((position) => toTrackedVehicle(position, slotsOf(position.position.vehicleId), lastBusIds));
+  const tracked = reading.positions.map((position) => toTrackedVehicle(position, slotsOf(position.position.vehicleId)));
   const trackedIds = new Set(tracked.map(({ id }) => id));
   const namedIds = new Set(stations.flatMap(({ arrivals }) => arrivals.flatMap(({ vehicleId }) => (vehicleId === null ? [] : [vehicleId]))));
-  const untracked = [...namedIds].filter((vehicleId) => !trackedIds.has(vehicleId)).map((vehicleId) => toUntrackedVehicle(vehicleId, slotsOf(vehicleId), lastBusIds));
+  const untracked = [...namedIds].filter((vehicleId) => !trackedIds.has(vehicleId)).map((vehicleId) => toUntrackedVehicle(vehicleId, slotsOf(vehicleId)));
   return [...tracked, ...untracked];
 }
 
@@ -96,7 +96,7 @@ export function toLiveJongroGroup(groupId: string, reading: JongroReading, alias
     stationsVersion: reading.route.stationsVersion,
     updatedAt: updatedAt === null ? null : toKstInstant(updatedAt.getTime()),
     operation: toGroupOperation(stations),
-    vehicles: toVehicles(reading, stations, states),
+    vehicles: toVehicles(reading, stations),
     stations,
   };
 }

@@ -38,14 +38,16 @@ import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesModule } from "../../../src/bus/route-attributes/bus-route-attributes.module";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { storedBusRoutePathRepository } from "../../helpers/bus/bus-route-path";
 import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
-import { ROUTE_7800, arrivalDocs7800, registryDoc7800, sightings7800 } from "../../helpers/bus/topis-7800";
+import { ROUTE_7800, arrivalDocs7800, registryDoc7800, routePathDoc7800, sightings7800 } from "../../helpers/bus/topis-7800";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeGbisClient } from "../../helpers/fakes/bus/bus-realtime-gbis.client.fake";
@@ -66,6 +68,9 @@ let httpServer: import("http").Server;
 beforeAll(async () => {
   const registryRepository = storedBusRegistryRepository();
   registryRepository.routes.set("gyeonggi7800", registryDoc7800());
+  // WHY: each call's headsign is its station's direction, which the stored route line gives (ADR 0022, D2).
+  const routePathRepository = storedBusRoutePathRepository();
+  routePathRepository.routePaths.set("gyeonggi7800", routePathDoc7800());
   app = await buildTestApp({
     imports: [
       SchedulingModule,
@@ -93,6 +98,7 @@ beforeAll(async () => {
       { provide: BusRealtimeGbisClient, useValue: gbisClient },
       { provide: BusRealtimeGbisRepository, useValue: seats },
       { provide: BusRegistryRepository, useValue: registryRepository },
+      { provide: BusRoutePathRepository, useValue: routePathRepository },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: Clock, useValue: { now: () => NOW } },
@@ -153,8 +159,9 @@ describe("GET /bus/live/gyeonggi7800 over 7800's capture", () => {
       ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
       basis: "provider",
       stopsAway: 1,
-      isLastBus: false,
+      runId: null,
       vehicleId: "200010901",
+      ...{ headsign: "사당역 방면", isFirstRun: null, isLastRun: false, isExpress: null },
       providerText: "2분34초후[0번째 전]",
     });
   });
