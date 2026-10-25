@@ -7,9 +7,12 @@ import type { MiniAppDetailRaw, MiniAppIndexEntryRaw, MiniAppLogoRaw, RegistryFi
 import type { MiniAppRegistry } from "./miniapps.types";
 import type { MiniAppIndexEntry, MiniAppLogo, ShellConfig } from "./miniapps.wire";
 
-// WHY: an entry registered before senders carried credentials is pending, with no scopes and no keys.
-function toSenderCredentials({ status, scopes, signingKeys }: Readonly<MiniAppDetailRaw>): SenderCredentials {
-  return Object.freeze({ status: status ?? "pending", scopes: Object.freeze([...(scopes ?? [])]), signingKeys: Object.freeze([...(signingKeys ?? [])]) });
+const NOT_A_SENDER: SenderCredentials = Object.freeze({ status: "pending", scopes: Object.freeze([]), signingKeys: Object.freeze([]) });
+
+// WHY: an entry without a `sender` is pending, with no scopes and no keys.
+function toSenderCredentials({ sender }: Readonly<MiniAppDetailRaw>): SenderCredentials {
+  if (sender === undefined) return NOT_A_SENDER;
+  return Object.freeze({ status: sender.status, scopes: Object.freeze([...sender.scopes]), signingKeys: Object.freeze([...sender.signingKeys]) });
 }
 
 const pick = <T extends string>(value: unknown, allowed: readonly T[]): T | undefined => allowed.find((option) => option === value);

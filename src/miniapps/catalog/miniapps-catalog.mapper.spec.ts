@@ -101,7 +101,7 @@ describe("toDetailResponse", () => {
   // WHY: a sender's status, scopes and keys are the push routes' business, never the app's.
   it("leaves the sender's status, scopes and signing keys out of the detail it serves", () => {
     // Arrange
-    const sender: MiniAppDetailRaw = { ...detail, status: "active", scopes: ["push.send"], signingKeys: [{ keyId: "0123456789abcdef", publicKey: "k".repeat(43) }] };
+    const sender: MiniAppDetailRaw = { ...detail, sender: { status: "active", scopes: ["push.send"], signingKeys: [{ keyId: "0123456789abcdef", publicKey: "k".repeat(43) }] } };
 
     // Act & Assert
     expect(toDetailResponse(sender, {})).toEqual({ ...detail, shell: DEFAULT_SHELL });
