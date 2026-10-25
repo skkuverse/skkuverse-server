@@ -2,7 +2,7 @@ import { Controller, Get, Res } from "@nestjs/common";
 import type { Response } from "express";
 import config from "../infra/config";
 import { ping as pingDb } from "../infra/db";
-import { createLogThrottle } from "../infra/log-throttle";
+import { createLogThrottle } from "../shared/log-throttle.util";
 import logger from "../infra/logger";
 import { PollerRegistryService } from "../scheduling/poller-registry.service";
 

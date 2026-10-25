@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { AppError } from "../../http/app.error";
 import { Clock } from "../../infra/clock";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import type { LatLng } from "../../shared/lat-lng.types";

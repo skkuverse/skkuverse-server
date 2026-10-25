@@ -3,7 +3,7 @@ import { withMeta } from "../../http/response.interceptor";
 import type { WithMeta } from "../../http/response.types";
 import { Clock } from "../../infra/clock";
 import { t } from "../../infra/i18n";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import { toCatalogNamedLine } from "../bus.mapper";

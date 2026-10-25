@@ -3,7 +3,7 @@ import type { Collection } from "mongodb";
 import type { z } from "zod";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import { mongoCollection } from "../../infra/mongo";
 import { SUBWAY_TIMETABLES_DATASET, TIMETABLES_LOG_INTERVAL_MS } from "./subway-timetable.constants";

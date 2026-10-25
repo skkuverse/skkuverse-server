@@ -3,7 +3,7 @@ import { AppError } from "../../../http/app.error";
 import { withMeta } from "../../../http/response.interceptor";
 import type { WithMeta } from "../../../http/response.types";
 import { Clock } from "../../../infra/clock";
-import { createLogThrottle } from "../../../infra/log-throttle";
+import { createLogThrottle } from "../../../shared/log-throttle.util";
 import logger from "../../../infra/logger";
 import { TOPIS_ROUTES } from "../../bus.constants";
 import { toKstInstant } from "../../../shared/kst-date.util";

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../../infra/clock";
-import { createLogThrottle } from "../../../infra/log-throttle";
+import { createLogThrottle } from "../../../shared/log-throttle.util";
 import logger from "../../../infra/logger";
 import { REGIONAL_ROUTES } from "../../bus.constants";
 import type { JongroRoute } from "../../bus.types";

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
-import { createLogThrottle, type LogThrottle } from "../../infra/log-throttle";
+import type { LogThrottle } from "../../shared/log-throttle.types";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import type { CountdownDivergence, CountdownRejection, TrainArrival } from "../estimate/subway-estimate.types";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
