@@ -264,7 +264,7 @@ describe("the Seoul pollers with the stored timetables", () => {
 
     // Assert
     expect(failure).toMatchObject({ code: UNAVAILABLE_CODE, httpStatus: 503, keys: ["KR-1-weekday"] });
-    const others = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)).filter((id) => id !== "KR-1-0153");
+    const others = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)).filter((id) => !["KR-1-0153", "KR-1-P149", "S1-1-154"].includes(id));
     expect([...stores.state.docs.keys()]).toEqual(others);
   });
 });

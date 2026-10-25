@@ -374,11 +374,13 @@ describe("Recording never affects serving", () => {
     // Arrange
     const { arrivals, history, tickAt } = setup();
     history.failWith = new Error("connection reset");
-    const observed = upstream("seoul-subway-api", [event("0493", "KR-1-P152", "arrived", "20:39:00", "서동탄")]);
-    await tickAt("20:26:10", observed);
+    const atUiwang = event("0493", "KR-1-P152", "arrived", "20:39:00", "서동탄");
+    await tickAt("20:26:10", upstream("seoul-subway-api", [atUiwang]));
+    // WHY: 1949 first seen leaving Anyang changes Sungkyunkwan Univ.'s trains, so the second tick writes its document.
+    const leftAnyang = event("1949", "KR-1-P147", "departed", "20:26:30", "천안");
 
     // Act
-    const tick = tickAt("20:26:40", observed);
+    const tick = tickAt("20:26:40", upstream("seoul-subway-api", [atUiwang, leftAnyang]));
 
     // Assert
     await expect(tick).resolves.toBeUndefined();

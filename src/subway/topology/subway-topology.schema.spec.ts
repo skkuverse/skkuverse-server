@@ -85,8 +85,8 @@ describe("subwayTopologyDataset", () => {
   it("passes a neighbor with no name and no train-map name", () => {
     // Arrange
     const data = fixture();
-    delete data.neighbors["KR-1-P149"].name;
-    delete data.neighbors["KR-1-P149"].trainMapName;
+    delete data.neighbors["KR-1-P151"].name;
+    delete data.neighbors["KR-1-P151"].trainMapName;
 
     // Act & Assert
     expect(messagesOf(data)).toEqual([]);

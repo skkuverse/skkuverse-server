@@ -520,7 +520,7 @@ describe("SubwayTrackingService.track without a table", () => {
 
     // Assert
     await expect(tick).rejects.toMatchObject({ name: "SubwayTimetablesUnavailableError", code: "SUBWAY_TIMETABLES_UNAVAILABLE", httpStatus: 503, keys: ["KR-1-weekday"] });
-    const others = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)).filter((id) => id !== SUNGKYUNKWAN);
+    const others = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)).filter((id) => ![SUNGKYUNKWAN, "KR-1-P149", "S1-1-154"].includes(id));
     expect([...repository.docs.keys()]).toEqual(others);
   });
 
@@ -536,7 +536,7 @@ describe("SubwayTrackingService.track without a table", () => {
     await tickAt("20:39:10", api()).catch(() => undefined);
 
     // Assert
-    expect(ticks.map((tick) => tick.platforms.length)).toEqual([12]);
+    expect(ticks.map((tick) => tick.platforms.length)).toEqual([15]);
   });
 
   it("finds no timetable-only document for 성균관대 but rejects with the unavailable error", async () => {

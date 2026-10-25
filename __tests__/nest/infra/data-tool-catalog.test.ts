@@ -240,7 +240,7 @@ describe("loadCatalog code-held sources", () => {
     // Act & Assert
     expect(source.owner).toBe("src/subway");
     expect(source.ids()).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
-    expect(source.ids()).toHaveLength(13);
+    expect(source.ids()).toHaveLength(18);
     expect(source.has("S1-4-420")).toBe(true);
     expect(source.has("hyehwa")).toBe(false);
   });
@@ -975,7 +975,7 @@ describe("loadCatalog subway-topology", () => {
 
     // Assert
     expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.S1-4-420\.down\.upstreamPlatformIds: .*\["S1-4-418","S1-4-417","S1-4-416"\]/));
-    expect(lines.every((line) => line.startsWith("subway-topology: platforms.S1-4-420."))).toBe(true);
+    expect(lines.every((line) => ["S1-4-420", "S1-4-433", "KR-4-443"].some((id) => line.startsWith(`subway-topology: platforms.${id}.`)))).toBe(true);
   });
 
   it("No stored timetables: refuses revision 1, naming subway-timetables, when the target stores none it can read", () => {
@@ -1028,7 +1028,7 @@ describe("loadCatalog subway-topology", () => {
     const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
 
     // Assert
-    expect(lines).toEqual(['subway-topology: platforms.S1-4-420.up.watchedPlatformIds.3: "S1-3-330" is on line "3", not "4"']);
+    expect(lines).toEqual(['subway-topology: platforms.S1-4-420.up.watchedPlatformIds.25: "S1-3-330" is on line "3", not "4"']);
   });
 
   it("Upstream reordered: refuses 혜화 down's second and third upstream platforms swapped, naming the direction's list and the route's order", () => {
@@ -1045,18 +1045,19 @@ describe("loadCatalog subway-topology", () => {
     expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.S1-4-420\.down\.upstreamPlatformIds: .*\["S1-4-419","S1-4-418","S1-4-417"\]/)]);
   });
 
-  it("Watched platform dropped with its neighbor: refuses 성균관대 down without 안양 (KR-1-P147), naming the stop the tracker follows", () => {
+  it("Watched platform dropped with its neighbor: refuses 성균관대 down without 회기 (KR-1-123), naming the stop the tracker follows", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
     const data = topology();
-    data.platforms["KR-1-0153"]!.down.watchedPlatformIds.pop();
-    delete data.neighbors["KR-1-P147"];
+    // WHY: 회기 ends the down stretch of every line 1 platform, so each one drops it.
+    for (const id of ["KR-1-0153", "KR-1-P149", "S1-1-154"]) data.platforms[id]!.down.watchedPlatformIds.pop();
+    delete data.neighbors["KR-1-123"];
 
     // Act
     const lines = issueLines(checkData(catalog, "subway-topology", data, storedTimetables()));
 
     // Assert
-    expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.down: "KR-1-P147" .*neither a served platform nor a neighbor$/));
+    expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.down: "KR-1-123" .*neither a served platform nor a neighbor$/));
   });
 
   it("refuses four upstream platforms with the server's schema, naming the direction's list", () => {
@@ -1141,7 +1142,7 @@ describe("loadCatalog subway-timetables", () => {
     const lines = issueLines(checkParts(catalog, "subway-timetables", withoutSaturday, {}).issues);
 
     // Assert
-    expect(lines).toEqual(["subway-timetables: S1-4-saturday: no table for S1-4-420 saturday"]);
+    expect(lines).toEqual(["subway-timetables: S1-4-saturday: no table for S1-4-420 saturday, S1-4-433 saturday, KR-4-443 saturday"]);
   });
 
   it("Malformed train number: refuses a table holding K602, naming the table and the train's path", () => {

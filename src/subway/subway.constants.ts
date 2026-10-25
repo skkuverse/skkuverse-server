@@ -33,6 +33,9 @@ export const SUBWAY_STATIONS: readonly NetworkStation[] = [
   { id: "gangnam", name: named("강남", "Gangnam", "江南"), seoulName: "강남", campus: "nsc", platforms: [{ id: "S1-2-222", line: "2", timetable: seoulStation("0222") }, { id: "DX-D1-4307", line: "D1", timetable: SHINBUNDANG }] },
   { id: "yangjae", name: named("양재", "Yangjae", "良才"), seoulName: "양재", campus: "nsc", platforms: [{ id: "S1-3-332", line: "3", timetable: seoulStation("0332") }, { id: "DX-D1-4308", line: "D1", timetable: SHINBUNDANG }] },
   { id: "gwanggyo-jungang", name: named("광교중앙", "Gwanggyojungang", "光教中央"), seoulName: "광교중앙", campus: "nsc", platforms: [{ id: "DX-D1-4318", line: "D1", timetable: SHINBUNDANG }] },
+  { id: "sadang", name: named("사당", "Sadang", "舍堂"), seoulName: "사당", campus: null, platforms: [{ id: "S1-2-226", line: "2", timetable: seoulStation("0226") }, { id: "S1-4-433", line: "4", timetable: seoulStation("0433") }] },
+  { id: "geumjeong", name: named("금정", "Geumjeong", "衿井"), seoulName: "금정", campus: null, platforms: [{ id: "KR-1-P149", line: "1", timetable: KORAIL }, { id: "KR-4-443", line: "4", timetable: seoulStation("1458") }] },
+  { id: "jongno-5-ga", name: named("종로5가", "Jongno 5(o)-ga", "钟路5街"), seoulName: "종로5가", campus: null, platforms: [{ id: "S1-1-154", line: "1", timetable: KORAIL }] },
 ];
 
 export const SUBWAY_NETWORK: SubwayNetwork = { lines: SUBWAY_LINES, stations: SUBWAY_STATIONS };

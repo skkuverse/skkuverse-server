@@ -103,7 +103,7 @@ describe("findPlatformName", () => {
     expect(findPlatformName(platformId, REGISTRY)).toEqual(name);
   });
 
-  it.each(["KR-1-P149", "S1-4-499"])("finds no name for %s, which is neither a named neighbor nor served", (platformId) => {
+  it.each(["KR-1-P151", "S1-4-499"])("finds no name for %s, which is neither a named neighbor nor served", (platformId) => {
     // Act & Assert
     expect(findPlatformName(platformId, REGISTRY)).toBeNull();
   });
