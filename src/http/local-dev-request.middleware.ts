@@ -8,8 +8,10 @@ function isProxied(headers: Request["headers"]): boolean {
   return Object.keys(headers).some((name) => PROXY_HEADERS.has(name) || name.startsWith("x-forwarded-"));
 }
 
+const HOST_HEADER = /^(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::\d+)?$/;
+
 function hostnameOf(host: string | undefined): string | null {
-  if (!host || !URL.canParse(`http://${host}`)) return null;
+  if (!host || !HOST_HEADER.test(host)) return null;
   return new URL(`http://${host}`).hostname.replace(/^\[(.*)\]$/, "$1");
 }
 
