@@ -40,6 +40,14 @@ export class MiniappsSenderService {
     return { miniAppId: senderId, keyId: decision.allowed ? decision.keyId : null, registry };
   }
 
+  // WHY: for the internal routes only, whose INTERNAL_AUTHORIZER guard already took the shared push token; deleted in
+  // deploy 2 (docs/decisions/0020-miniapp-push-link-policy.md, D6).
+  async authorizeTrusted(senderId: string): Promise<PushSender> {
+    const registry = await this.miniApps.current();
+    if (registry.senderCredentialsOf(senderId) === null) throw toMiniAppNotFound(senderId);
+    return { miniAppId: senderId, keyId: null, registry };
+  }
+
   checkDraft({ miniAppId, registry }: PushSender, draft: NotificationDraft): Promise<DraftCheck> {
     return this.contentPolicy.check(draft, { senderId: miniAppId, gameIds: FIRST_PARTY_GAME_IDS, isKnownMiniAppTarget: (value) => registry.isKnownMiniAppTarget(value) });
   }
