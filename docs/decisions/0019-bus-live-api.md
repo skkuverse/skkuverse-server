@@ -3,7 +3,7 @@ title: Bus Live API — One Arrival Shape for Every Source
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-24
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -48,6 +48,7 @@ Every key is always present, and what a source cannot supply is null, never a mi
 - A route `/bus/config` does not list (`isListed: false` in the TOPIS route list, 7800 for now) names only the poles a local stop aliases, on the live route and in the stop index: its other stations serve `stopId: null` and add no `seoul-` stop to `GET /bus/stops`, which installed apps list. A listed route keeps the rule above.
 
 - Added 2026-10-25 ([ADR 0022](0022-journey-and-call-spec.md), D4): an alias never retires an id. `seoul-<arsId>` keeps resolving to the stop that aliases it, so a reference written with either id stays valid. An unlisted route's pole exists only through its alias, so that alias cannot be removed while the journey dataset names the pole.
+- Amended 2026-10-25 (owner): a pole's canonical stop id is its national nine-digit station id (TOPIS `stId`, the registry's `topisId`, equal to GBIS `stationId`; 국토교통부고시 제2021-200호 §14① nine digits, §14⑤ never reused, §15② kept through a rename), no longer `seoul-<arsId>`, since ARS numbers collide (`01013` is both 종로2가 and 수원 성균관대학교), stand at `0` and are reassigned. The rules above keep which stations are a stop; only the id changes. `seoul-<arsId>` is a legacy alias that never retires: a stop page asked by it answers the stop that pole is under its canonical id, with the same `503` and `404`, and a stop area may name a member by it. `GET /bus/stops` and every served `stopId` carry only canonical ids, and a catalog slug and a stop area id hold a letter, so neither can take a numeric id. ARS stays display only (`arsId`, `arsIds`, `stationNumber`).
 
 Agreed with the session that owns the stop catalog, 2026-10-22; the TOPIS alias and the unlisted rule by the owner, 2026-10-24 (Q3 of [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md)).
 

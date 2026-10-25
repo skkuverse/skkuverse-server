@@ -1,9 +1,9 @@
 /**
  * The stop id each realtime station of `/bus/config` and
  * `/bus/config/:groupId` carries, for a test that pinned a body served before
- * the field: the HSSC positions' ids (revision 1 of `bus-stops`), and `seoul-<arsId>` of each station stored in
- * fixtures/jongro-registry-routes.json, of which none is a virtual stop and
- * none is aliased in revision 1.
+ * the field: the HSSC positions' ids (revision 1 of `bus-stops`), and the national station id (`topisId`) of each
+ * station stored in fixtures/jongro-registry-routes.json, of which none is a virtual stop and none is aliased in
+ * revision 1. Until the owner's decision of 2026-10-25 a pole's id was `seoul-<arsId>`, now a legacy alias.
  *
  * `withStationStopIds` derives the body served with the field from a pinned one by
  * appending exactly those ids, each as its station's last field, and
@@ -36,9 +36,9 @@ export const HSSC_STOP_IDS: ReadonlyArray<string | null> = [
 function jongroStopIdsOf(routeId: string): Array<string | null> {
   const route = storedRoutes.routes.find((candidate) => candidate.id === routeId);
   if (route === undefined) throw new Error(`jongro-registry-routes.json has no ${routeId}`);
-  return route.stations.map(({ arsId }) => {
+  return route.stations.map(({ arsId, topisId }) => {
     if (!/^\d{5}$/.test(arsId) || Number(arsId) === 0) throw new Error(`${routeId} stores ${arsId}, which this helper does not derive`);
-    return `seoul-${arsId}`;
+    return topisId;
   });
 }
 

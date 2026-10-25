@@ -662,7 +662,7 @@ describe("GET /bus/live/:groupId for the Jongro routes", () => {
 });
 
 describe("GET /bus/stops/:stopId/arrivals at Jongro poles", () => {
-  const STOP_IDS = ["seoul-01619", "seoul-01525", "seoul-01618", "seoul-01520"] as const;
+  const STOP_IDS = ["100000424", "100900045", "100900221", "100900021"] as const;
 
   it.each(LANGS.flatMap((lang) => STOP_IDS.map((stopId) => [lang, stopId] as const)))("answers in %s for %s the body pinned before the TOPIS route list, uncached", async (lang, stopId) => {
     // Arrange

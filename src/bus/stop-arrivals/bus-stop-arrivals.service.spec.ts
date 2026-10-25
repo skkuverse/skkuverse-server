@@ -278,7 +278,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     await service.findStopArrivals("seoul-01592", "ko");
 
     // Assert
-    expect(page?.data.stop.id).toBe("seoul-01592");
+    expect(page?.data.stop.id).toBe("100900075");
     expect(page?.data.routes.map((route) => route.groupId)).toEqual(["jongro08"]);
     expect(leftOutLogs()).toHaveLength(2);
     expect(logText(leftOutLogs()[0])).toContain("jongro07");
