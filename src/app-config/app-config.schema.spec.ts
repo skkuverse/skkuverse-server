@@ -3,7 +3,7 @@
  * `ios` and `android`, each a `minVersion`, an `updateUrl` and a `minOsVersion`. A push is refused on it and
  * the read parses with it, so a gate the app cannot compare is never served.
  *
- * The production gates (the fixture) pass, and parse into the key order installed apps were served
+ * The captured gates (the fixture) pass, and parse into the key order installed apps were served
  * (`minVersion`, `updateUrl`, `minOsVersion`) whatever order they were stored in. A copy missing any field
  * fails at its path; `minVersion` is a three-part version, `updateUrl` an https URL, and `minOsVersion` an
  * iOS version (one to three dot-separated numbers) or an Android API level (digits), the shapes the app's

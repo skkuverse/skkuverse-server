@@ -30,8 +30,9 @@
  *
  * The platform gates moved from environment variables to the
  * `app-platform-gates` dataset (ADR 0013) without a byte of the body or its
- * ETag changing: they are read from the production gates (the fixture)
- * through an in-memory repository, on a fixed clock.
+ * ETag changing: they are read from the gates of the 2026-10-19 capture (the
+ * fixture, not production's current gates) through an in-memory repository,
+ * on a fixed clock.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
