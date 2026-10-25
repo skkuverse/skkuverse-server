@@ -4,7 +4,8 @@
  * fallback, and the history's nulls for rows that lack a field.
  */
 import type { SentNotificationDoc } from "../miniapps.document";
-import { toFeedEntry, toHistoryEntry, toNotificationContent, toReplayedOutcome, toSendTrace, toSentNotification } from "./miniapps-notifications.mapper";
+import type { MiniAppDetailRaw } from "../miniapps.schema";
+import { toFeedEntry, toHistoryEntry, toNotificationContent, toReplayedOutcome, toSendTrace, toSenderCredentials, toSentNotification } from "./miniapps-notifications.mapper";
 
 const SENT_AT = new Date("2026-10-14T03:00:00.000Z");
 
@@ -204,5 +205,16 @@ describe("toFeedEntry of a keyed row", () => {
   it("leaves the Idempotency-Key out of the public feed", () => {
     // Act & Assert
     expect(toFeedEntry({ ...DOC, idempotencyKey: "retry-1" }, "ko")).not.toHaveProperty("idempotencyKey");
+  });
+});
+
+describe("toSenderCredentials", () => {
+  // WHY: no registry entry carries a status, scopes or signing keys until 2A-3 adds them, so every sender is pending.
+  it("maps an entry with no status and no scopes to pending, with no scopes and no signing keys", () => {
+    // Arrange
+    const detail: MiniAppDetailRaw = { version: 1, id: "wave-run", startUrl: "https://wave-run.example.com/", verified: false, relatedLinks: [] };
+
+    // Act & Assert
+    expect(toSenderCredentials(detail)).toEqual({ status: "pending", scopes: [], signingKeys: [] });
   });
 });

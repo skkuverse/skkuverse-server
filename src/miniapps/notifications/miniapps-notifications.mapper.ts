@@ -1,8 +1,9 @@
 import type { SupportedLang } from "../../infra/types";
 import type { SentNotificationDoc } from "../miniapps.document";
+import type { MiniAppDetailRaw } from "../miniapps.schema";
 import { LOG_TITLE_CHARS, NO_RECORDED_OUTCOME_ERROR } from "./miniapps-notifications.constants";
 import type { PushMapTarget } from "./miniapps-notifications.schema";
-import type { NotificationContent } from "../../perimeter/perimeter.ports";
+import type { NotificationContent, SenderCredentials } from "../../perimeter/perimeter.ports";
 import type { MiniAppNotificationHistoryEntry, SendOutcome, SendTrace } from "./miniapps-notifications.types";
 import type { MiniAppFeedEntry } from "./miniapps-notifications.wire";
 
@@ -78,4 +79,9 @@ export function toHistoryEntry(doc: SentNotificationDoc): MiniAppNotificationHis
     deliveryError: doc.deliveryError ?? null,
     idempotencyKey: doc.idempotencyKey ?? null,
   };
+}
+
+// WHY: the registry holds no sender status, scopes or keys until 2A-3 adds them, so every registered sender is pending.
+export function toSenderCredentials(_detail: Readonly<MiniAppDetailRaw>): SenderCredentials {
+  return { status: "pending", scopes: [], signingKeys: [] };
 }

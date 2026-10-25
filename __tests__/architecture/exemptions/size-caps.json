@@ -67,6 +67,10 @@
     "max": 63,
     "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers, then the HSSC route layer and then the `tabs` each base layer states took it past the role cap."
   },
+  "src/miniapps/notifications/miniapps-notifications.controller.ts": {
+    "max": 57,
+    "reason": "ADR 0010 D9, no domain seam: the send and the operator history are the two routes of one internal prefix, and both bind the same sender authorization (`authorizedSender`: the `PushCall` for MINIAPP_PUSH_AUTHORIZER, its refusal before the unknown slug's 404, the sender's quota), which ADR 0023 D1 names the push controller's; `MiniappsNotificationsService` is at the four-dependency constructor cap in eslint.config.js, so the binding cannot move into it, and a pure `.rules` file cannot read the Express request it is built from."
+  },
   "src/notices/list/notices-list.rules.ts": {
     "max": 182,
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
