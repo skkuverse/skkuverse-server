@@ -28,17 +28,18 @@
  * festival closed on 2026-10-09: that one entry is cut from the captured list
  * and the rest keep their order. `miniapps.origins` still names it.
  *
- * The version gates are read from the environment when src/infra/config.ts
- * loads, so the production values are set by the first import, before any
- * import reaches src/, and restored once config has loaded.
+ * The platform gates moved from environment variables to the
+ * `app-platform-gates` dataset (ADR 0013) without a byte of the body or its
+ * ETag changing: they are read from the production gates (the fixture)
+ * through an in-memory repository, on a fixed clock.
  */
-import { restoreProductionGates } from "../../helpers/app-config/production-gates";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
+import { AppConfigRepository } from "../../../src/app-config/app-config.repository";
+import { Clock } from "../../../src/infra/clock";
+import { storedPlatformGatesRepository } from "../../helpers/app-config/app-platform-gates";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-
-restoreProductionGates();
 
 /** What production served at 2026-10-19T20:12:40Z: the body text and its weak ETag. */
 const CAPTURED = {
@@ -70,6 +71,10 @@ let app: NestExpressApplication;
 beforeAll(async () => {
   app = await buildTestApp({
     imports: appModulesUnder("src/config/", "src/app-config/"),
+    overrides: [
+      { provide: AppConfigRepository, useValue: storedPlatformGatesRepository() },
+      { provide: Clock, useValue: { now: () => new Date("2026-10-25T03:00:00.000Z") } },
+    ],
     role: "api",
   });
 });

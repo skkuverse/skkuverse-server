@@ -13,11 +13,11 @@ audience: internal
 
 ## Context
 
-App config assembles one body, the same for every client, and the app fetches it once per cold start. The values belong to their sources: the version gates to the deploy's environment, and the origins and the owner of each first-party mini app and game origin to `src/infra/origins.ts`. It reads nothing from MongoDB.
+App config assembles one body, the same for every client, and the app fetches it once per cold start. The values belong to their sources: the platform gates to the `app-platform-gates` dataset ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)), the one value it reads from MongoDB, so a raised floor is a push, not a deploy; and the origins and the owner of each first-party mini app and game origin to `src/infra/origins.ts`.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
-| Doppler, through the deploy's environment | — | The minimum version, the minimum OS and the update URL per platform (`APP_IOS_MIN_VERSION`, `APP_IOS_MIN_OS_VERSION` and their siblings) | `config.app` in `src/infra/config.ts` |
+| `npm run data` | — | The minimum version, the update URL and the minimum OS per platform, pushed without a deploy | the `app-platform-gates` dataset, read by `AppConfigRepository.findPlatformGates` |
 | The first-party web origins | — | The origins allowed to talk to the native bridge, and the web app's origin | `BRIDGE_ORIGINS` and `WEB_ORIGIN` in `src/infra/origins.ts` |
 | The first-party mini app owners | — | Each first-party mini app origin and the mini app that owns it | `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts` |
 | The first-party game owners | — | Each first-party game origin and the game that owns it | `GAME_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts` |
@@ -28,8 +28,8 @@ App config assembles one body, the same for every client, and the app fetches it
 | Term | Means | Derived from | Not |
 | --- | --- | --- | --- |
 | client config (`AppClientConfig`) | The whole `GET /app/config` body | `AppConfigService.getConfig` | `AppSettings` |
-| platform gate (`platformGate`) | One platform's `minVersion`, `updateUrl` and `minOsVersion`: below `minVersion`, the app blocks on its force-update screen, unless the device OS is below `minOsVersion` | `config.app` | `forceUpdate` |
-| min OS version (`minOsVersion`) | The lowest OS that can install the store build meeting `minVersion`: an iOS version (`16.4`) or an Android API level (`24`) | `APP_IOS_MIN_OS_VERSION`, `APP_ANDROID_MIN_OS_VERSION` | — |
+| platform gate (`platformGate`) | One platform's `minVersion`, `updateUrl` and `minOsVersion`: below `minVersion`, the app blocks on its force-update screen, unless the device OS is below `minOsVersion` | the `app-platform-gates` dataset (`AppPlatformGates`) | `forceUpdate` |
+| min OS version (`minOsVersion`) | The lowest OS that can install the store build meeting `minVersion`: an iOS version (`16.4`) or an Android API level (`24`) | the `app-platform-gates` dataset | — |
 | bridge origins | The origins whose pages may post messages to the app's native bridge | `BRIDGE_ORIGINS` | — |
 | web origin | The origin of the first-party web app | `WEB_ORIGIN` | — |
 | mini-app origins | Each first-party mini app's id with its origin, so the app opens such a URL in that mini app's shell | `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` | — |
@@ -39,7 +39,7 @@ App config assembles one body, the same for every client, and the app fetches it
 
 ```mermaid
 flowchart LR
-  env["deploy environment, from Doppler"] -->|config.app| svc["AppConfigService"]
+  dataset["app-platform-gates dataset"] -->|AppConfigRepository, cached a minute| svc["AppConfigService"]
   origins["src/infra/origins.ts"] -->|BRIDGE_ORIGINS, WEB_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, GAME_ID_BY_FIRST_PARTY_ORIGIN| svc
   svc -->|APP_CONFIG_CACHE_CONTROL| route["GET /app/config"]
   route -->|ios, android| gate["app: InitGate and ForceUpdateScreen"]
@@ -62,20 +62,21 @@ What the app reads, from `skkuverse-app/packages/shared/src/schema/app-config.sc
 
 ## Invariants
 
-- The body is the same for every client; it is served with `APP_CONFIG_CACHE_CONTROL`, which Cloudflare's edge also honors. A raised minimum version reaches a cold start once the replicas restart with it and that cache expires.
+- The body is the same for every client; it is served with `APP_CONFIG_CACHE_CONTROL`, which Cloudflare's edge also honors. A pushed gate reaches every replica within `DATASET_CACHE_TTL_MS`, then the edge and device caches within `APP_CONFIG_CACHE_CONTROL`: a cold start about two minutes after the push applies it.
 - The body only grows: installed apps ignore keys they do not know, and a removed key breaks them (`CONTRACT(skkuverse-app)` on `AppClientConfig`). The one exception is `features`, the retired kill switches: installed builds read its absence as every switch off, so a build that still reads `sharedMapShell` keeps its NativeTabs shell, while later builds run the shared-map shell unconditionally.
 - A game origin is served only under `games.origins`, never in `webview.bridgeOrigins` or `miniapps.origins`, so no game page gets a mini app's grants or shell ([Web origins](web-origins.md)).
-- `minOsVersion` is required: a missing value, or one that is not an iOS version or an Android API level, stops an api replica at boot (`src/infra/required-env.ts`).
+- The platform gates have no default. A replica that never read a good `app-platform-gates` revision (none stored, only an invalid one, or a database that never answered) answers `503 APP_PLATFORM_GATES_UNAVAILABLE` with no `Cache-Control`, never a permissive gate, and logs the cause at error (`app_config.platform_gates.missing`, `.invalid`, `.read_failed`). One that read a good revision keeps it through failed reloads for `DATASET_STALE_WINDOW_MS` ([ADR 0013, D6](../decisions/0013-runtime-data-in-mongodb.md)).
+- The dataset is stricter than the wire: `minVersion` is three dot-separated numbers, `updateUrl` an https URL, and `minOsVersion` an iOS version or an Android API level (`appPlatformGatesDataset`), the shapes the app compares. A push that breaks one is refused, and a stored revision that does is not served.
 - In the app, a failed fetch lets the boot pass the gate and keeps the cached config, so the gate holds only when the route answers.
 
 ## Open questions
 
-- `config.app` falls back to a built-in minimum version when `APP_IOS_MIN_VERSION` or `APP_ANDROID_MIN_VERSION` is unset, against the rule that config fails fast. Whether these become required is open.
 - `web.origin` has no live reader in the app while its share and add-to-home menus are disabled.
 
 ## Related
 
 - [Raise the minimum app version](../how-to/raise-the-minimum-app-version.md): the checklist for a new floor
+- [Edit runtime data](../how-to/edit-runtime-data.md#raise-an-app-platform-gate): pushing the `app-platform-gates` dataset
 - [Web origins](web-origins.md): why each first-party host is a constant, and bridge versus CORS
 - [Register a mini app](../how-to/register-a-miniapp.md): adding a first-party origin and its owner
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape

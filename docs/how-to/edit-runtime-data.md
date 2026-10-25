@@ -19,6 +19,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | --- | --- | --- | --- |
 | `miniapps` | `GET /miniapps`, `GET /miniapps/:id`, the feed and send routes, and every dataset below that names a mini app | 503 `MINIAPP_REGISTRY_UNAVAILABLE` | none; each first-party origin's owner is the one `src/infra/origins.ts` names. Named by the three ui datasets, so a push may not drop an id they name ([register-a-miniapp.md](register-a-miniapp.md)) |
 | `games` | `GET /games`, `GET /games/:id` | 503 `GAME_REGISTRY_UNAVAILABLE` | none; each entry URL is on the origin `src/infra/origins.ts` maps to its id, and no id is one the stored `miniapps` holds, nor a mini app's id one it lists. Named by home layout game tiles, so a push may not drop an id a stored layout names ([games-api.md](../reference/games-api.md)) |
+| `app-platform-gates` | `GET /app/config`, as `ios` and `android` | 503 `APP_PLATFORM_GATES_UNAVAILABLE` for the whole route | none; one gate per platform, each a three-part `minVersion`, an https `updateUrl` and a `minOsVersion` (an iOS version or an Android API level) ([below](#raise-an-app-platform-gate)) |
 | `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action; `games`: each `game` tile but the bundled games (`BUNDLED_GAME_IDS`) |
 | `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
 | `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once, a station with no campus at most once; `miniapps`: each `miniapp` link |
@@ -248,6 +249,18 @@ npm run data -- push subway-station-coords --prod --note "move 정자 to the Shi
 ```
 
 A change that adds a station pushes its coords from that checkout before the deploy: the running code ignores a station it does not serve, logged at warn (`subway.station_coords.station_unknown`). A change that removes a station deploys first, then pushes coords without it.
+
+### Raise an app platform gate
+
+`app-platform-gates` holds the force-update gate of each platform, served on `GET /app/config` as `ios` and `android`: `{ "ios": { "minVersion": "3.6.2", "updateUrl": "https://apps.apple.com/app/id6446813434", "minOsVersion": "16.4" }, "android": { … } }`. Below `minVersion` the app blocks on its update screen, unless the device OS is below `minOsVersion`. Follow the checklist in [raise-the-minimum-app-version.md](raise-the-minimum-app-version.md) before a push; the push itself is:
+
+```bash
+npm run data -- pull app-platform-gates --prod
+# edit .data/prod/app-platform-gates.json
+npm run data -- push app-platform-gates --prod --note "iOS floor 3.6.2: <why>"
+```
+
+The dataset has no default: a replica that never read a good revision answers 503 on the whole route, so a fresh database gets the dataset (`push --create`) before the deploy that first reads it.
 
 ### Check before a deploy
 

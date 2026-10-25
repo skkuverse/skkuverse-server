@@ -1,0 +1,13 @@
+{
+  "_about": "Hand-written 2026-10-25 from GET /app/config as production served it at 2026-10-19T20:12:40Z (minVersion and updateUrl per platform), with the minOsVersion values production's Doppler config held on 2026-10-25 (16.4, 24): the platform gates the app-platform-gates dataset replaces the APP_*_MIN_VERSION, APP_*_UPDATE_URL and APP_*_MIN_OS_VERSION variables with. Never captured from the dataset: it is new with this change.",
+  "ios": {
+    "minVersion": "3.5.0",
+    "updateUrl": "https://apps.apple.com/app/id6446813434",
+    "minOsVersion": "16.4"
+  },
+  "android": {
+    "minVersion": "3.5.0",
+    "updateUrl": "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus",
+    "minOsVersion": "24"
+  }
+}

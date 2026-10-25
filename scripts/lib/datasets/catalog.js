@@ -204,6 +204,7 @@ function loadCatalog(load) {
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
   const { gamesFile } = load("games/games.schema");
+  const { appPlatformGatesDataset } = load("app-config/app-config.schema");
   const { gameIdsOf, toGameOriginIssues, toTakenIdIssues } = load("games/games.rules");
   const { GAME_ID_BY_FIRST_PARTY_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
   const { JONGRO_ROUTES, SERVICE_CONFIG, SLUG_LETTER_PATTERN, TOPIS_ROUTES } = load("bus/bus.constants");
@@ -378,6 +379,12 @@ function loadCatalog(load) {
         ],
         referencesOf: () => [],
         idsOf: ({ games }) => games.map((game) => game.id),
+      },
+      // The force-update floor on /app/config; a replica that never read it answers 503, never a permissive gate.
+      "app-platform-gates": {
+        owner: "src/app-config",
+        schema: appPlatformGatesDataset,
+        referencesOf: () => [],
       },
       "home-layout": {
         owner: "src/ui/home",
