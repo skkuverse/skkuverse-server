@@ -15,10 +15,10 @@
  * every key production served keeps its bytes and its place, and the weak ETag
  * is the appended body's.
  *
- * `features` (the kill switches, skkuverse-app ADR 0023 decision 4) is appended
- * after `games` the same way, read from revision 1 of the `app-features`
- * dataset (the shared-map shell off) through an in-memory repository, on a
- * fixed clock.
+ * `features` (the kill switches, skkuverse-app ADR 0023 decision 4) was
+ * appended after `games` and is served no more: the one switch,
+ * `sharedMapShell`, is retired, so the body ends at `games` again and its weak
+ * ETag is that body's.
  *
  * `minOsVersion` (the lowest OS that can install the store build meeting
  * `minVersion`) is appended as the last key of each platform gate, after
@@ -28,20 +28,19 @@
  * festival closed on 2026-10-09: that one entry is cut from the captured list
  * and the rest keep their order. `miniapps.origins` still names it.
  *
- * The version gates are read from the environment when src/infra/config.ts
- * loads, so the production values are set by the first import, before any
- * import reaches src/, and restored once config has loaded.
+ * The platform gates moved from environment variables to the
+ * `app-platform-gates` dataset (ADR 0013) without a byte of the body or its
+ * ETag changing: they are read from the gates of the 2026-10-19 capture (the
+ * fixture, not production's current gates) through an in-memory repository,
+ * on a fixed clock.
  */
-import { restoreProductionGates } from "../../helpers/app-config/production-gates";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { AppConfigRepository } from "../../../src/app-config/app-config.repository";
 import { Clock } from "../../../src/infra/clock";
-import { storedAppFeaturesRepository } from "../../helpers/app-config/app-features";
+import { storedPlatformGatesRepository } from "../../helpers/app-config/app-platform-gates";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-
-restoreProductionGates();
 
 /** What production served at 2026-10-19T20:12:40Z: the body text and its weak ETag. */
 const CAPTURED = {
@@ -53,22 +52,19 @@ const CAPTURED = {
 const GAMES_KEY =
   '"games":{"origins":{"https://apple-game.game.skkuverse.com":"apple-game","https://suika-game.game.skkuverse.com":"suika-game","https://wave-run.game.skkuverse.com":"wave-run","https://subway-typing.game.skkuverse.com":"subway-typing","https://building-stack.game.skkuverse.com":"building-stack","https://bigger-building.game.skkuverse.com":"bigger-building"}}';
 
-/** The key appended after `games`: the kill switches as revision 1 of `app-features` stores them. */
-const FEATURES_KEY = '"features":{"sharedMapShell":false}';
-
 /** Appended after each platform gate's `updateUrl`: the lowest OS that can install the store build meeting `minVersion`. */
 const MIN_OS_VERSION_KEY = { ios: '"minOsVersion":"16.4"', android: '"minOsVersion":"24"' };
 
 /** The captured body with the closed ESKARA 2026 site cut from `webview.bridgeOrigins`; `miniapps.origins` still names it. */
 const KEPT_TEXT = CAPTURED.text.replace('"https://webview.skkuverse.com","https://eskara.miniapp.skkuverse.com",', '"https://webview.skkuverse.com",');
 
-/** The kept body with each gate's `minOsVersion`, then `games` and `features` as the last keys of `data`, and its weak ETag. */
+/** The kept body with each gate's `minOsVersion`, then `games` as the last key of `data`, and its weak ETag. */
 const SERVED = {
   text: `${KEPT_TEXT
     .replace('id6446813434"}', `id6446813434",${MIN_OS_VERSION_KEY.ios}}`)
     .replace('com.zoyoong.skkubus"}', `com.zoyoong.skkubus",${MIN_OS_VERSION_KEY.android}}`)
-    .slice(0, -2)},${GAMES_KEY},${FEATURES_KEY}}}`,
-  etag: 'W/"4e7-TVVzFr8RHyHSfe9vHdRdpI7/1KU"',
+    .slice(0, -2)},${GAMES_KEY}}}`,
+  etag: 'W/"4c3-jDkQ9sOCfztXlTXMcBPDf/kdV2Q"',
 };
 
 let app: NestExpressApplication;
@@ -77,8 +73,8 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: appModulesUnder("src/config/", "src/app-config/"),
     overrides: [
-      { provide: AppConfigRepository, useValue: storedAppFeaturesRepository() },
-      { provide: Clock, useValue: { now: () => new Date("2026-10-23T03:00:00.000Z") } },
+      { provide: AppConfigRepository, useValue: storedPlatformGatesRepository() },
+      { provide: Clock, useValue: { now: () => new Date("2026-10-25T03:00:00.000Z") } },
     ],
     role: "api",
   });
@@ -89,7 +85,7 @@ afterAll(async () => {
 });
 
 describe("GET /app/config at the production capture", () => {
-  it("answers the bytes production served with minOsVersion, games and features appended, cacheable by shared caches", async () => {
+  it("answers the bytes production served with minOsVersion and games appended, cacheable by shared caches", async () => {
     // Act
     const res = await request(app.getHttpServer()).get("/app/config");
 
@@ -106,9 +102,8 @@ describe("GET /app/config at the production capture", () => {
     const res = await request(app.getHttpServer()).get("/app/config");
 
     // Assert
-    const { games, features, ...captured } = res.body.data as Record<string, Record<string, unknown>>;
+    const { games, ...captured } = res.body.data as Record<string, Record<string, unknown>>;
     expect(games).toBeDefined();
-    expect(features).toBeDefined();
     for (const platform of ["ios", "android"]) {
       expect(captured[platform]!.minOsVersion).toBeDefined();
       delete captured[platform]!.minOsVersion;

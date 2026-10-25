@@ -1,0 +1,13 @@
+{
+  "_about": "Hand-written 2026-10-25 from GET /app/config as production served it at 2026-10-19T20:12:40Z (minVersion and updateUrl per platform), with the minOsVersion values production's Doppler config held on 2026-10-25 (16.4, 24). Test data for the 2026-10-19 capture, not production's current gates: production has since raised both minVersion floors, and the /app/config characterization bytes depend on these values. Never push this file with npm run data: it would lower the force-update floor. Create the dataset from the live response instead (docs/how-to/edit-runtime-data.md).",
+  "ios": {
+    "minVersion": "3.5.0",
+    "updateUrl": "https://apps.apple.com/app/id6446813434",
+    "minOsVersion": "16.4"
+  },
+  "android": {
+    "minVersion": "3.5.0",
+    "updateUrl": "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus",
+    "minOsVersion": "24"
+  }
+}

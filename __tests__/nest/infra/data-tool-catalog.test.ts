@@ -60,9 +60,10 @@
  * committed timetable routes (`toRouteIssues`): upstream, watched and next
  * platforms in route order, and every stop the tracker follows named.
  *
- * The `app-features` dataset (skkuverse-app ADR 0023, decision 4) is checked
- * with the server's schema alone: a boolean per kill switch, no unknown key,
- * and it names no other dataset.
+ * The `app-platform-gates` dataset (the force-update floor on /app/config) is
+ * checked with the server's schema alone: a gate per platform whose versions
+ * the app can compare and whose update URL is https, no unknown key, and it
+ * names no other dataset.
  *
  * The `subway-station-coords` dataset (ADR 0013, D2) is checked with the
  * server's coords schema (each point inside South Korea) and against the
@@ -80,7 +81,7 @@
  * first, and the topology push stays the gate that refuses.
  */
 import path from "node:path";
-import { appFeaturesDataset } from "../../../src/app-config/app-config.schema";
+import { appPlatformGatesDataset } from "../../../src/app-config/app-config.schema";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { corridorIssues } from "../../../src/bus/eta/lane/bus-eta-lane.rules";
 import { laneCorridorDataset } from "../../../src/bus/eta/lane/bus-eta-lane.schema";
@@ -839,33 +840,36 @@ describe("loadCatalog jongro-route-attributes", () => {
   });
 });
 
-describe("loadCatalog app-features", () => {
-  const features = () => datasetFixture("../app-config/fixtures/app-features.dataset.json");
+describe("loadCatalog app-platform-gates", () => {
+  const gates = () => datasetFixture("../app-config/fixtures/app-platform-gates.dataset.json") as Record<string, Record<string, unknown>>;
 
-  it("is owned by src/app-config, takes appFeaturesDataset, and accepts revision 1 with no issue and no reference", () => {
+  it("is owned by src/app-config, takes appPlatformGatesDataset, and accepts the production gates with no issue and no reference", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
-    const entry = catalog.datasets["app-features"];
+    const entry = catalog.datasets["app-platform-gates"];
 
     // Act
-    const issues = checkData(catalog, "app-features", features(), {});
+    const issues = checkData(catalog, "app-platform-gates", gates(), {});
 
     // Assert
     expect(entry.owner).toBe("src/app-config");
-    expect(entry.schema).toBe(appFeaturesDataset);
+    expect(entry.schema).toBe(appPlatformGatesDataset);
     expect(issues).toEqual([]);
-    expect(entry.referencesOf(entry.schema.parse(features()))).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(gates()))).toEqual([]);
   });
 
-  it("refuses a switch given as a string, naming it", () => {
+  it("refuses a two-part minVersion and an Android minOsVersion given as an iOS version, naming each", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
+    const data = gates();
+    data.ios!.minVersion = "3.6";
+    data.android!.minOsVersion = "7.0";
 
     // Act
-    const lines = issueLines(checkData(catalog, "app-features", { sharedMapShell: "true" }, {}));
+    const lines = issueLines(checkData(catalog, "app-platform-gates", data, {}));
 
     // Assert
-    expect(lines).toEqual([expect.stringMatching(/^app-features: sharedMapShell: .*expected boolean/)]);
+    expect(lines).toEqual([expect.stringMatching(/^app-platform-gates: ios\.minVersion: /), expect.stringMatching(/^app-platform-gates: android\.minOsVersion: /)]);
   });
 });
 

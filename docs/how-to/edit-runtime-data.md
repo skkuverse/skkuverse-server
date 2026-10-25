@@ -3,7 +3,7 @@ title: Edit Runtime Data
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -19,7 +19,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | --- | --- | --- | --- |
 | `miniapps` | `GET /miniapps`, `GET /miniapps/:id`, the feed and send routes, and every dataset below that names a mini app | 503 `MINIAPP_REGISTRY_UNAVAILABLE` | none; each first-party origin's owner is the one `src/infra/origins.ts` names. Named by the three ui datasets, so a push may not drop an id they name ([register-a-miniapp.md](register-a-miniapp.md)) |
 | `games` | `GET /games`, `GET /games/:id` | 503 `GAME_REGISTRY_UNAVAILABLE` | none; each entry URL is on the origin `src/infra/origins.ts` maps to its id, and no id is one the stored `miniapps` holds, nor a mini app's id one it lists. Named by home layout game tiles, so a push may not drop an id a stored layout names ([games-api.md](../reference/games-api.md)) |
-| `app-features` | `GET /app/config`, as `features` | 200, every switch off, logged at error | none; a boolean per switch, no other key ([below](#flip-an-app-kill-switch)) |
+| `app-platform-gates` | `GET /app/config`, as `ios` and `android` | 503 `APP_PLATFORM_GATES_UNAVAILABLE` for the whole route | none; one gate per platform, each a three-part `minVersion`, an https `updateUrl` and a `minOsVersion` (an iOS version or an Android API level) ([below](#raise-an-app-platform-gate)) |
 | `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action; `games`: each `game` tile but the bundled games (`BUNDLED_GAME_IDS`) |
 | `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
 | `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once, a station with no campus at most once; `miniapps`: each `miniapp` link |
@@ -250,17 +250,26 @@ npm run data -- push subway-station-coords --prod --note "move 정자 to the Shi
 
 A change that adds a station pushes its coords from that checkout before the deploy: the running code ignores a station it does not serve, logged at warn (`subway.station_coords.station_unknown`). A change that removes a station deploys first, then pushes coords without it.
 
-### Flip an app kill switch
+### Raise an app platform gate
 
-`app-features` holds the app's kill switches, served on `GET /app/config` as `features`: `{ "sharedMapShell": false }`. `sharedMapShell` picks the app's shared-map shell (`true`) or its NativeTabs shell (`false`); skkuverse-app ADR 0023, decision 4, is the switch's reason. To switch every install back to the old shell:
+`app-platform-gates` holds the force-update gate of each platform, served on `GET /app/config` as `ios` and `android`: `{ "ios": { "minVersion": "3.6.2", "updateUrl": "https://apps.apple.com/app/id6446813434", "minOsVersion": "16.4" }, "android": { … } }`. Below `minVersion` the app blocks on its update screen, unless the device OS is below `minOsVersion`. Follow the checklist in [raise-the-minimum-app-version.md](raise-the-minimum-app-version.md) before a push; the push itself is:
 
 ```bash
-npm run data -- pull app-features --prod
-# set "sharedMapShell": false in .data/prod/app-features.json
-npm run data -- push app-features --prod --note "back to the NativeTabs shell: <why>"
+npm run data -- pull app-platform-gates --prod
+# edit .data/prod/app-platform-gates.json
+npm run data -- push app-platform-gates --prod --note "iOS floor 3.6.2: <why>"
 ```
 
-Every replica serves the push within a minute; the edge and the devices' HTTP caches hold the old body for up to the `/app/config` `Cache-Control` after that, and the app applies what it cached at its next cold start. A replica that never read a good revision serves every switch off and logs the cause at error (`app_config.features.missing`, `app_config.features.invalid` or `app_config.features.read_failed`), so push the dataset before the deploy that first reads it. A value that is not a boolean, or a key the schema does not hold, is refused at push.
+The dataset has no default: a replica that never read a good revision answers 503 on the whole route, so a fresh database gets the dataset (`push --create`) before the deploy that first reads it. The deploy rolls back when an api replica answers `/app/config` with anything but 200.
+
+Create it from the gates production serves now, and never from `__tests__/nest/app-config/fixtures/app-platform-gates.dataset.json`: that fixture holds the 2026-10-19 capture (3.5.0), which is lower than production's floor, so pushing it lowers the force-update floor.
+
+```bash
+curl -s "https://api.skkuverse.com/app/config?cb=$RANDOM" | jq '.data | {ios, android}' > /tmp/app-platform-gates.json
+npm run data -- push app-platform-gates --create --file /tmp/app-platform-gates.json --prod
+```
+
+The push prints the gates it will store. Before you type `y`, check that each platform's `minVersion`, `updateUrl` and `minOsVersion` are the values the `curl` printed from production. Run it from a checkout whose dataset catalog (`scripts/lib/datasets/`) knows `app-platform-gates`: `origin/dev` until the change that added it merges to `main`, and `main` after that. An older checkout answers `unknown dataset "app-platform-gates"`. What the move from the environment variables costs until that merge: [raise-the-minimum-app-version.md](raise-the-minimum-app-version.md#until-the-dataset-reaches-main).
 
 ### Check before a deploy
 

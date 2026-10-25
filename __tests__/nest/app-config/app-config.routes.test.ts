@@ -1,7 +1,8 @@
 /**
- * GET /app/config: the boot-time client config (version gates, the bridge
- * allowlist, the web origin, first-party mini-app and game origins) in the standard
- * envelope, cacheable for five minutes, with no auth. Runs main.ts's pipeline for
+ * GET /app/config: the boot-time client config (the platform gates, read from
+ * the stored `app-platform-gates` dataset, the bridge allowlist, the web origin,
+ * first-party mini-app and game origins) in the standard envelope, cacheable for
+ * a minute, with no auth. Runs main.ts's pipeline for
  * this route: request logging, JSON body, LangMiddleware, the general limiter
  * (AppConfigModule binds it on /app), the controller, ResponseInterceptor and
  * HttpExceptionFilter.
@@ -16,12 +17,12 @@ import { expectWire } from "../../helpers/contracts/expect-wire";
 import { appClientConfig } from "../../../src/app-config/app-config.wire";
 import { AppConfigRepository } from "../../../src/app-config/app-config.repository";
 import { Clock } from "../../../src/infra/clock";
-import { storedAppFeaturesRepository } from "../../helpers/app-config/app-features";
+import { appPlatformGatesFixture, storedPlatformGatesRepository } from "../../helpers/app-config/app-platform-gates";
 import { FakeAppConfigRepository } from "../../helpers/fakes/app-config/app-config.repository.fake";
 
-const CLOCK: Clock = { now: () => new Date("2026-10-23T03:00:00.000Z") };
+const CLOCK: Clock = { now: () => new Date("2026-10-25T03:00:00.000Z") };
 
-function bootAppConfig(repository: FakeAppConfigRepository = storedAppFeaturesRepository()): Promise<NestExpressApplication> {
+function bootAppConfig(repository: FakeAppConfigRepository = storedPlatformGatesRepository()): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: [ConfigModule, AppConfigModule],
     overrides: [
@@ -213,22 +214,63 @@ describe("GET /app/config", () => {
 });
 
 /**
- * `minOsVersion` beside each platform's gate: the lowest OS that can install the store build meeting
- * `minVersion`, read from APP_IOS_MIN_OS_VERSION and APP_ANDROID_MIN_OS_VERSION (jest.setup.ts sets
- * values production does not use, so a hard-coded value fails here). Below it the app lets the user through.
+ * The platform gates, read from the stored `app-platform-gates` dataset (ADR 0013): served as stored, in
+ * the key order installed apps were served (`minVersion`, `updateUrl`, `minOsVersion`). The values here
+ * are none production used, so a gate hard-coded or read from elsewhere fails.
  */
-describe("GET /app/config minOsVersion", () => {
-  it("serves each platform's minOsVersion from its environment value, after minVersion and updateUrl", async () => {
+describe("GET /app/config platform gates", () => {
+  let other: NestExpressApplication | undefined;
+
+  afterEach(async () => {
+    await other?.close();
+    other = undefined;
+  });
+
+  it("serves each platform's gate as the dataset stores it", async () => {
+    // Arrange
+    const gates = {
+      ios: { minOsVersion: "17.0", minVersion: "4.1.0", updateUrl: "https://apps.apple.com/app/id1" },
+      android: { minOsVersion: "26", minVersion: "4.2.0", updateUrl: "https://play.google.com/store/apps/details?id=x" },
+    };
+    other = await bootAppConfig(storedPlatformGatesRepository(gates));
+
     // Act
-    const res = await request(httpServer).get("/app/config");
+    const res = await request(other.getHttpServer()).get("/app/config");
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.ios.minOsVersion).toBe("17.0");
-    expect(res.body.data.android.minOsVersion).toBe("26");
+    expect(res.body.data.ios).toEqual({ minVersion: "4.1.0", updateUrl: "https://apps.apple.com/app/id1", minOsVersion: "17.0" });
+    expect(res.body.data.android).toEqual({ minVersion: "4.2.0", updateUrl: "https://play.google.com/store/apps/details?id=x", minOsVersion: "26" });
     expect(Object.keys(res.body.data.ios)).toEqual(["minVersion", "updateUrl", "minOsVersion"]);
     expect(Object.keys(res.body.data.android)).toEqual(["minVersion", "updateUrl", "minOsVersion"]);
     expectWire(appClientConfig, res.body.data);
+  });
+
+  it("Dataset never pushed: answers 503 APP_PLATFORM_GATES_UNAVAILABLE, with no gate and no shared caching", async () => {
+    // Arrange
+    other = await bootAppConfig(new FakeAppConfigRepository());
+
+    // Act
+    const res = await request(other.getHttpServer()).get("/app/config");
+
+    // Assert
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ error: { code: "APP_PLATFORM_GATES_UNAVAILABLE", message: "The app platform gates are unavailable" } });
+    expect(res.headers["cache-control"] ?? "").not.toMatch(/public|max-age|s-maxage/);
+  });
+
+  it("Only an invalid revision stored: answers 503, never a permissive gate", async () => {
+    // Arrange
+    const gates = appPlatformGatesFixture() as unknown as Record<string, Record<string, unknown>>;
+    delete gates.ios!.minVersion;
+    other = await bootAppConfig(storedPlatformGatesRepository(gates));
+
+    // Act
+    const res = await request(other.getHttpServer()).get("/app/config");
+
+    // Assert
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe("APP_PLATFORM_GATES_UNAVAILABLE");
   });
 });
 
@@ -248,51 +290,17 @@ describe("/app/config body against its wire schema", () => {
 });
 
 /**
- * The `features` kill switches, read from the stored `app-features` dataset: served as stored, and
- * off when nothing good was ever read, never a 503, since the app reads this route at boot for its
- * force-update gate.
+ * No `features` key: the app's one kill switch, `sharedMapShell`, is retired. Installed builds read an
+ * absent `features` as every switch off, and only an exact `true` turned one on.
  */
-describe("GET /app/config features", () => {
-  let other: NestExpressApplication | undefined;
-
-  afterEach(async () => {
-    await other?.close();
-    other = undefined;
-  });
-
-  it("serves features.sharedMapShell as stored, in the body the wire declares", async () => {
-    // Arrange
-    other = await bootAppConfig(storedAppFeaturesRepository({ sharedMapShell: true }));
-
-    // Act
-    const res = await request(other.getHttpServer()).get("/app/config");
-
-    // Assert
-    expect(res.status).toBe(200);
-    expect(res.body.data.features).toEqual({ sharedMapShell: true });
-    expectWire(appClientConfig, res.body.data);
-  });
-
-  it("serves revision 1 of the dataset with the shared-map shell off", async () => {
+describe("GET /app/config without features", () => {
+  it("serves no features key, ending the body at games", async () => {
     // Act
     const res = await request(httpServer).get("/app/config");
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.features).toEqual({ sharedMapShell: false });
-  });
-
-  it("Dataset never pushed: answers 200 with the shared-map shell off and the gates intact", async () => {
-    // Arrange
-    other = await bootAppConfig(new FakeAppConfigRepository());
-
-    // Act
-    const res = await request(other.getHttpServer()).get("/app/config");
-
-    // Assert
-    expect(res.status).toBe(200);
-    expect(res.body.data.features).toEqual({ sharedMapShell: false });
-    expect(res.body.data.ios).toHaveProperty("minVersion");
+    expect(Object.keys(res.body.data)).toEqual(["ios", "android", "webview", "web", "miniapps", "games"]);
     expectWire(appClientConfig, res.body.data);
   });
 });
