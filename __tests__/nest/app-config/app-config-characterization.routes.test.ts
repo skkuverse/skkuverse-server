@@ -24,6 +24,10 @@
  * `minVersion`) is appended as the last key of each platform gate, after
  * `updateUrl`, so every other key keeps its bytes and its place.
  *
+ * `webview.bridgeOrigins` no longer names the standalone ESKARA site, whose
+ * festival closed on 2026-10-09: that one entry is cut from the captured list
+ * and the rest keep their order. `miniapps.origins` still names it.
+ *
  * The version gates are read from the environment when src/infra/config.ts
  * loads, so the production values are set by the first import, before any
  * import reaches src/, and restored once config has loaded.
@@ -55,13 +59,16 @@ const FEATURES_KEY = '"features":{"sharedMapShell":false}';
 /** Appended after each platform gate's `updateUrl`: the lowest OS that can install the store build meeting `minVersion`. */
 const MIN_OS_VERSION_KEY = { ios: '"minOsVersion":"16.4"', android: '"minOsVersion":"24"' };
 
-/** The captured body with each gate's `minOsVersion`, then `games` and `features` as the last keys of `data`, and its weak ETag. */
+/** The captured body with the closed ESKARA 2026 site cut from `webview.bridgeOrigins`; `miniapps.origins` still names it. */
+const KEPT_TEXT = CAPTURED.text.replace('"https://webview.skkuverse.com","https://eskara.miniapp.skkuverse.com",', '"https://webview.skkuverse.com",');
+
+/** The kept body with each gate's `minOsVersion`, then `games` and `features` as the last keys of `data`, and its weak ETag. */
 const SERVED = {
-  text: `${CAPTURED.text
+  text: `${KEPT_TEXT
     .replace('id6446813434"}', `id6446813434",${MIN_OS_VERSION_KEY.ios}}`)
     .replace('com.zoyoong.skkubus"}', `com.zoyoong.skkubus",${MIN_OS_VERSION_KEY.android}}`)
     .slice(0, -2)},${GAMES_KEY},${FEATURES_KEY}}}`,
-  etag: 'W/"50e-Jmv8jmL/RUim21o25UuZwwqCSH8"',
+  etag: 'W/"4e7-TVVzFr8RHyHSfe9vHdRdpI7/1KU"',
 };
 
 let app: NestExpressApplication;
@@ -106,7 +113,8 @@ describe("GET /app/config at the production capture", () => {
       expect(captured[platform]!.minOsVersion).toBeDefined();
       delete captured[platform]!.minOsVersion;
     }
-    expect(JSON.stringify({ meta: res.body.meta, data: captured })).toBe(CAPTURED.text);
+    expect(KEPT_TEXT).not.toBe(CAPTURED.text);
+    expect(JSON.stringify({ meta: res.body.meta, data: captured })).toBe(KEPT_TEXT);
   });
 
   it("answers the same bytes in every language", async () => {
