@@ -229,6 +229,7 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       FCM_API_KEY: "all",
       INTERNAL_DISPATCH_TOKEN: "api",
       MINIAPP_PUSH_TOKEN: "api",
+      SUBWAY_ACCURACY_TOKEN: "api",
       AI_API_URL: "api",
       NAVER_API_KEY_ID: "poller",
       NAVER_API_KEY: "poller",
