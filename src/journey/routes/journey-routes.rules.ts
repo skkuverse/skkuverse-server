@@ -1,7 +1,7 @@
 import type { StopCall } from "../../shared/call.types";
 import { toAlightTime, toBoardTime } from "../../shared/call.util";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
-import { toKstDate } from "../../shared/kst-date.util";
+import { isKstRestDay, toKstDate, toKstTimeOfDay } from "../../shared/kst-date.util";
 import type { JourneyOption, RideLeg } from "../journey.document";
 import { ESTIMATE_UNCERTAINTY_SEC, MAX_LATER_CALLS, SERVICE_DAY_START_MS, TIGHT_TRANSFER_SEC } from "./journey-routes.constants";
 import type { PlanContext, PlannedLeg, PlannedOption, PlannedRide, PlannedStep, PlannedWarning } from "./journey-routes.types";
@@ -31,21 +31,21 @@ function toHeadwayDeparture({ continuation, departures }: DepartureBoard, readyA
   return { lineId: departures[0]?.lineId ?? "", board, alight: null, observedAt: null };
 }
 
-// WHY: with no alight call from the door, the ride takes the dataset's minutes, as an estimate of this server (ADR 0022, D5).
-function toAlight({ board, alight }: Departure, rideMinutes: number): StopCall {
+// WHY: with no alight call from the door, the ride takes the dataset's minutes for its board's time of day, as an estimate of this server (ADR 0022, D5).
+function toAlight({ board, alight }: Departure, { rideMinutes, rideMinutesBands }: RideLeg, boardAt: Date): StopCall {
   if (alight) return alight;
-  return { ...board, status: "unknown", ...NO_INSTANTS, expectedArrivalAt: new Date(timeMsOf(board) + rideMinutes * MINUTE_MS), basis: "estimate", stopsAway: null, providerText: null };
+  const minutes = rideMinutesBands?.[isKstRestDay(boardAt) ? "weekend" : "weekday"]?.filter((band) => band.from <= toKstTimeOfDay(boardAt)).at(-1)?.minutes ?? rideMinutes;
+  return { ...board, status: "unknown", ...NO_INSTANTS, expectedArrivalAt: new Date(boardAt.getTime() + minutes * MINUTE_MS), basis: "estimate", stopsAway: null, providerText: null };
 }
 
 function toRide(leg: RideLeg, board: DepartureBoard, { arrivedAtMs, readyAtMs, line }: { arrivedAtMs: number; readyAtMs: number; line: PlannedRide["line"] }): Ride | null {
   const catchable = board.departures.filter((departure) => isCatchable(departure, readyAtMs, board));
   const boarded = catchable[0] ?? toHeadwayDeparture(board, readyAtMs);
   if (!boarded) return null;
-  const alight = toAlight(boarded, leg.rideMinutes);
-  const later = catchable.slice(1, 1 + MAX_LATER_CALLS).map((departure) => departure.board);
-  const vehicleIds = new Set([boarded.board, alight, ...later].flatMap((call) => call.vehicleId ?? []));
-  const vehicles = [...vehicleIds].flatMap((id) => board.vehicles[id] ?? []);
   const boardAtMs = timeMsOf(boarded.board);
+  const alight = toAlight(boarded, leg, new Date(boardAtMs));
+  const later = catchable.slice(1, 1 + MAX_LATER_CALLS).map((departure) => departure.board);
+  const vehicles = [...new Set([boarded.board, alight, ...later].flatMap((call) => call.vehicleId ?? []))].flatMap((id) => board.vehicles[id] ?? []);
   const planned = { leg, line, board: boarded.board, alight, later, vehicles, waitSec: Math.round((boardAtMs - arrivedAtMs) / 1000), observedAt: boarded.observedAt };
   return { planned, boardAtMs, alightAtMs: toAlightTime(alight)?.getTime() ?? Number.NaN };
 }

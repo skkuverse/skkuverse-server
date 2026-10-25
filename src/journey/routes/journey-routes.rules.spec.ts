@@ -4,7 +4,7 @@
  * a vehicle with no seat left; the legs before the first ride are timed back from that boarding, so the option leaves
  * when it must, never before now; the wait is the boarding minus the arrival at the stop; up to two later catchable
  * listed calls are kept, a full vehicle skipped, and never a headway estimate (ADR 0022 PR (h)); the alight is the door's call for the same run, else the boarding plus the leg's ride minutes as an
- * estimate; past a source's listed vehicles a headway boards half a headway after the rider is ready, as an estimate;
+ * estimate, those of the band of the day type (weekday, or weekend and public holiday) the board's KST time falls in, the flat ones outside every band; past a source's listed vehicles a headway boards half a headway after the rider is ready, as an estimate;
  * an option with no run left is not running, with the board's next service: not started when that falls later in the
  * same service day as now (03:00 to 03:00 KST), ended when in a later one or unknown, so between the last run and
  * 03:00 it is ended (ADR 0022 PR (h)); one whose door failed is
@@ -122,6 +122,47 @@ describe("planOption", () => {
     expect(running(joined).arriveAt).toEqual(kst("15:44"));
     expect(rideOf(fallback).alight).toMatchObject({ status: "unknown", expectedArrivalAt: kst("15:52"), basis: "estimate", runId: rideOf(fallback).board.runId });
     expect(running(fallback).arriveAt).toEqual(kst("15:56"));
+  });
+
+  describe("Ride minutes by time of day: a run with no alight call takes the band its board's KST time falls in", () => {
+    const BANDS = { weekday: [{ from: "07:00", minutes: 90 }, { from: "17:00", minutes: 100 }], weekend: [{ from: "13:00", minutes: 70 }] };
+    const banded: JourneyOption = { ...OPTION, legs: OPTION.legs.map((leg) => (leg.kind === "ride" ? { ...leg, rideMinutesBands: BANDS } : leg)) };
+    const MINUTE_MS = 60_000;
+
+    it.each([
+      ["2026-10-20T06:59:00+09:00", "a weekday before its first band, the flat minutes", 82],
+      ["2026-10-20T07:00:00+09:00", "a weekday at its first band's start", 90],
+      ["2026-10-20T16:59:00+09:00", "a weekday a minute before the next band", 90],
+      ["2026-10-20T17:00:00+09:00", "a weekday at the next band's start", 100],
+      ["2026-10-20T23:59:00+09:00", "the last band, until midnight", 100],
+      ["2026-10-21T00:30:00+09:00", "past midnight, 15:30 Tuesday in UTC, the flat minutes again", 82],
+      ["2026-10-24T07:00:00+09:00", "a Saturday at a weekday band's start, the flat minutes", 82],
+      ["2026-10-24T12:59:00+09:00", "a Saturday before its weekend band", 82],
+      ["2026-10-24T13:00:00+09:00", "a Saturday at its weekend band", 70],
+      ["2026-10-09T13:00:00+09:00", "한글날, a Friday holiday, as a weekend", 70],
+    ])("boarding %s (%s) rides %i minutes", (boardAt, _case, minutes) => {
+      // Arrange
+      const boardAtMs = Date.parse(boardAt);
+      const runs = board([{ lineId: "campus-inja", board: call(new Date(boardAtMs)), alight: null, observedAt: null }]);
+
+      // Act
+      const planned = planOption(banded, context(new Date(boardAtMs - 7 * MINUTE_MS), runs));
+
+      // Assert
+      expect(rideOf(planned).alight.expectedArrivalAt).toEqual(new Date(boardAtMs + minutes * MINUTE_MS));
+      expect(rideOf(planned).alight.basis).toBe("estimate");
+    });
+
+    it("keeps the door's alight call whatever band the board falls in", () => {
+      // Arrange
+      const runs = board([departure("17:00", call(kst("17:40"), { scheduledDepartureAt: null, expectedArrivalAt: kst("17:40"), basis: "estimate" }))]);
+
+      // Act
+      const planned = planOption(banded, context(kst("16:53"), runs));
+
+      // Assert
+      expect(rideOf(planned).alight.expectedArrivalAt).toEqual(kst("17:40"));
+    });
   });
 
   it("Full bus: skips a vehicle with no seat left and boards one whose seats are unknown", () => {
