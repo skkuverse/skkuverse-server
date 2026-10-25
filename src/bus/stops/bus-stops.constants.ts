@@ -16,3 +16,7 @@ export const MAX_ETA_STOPS = 7;
 export const STOP_END = "stop";
 
 export const OPTIONAL_LANGS = ["en", "zh"] as const;
+
+// EVIDENCE: the widest pair of candidate members measured in production on 2026-10-25 is 76 m apart (the yangjae
+// commute exits), so 150 m from the centroid holds every candidate area and refuses a member a stop further on.
+export const MAX_STOP_AREA_RADIUS_M = 150;

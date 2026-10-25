@@ -3,7 +3,7 @@ title: Edit Bus Stops
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -19,7 +19,8 @@ The `bus-stops` dataset holds every local stop the server serves ([bus architect
 { "stops":     [ { "id", "name", "detail"?, "coords"?, "photo"?, "panorama"?, "guide"?, "subwayStationId"?, "arsIds"?, "topisIds"?, "campus"? } ],
   "sequences": { "<serviceId>": { "<routeType>": [ { "stopId" | "label", "action", "timing", "note"?, "detail"? } ] } },
   "hssc":      { "stations": [ { "stopId", "name", "subtitle"?, "isFirstStation", "isLastStation", "isRotationStation", "isAlightOnly"?, "transferLines" } ] },
-  "topis"?:    { "<ARS number>": { "name"?: { "en"?, "zh"? }, "subwayStationId"? } } }
+  "topis"?:    { "<ARS number>": { "name"?: { "en"?, "zh"? }, "subwayStationId"? } },
+  "stopAreas"?: [ { "id", "name", "stopIds" } ] }
 ```
 
 What stays in code, and needs a deploy to change: the service ids and which route types get arrival estimates (`SERVICE_CONFIG` in `src/bus/bus.constants.ts`), the travel strategies (`LANE_STRATEGIES`), the HSSC position count (`HSSC_POSITION_COUNT`), the positions the shuttle passes through (`isHsscPassThrough` in `src/bus/bus.rules.ts`, 5 and 7) and how the HSSC API's stop names map to positions (`src/bus/realtime/hssc/`). Jongno stops are TOPIS's and are never stored here.
@@ -55,6 +56,7 @@ A push that changes a stop, a sequence or an alias reaches its page within a min
 | `arsIds` | Five-digit ARS numbers, each claimed by one stop only |
 | `topisIds` | Nine-digit TOPIS station ids, each claimed by one stop only: for a pole TOPIS gives no ARS number (7800's 성균관대학교 `200000162` and `200000159`); it wins over another stop's `arsIds` claim on the same pole. A server older than the field refuses the key |
 | `campus` | `hssc` or `nsc`, optional: `hssc` for a stop on the HSSC campus (the `hssc-` stops), `nsc` for one on the NSC campus (the `nsc-` stops), left out for a commute station stop, which serves neither campus. A server older than the field keeps it unread, so push it once the server that reads it is deployed |
+| `stopAreas` | Each area's `id` a stop id that no stop or other area takes; its `name` as a stop's; at least two `stopIds`, each a stop of this dataset or `seoul-<ARS number>` of a pole a listed TOPIS route serves in the target's stored registry (a pole a local stop aliases is that stop), each stop in one area once, and each within 150 m of the members' centroid, a pole at its stored route line's coordinates. The id, the name and the member count are checked at read too; the rest needs the registry and the route lines, so only the push checks it ([below](#add-a-stop-area)) |
 | A sequence against the stored timetables | Every entry of its service and route type in the target's `bus_campus.bus_schedules` (`_dev` without `--prod`) has one `stopTimes` time per stop, `null` only at an estimated stop; a refusal names the service, the route type and the first three entry times. A pattern that ended before today (KST) serves no date ahead: it is printed as `skipped` and not checked |
 
 A sequence and its timetable are written by two tools, and each refuses a length the other side does not match: `npm run data -- push bus-stops` checks against the stored timetables, and `npm run schedule` checks a timetable file against the stored `bus-stops`, each in the database it targets. A sequence-length change pushes the sequence with `--against` the new timetable file, then applies that file at once ([below](#change-a-sequences-length)).
@@ -134,6 +136,28 @@ Keep the `[하차전용]` (and `[미정차]`) markers in the names until the app
 A pole with no ARS number takes its TOPIS station id in `topisIds` the same way. On a route `/bus/config` does not list (7800), only an aliased pole is a stop: its station serves the local stop's `stopId` on `/bus/live/<groupId>`, the local stop's page lists the route, and the route's other poles stay off `GET /bus/stops`.
 
 Removing an alias is the same edit in reverse: the pole's own page `seoul-<ARS number>` serves again, and the stations name it.
+
+### Add a stop area
+
+A stop area groups the stops a rider calls one place, so the journey planner offers it as one place to pick; each stop keeps its pin and its page ([bus-stops-api.md](../reference/bus-stops-api.md#stop-areas)). Push an area when something cites it ([ADR 0022, D4](../decisions/0022-journey-and-call-spec.md)).
+
+1. Pull `_dev` and add the area to `stopAreas`, listing a local stop by its slug and a Jongno pole by `seoul-<ARS number>`:
+
+   ```json
+   "stopAreas": [{ "id": "hyehwa-exit1", "name": { "ko": "혜화역 1번 출구", "en": "Hyehwa Stn. Exit 1" }, "stopIds": ["hssc-hyehwa-exit1", "seoul-01592"] }]
+   ```
+
+2. Push to `_dev` with `--dry-run` first, then for real, and `check bus-stops`, as above. The push reads `bus_campus.jongro_routes` and `jongro_route_paths` of the target (`_dev` without `--prod`) to resolve each `seoul-` member and place it.
+3. Within a minute, `GET /bus/stops` serves `stopAreaId: "hyehwa-exit1"` on both stops, under a new ETag, and so do their stop pages; no `bus.stop_index.stop_area_member_unmatched` warning names a member.
+4. Make the same edit in production, push with `--prod` and `check bus-stops --prod`.
+
+An area id is never renamed or removed while another dataset cites it: the push names the citing dataset and path.
+
+A new top-level key such as `stopAreas` is unknown to a server deployed before it, whose strict schema refuses the whole revision, so the first push that uses it goes in this order:
+
+1. Deploy the code that reads the key to production.
+2. Run `npm run data -- check --prod` from a checkout of that deployed `main`, so the stored revisions pass this code.
+3. Push the key, to `_dev` and then with `--prod`.
 
 ### Change a sequence's length
 

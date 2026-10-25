@@ -13,7 +13,12 @@
  * never drop-off only. The
  * catalog's own checks run at push (toBusStopsIssues, bus-stops.rules.spec.ts).
  * storedBusStops, the stored document as the repository reads it, needs its
- * revision and data.
+ * revision and data. The optional stop areas (ADR 0022, D4) each hold an id
+ * in the stop id grammar outside the TOPIS prefix that no stop and no earlier
+ * area holds, a name with a Korean text and no blank English or Chinese one,
+ * and at least two member stop ids; whether the members resolve and lie close
+ * together needs the stop index, so the push checks it
+ * (src/bus/stop-index/area/bus-stop-index-area.rules.spec.ts).
  *
  * Ported from this file's stopCatalogFile cases, which went with the
  * committed stop catalog: "passes the
@@ -280,6 +285,51 @@ describe("busStopsDataset: a stop's campus", () => {
   it.each(["seoul", "HSSC", 1])("fails campus %s, naming it", (campus) => {
     // Act & Assert
     expect(messagesOf(withStop(0, { campus }))).toEqual([expect.stringMatching(/^stops\.0\.campus: /)]);
+  });
+});
+
+describe("busStopsDataset: stop areas", () => {
+  const area = (patch: Record<string, unknown> = {}) => ({ id: "hyehwa-exit1", name: { ko: "혜화역 1번 출구", en: "Hyehwa Stn. Exit 1" }, stopIds: ["hssc-hyehwa-exit1", "seoul-01592"], ...patch });
+  const withAreas = (...stopAreas: unknown[]): Record<string, any> => ({ ...fixture(), stopAreas });
+
+  it("passes a copy with an area, in its order", () => {
+    // Arrange
+    const data = withAreas(area());
+
+    // Act
+    const parsed = busStopsDataset.parse(data);
+
+    // Assert
+    expect(JSON.stringify(parsed)).toBe(JSON.stringify(data));
+  });
+
+  it("passes a copy with no areas, and one with an empty list", () => {
+    // Act & Assert
+    expect([messagesOf(fixture()), messagesOf(withAreas())]).toEqual([[], []]);
+  });
+
+  it.each([
+    ["an id under the TOPIS prefix", { id: "seoul-01592" }, /^stopAreas\.0\.id: /],
+    ["an id outside the stop id grammar", { id: "Hyehwa Exit" }, /^stopAreas\.0\.id: /],
+    ["one member", { stopIds: ["hssc-hyehwa-exit1"] }, /^stopAreas\.0\.stopIds: /],
+    ["a member outside the stop id grammar", { stopIds: ["hssc-hyehwa-exit1", "Seoul 01592"] }, /^stopAreas\.0\.stopIds\.1: /],
+    ["a name without its Korean text", { name: { en: "Hyehwa" } }, /^stopAreas\.0\.name\.ko: /],
+    ["a blank English name", { name: { ko: "혜화역", en: " " } }, /^stopAreas\.0\.name\.en: /],
+    ["the id of a stop", { id: "hssc-hyehwa-exit1" }, /^stopAreas\.0\.id: "hssc-hyehwa-exit1" is a stop id too$/],
+    ["a field an area does not hold", { coords: { lat: 37.58, lng: 127 } }, /^stopAreas\.0: /],
+  ])("fails an area with %s, naming it", (_case, patch, path) => {
+    // Act & Assert
+    expect(messagesOf(withAreas(area(patch)))).toEqual([expect.stringMatching(path)]);
+  });
+});
+
+describe("busStopsDataset: stop area ids", () => {
+  it("fails the second of two areas with one id, naming it", () => {
+    // Arrange
+    const data = { ...fixture(), stopAreas: [0, 1].map(() => ({ id: "hyehwa", name: { ko: "혜화" }, stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] })) };
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual(['stopAreas.1.id: "hyehwa" is the id of an earlier area too']);
   });
 });
 

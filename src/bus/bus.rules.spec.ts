@@ -15,10 +15,13 @@
  * and whether riders board or only get off there, which the stop page and the
  * stop list both serve: toTowards moved here unchanged from
  * src/bus/stop-arrivals/bus-stop-arrivals.rules.spec.ts.
+ * Which stop area holds each stop (ADR 0022, D4), which the bus-stops checks
+ * and the stop index both read: the first area listing a stop holds it, and a
+ * member that resolves to no stop, or to one an area holds already, is left out.
  */
 import arrivals7800 from "../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import registryRoutes from "../../__tests__/nest/bus/fixtures/jongro-registry-routes.json";
-import { deepFreeze, isHsscPassThrough, isTopisPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toStationStopId, toTowards } from "./bus.rules";
+import { deepFreeze, isHsscPassThrough, isTopisPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toStationStopId, toStopAreaMembership, toTowards } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -255,5 +258,57 @@ describe("toStationAction", () => {
   ])("riders at %s: %s", (_case, station, expected) => {
     // Act & Assert
     expect(toStationAction(station)).toBe(expected);
+  });
+});
+
+describe("toStopAreaMembership", () => {
+  const stopIdByMemberId = new Map([
+    ["hssc-bus-lot", "hssc-bus-lot"],
+    ["seoul-01618", "hssc-bus-lot"],
+    ["hssc-600th", "hssc-600th"],
+    ["seoul-01592", "seoul-01592"],
+  ]);
+  const stopIdOf = (memberId: string): string | null => stopIdByMemberId.get(memberId) ?? null;
+
+  it("files each resolved member's stop under its area and leaves none out", () => {
+    // Act
+    const membership = toStopAreaMembership([{ id: "hssc-lot", stopIds: ["seoul-01618", "hssc-600th"] }], stopIdOf);
+
+    // Assert
+    expect([...membership.stopAreaIdByStopId]).toEqual([
+      ["hssc-bus-lot", "hssc-lot"],
+      ["hssc-600th", "hssc-lot"],
+    ]);
+    expect(membership.heldMembers).toEqual([
+      { areaIndex: 0, memberIndex: 0, stopId: "hssc-bus-lot" },
+      { areaIndex: 0, memberIndex: 1, stopId: "hssc-600th" },
+    ]);
+    expect(membership.leftOutMembers).toEqual([]);
+  });
+
+  it("leaves out a member that resolves to no stop, one its own area lists already, and one an earlier area holds", () => {
+    // Arrange
+    const stopAreas = [
+      { id: "first", stopIds: ["hssc-bus-lot", "seoul-99999", "seoul-01618"] },
+      { id: "second", stopIds: ["seoul-01592", "hssc-bus-lot"] },
+    ];
+
+    // Act
+    const membership = toStopAreaMembership(stopAreas, stopIdOf);
+
+    // Assert
+    expect([...membership.stopAreaIdByStopId]).toEqual([
+      ["hssc-bus-lot", "first"],
+      ["seoul-01592", "second"],
+    ]);
+    expect(membership.heldMembers.map(({ areaIndex, memberIndex }) => [areaIndex, memberIndex])).toEqual([
+      [0, 0],
+      [1, 0],
+    ]);
+    expect(membership.leftOutMembers).toEqual([
+      { stopAreaId: "first", areaIndex: 0, memberIndex: 1, memberId: "seoul-99999", stopId: null, heldBy: null },
+      { stopAreaId: "first", areaIndex: 0, memberIndex: 2, memberId: "seoul-01618", stopId: "hssc-bus-lot", heldBy: "first" },
+      { stopAreaId: "second", areaIndex: 1, memberIndex: 1, memberId: "hssc-bus-lot", stopId: "hssc-bus-lot", heldBy: "first" },
+    ]);
   });
 });

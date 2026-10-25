@@ -78,6 +78,12 @@
               }
             ]
           },
+          "stopAreaId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "routes": {
             "type": "array",
             "items": {
@@ -221,6 +227,7 @@
           "coords",
           "arsIds",
           "campus",
+          "stopAreaId",
           "routes"
         ]
       }

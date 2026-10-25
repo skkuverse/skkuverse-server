@@ -53,3 +53,13 @@ export interface StopAliases {
   readonly stopIdByArsId: ReadonlyMap<string, string>;
   readonly stopIdByTopisId: ReadonlyMap<string, string>;
 }
+
+/** WHY: a stop area member left out: it resolves to no stop, or to one an area (`heldBy`) holds already (ADR 0022, D4). */
+export interface LeftOutStopAreaMember { stopAreaId: string; areaIndex: number; memberIndex: number; memberId: string; stopId: string | null; heldBy: string | null }
+
+export interface StopAreaMembership {
+  stopAreaIdByStopId: Map<string, string>;
+  /** WHY: the member each stop is held through, so a check names it at its path. */
+  heldMembers: Array<{ areaIndex: number; memberIndex: number; stopId: string }>;
+  leftOutMembers: LeftOutStopAreaMember[];
+}

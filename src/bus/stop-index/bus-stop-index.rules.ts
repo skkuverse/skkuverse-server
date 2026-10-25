@@ -1,5 +1,5 @@
 import { ARS_ID_PATTERN, STOP_SERVICE_IDS_BY_GROUP_ID, TOPIS_STOP_ID_PREFIX } from "../bus.constants";
-import { deepFreeze, toServedArsId, toStationStopId } from "../bus.rules";
+import { deepFreeze, toServedArsId, toStationStopId, toStopAreaMembership } from "../bus.rules";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { BusStopsSnapshot, ScheduleStop } from "../stops/bus-stops.types";
 import type { IndexedPole, IndexedStop, StopIndex, StopRoute } from "./bus-stop-index.types";
@@ -69,6 +69,21 @@ class StopIndexBuilder {
       if (!stop.poles.some((each) => toPoleKey(each) === toPoleKey(pole))) stop.poles.push(pole);
     });
   }
+
+  // WHY: a member the index cannot find (TOPIS dropped its pole) is left out and named, never failing the build (ADR 0022, D4).
+  addStopAreas(): Array<{ stopAreaId: string; memberId: string }> {
+    const indexedIdOf = (memberId: string): string | null => {
+      const arsId = toPoleArsId(memberId);
+      const stopId = arsId === null ? memberId : this.stopIdByArsId.get(arsId);
+      return stopId !== undefined && this.stopById.has(stopId) ? stopId : null;
+    };
+    const { stopAreaIdByStopId, leftOutMembers } = toStopAreaMembership(this.snapshot.stopAreas, indexedIdOf);
+    for (const stop of this.stopById.values()) {
+      const stopAreaId = stopAreaIdByStopId.get(stop.id);
+      if (stopAreaId !== undefined) stop.stopAreaId = stopAreaId;
+    }
+    return leftOutMembers.map(({ stopAreaId, memberId }) => ({ stopAreaId, memberId }));
+  }
 }
 
 // WHY: each stop's served routes, in the order /bus/config lists the HSSC line, the shuttle groups, then each Jongno route;
@@ -78,8 +93,9 @@ export function toStopIndex(snapshot: BusStopsSnapshot, routes: readonly Registr
   builder.addHsscLine();
   builder.addSequences();
   for (const route of routes) builder.addJongroRoute(route);
+  const unmatchedStopAreaMembers = builder.addStopAreas();
   const unmatchedArsIds = [...snapshot.stopIdByArsId].filter(([arsId, stopId]) => builder.stopIdByArsId.get(arsId) !== stopId).map(([arsId]) => arsId);
   const unmatchedTopisIds = [...snapshot.stopIdByTopisId.keys()].filter((topisId) => !builder.matchedTopisIds.has(topisId));
-  const index = deepFreeze({ stopById: builder.stopById, stopIdByArsId: builder.stopIdByArsId, unmatchedArsIds, unmatchedTopisIds });
+  const index = deepFreeze({ stopById: builder.stopById, stopIdByArsId: builder.stopIdByArsId, unmatchedArsIds, unmatchedTopisIds, unmatchedStopAreaMembers });
   return { snapshot, ...index };
 }

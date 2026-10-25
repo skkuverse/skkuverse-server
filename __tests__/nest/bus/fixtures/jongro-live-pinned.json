@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written pin, not captured from production: what GET /bus/live/jongro02, jongro07 and jongro08 and the stop pages of seoul-01619, seoul-01525, seoul-01618 and seoul-01520 answered in ko, en and zh at commit 64062a50 (2026-10-24), before the TOPIS route list gave each route an explicit code and capabilities, over the bus_cache rows jongro-attributes-characterization.routes.test.ts seeds. `<cacheWrittenAt>` stands for the seeded rows' write time, which that test sets from the wall clock. Changed on purpose once since (ADR 0019, D17): every vehicle gained seatsLeft, null on these routes, right after occupancy, and nothing else changed.",
+  "_about": "Hand-written pin, not captured from production: what GET /bus/live/jongro02, jongro07 and jongro08 and the stop pages of seoul-01619, seoul-01525, seoul-01618 and seoul-01520 answered in ko, en and zh at commit 64062a50 (2026-10-24), before the TOPIS route list gave each route an explicit code and capabilities, over the bus_cache rows jongro-attributes-characterization.routes.test.ts seeds. `<cacheWrittenAt>` stands for the seeded rows' write time, which that test sets from the wall clock. Changed on purpose twice since: every vehicle gained seatsLeft (ADR 0019, D17), null on these routes, right after occupancy; then each stop page's stop gained stopAreaId (ADR 0022, D4), null here since no stop area is stored, after its other fields; nothing else changed.",
   "live": {
     "ko": {
       "jongro02": {
@@ -1269,7 +1269,8 @@
             "name": "비천당",
             "arsIds": [
               "01619"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1364,7 +1365,8 @@
             "name": "통일부",
             "arsIds": [
               "01525"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1459,7 +1461,8 @@
             "name": "학생회관",
             "arsIds": [
               "01618"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1554,7 +1557,8 @@
             "name": "양현관",
             "arsIds": [
               "01520"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1587,7 +1591,8 @@
             "name": "비천당",
             "arsIds": [
               "01619"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1682,7 +1687,8 @@
             "name": "통일부",
             "arsIds": [
               "01525"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1777,7 +1783,8 @@
             "name": "학생회관",
             "arsIds": [
               "01618"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1872,7 +1879,8 @@
             "name": "양현관",
             "arsIds": [
               "01520"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -1905,7 +1913,8 @@
             "name": "비천당",
             "arsIds": [
               "01619"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -2000,7 +2009,8 @@
             "name": "통일부",
             "arsIds": [
               "01525"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -2095,7 +2105,8 @@
             "name": "학생회관",
             "arsIds": [
               "01618"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
@@ -2190,7 +2201,8 @@
             "name": "양현관",
             "arsIds": [
               "01520"
-            ]
+            ],
+            "stopAreaId": null
           },
           "routes": [
             {
