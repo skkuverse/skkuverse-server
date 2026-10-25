@@ -2,7 +2,8 @@
  * A route test replaces only what leaves the process or reads the time
  * (ADR 0011, D2): every provider it overrides is imported
  * from a `*.repository`, `*.client` or `*.poller` file, or is the poller registry
- * (tests.md: a poller's double is a spy on it) or the Clock. Overriding a
+ * (tests.md: a poller's double is a spy on it), the Clock, or a perimeter port
+ * class of `src/perimeter/perimeter.ports.ts`, replaced by its fake. Overriding a
  * service, a controller or a config stubs the code the route test exists to run.
  *
  * A route test is a test file, or a `__tests__/helpers/nest/` helper, that boots
@@ -24,6 +25,8 @@ const BUILDERS_DIR = "__tests__/helpers/nest";
 const DOUBLE_ROLES = new Set(["repository", "client", "poller"]);
 /** `<file>#<export>` of the tokens a route test may override whatever their file's role. */
 const DOUBLE_TOKENS = new Set(["src/infra/clock.ts#Clock", "src/scheduling/poller-registry.service.ts#PollerRegistryService"]);
+/** Every class of the perimeter ports file is a port, which a route test replaces with its fake (ADR 0023, D7). */
+const PORTS_FILE = "src/perimeter/perimeter.ports.ts";
 const PROVIDER_KEYS = new Set(["useValue", "useClass", "useFactory", "useExisting"]);
 const OVERRIDE_CALLS = new Set([
   "overrideProvider",
@@ -63,7 +66,7 @@ function importOrigins(source: ts.SourceFile): Map<string, string> {
 }
 
 function isDouble(origin: string): boolean {
-  if (DOUBLE_TOKENS.has(origin)) return true;
+  if (DOUBLE_TOKENS.has(origin) || origin.startsWith(`${PORTS_FILE}#`)) return true;
   const [file] = origin.split("#") as [string];
   return file.endsWith(".ts") && DOUBLE_ROLES.has(parse(file).parts.at(-1) ?? "");
 }
@@ -207,6 +210,33 @@ describe("route overrides rule applies as specified", () => {
       [],
     ],
   ])("%s", (_case, text, expected) => {
+    // Act & Assert
+    expect(routeOverrideViolations(FILE, text)).toEqual(expected);
+  });
+});
+
+// WHY: a perimeter port is replaced by its fake in a route test (ADR 0023, D7), as a client is.
+describe("route overrides rule applies to perimeter ports", () => {
+  const FILE = "__tests__/nest/notices/notices-proxy.test.ts";
+
+  it.each([
+    ["a port class", `import { OutboundPolicy } from "../../../src/perimeter/perimeter.ports";`, "{ provide: OutboundPolicy, useValue: fake }", []],
+    [
+      "an implementation of a port",
+      `import { OverlayOutboundPolicy } from "../../../src/perimeter/current/outbound-policy";`,
+      "{ provide: OverlayOutboundPolicy, useValue: fake }",
+      [`${FILE}: OverlayOutboundPolicy (src/perimeter/current/outbound-policy.ts)`],
+    ],
+    [
+      "the registry module",
+      `import { PerimeterModule } from "../../../src/perimeter/perimeter.module";`,
+      "{ provide: PerimeterModule, useValue: fake }",
+      [`${FILE}: PerimeterModule (src/perimeter/perimeter.module.ts)`],
+    ],
+  ])("%s", (_case, imports, overrides, expected) => {
+    // Arrange
+    const text = `${imports}\nbeforeAll(async () => { app = await buildTestApp({ imports: [NoticesModule], overrides: [${overrides}] }); });\n`;
+
     // Act & Assert
     expect(routeOverrideViolations(FILE, text)).toEqual(expected);
   });

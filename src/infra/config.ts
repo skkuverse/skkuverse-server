@@ -52,6 +52,7 @@ const config = {
 
   perimeter: {
     mode: process.env.PERIMETER_MODE as PerimeterMode,
+    settings: process.env.PERIMETER_SETTINGS || undefined,
   },
 
   mongo: {
@@ -103,9 +104,7 @@ const config = {
       // SEE: docs/decisions/0003-fcm-dispatch-cloud-function-claim-lease.md — long enough that a slow
       // round trip does not trip a re-claim, short enough that a crashed dispatcher's claims free up.
       claimLeaseMs: 10 * FCM_TIMEOUT_MS,
-      sweepCronIntervalMs:
-        parseInt(process.env.NOTICES_DISPATCH_SWEEP_MS || "", 10) ||
-        30 * 60 * 1000,
+      sweepCronIntervalMs: parseInt(process.env.NOTICES_DISPATCH_SWEEP_MS || "", 10) || 30 * 60 * 1000,
       maxAttempts: 5,
       sweepBatchCap: 200,
     },

@@ -171,6 +171,8 @@ export const PORT_TOKENS: { readonly [K in PortName]: PortToken<PerimeterPorts[K
   abuseSignals: AbuseSignals,
 };
 
+export const PORT_NAMES = Object.keys(PORT_TOKENS) as readonly PortName[];
+
 export const PORT_LABELS: { readonly [K in PortName]: string } = {
   requestAuthenticator: "REQUEST_AUTHENTICATOR",
   rateLimitPolicy: "RATE_LIMIT_POLICY",
@@ -193,7 +195,8 @@ export interface PerimeterCounters {
 export interface PerimeterDeps {
   readonly logger: Logger;
   readonly now: () => Date;
-  readonly host: string;
+  // WHY: null on the poller, which listens on nothing.
+  readonly host: string | null;
   readonly firebaseProjectId: string;
   readonly settings: string | undefined;
   readonly counters: PerimeterCounters;
