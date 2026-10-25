@@ -37,9 +37,12 @@ export function toLiveEntry(
   };
 }
 
-// WHY: a run heads where its service's label says, so each run takes the entry's label as its headsign (ADR 0022, D2).
-export function toTimetableEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">): TimetableEntry {
-  const headed = arrivals.map((arrival) => ({ ...arrival, headsign: label }));
+export function toTimetableEntry(
+  { groupId, serviceId, routeType, action }: ShuttleStopRoute,
+  { label, headsign }: { label: string; headsign: string },
+  { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">,
+): TimetableEntry {
+  const headed = arrivals.map((arrival) => ({ ...arrival, headsign }));
   return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals: headed };
 }
 

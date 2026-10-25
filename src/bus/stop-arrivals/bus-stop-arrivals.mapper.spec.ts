@@ -4,7 +4,7 @@
  * for a TOPIS one; a live entry carrying the live route's station entry at its index and the vehicles it names
  * (ADR 0019, D12) with the direction (right after towards) and the action given (board, or alight at a drop-off-only
  * station); and a timetable entry carrying its runs, each a run's stop call served with its departure from the
- * origin and headed by the entry's label (ADR 0022, D2). The HSSC line named by its catalog stops moved with
+ * origin and headed by the headsign it is given (ADR 0022, D2). The HSSC line named by its catalog stops moved with
  * toCatalogNamedLine to src/bus/bus.mapper.spec.ts.
  */
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
@@ -125,7 +125,7 @@ describe("toTimetableEntry", () => {
     const arrivals = [{ ...arrival(null, ""), status: "scheduled" as const, providerText: null, runDepartureAt: "2026-10-20T14:30:00+09:00" }];
 
     // Act & Assert
-    expect(toTimetableEntry(route, "인사캠 → 자과캠", { operation: "running", arrivals })).toEqual({
+    expect(toTimetableEntry(route, { label: "인사캠 → 자과캠", headsign: "인사캠 → 자과캠" }, { operation: "running", arrivals })).toEqual({
       kind: "timetable",
       groupId: "campus",
       label: "인사캠 → 자과캠",
@@ -138,16 +138,17 @@ describe("toTimetableEntry", () => {
     });
   });
 
-  it("heads each run with the entry's label, the service's, keeping the call's key order", () => {
+  it("heads each run with the headsign it is given, keeping the call's key order", () => {
     // Arrange
     const route = { kind: "shuttle" as const, groupId: "commute", serviceId: "commute-jamsil", routeType: "down", sequenceIndex: 0, action: "board" as const };
     const run = { ...arrival(null, ""), status: "scheduled" as const, providerText: null, runDepartureAt: "2026-10-20T21:00:00+09:00" };
 
     // Act
-    const entry = toTimetableEntry(route, "잠실", { operation: "running", arrivals: [run, run] });
+    const entry = toTimetableEntry(route, { label: "잠실", headsign: "하교" }, { operation: "running", arrivals: [run, run] });
 
     // Assert
-    expect(entry.arrivals.map(({ headsign }) => headsign)).toEqual(["잠실", "잠실"]);
+    expect(entry.label).toBe("잠실");
+    expect(entry.arrivals.map(({ headsign }) => headsign)).toEqual(["하교", "하교"]);
     expect(Object.keys(entry.arrivals[0]!)).toEqual(Object.keys(run));
   });
 });

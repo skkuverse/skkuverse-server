@@ -12,7 +12,7 @@
  * src/bus/bus.rules.spec.ts, since GET /bus/stops heads its stations the same way.
  */
 import type { RunStopTime, ShuttleRun } from "../eta/smart/bus-eta-smart.types";
-import { toTimetableArrivals } from "./bus-stop-arrivals.rules";
+import { toRunHeadsign, toTimetableArrivals } from "./bus-stop-arrivals.rules";
 
 const kst = (date: string, time: string) => new Date(`${date}T${time}:00+09:00`);
 const timetable = (at: Date | null): RunStopTime => ({ shownAt: at, isEstimated: false, latestEstimateAt: null, timetableAt: at });
@@ -207,6 +207,23 @@ describe("toTimetableArrivals", () => {
     expect(toTimetableArrivals(runs, ALIGHT, AT_14_10_KST)).toEqual([
       expect.objectContaining({ runDepartureAt: "2026-10-20T14:30:00+09:00", scheduledArrivalAt: null, expectedArrivalAt: null }),
     ]);
+  });
+});
+
+// WHY: a commute run's service label names its station, not which way it goes; up and down say that (ADR 0022, D2).
+describe("toRunHeadsign", () => {
+  it.each([
+    ["up", "ko", "등교"],
+    ["up", "en", "To campus"],
+    ["up", "zh", "上学"],
+    ["down", "ko", "하교"],
+    ["down", "en", "From campus"],
+    ["down", "zh", "放学"],
+    ["regular", "ko", "잠실"],
+    ["hakbu", "en", "잠실"],
+  ] as const)("heads a %s run in %s as %s", (routeType, lang, headsign) => {
+    // Act & Assert
+    expect(toRunHeadsign(routeType, "잠실", lang)).toBe(headsign);
   });
 });
 

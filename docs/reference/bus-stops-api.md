@@ -206,7 +206,7 @@ A timetable entry lists up to three runs, each an arrival, ADR 0022's call ([bus
 | `scheduledArrivalAt`, `expectedArrivalAt` | The same at an alighting stop |
 | `basis` | `estimate` when the time here is an estimate, else `timetable` |
 | `runId` | The run's id, opaque: stable within one service day and one revision of its timetable ([ADR 0022, D2](../decisions/0022-journey-and-call-spec.md)) |
-| `headsign` | The entry's `label`, the service's |
+| `headsign` | Which way the run goes: an `up` run `등교` and a `down` run `하교` (commute services; `To campus`/`From campus`, `上学`/`放学`), as the HSSC line's live calls read; any other route type the entry's `label`, the service's |
 | `isFirstRun`, `isLastRun` | `true` for the day's first, and last, run of the route type |
 
 A run is listed while its time at this stop is not before the current minute in Asia/Seoul, and runs are ordered by that same time: the timetable's time where one is shown; otherwise (an alighting stop, whose timetable stores no time) the later of the arrival of its most recently fetched estimate, even one too old to be shown, and the expected time shown, or its departure when it has neither. The fields above still carry only the served estimate, so a run can be listed with no time at this stop. A time before the departure is the next day's. When the smart schedule's week holds fewer than three, the runs continue into the following week, as the smart schedule would show it: a Friday evening after the last run lists the next Monday's, and a day of no service or inside a suspension lists none. Boarding and drop-off stops are both served.
