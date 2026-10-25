@@ -53,6 +53,21 @@ describe("SubwayStationsService.listStations", () => {
         ],
       },
       { id: "gwanggyo-jungang", lines: [{ code: "D1", color: "D4003B" }] },
+      {
+        id: "sadang",
+        lines: [
+          { code: "2", color: "00A84D" },
+          { code: "4", color: "00A5DE" },
+        ],
+      },
+      {
+        id: "geumjeong",
+        lines: [
+          { code: "1", color: "0052A4" },
+          { code: "4", color: "00A5DE" },
+        ],
+      },
+      { id: "jongno-5-ga", lines: [{ code: "1", color: "0052A4" }] },
     ]);
     expect(stations[1]?.title.ko).toBe("혜화역");
   });

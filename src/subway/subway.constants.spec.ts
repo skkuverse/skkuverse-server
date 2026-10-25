@@ -4,7 +4,8 @@
  * their platforms, on lines 1, 4, 2, 3, 8, K1 and D1, which key the stored
  * arrival state, the timetables and the transit layout. The network passes the
  * schema the registry's identities passed (slugs, platform ids, colors,
- * one-character markers, Seoul ids), every station is filed under a campus,
+ * one-character markers, Seoul ids), every station is filed under a campus or,
+ * when a journey only boards or alights there (ADR 0022 D7), under none,
  * and every line's marker color reads as small text on the app's light row
  * background.
  */
@@ -12,7 +13,7 @@ import { SUBWAY_LINES, SUBWAY_STATIONS } from "./subway.constants";
 import { subwayNetwork } from "./subway.schema";
 
 describe("SUBWAY_STATIONS", () => {
-  it("lists the stations in served order with their platforms in order, 13 in all", () => {
+  it("lists the stations in served order with their platforms in order, 18 in all", () => {
     // Act
     const stations = SUBWAY_STATIONS.map((station) => [station.id, station.platforms.map((platform) => platform.id)]);
 
@@ -26,8 +27,11 @@ describe("SUBWAY_STATIONS", () => {
       ["gangnam", ["S1-2-222", "DX-D1-4307"]],
       ["yangjae", ["S1-3-332", "DX-D1-4308"]],
       ["gwanggyo-jungang", ["DX-D1-4318"]],
+      ["sadang", ["S1-2-226", "S1-4-433"]],
+      ["geumjeong", ["KR-1-P149", "KR-4-443"]],
+      ["jongno-5-ga", ["S1-1-154"]],
     ]);
-    expect(stations.flatMap(([, platformIds]) => platformIds)).toHaveLength(13);
+    expect(stations.flatMap(([, platformIds]) => platformIds)).toHaveLength(18);
   });
 
   it("serves each platform from its timetable source, a Seoul station's with its station code", () => {
@@ -49,6 +53,11 @@ describe("SUBWAY_STATIONS", () => {
       ["S1-3-332", "3", { source: "seoul-station", stationCode: "0332" }],
       ["DX-D1-4308", "D1", { source: "shinbundang" }],
       ["DX-D1-4318", "D1", { source: "shinbundang" }],
+      ["S1-2-226", "2", { source: "seoul-station", stationCode: "0226" }],
+      ["S1-4-433", "4", { source: "seoul-station", stationCode: "0433" }],
+      ["KR-1-P149", "1", { source: "korail" }],
+      ["KR-4-443", "4", { source: "seoul-station", stationCode: "1458" }],
+      ["S1-1-154", "1", { source: "korail" }],
     ]);
   });
 
@@ -66,10 +75,13 @@ describe("SUBWAY_STATIONS", () => {
       ["gangnam", { ko: "강남", en: "Gangnam", zh: "江南" }, "강남"],
       ["yangjae", { ko: "양재", en: "Yangjae", zh: "良才" }, "양재"],
       ["gwanggyo-jungang", { ko: "광교중앙", en: "Gwanggyojungang", zh: "光教中央" }, "광교중앙"],
+      ["sadang", { ko: "사당", en: "Sadang", zh: "舍堂" }, "사당"],
+      ["geumjeong", { ko: "금정", en: "Geumjeong", zh: "衿井" }, "금정"],
+      ["jongno-5-ga", { ko: "종로5가", en: "Jongno 5(o)-ga", zh: "钟路5街" }, "종로5가"],
     ]);
   });
 
-  it("files each station under the campus whose section of the transit tab lists it: 혜화 under hssc, the rest under nsc", () => {
+  it("files each station under the campus whose section of the transit tab lists it: 혜화 under hssc, 사당, 금정 and 종로5가 under none, the rest under nsc", () => {
     // Act
     const campuses = SUBWAY_STATIONS.map((station) => [station.id, station.campus]);
 
@@ -83,6 +95,9 @@ describe("SUBWAY_STATIONS", () => {
       ["gangnam", "nsc"],
       ["yangjae", "nsc"],
       ["gwanggyo-jungang", "nsc"],
+      ["sadang", null],
+      ["geumjeong", null],
+      ["jongno-5-ga", null],
     ]);
   });
 });

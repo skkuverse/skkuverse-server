@@ -1,4 +1,5 @@
 import { captureGroups } from "../../shared/regex.util";
+import { MAX_UPSTREAM_PLATFORMS } from "../subway.constants";
 import type { CountdownRow, SubwayDirection, TrainEvent, TrainState } from "../subway.types";
 import type { ScheduledTrain, TimetableTrain } from "../timetable/subway-timetable.types";
 import { MAX_COUNTDOWN_SOURCE_AGE_MS, MAX_ROW_AHEAD_MS, MISSING_TRAIN_HOLD_MS, PASSED_TRAIN_HOLD_MS, STATE_STEPS } from "./subway-tracking.constants";
@@ -20,9 +21,8 @@ export function toProgressOrdinal(route: readonly string[], event: Pick<TrainEve
   return stationIndex < 0 ? null : toOrdinal(stationIndex, event.state);
 }
 
-// WHY: a train seen at a station its row passes has left its last stop before it, at the latest then, so it never
-// replaces a stop event; before its first stop or its stop at the served station it stays there, timed from that
-// next stop, since that last stop may be Geumjeong, a whole express run back.
+// WHY: a train seen at a station its row passes has left its last stop before it, at the latest then, so it never replaces
+// a stop event; before its first stop or its stop at the served station it stays there, as that stop may be an express run back.
 function toStopProgress(tick: TrackingTick, route: readonly string[], event: TrainEvent): TrainProgress | null {
   const stopPlatformIds = tick.stopPlatformIdsByTrainNo.get(event.trainNo);
   const stationIndex = route.indexOf(event.platformId);
@@ -36,8 +36,7 @@ function toStopProgress(tick: TrackingTick, route: readonly string[], event: Tra
   return { platformId: lastStopId, state: "departed", at, ordinal: toOrdinal(route.indexOf(lastStopId), "departed") };
 }
 
-// WHY: both operators number up trains even and down trains odd (every train of revision 1 of subway-timetables);
-// a destination the timetable runs in one direction only decides first (line 2's Seongsu runs both ways).
+// WHY: every operator numbers up trains even, down odd (all of subway-timetables); a one-direction destination decides first.
 export function toDirection(
   train: Pick<TrainEvent, "trainNo" | "destination">,
   directionByDestination: ReadonlyMap<string, SubwayDirection>,
@@ -45,9 +44,7 @@ export function toDirection(
   return directionByDestination.get(train.destination) ?? (Number(train.trainNo) % 2 === 0 ? "up" : "down");
 }
 
-export function toDirectionByDestination(
-  trains: readonly Pick<TimetableTrain, "direction" | "destination">[],
-): Map<string, SubwayDirection> {
+export function toDirectionByDestination(trains: readonly Pick<TimetableTrain, "direction" | "destination">[]): Map<string, SubwayDirection> {
   const toDestinations = (direction: SubwayDirection): Set<string> => new Set(trains.filter((t) => t.direction === direction).map((t) => t.destination));
   const [upDestinations, downDestinations] = [toDestinations("up"), toDestinations("down")];
   return new Map(trains.filter((t) => !(upDestinations.has(t.destination) && downDestinations.has(t.destination))).map((t) => [t.destination, t.direction]));
@@ -55,6 +52,11 @@ export function toDirectionByDestination(
 
 export function toStopPlatformIdsByTrainNo(trains: readonly Pick<ScheduledTrain, "trainNo" | "stops">[]): Map<string, string[]> {
   return new Map(trains.map((train) => [train.trainNo, train.stops.map((stop) => stop.platformId)]));
+}
+
+export function toPassedPlatformIds(route: readonly string[], platformId: string, stopPlatformIds: readonly string[]): string[] {
+  const [from, to] = [Math.max(route.indexOf(stopPlatformIds[0] ?? "") + 1, route.indexOf(platformId) - MAX_UPSTREAM_PLATFORMS), Math.max(0, route.indexOf(platformId))];
+  return route.slice(from, to).filter((id) => !stopPlatformIds.includes(id)).reverse();
 }
 
 export function toLatestProgress(latest: TrainProgress, candidate: TrainProgress): TrainProgress {

@@ -1,3 +1,4 @@
+import type { TrainArrival } from "../estimate/subway-estimate.types";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import type { CountdownRow, SubwayDirection, TrainEvent, TrainState } from "../subway.types";
 import type { LineRoutes, PlatformSchedule } from "../timetable/subway-timetable.types";
@@ -43,6 +44,11 @@ export interface TrackedPlatform {
   serviceDate: string;
   events: readonly TrainEvent[];
   arrivals: SubwayArrivalsDoc;
+}
+
+export interface DocumentedArrival {
+  arrival: TrainArrival;
+  passedPlatformIds: readonly string[];
 }
 
 export interface TrackedTick {

@@ -4,6 +4,8 @@ import type { MiniAppReference, MiniAppRegistry } from "../ui.types";
 export interface TransitLayoutReferences {
   busGroupIds: readonly string[];
   stationIds: readonly string[];
+  // WHY: a served station with no campus has no section of the tab to sit in, so the layout may leave it out (ADR 0022 D7).
+  campuslessStationIds: readonly string[];
   registry: MiniAppRegistry;
 }
 
@@ -19,4 +21,4 @@ export interface TransitLayoutRevision {
   layout: TransitLayoutRaw;
 }
 
-export type ServedTransitIds = Pick<TransitLayoutReferences, "busGroupIds" | "stationIds">;
+export type ServedTransitIds = Pick<TransitLayoutReferences, "busGroupIds" | "stationIds" | "campuslessStationIds">;

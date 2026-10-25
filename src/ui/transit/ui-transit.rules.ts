@@ -68,7 +68,7 @@ function unplacedIssues(items: readonly TransitItemRaw[], references: TransitLay
   const placedStationIds = new Set(items.flatMap((item) => (item.kind === "subway" ? [item.stationId] : [])));
   return [
     ...references.busGroupIds.filter((id) => !placedGroupIds.has(id)).map((id) => `bus group "${id}" is not placed`),
-    ...references.stationIds.filter((id) => !placedStationIds.has(id)).map((id) => `subway station "${id}" is not placed`),
+    ...references.stationIds.filter((id) => !placedStationIds.has(id) && !references.campuslessStationIds.includes(id)).map((id) => `subway station "${id}" is not placed`),
   ].map((message) => ({ path: ["sections"], message }));
 }
 
