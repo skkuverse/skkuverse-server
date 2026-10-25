@@ -3,7 +3,7 @@ title: Resync the Jongro Registry
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-25
 audience: internal
 ---
 
