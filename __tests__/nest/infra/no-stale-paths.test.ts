@@ -53,7 +53,7 @@ describe("no stale paths in src/ and __tests__/", () => {
       "scripts/lib/map-places-file.js",
       "skkuverse-app/apps/mobile/src/features/games",
       "node_modules/pino/lib/levels",
-      "as __tests__/nest/infra/private-file does",
+      "as __tests__/nest/infra/replica-topology.test.ts does",
     ]) {
       expect(cites(line)).toBe(false);
     }
