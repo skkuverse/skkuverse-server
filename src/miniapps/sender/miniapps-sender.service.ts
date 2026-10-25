@@ -1,9 +1,20 @@
 import { Injectable } from "@nestjs/common";
-import { MiniAppPushAuthorizer, MiniAppPushQuota, type PushCall } from "../../perimeter/perimeter.ports";
+import { GAME_ID_BY_FIRST_PARTY_ORIGIN } from "../../infra/origins";
+import {
+  MiniAppPushAuthorizer,
+  MiniAppPushQuota,
+  PushContentPolicy,
+  type DraftCheck,
+  type NotificationDraft,
+  type PushCall,
+  type QuotaDecision,
+} from "../../perimeter/perimeter.ports";
 import { toMiniAppNotFound } from "../miniapps.rules";
 import { MiniappsService } from "../miniapps.service";
 import { toPushRefusal } from "./miniapps-sender.rules";
 import type { PushSender } from "./miniapps-sender.types";
+
+const FIRST_PARTY_GAME_IDS: readonly string[] = Object.values(GAME_ID_BY_FIRST_PARTY_ORIGIN);
 
 // SEE: docs/explanation/miniapps-architecture.md — every perimeter decision about a push sender, for any push route.
 @Injectable()
@@ -12,6 +23,7 @@ export class MiniappsSenderService {
     private readonly miniApps: MiniappsService,
     private readonly pushAuthorizer: MiniAppPushAuthorizer,
     private readonly pushQuota: MiniAppPushQuota,
+    private readonly contentPolicy: PushContentPolicy,
   ) {}
 
   // WHY: the authorizer answers before an unknown slug's 404, so an unauthenticated caller learns no slug; no
@@ -24,6 +36,14 @@ export class MiniappsSenderService {
     const refusal = toPushRefusal(call, await this.pushAuthorizer.authorize(call));
     if (refusal !== null) throw refusal;
     if (credentials === null) throw toMiniAppNotFound(senderId);
-    return { miniAppId: senderId, registry, quota: this.pushQuota };
+    return { miniAppId: senderId, registry };
+  }
+
+  checkDraft({ miniAppId, registry }: PushSender, draft: NotificationDraft): Promise<DraftCheck> {
+    return this.contentPolicy.check(draft, { senderId: miniAppId, gameIds: FIRST_PARTY_GAME_IDS, isKnownMiniAppTarget: (value) => registry.isKnownMiniAppTarget(value) });
+  }
+
+  takeQuota({ miniAppId }: PushSender): Promise<QuotaDecision> {
+    return this.pushQuota.take(miniAppId);
   }
 }
