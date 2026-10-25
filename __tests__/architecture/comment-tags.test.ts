@@ -18,6 +18,7 @@ export const CONTRACT_REPOS = [
   "skkuverse-web",
   "skkuverse-mini",
   "skkuverse-codepush",
+  "repository-outside-this-one",
   "scripts",
   "infra",
 ] as const;
