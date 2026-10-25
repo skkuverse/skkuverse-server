@@ -8,7 +8,7 @@
  */
 import type { Clock } from "../../infra/clock";
 import { pick } from "../../infra/i18n";
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { WEBVIEW_ORIGIN } from "../../shared/webview-origin.constants";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
 import { fixtureLayerSet, fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";

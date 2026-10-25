@@ -11,7 +11,7 @@
  * its `visibleWith` bus group is not visible, and when no child is left.
  */
 import type { BusGroup } from "../../../bus/config/bus-config.wire";
-import { WEBVIEW_ORIGIN } from "../../../infra/origins";
+import { WEBVIEW_ORIGIN } from "../../../shared/webview-origin.constants";
 import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { ServedStation } from "../../../subway/stations/subway-stations.types";
 import { toTransitSection } from "./ui-transit-tab.mapper";

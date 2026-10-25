@@ -185,7 +185,7 @@ describe("import boundary blocks apply as specified", () => {
     for (const source of [
       'import { t } from "../infra/i18n";',
       'import type { SupportedLang } from "../infra/types";',
-      'import { toWebviewUrl } from "../infra/webview-url";',
+      'import { toWebviewUrl } from "../shared/webview-url.util";',
       'import { isMediaUrl } from "../infra/media-url";',
       'import { AppError } from "../http/app.error";',
       'import { escapeRegex } from "../shared/regex.util";',

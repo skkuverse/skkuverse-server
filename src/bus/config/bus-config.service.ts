@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import crypto from "crypto";
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { WEBVIEW_ORIGIN } from "../../shared/webview-origin.constants";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import { TOPIS_ROUTES } from "../bus.constants";

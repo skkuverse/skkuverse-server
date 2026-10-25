@@ -1,6 +1,7 @@
 import { isRecord } from "../shared/object.util";
 import { SHELL_BACKGROUND_RE, SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
-import { isKnownMiniAppTarget, isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
+import { parseMiniAppTarget } from "../shared/miniapp-target.util";
+import { isKnownMiniAppTarget, isSingleEmoji } from "./miniapps.rules";
 import type { MiniAppDetailRaw, MiniAppIndexEntryRaw, MiniAppLogoRaw, RegistryFile } from "./miniapps.schema";
 import type { MiniAppRegistry } from "./miniapps.types";
 import type { MiniAppIndexEntry, MiniAppLogo, ShellConfig } from "./miniapps.wire";

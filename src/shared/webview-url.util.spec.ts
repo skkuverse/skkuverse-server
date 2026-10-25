@@ -4,8 +4,8 @@
  * value brings, is refused. A link served after its check is absolute, and
  * one the check would have refused throws rather than being served raw.
  */
-import { WEBVIEW_ORIGIN } from "./origins";
-import { toServedWebviewUrl, toWebviewUrl } from "./webview-url";
+import { WEBVIEW_ORIGIN } from "./webview-origin.constants";
+import { toServedWebviewUrl, toWebviewUrl } from "./webview-url.util";
 
 describe("toWebviewUrl", () => {
   it("resolves a root-relative web view path onto the web view origin", () => {
