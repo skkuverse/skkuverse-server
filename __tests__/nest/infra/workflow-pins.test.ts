@@ -9,7 +9,7 @@
  *   - `.github/dependabot.yml` updates the `github-actions` ecosystem only,
  *     monthly, as one grouped pull request into `dev`.
  *
- * Patterns rather than a YAML parser, as in deploy-workflow.test.ts.
+ * Patterns rather than a YAML parser: the repo avoids the dependency.
  */
 import fs from "fs";
 import path from "path";
@@ -44,7 +44,7 @@ describe("workflow pin rule applies as specified", () => {
     const yaml = [
       "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0",
       "        uses: github/codeql-action/init@0123456789abcdef0123456789abcdef01234567 # v3",
-      "    uses: ./.github/workflows/deploy-host.yml",
+      "    uses: ./.github/workflows/reusable.yml",
       "      - run: echo uses: nothing",
     ].join("\n");
 
