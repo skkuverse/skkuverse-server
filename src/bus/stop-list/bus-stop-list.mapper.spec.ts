@@ -52,6 +52,7 @@ describe("toListedStop", () => {
       coords: { lat: 37.58, lng: 127.0 },
       arsIds: ["01592"],
       campus: "hssc",
+      stopAreaId: null,
       routes: [
         { kind: "live", groupId: "jongro07", label: { ko: "종로 07", en: "Jongro 07", zh: "钟路 07" }, stationIndex: 16, towards: sameInEvery("혜화동로터리"), action: "board" },
         { kind: "live", groupId: "jongro08", label: { ko: "종로 08", en: "Jongro 08", zh: "钟路 08" }, stationIndex: 22, towards: null, action: "board" },
@@ -80,6 +81,7 @@ describe("toListedStop", () => {
       coords: null,
       arsIds: null,
       campus: null,
+      stopAreaId: null,
       routes: [
         {
           kind: "live",
@@ -141,5 +143,27 @@ describe("toListedStop", () => {
 
     // Assert
     expect(listed.routes).toEqual([expect.objectContaining({ kind: "live", stationIndex: 2, towards: { ko: "농구장", en: "Basketball Court", zh: "Basketball Court" }, action: "alight" })]);
+  });
+});
+
+describe("toListedStop stop area", () => {
+  const pole = (stopAreaId?: string): LocatedStop => ({
+    id: "seoul-01592",
+    localStop: null,
+    poles: [{ arsId: "01592", topisId: "100900075", stationName: "혜화역1번출구" }],
+    routes: [],
+    coords: null,
+    ...(stopAreaId !== undefined && { stopAreaId }),
+  });
+
+  it.each([
+    ["the area that holds it", "hyehwa-exit1", "hyehwa-exit1"],
+    ["null when no area holds it", undefined, null],
+  ])("serves %s", (_case, stopAreaId, expected) => {
+    // Act
+    const listed = toListedStop(pole(stopAreaId), null, LINE);
+
+    // Assert
+    expect(listed.stopAreaId).toBe(expected);
   });
 });

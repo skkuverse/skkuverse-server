@@ -55,11 +55,18 @@
           "items": {
             "type": "string"
           }
+        },
+        "stopAreaId": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
         "id",
-        "name"
+        "name",
+        "stopAreaId"
       ]
     },
     "routes": {

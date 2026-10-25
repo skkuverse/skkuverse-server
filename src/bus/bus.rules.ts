@@ -1,5 +1,5 @@
 import { ARS_ID_PATTERN, SERVICE_CONFIG, TOPIS_STOP_ID_PREFIX } from "./bus.constants";
-import type { ServiceConfigEntry, StopAliases } from "./bus.types";
+import type { ServiceConfigEntry, StopAliases, StopAreaMembership } from "./bus.types";
 
 // WHY: own keys only, so a service id that names an Object.prototype member (`toString`) is unknown.
 export function serviceConfigOf(serviceId: string): ServiceConfigEntry | undefined {
@@ -70,6 +70,24 @@ export function toStationStopId({ arsId, topisId }: { arsId: string | null; topi
   const aliasedStopId = aliases.stopIdByTopisId.get(topisId) ?? (servedArsId === null ? undefined : aliases.stopIdByArsId.get(servedArsId));
   if (aliasedStopId !== undefined) return aliasedStopId;
   return isListed ? toPoleStopId(arsId, aliases.stopIdByArsId) : null;
+}
+
+/** WHY: each stop's area, held by the first area that lists it (ADR 0022, D4); a member is left out when it is no stop or a held one. */
+export function toStopAreaMembership(stopAreas: ReadonlyArray<{ id: string; stopIds: readonly string[] }>, stopIdOf: (memberId: string) => string | null): StopAreaMembership {
+  const membership: StopAreaMembership = { stopAreaIdByStopId: new Map(), heldMembers: [], leftOutMembers: [] };
+  stopAreas.forEach(({ id, stopIds }, areaIndex) =>
+    stopIds.forEach((memberId, memberIndex) => {
+      const stopId = stopIdOf(memberId);
+      const heldBy = stopId === null ? null : (membership.stopAreaIdByStopId.get(stopId) ?? null);
+      if (stopId === null || heldBy !== null) {
+        membership.leftOutMembers.push({ stopAreaId: id, areaIndex, memberIndex, memberId, stopId, heldBy });
+        return;
+      }
+      membership.stopAreaIdByStopId.set(stopId, id);
+      membership.heldMembers.push({ areaIndex, memberIndex, stopId });
+    }),
+  );
+  return membership;
 }
 
 /** WHY: the next station of the HSSC loop a rider can get off at; its next position can be a rotary pass. */

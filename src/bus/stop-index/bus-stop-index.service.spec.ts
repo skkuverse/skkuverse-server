@@ -343,6 +343,58 @@ describe("BusStopIndexService.findStop while the registry cannot be read", () =>
   });
 });
 
+describe("BusStopIndexService stop areas", () => {
+  const memberWarnings = () => jest.mocked(logger.warn).mock.calls.filter((call) => (call[0] as { event?: string }).event === "bus.stop_index.stop_area_member_unmatched");
+
+  function setupWithAreas(stopIds: string[]) {
+    const context = setup();
+    context.stopsRepository.storeStops({ ...context.data, stopAreas: [{ id: "hyehwa-exit1", name: { ko: "혜화역 1번 출구" }, stopIds }] });
+    return context;
+  }
+
+  /** A new stations version of jongro08 the registry serves once its TTL has passed. */
+  function syncJongro08(registryRepository: ReturnType<typeof setup>["registryRepository"], version: string): void {
+    registryRepository.routes.get("jongro08")!.stationsVersion = version;
+  }
+
+  it("answers each found and listed stop with the area that holds it", async () => {
+    // Arrange
+    const { service } = setupWithAreas(["hssc-hyehwa-exit1", "seoul-01592"]);
+
+    // Act
+    const [found, list] = [await service.findStop("seoul-01592"), await service.listStops()];
+
+    // Assert
+    expect(found?.stopAreaId).toBe("hyehwa-exit1");
+    expect(list.stops.filter((stop) => stop.stopAreaId !== undefined).map((stop) => [stop.id, stop.stopAreaId])).toEqual([
+      ["hssc-hyehwa-exit1", "hyehwa-exit1"],
+      ["seoul-01592", "hyehwa-exit1"],
+    ]);
+    expect(memberWarnings()).toEqual([]);
+  });
+
+  it("serves an area without a member the index cannot find, warning of it at most once a minute and never failing the read", async () => {
+    // Arrange
+    const { service, registryRepository } = setupWithAreas(["hssc-hyehwa-exit1", "seoul-01592", "seoul-99999"]);
+
+    // Act
+    const found = await service.findStop("hssc-hyehwa-exit1");
+    syncJongro08(registryRepository, "second");
+    jest.setSystemTime(NOW.getTime() + PAST_REGISTRY_TTL_MS);
+    await service.findStop("hssc-hyehwa-exit1");
+    syncJongro08(registryRepository, "third");
+    jest.setSystemTime(NOW.getTime() + 2 * PAST_REGISTRY_TTL_MS);
+    await service.findStop("hssc-hyehwa-exit1");
+
+    // Assert
+    expect(found?.stopAreaId).toBe("hyehwa-exit1");
+    expect(memberWarnings()).toHaveLength(2);
+    expect(memberWarnings().map((call) => (call[0] as { suppressed: number }).suppressed)).toEqual([0, 1]);
+    expect(logText(memberWarnings()[0])).toContain("seoul-99999");
+    expect(jest.mocked(logger.error)).not.toHaveBeenCalled();
+  });
+});
+
 describe("BusStopIndexService.listStops", () => {
   const HSSC_LINE_STOP_IDS = [
     "hssc-basketball-court",

@@ -2,10 +2,10 @@ import { isMediaUrl } from "../../infra/media-url";
 import { SUPPORTED_LANGS } from "../../infra/types";
 import { haversineM } from "../../shared/distance.util";
 import { isRecord } from "../../shared/object.util";
-import { isHsscPassThrough } from "../bus.rules";
-import type { ServiceConfigMap } from "../bus.types";
+import { isHsscPassThrough, toStopAreaMembership } from "../bus.rules";
+import type { LeftOutStopAreaMember, ServiceConfigMap } from "../bus.types";
 import type { LaneStrategies } from "../eta/lane/bus-eta-lane.types";
-import { MAX_ETA_STOPS, MAX_WALK_M, OPTIONAL_LANGS, PANO_ID_PATTERN, STOP_END } from "./bus-stops.constants";
+import { MAX_ETA_STOPS, MAX_STOP_AREA_RADIUS_M, MAX_WALK_M, OPTIONAL_LANGS, PANO_ID_PATTERN, STOP_END } from "./bus-stops.constants";
 import type { BusStopsData } from "./bus-stops.document";
 import type { EtaOptIns } from "./bus-stops.types";
 import type { LatLng } from "../../shared/lat-lng.types";
@@ -349,6 +349,8 @@ interface BusStopsCheckContext {
   optIns: EtaOptIns;
   stationIds: ReadonlySet<string>;
   laneStrategies: LaneStrategies;
+  /** WHY: the stop index the data tool builds from the stored TOPIS registry and route lines; without it no member is checked. */
+  stopAreaResolution?: { stopIdOf: (memberId: string) => string | null; coordsOf: (stopId: string) => LatLng | null };
 }
 
 interface BusStopsReference {
@@ -469,9 +471,38 @@ function servedCoordsIssues({ stops, sequences, hssc }: BusStopsData): BusStopsI
   return stops.flatMap((stop, index) => (stop.coords === undefined && isServed(stop) ? [{ path: ["stops", index, "coords"], message: message(stop) }] : []));
 }
 
+const memberPath = (areaIndex: number, memberIndex: number) => ["stopAreas", areaIndex, "stopIds", memberIndex];
+
+function leftOutIssue({ stopAreaId, areaIndex, memberIndex, memberId, stopId, heldBy }: LeftOutStopAreaMember): BusStopsIssue {
+  if (stopId === null) return { path: memberPath(areaIndex, memberIndex), message: `"${memberId}" is neither a stop of this dataset nor a pole a listed TOPIS route serves` };
+  return { path: memberPath(areaIndex, memberIndex), message: `"${memberId}" is the stop ${stopId}, which ${heldBy === stopAreaId ? "this area lists" : `area ${String(heldBy)} holds`} already` };
+}
+
+// WHY: an area is one place to pick, drawn at its members' centroid, so a member farther than the radius is another place.
+function spreadIssues(areaIndex: number, members: ReadonlyArray<{ memberIndex: number; stopId: string; coords: LatLng | null }>): BusStopsIssue[] {
+  const unplaced = members.filter((member) => member.coords === null);
+  if (unplaced.length > 0) return unplaced.map(({ memberIndex, stopId }) => ({ path: memberPath(areaIndex, memberIndex), message: `stop ${stopId} has no coords, so the area's centroid cannot place it` }));
+  const points = members.map((member) => member.coords as LatLng);
+  const centroid = { lat: points.reduce((sum, point) => sum + point.lat, 0) / points.length, lng: points.reduce((sum, point) => sum + point.lng, 0) / points.length };
+  return members.flatMap(({ memberIndex, stopId, coords }) => {
+    const meters = haversineM(centroid, coords as LatLng);
+    if (meters <= MAX_STOP_AREA_RADIUS_M) return [];
+    return [{ path: memberPath(areaIndex, memberIndex), message: `stop ${stopId} is ${Math.round(meters)} m from the area's centroid, farther than ${MAX_STOP_AREA_RADIUS_M} m` }];
+  });
+}
+
+function stopAreaIssues({ stopAreas = [] }: BusStopsData, { stopAreaResolution }: BusStopsCheckContext): BusStopsIssue[] {
+  if (!stopAreaResolution) return [];
+  const { heldMembers, leftOutMembers } = toStopAreaMembership(stopAreas, stopAreaResolution.stopIdOf);
+  const placed = heldMembers.map((member) => ({ ...member, coords: stopAreaResolution.coordsOf(member.stopId) }));
+  const spread = stopAreas.flatMap((_area, areaIndex) => spreadIssues(areaIndex, placed.filter((member) => member.areaIndex === areaIndex)));
+  const issues = [...leftOutMembers.map(leftOutIssue), ...spread];
+  return issues.sort((first, second) => (first.path[1] as number) - (second.path[1] as number));
+}
+
 /** WHY: every check a bus-stops push runs after its schema, each issue at its path. */
 export function toBusStopsIssues(data: BusStopsData, context: BusStopsCheckContext): BusStopsIssue[] {
-  return [...catalogIssues(data, context), ...laneStrategyIssues(data, context), ...hsscLineIssues(data), ...aliasIssues(data), ...servedCoordsIssues(data), ...overlayIssues(data, context)];
+  return [...catalogIssues(data, context), ...laneStrategyIssues(data, context), ...hsscLineIssues(data), ...aliasIssues(data), ...servedCoordsIssues(data), ...overlayIssues(data, context), ...stopAreaIssues(data, context)];
 }
 
 /** WHY: what the dataset names in the code-held sources: each stop's and overlay entry's subway station, each sequence's service. */

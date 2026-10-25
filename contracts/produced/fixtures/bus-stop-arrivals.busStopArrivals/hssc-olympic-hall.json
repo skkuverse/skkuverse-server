@@ -1,9 +1,10 @@
 {
-  "_about": "Synthetic, never captured: GET /bus/stops/hssc-olympic-hall/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts with bus-stops revision 1 flagging 올림픽기념국민생활관 and 혜화동우체국 isAlightOnly (\"drop-off-only HSSC stops\"): a drop-off-only stop, so its live entry's action is alight, heading towards 혜화동우체국 by its stop's name, with one bus behind the layover; untrimmed. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16). Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus.",
+  "_about": "Synthetic, never captured: GET /bus/stops/hssc-olympic-hall/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts with bus-stops revision 1 flagging 올림픽기념국민생활관 and 혜화동우체국 isAlightOnly (\"drop-off-only HSSC stops\"): a drop-off-only stop, so its live entry's action is alight, heading towards 혜화동우체국 by its stop's name, with one bus behind the layover; untrimmed. Each live entry's direction (right after towards) is added by hand, as the server serves it since 2026-10-23 (ADR 0019, D16). Each vehicle carries seatsLeft (ADR 0019, D17), null as on every Jongno and HSSC bus. Each stop's stopAreaId (ADR 0022, D4) is added by hand as null, since no stop area is stored.",
   "data": {
     "stop": {
       "id": "hssc-olympic-hall",
-      "name": "올림픽기념국민생활관"
+      "name": "올림픽기념국민생활관",
+      "stopAreaId": null
     },
     "routes": [
       {

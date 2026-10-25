@@ -39,13 +39,17 @@
     "max": 112,
     "reason": "ADR 0010 D9, no reachable seam: the overdue bound (`isStalled`, ADR 0018 D6) and the layover (`isLayingOver`) decide the same anchor's lap times, layover and per-stop status from the same segment medians (`segmentOf`) the rest of the engine sums, and a sibling sub-module cannot hold them, since a sibling's rules are never imported across sub-modules (sub-modules.test.ts) and `BusLiveHsscService` is at the four-dependency constructor cap in eslint.config.js."
   },
-  "src/bus/stop-index/bus-stop-index.types.ts": {
+  "src/bus/stop-arrivals/bus-stop-arrivals.wire.ts": {
     "max": 58,
-    "reason": "ADR 0010 D9, no reachable seam: `IndexedPole`, the three stop route variants, `IndexedStop`, `StopIndex`, `FoundStop` and `StopList` are the one derived stop index `BusStopIndexService` answers to the stop page and the stop list; the unlisted route rule and `unmatchedTopisIds` (ADR 0019 D5) took it past the types cap, and its readers sit in sibling sub-modules that cannot own its types (docs/plans/private-file)."
+    "reason": "ADR 0010 D9, no domain seam: `busStopArrivals` is the one stop page body, whose `stopBlock`, live entry and timetable entry are its pieces, not flows; `stopAreaId` (ADR 0022 D4) took it past the wire cap, a sibling never imports another sub-module's wire (sub-modules.test.ts), and moving the stop block into the root `bus.wire.ts` would spill a shape only this route serves."
+  },
+  "src/bus/stop-index/bus-stop-index.types.ts": {
+    "max": 60,
+    "reason": "ADR 0010 D9, no reachable seam: `IndexedPole`, the three stop route variants, `IndexedStop`, `StopIndex`, `FoundStop` and `StopList` are the one derived stop index `BusStopIndexService` answers to the stop page and the stop list; the unlisted route rule and `unmatchedTopisIds` (ADR 0019 D5), then each stop's `stopAreaId` and `unmatchedStopAreaMembers` (ADR 0022 D4), took it past the types cap, and its readers sit in sibling sub-modules that cannot own its types (docs/plans/private-file)."
   },
   "src/bus/stops/bus-stops.rules.ts": {
-    "max": 427,
-    "reason": "ADR 0010 D9, no domain seam: the push checks `toBusStopsIssues` and `busStopsReferences` that scripts/lib/datasets/catalog.js runs, and the read check `BusStopsService` applies to every stored revision (`validateStopCatalog`, `subwayStationErrors`, `storedLineAndAliasErrors`), are one validator of the `bus-stops` dataset: `toBusStopsIssues` reads the labels of `validateStopCatalog`'s messages back into dataset paths, so a sub-module holding the push half would be a Nest module with no provider, imported by nothing in src/, holding rules alone. The catalog checks list every issue in the words bus-stops.rules.spec.ts pins, so they stay hand-written beside the structural schema `busStopsDataset` (docs/plans/private-file)."
+    "max": 454,
+    "reason": "ADR 0010 D9, no domain seam: the push checks `toBusStopsIssues` and `busStopsReferences` that scripts/lib/datasets/catalog.js runs, and the read check `BusStopsService` applies to every stored revision (`validateStopCatalog`, `subwayStationErrors`, `storedLineAndAliasErrors`), are one validator of the `bus-stops` dataset, and the stop area member checks (`stopAreaIssues`, ADR 0022 D4) are that validator's too, run by `toBusStopsIssues` over the stop index the data tool builds: `toBusStopsIssues` reads the labels of `validateStopCatalog`'s messages back into dataset paths, so a sub-module holding the push half would be a Nest module with no provider, imported by nothing in src/, holding rules alone. The catalog checks list every issue in the words bus-stops.rules.spec.ts pins, so they stay hand-written beside the structural schema `busStopsDataset` (docs/plans/private-file)."
   },
   "src/bus/stops/bus-stops.types.ts": {
     "max": 58,

@@ -26,11 +26,20 @@
  *
  * Moved from src/bus/stops/check/bus-stops-check.rules.spec.ts unchanged,
  * when the push checks came back into this file.
+ *
+ * Stop area members (ADR 0022, D4), checked at push only, through the stop
+ * index the data tool builds from the stored TOPIS registry and route lines:
+ * each member resolves to a catalog stop or a pole a listed route serves (a
+ * pole a local stop aliases is that stop), a stop belongs to one area once,
+ * and each member lies within MAX_STOP_AREA_RADIUS_M of its area's centroid.
+ * Without that index no member check runs; the area's id and name are its
+ * schema's (bus-stops.schema.spec.ts).
  */
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
 import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
 import type { LaneStrategies } from "../eta/lane/bus-eta-lane.types";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
+import { MAX_STOP_AREA_RADIUS_M } from "./bus-stops.constants";
 import type { BusStopsData } from "./bus-stops.document";
 import { etaOptIns, storedLineAndAliasErrors, subwayStationErrors, toBusStopsIssues, validateStopCatalog } from "./bus-stops.rules";
 import type { ScheduleStopCatalog } from "./bus-stops.types";
@@ -969,5 +978,88 @@ describe("storedLineAndAliasErrors", () => {
 
     // Act & Assert
     expect(storedLineAndAliasErrors(data as BusStopsData)).toEqual([]);
+  });
+});
+
+describe("toBusStopsIssues stop area members", () => {
+  type Coords = { lat: number; lng: number };
+  const POLE_01592 = { lat: 37.5834729904, lng: 127.0017632862 };
+  const METERS_PER_DEGREE_LAT = (2 * Math.PI * 6_371_000) / 360;
+  const context = { knownServiceIds: new Set(Object.keys(serviceConfig)), optIns: etaOptIns(serviceConfig), stationIds: SERVED_STATIONS, laneStrategies: {} };
+  const fixtureStops = (): Array<{ id: string; coords?: Coords }> => busStopsFixture().stops as Array<{ id: string; coords?: Coords }>;
+  const withAreas = (...stopAreas: Array<{ id: string; stopIds: string[] }>): BusStopsData => ({ ...busStopsFixture(), stopAreas: stopAreas.map((area) => ({ name: { ko: "정류장" }, ...area })) }) as BusStopsData;
+
+  /** The stop index as the data tool builds it: hssc-bus-lot aliases the pole 01618, 01592 is a listed route's pole, and a catalog stop is itself. */
+  function resolution(coordsByStopId: Record<string, Coords | null> = {}) {
+    const poleStopIds: Record<string, string> = { "seoul-01618": "hssc-bus-lot", "seoul-01592": "seoul-01592" };
+    const coordsOf = (stopId: string): Coords | null => {
+      if (stopId in coordsByStopId) return coordsByStopId[stopId]!;
+      return stopId === "seoul-01592" ? POLE_01592 : (fixtureStops().find((stop) => stop.id === stopId)?.coords ?? null);
+    };
+    return { stopIdOf: (memberId: string) => poleStopIds[memberId] ?? fixtureStops().find((stop) => stop.id === memberId)?.id ?? null, coordsOf };
+  }
+
+  it("finds no issue in an area of a catalog stop and the pole beside it", () => {
+    // Arrange
+    const data = withAreas({ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] });
+
+    // Act & Assert
+    expect(toBusStopsIssues(data, { ...context, stopAreaResolution: resolution() })).toEqual([]);
+  });
+
+  it("names a member that resolves to no stop, one its area lists already, and one an earlier area holds", () => {
+    // Arrange
+    const data = withAreas({ id: "hssc-lot", stopIds: ["hssc-bus-lot", "seoul-01618", "seoul-99999"] }, { id: "hssc-600th-area", stopIds: ["hssc-600th", "hssc-bus-lot"] });
+
+    // Act
+    const issues = toBusStopsIssues(data, { ...context, stopAreaResolution: resolution() });
+
+    // Assert
+    expect(issues).toEqual([
+      { path: ["stopAreas", 0, "stopIds", 1], message: '"seoul-01618" is the stop hssc-bus-lot, which this area lists already' },
+      { path: ["stopAreas", 0, "stopIds", 2], message: '"seoul-99999" is neither a stop of this dataset nor a pole a listed TOPIS route serves' },
+      { path: ["stopAreas", 1, "stopIds", 1], message: '"hssc-bus-lot" is the stop hssc-bus-lot, which area hssc-lot holds already' },
+    ]);
+  });
+
+  it.each([
+    [MAX_STOP_AREA_RADIUS_M - 1, []],
+    [MAX_STOP_AREA_RADIUS_M - 1e-6, []],
+    [MAX_STOP_AREA_RADIUS_M + 1, [0, 1]],
+  ])("with each member %d m from the centroid, names the members farther than the limit: %j", (meters, farMemberIndexes) => {
+    // Arrange
+    const offset = meters / METERS_PER_DEGREE_LAT;
+    const data = withAreas({ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] });
+    const placed = resolution({ "hssc-hyehwa-exit1": { lat: 37.58 - offset, lng: 127 }, "seoul-01592": { lat: 37.58 + offset, lng: 127 } });
+
+    // Act
+    const issues = toBusStopsIssues(data, { ...context, stopAreaResolution: placed });
+
+    // Assert
+    expect(issues).toEqual(
+      farMemberIndexes.map((memberIndex) => ({
+        path: ["stopAreas", 0, "stopIds", memberIndex],
+        message: `stop ${["hssc-hyehwa-exit1", "seoul-01592"][memberIndex]} is ${MAX_STOP_AREA_RADIUS_M + 1} m from the area's centroid, farther than ${MAX_STOP_AREA_RADIUS_M} m`,
+      })),
+    );
+  });
+
+  it("names a member with no coords, which the centroid cannot place", () => {
+    // Arrange
+    const data = withAreas({ id: "hyehwa-exit1", stopIds: ["hssc-hyehwa-exit1", "seoul-01592"] });
+
+    // Act
+    const issues = toBusStopsIssues(data, { ...context, stopAreaResolution: resolution({ "seoul-01592": null }) });
+
+    // Assert
+    expect(issues).toEqual([{ path: ["stopAreas", 0, "stopIds", 1], message: "stop seoul-01592 has no coords, so the area's centroid cannot place it" }]);
+  });
+
+  it("runs no member check without the stop index", () => {
+    // Arrange
+    const data = withAreas({ id: "far", stopIds: ["hssc-hyehwa-exit1", "seoul-99999", "jeongja-exit3"] });
+
+    // Act & Assert
+    expect(toBusStopsIssues(data, context)).toEqual([]);
   });
 });
