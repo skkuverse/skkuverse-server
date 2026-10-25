@@ -20,6 +20,10 @@
  * dataset (the shared-map shell off) through an in-memory repository, on a
  * fixed clock.
  *
+ * `minOsVersion` (the lowest OS that can install the store build meeting
+ * `minVersion`) is appended as the last key of each platform gate, after
+ * `updateUrl`, so every other key keeps its bytes and its place.
+ *
  * The version gates are read from the environment when src/infra/config.ts
  * loads, so the production values are set by the first import, before any
  * import reaches src/, and restored once config has loaded.
@@ -48,10 +52,16 @@ const GAMES_KEY =
 /** The key appended after `games`: the kill switches as revision 1 of `app-features` stores them. */
 const FEATURES_KEY = '"features":{"sharedMapShell":false}';
 
-/** The captured body with `games`, then `features`, appended as the last keys of `data`, and its weak ETag. */
+/** Appended after each platform gate's `updateUrl`: the lowest OS that can install the store build meeting `minVersion`. */
+const MIN_OS_VERSION_KEY = { ios: '"minOsVersion":"16.4"', android: '"minOsVersion":"24"' };
+
+/** The captured body with each gate's `minOsVersion`, then `games` and `features` as the last keys of `data`, and its weak ETag. */
 const SERVED = {
-  text: `${CAPTURED.text.slice(0, -2)},${GAMES_KEY},${FEATURES_KEY}}}`,
-  etag: 'W/"4e4-4gabcmGA7ZUlrsL3w7+S9mIDO+A"',
+  text: `${CAPTURED.text
+    .replace('id6446813434"}', `id6446813434",${MIN_OS_VERSION_KEY.ios}}`)
+    .replace('com.zoyoong.skkubus"}', `com.zoyoong.skkubus",${MIN_OS_VERSION_KEY.android}}`)
+    .slice(0, -2)},${GAMES_KEY},${FEATURES_KEY}}}`,
+  etag: 'W/"50e-Jmv8jmL/RUim21o25UuZwwqCSH8"',
 };
 
 let app: NestExpressApplication;
@@ -72,7 +82,7 @@ afterAll(async () => {
 });
 
 describe("GET /app/config at the production capture", () => {
-  it("answers the bytes production served with games appended, cacheable by shared caches", async () => {
+  it("answers the bytes production served with minOsVersion, games and features appended, cacheable by shared caches", async () => {
     // Act
     const res = await request(app.getHttpServer()).get("/app/config");
 
@@ -89,9 +99,13 @@ describe("GET /app/config at the production capture", () => {
     const res = await request(app.getHttpServer()).get("/app/config");
 
     // Assert
-    const { games, features, ...captured } = res.body.data as Record<string, unknown>;
+    const { games, features, ...captured } = res.body.data as Record<string, Record<string, unknown>>;
     expect(games).toBeDefined();
     expect(features).toBeDefined();
+    for (const platform of ["ios", "android"]) {
+      expect(captured[platform]!.minOsVersion).toBeDefined();
+      delete captured[platform]!.minOsVersion;
+    }
     expect(JSON.stringify({ meta: res.body.meta, data: captured })).toBe(CAPTURED.text);
   });
 
