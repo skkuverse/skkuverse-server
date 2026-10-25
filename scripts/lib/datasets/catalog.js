@@ -220,6 +220,7 @@ function loadCatalog(load) {
   const { findTimetable, toLineRoutes, toServiceWindowIssues, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
   const { timetableFile } = load("subway/timetable/subway-timetable.schema");
   const { toRideTimetableIssue } = load("subway/timetable/departures/subway-timetable-departures.rules");
+  const { toTopisRideIssue } = load("bus/departures/topis/bus-departures-topis.rules");
   const { journeyRoutesDataset } = load("journey/journey.schema");
   const { journeyRoutesReferences, toJourneyRoutesIssues } = load("journey/journey.rules");
   const { toPlaceIssues } = load("journey/places/journey-places.rules");
@@ -267,7 +268,7 @@ function loadCatalog(load) {
 
   // The stop index a bus-stops push resolves its stop areas' members through, built as the server builds it from the
   // target's stored registry and route lines: a catalog stop is itself, a pole (by station id or `seoul-` alias) the
-  // stop a listed route serves it as.
+  // stop a listed route serves it as; a TOPIS ride's stops are placed on their route through the same index.
   const stopAreaResolutionOf = (data, registryDocs, routePathDocs) => {
     const routes = TOPIS_ROUTES.flatMap((route) => registryDocs.filter((doc) => doc._id === route.id).map((doc) => toRegistryRoute(route, doc)));
     const index = toStopIndex(toBusStopsSnapshot({ revision: 0, data: JSON.parse(JSON.stringify(data)) }), routes);
@@ -277,7 +278,8 @@ function loadCatalog(load) {
       return stopId !== undefined && (catalogStops.has(stopId) || index.stopById.has(stopId)) ? stopId : null;
     };
     const coordsOf = (stopId) => catalogStops.get(stopId)?.coords ?? toPoleCoords(index.stopById.get(stopId)?.poles ?? [], routePathDocs);
-    return { stopIdOf, coordsOf };
+    const stopOf = (memberId) => index.stopById.get(toCanonicalStopId(index, memberId) ?? "") ?? null;
+    return { stopIdOf, coordsOf, stopOf };
   };
   const stopAreasUnread = {
     path: ["stopAreas"],
@@ -317,6 +319,7 @@ function loadCatalog(load) {
       stationCoords: new Map(subwayStations.ids().map((id) => [id, stationCoords?.stations[id] ?? null])),
       platformIdsByStation: new Map(SUBWAY_STATIONS.map((station) => [station.id, new Set(station.platforms.map((platform) => platform.id))])),
       subwayRideIssueOf: timetables && ((ride) => toRideTimetableIssue(timetables, ride)),
+      topisRideIssueOf: resolution && ((ride) => toTopisRideIssue(resolution.stopOf, ride)),
     };
   };
 

@@ -19,6 +19,7 @@ Journey owns only the `journey-routes` dataset: lines, routes, options and legs,
 | --- | --- | --- | --- |
 | `npm run data` (scripts/lib/datasets/store.js) | — | The `journey-routes` dataset, checked at push against the target's stops, buildings, stations and subway timetables | `JourneyRepository.findRoutes` |
 | bus (`BusDeparturesTimetableService`) | — | Each timetabled run's board and alight calls for one service between two stops | `JourneyDeparturesService.listDepartures` |
+| bus (`BusDeparturesTopisService`) | — | Each TOPIS route's predicted vehicles at the board pole, the calls `/bus/live` serves there, joined by vehicle to its call at the alight pole; the stored row's headway (`term`) and the pole's first and last run (`firstTm`, `lastTm`) | `JourneyDeparturesService.listDepartures` |
 | subway (`SubwayTimetableDeparturesService`) | — | Each train's board and alight calls between two platforms of one line, from the service day's stored `subway-timetables`, as the station board serves a timetable train | `JourneyDeparturesService.listDepartures` |
 | bus (`BusStopIndexService`), building (`BuildingService`), subway (`SubwayStationsService`, `SubwayStationCoordsService`) | — | The name and coords of each cited stop, building and station | `JourneyPlacesService.findPlace` |
 | TMAP pedestrian routing | — | Walk minutes, distance and path, measured once by a person at authoring time and stored with their evidence; the server never calls it | the dataset |
@@ -50,6 +51,7 @@ flowchart LR
   ds -->|JourneyRepository, dataset loader| svc["JourneyRoutesService"]
   door["BusDeparturesTimetableService"] -->|board and alight calls by run| reg["JourneyDeparturesService"]
   subway["SubwayTimetableDeparturesService"] -->|board and alight calls by train| reg
+  topis["BusDeparturesTopisService"] -->|predicted calls by vehicle, then a headway| reg
   reg --> svc
   cat["stop index, buildings, stations"] -->|JourneyPlacesService| svc
   svc -->|planOption, toServedRoute, cached per route and language| route["GET /journey/routes"]
@@ -75,6 +77,8 @@ flowchart LR
 - A ride's `basis` is the weaker of its two calls (`toLegBasis`); an alight the door cannot place takes the leg's `rideMinutes` as an estimate.
 - A subway ride lists only trains that call at its board platform and then at its alight one: within one table joined by the train's row, so a train ending short or an express passing the alight platform is never boarded; across two tables by train number, a train the alight table numbers apart still listed with no alight call. Every PoC ride's two platforms read one table, and the 남태령 probe found every through train numbered alike ([transit-route-planner.md](../plans/transit-route-planner.md#probes)). Its first and last flags are across the ride's trains, so the last train of a ride is the last that reaches the alight platform.
 - A ride starts at its board call's time, departure first, and ends at its alight call's arrival, falling back to its departure (`toAlightTime`; [ADR 0022, D5](../decisions/0022-journey-and-call-spec.md), amended): a subway alight call stays the station board's, both scheduled instants included, while the rider leaves at the arrival.
+- A TOPIS ride boards the predicted vehicles the live route lists at its board pole (TOPIS names two a stop), each call exactly as `/bus/live` serves it, and its alight is the same vehicle's call at the alight pole when TOPIS names it there, else the leg's `rideMinutes` (`toTopisBoard`). Past them, while the pole's service day runs (`toServiceSpan`, by the time of day of its stored first and last run), the ride boards half the stored headway after the rider is ready, naming no vehicle, as an estimate; with no stored `term` it extrapolates nothing. Before the first run it boards that run from TOPIS's published time; once TOPIS says the service ended at the pole or its last run has passed, it lists no headway and names the next service day's first run.
+- At push a TOPIS ride's poles are stops of its route through the stop index the server builds, the alight after the board (`toTopisRideIssue`), and a cited pole of an unlisted route resolves only through a `bus-stops` alias, which a `bus-stops` push may not drop.
 - At push a subway ride's platforms are of its stations and on its line's `sourceLineId`, and every day type's stored tables run a train from one to the other (`toRideTimetableIssue`, through `subwayRideIssueOf`); with no stored `subway-timetables` that check is a warning.
 - An option with no run left is not running, ended, with the board's `nextServiceAt`; one whose door failed is unavailable. Options run by arrival, then data order, then the rest in data order (`toOptionOrder`).
 - `JOURNEY_SOURCE_IDS` names every source the registry maps; adding one fails `tsc` until the registry maps it.
@@ -84,7 +88,8 @@ flowchart LR
 ## Open questions
 
 - Stop areas resolve at push in `bus-stops` but not in the planner; a route end at a stop area waits for that.
-- The TOPIS door and `warnings` land with the options that need them; a subway first leg boards from the timetable until (h) reads the platform's realtime arrivals ([transit-route-planner.md](../plans/transit-route-planner.md)).
+- `warnings` land with (h); a subway first leg boards from the timetable until (h) reads the platform's realtime arrivals ([transit-route-planner.md](../plans/transit-route-planner.md)).
+- Overnight TOPIS answers no rows (header code `4`), so a TOPIS ride then has no stored first run and names no next service.
 
 ## Related
 
