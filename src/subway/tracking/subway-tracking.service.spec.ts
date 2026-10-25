@@ -52,7 +52,7 @@ import { SubwayTrackingService } from "./subway-tracking.service";
 import type { TrackedTick } from "./subway-tracking.types";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
-const SUNGKYUNKWAN = "KR-1-0153";
+const SUNGKYUNKWAN = "KR-1-P153";
 const HYEHWA = "S1-4-420";
 
 const onSaturday = (kst: string): Date => new Date(`2026-10-17T${kst}+09:00`);

@@ -143,7 +143,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.station).toEqual({ id: "sungkyunkwan", name: "성균관대", coords: { lat: 37.300349, lng: 126.97075 } });
     expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
-      [{ code: "1", name: "1호선", color: "0052A4", marker: { text: "1", color: "0052A4" } }, "KR-1-0153"],
+      [{ code: "1", name: "1호선", color: "0052A4", marker: { text: "1", color: "0052A4" } }, "KR-1-P153"],
     ]);
     expectWire(subwayStationArrivals, res.body.data);
   });
@@ -204,7 +204,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
   });
 
   it.each([
-    ["sungkyunkwan", ["KR-1-0153"]],
+    ["sungkyunkwan", ["KR-1-P153"]],
     ["hyehwa", ["S1-4-420"]],
     ["jeongja", ["DX-D1-4312", "KR-K1-K230"]],
     ["jamsil", ["S1-2-216", "S1-8-2815"]],
@@ -295,7 +295,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     if (listed) expect(train).toMatchObject({ expectedArrivalAt: "2026-10-16T20:42:20+09:00", stopsAway: 0, basis: "estimate" });
   });
 
-  it.each(["S1-4-420", "KR-1-0153", "S1-2-222", "seoul", "Hyehwa"])("answers %s with 404 SUBWAY_STATION_NOT_FOUND and no cache header", async (stationId) => {
+  it.each(["S1-4-420", "KR-1-P153", "S1-2-222", "seoul", "Hyehwa"])("answers %s with 404 SUBWAY_STATION_NOT_FOUND and no cache header", async (stationId) => {
     // Act
     const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
 
@@ -331,9 +331,9 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
   it("no longer lists 0493 at 성균관대 once the train map shows it departed, the API still saying arrived", async () => {
     // Arrange
-    const stuck = event("0493", "KR-1-0153", "arrived", "20:41:05", "서동탄");
+    const stuck = event("0493", "KR-1-P153", "arrived", "20:41:05", "서동탄");
     await trackAt("20:41:10", "seoul-subway-api", [stuck]);
-    await trackAt("20:41:40", "seoul-trainmap", [event("0493", "KR-1-0153", "departed", "20:41:40", "서동탄")]);
+    await trackAt("20:41:40", "seoul-trainmap", [event("0493", "KR-1-P153", "departed", "20:41:40", "서동탄")]);
     await trackAt("20:41:50", "seoul-subway-api", [stuck]);
 
     // Act

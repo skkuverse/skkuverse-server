@@ -286,7 +286,7 @@ describe("SubwaySeoulPoller tracks what answered before it reports a failure", (
 
     // Assert
     await expect(trainMapTick).rejects.toMatchObject({ source: "seoul-trainmap", code: "unexpected_shape" });
-    expect(eventsAt(ticks, "KR-1-0153")).toContain("0493 departed");
+    expect(eventsAt(ticks, "KR-1-P153")).toContain("0493 departed");
     expect(eventsAt(ticks, "S1-4-420")).toEqual([]);
   });
 

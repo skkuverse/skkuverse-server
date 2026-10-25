@@ -16,7 +16,7 @@ const REGISTRY = subwayRegistryFixture();
 
 describe("findSubwayStation", () => {
   it.each([
-    ["sungkyunkwan", ["KR-1-0153"], "성균관대", { ko: "성균관대", en: "Sungkyunkwan Univ.", zh: "成均馆大学" }],
+    ["sungkyunkwan", ["KR-1-P153"], "성균관대", { ko: "성균관대", en: "Sungkyunkwan Univ.", zh: "成均馆大学" }],
     ["hyehwa", ["S1-4-420"], "혜화", { ko: "혜화", en: "Hyehwa", zh: "惠化" }],
     ["jeongja", ["DX-D1-4312", "KR-K1-K230"], "정자", { ko: "정자", en: "Jeongja", zh: "亭子" }],
     ["jamsil", ["S1-2-216", "S1-8-2815"], "잠실", { ko: "잠실", en: "Jamsil", zh: "蚕室" }],
@@ -34,7 +34,7 @@ describe("findSubwayStation", () => {
     expect(station?.name).toEqual(name);
   });
 
-  it.each(["S1-4-420", "KR-1-0153", "Hyehwa", "seoul", ""])("finds no station for %j", (slug) => {
+  it.each(["S1-4-420", "KR-1-P153", "Hyehwa", "seoul", ""])("finds no station for %j", (slug) => {
     // Act
     const station = findSubwayStation(slug, REGISTRY);
 
@@ -93,8 +93,8 @@ describe("toCallStopsAway, the call's stops away (ADR 0022, D2)", () => {
   const at = (stationId: string, state: "approaching" | "arrived" | "departed") => ({ stationId, state });
 
   it.each([
-    ["approaching the served platform", at("KR-1-0153", "approaching"), 1],
-    ["standing at the served platform", at("KR-1-0153", "arrived"), 0],
+    ["approaching the served platform", at("KR-1-P153", "approaching"), 1],
+    ["standing at the served platform", at("KR-1-P153", "arrived"), 0],
     ["approaching 의왕, the nearest upstream platform", at("KR-1-P152", "approaching"), 2],
     ["standing at 의왕", at("KR-1-P152", "arrived"), 1],
     ["leaving 의왕", at("KR-1-P152", "departed"), 1],
@@ -106,7 +106,7 @@ describe("toCallStopsAway, the call's stops away (ADR 0022, D2)", () => {
     ["at 화서, after the served platform", at("KR-1-P154", "arrived"), null],
   ] as const)("counts a local %s as %p", (_label, position, stopsAway) => {
     // Act & Assert
-    expect(toCallStopsAway(DOWN, "KR-1-0153", { position, passedPlatformIds: [] })).toBe(stopsAway);
+    expect(toCallStopsAway(DOWN, "KR-1-P153", { position, passedPlatformIds: [] })).toBe(stopsAway);
   });
 
   it.each([
@@ -116,17 +116,17 @@ describe("toCallStopsAway, the call's stops away (ADR 0022, D2)", () => {
     ["approaching 군포, with 의왕 and 당정 passed", at("KR-1-P150", "approaching"), ["KR-1-P152", "KR-1-P151"], 2],
   ] as const)("does not count the platforms an express's row passes: %s is %p", (_label, position, passedPlatformIds, stopsAway) => {
     // Act & Assert
-    expect(toCallStopsAway(DOWN, "KR-1-0153", { position, passedPlatformIds })).toBe(stopsAway);
+    expect(toCallStopsAway(DOWN, "KR-1-P153", { position, passedPlatformIds })).toBe(stopsAway);
   });
 
   it("counts every upstream platform for a document written before the poller stored the passes", () => {
     // Act & Assert
-    expect(toCallStopsAway(DOWN, "KR-1-0153", { position: at("KR-1-P150", "approaching") })).toBe(4);
+    expect(toCallStopsAway(DOWN, "KR-1-P153", { position: at("KR-1-P150", "approaching") })).toBe(4);
   });
 
   it("knows nothing of a train nothing has reported", () => {
     // Act & Assert
-    expect(toCallStopsAway(DOWN, "KR-1-0153", { position: null, passedPlatformIds: [] })).toBeNull();
+    expect(toCallStopsAway(DOWN, "KR-1-P153", { position: null, passedPlatformIds: [] })).toBeNull();
   });
 });
 
@@ -137,10 +137,10 @@ describe("toCallStatus", () => {
   const at = (stationId: string, state: "approaching" | "arrived" | "departed") => ({ stationId, state });
 
   it.each([
-    ["approaching the served platform", at("KR-1-0153", "approaching"), "estimated", "arriving"],
-    ["standing at the served platform", at("KR-1-0153", "arrived"), "live", "arriving"],
-    ["standing at the served platform, its time still the timetable's", at("KR-1-0153", "arrived"), "scheduled", "arriving"],
-    ["leaving the served platform", at("KR-1-0153", "departed"), "estimated", "unknown"],
+    ["approaching the served platform", at("KR-1-P153", "approaching"), "estimated", "arriving"],
+    ["standing at the served platform", at("KR-1-P153", "arrived"), "live", "arriving"],
+    ["standing at the served platform, its time still the timetable's", at("KR-1-P153", "arrived"), "scheduled", "arriving"],
+    ["leaving the served platform", at("KR-1-P153", "departed"), "estimated", "unknown"],
     ["approaching 의왕, the nearest upstream platform", at("KR-1-P152", "approaching"), "estimated", "enRoute"],
     ["leaving 군포, the last upstream platform", at("KR-1-P150", "departed"), "live", "enRoute"],
     ["seen upstream, its time still the timetable's", at("KR-1-P151", "arrived"), "scheduled", "enRoute"],
@@ -151,6 +151,6 @@ describe("toCallStatus", () => {
     ["unseen, with an estimate", null, "estimated", "unknown"],
   ] as const)("reads a train %s as %s", (_label, position, source, status) => {
     // Act & Assert
-    expect(toCallStatus(DOWN, "KR-1-0153", { position, source })).toBe(status);
+    expect(toCallStatus(DOWN, "KR-1-P153", { position, source })).toBe(status);
   });
 });

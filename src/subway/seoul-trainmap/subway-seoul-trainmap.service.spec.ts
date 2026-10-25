@@ -21,7 +21,7 @@ import type { SubwaySeoulTrainmapClient } from "./subway-seoul-trainmap.client";
 import { MAX_EMPTY_CRAWL_GAP_MS, MAX_EMPTY_LINE_MS } from "./subway-seoul-trainmap.constants";
 import { SubwaySeoulTrainmapService } from "./subway-seoul-trainmap.service";
 
-const STATION_ID_BY_NAME = new Map([["성균관대", "KR-1-0153"]]);
+const STATION_ID_BY_NAME = new Map([["성균관대", "KR-1-P153"]]);
 const LINE_4_NAMES = new Map([["동대문", "S1-4-421"], ["길음", "S1-4-417"]]);
 const OBSERVED_AT = new Date("2026-10-16T11:45:00Z");
 const ALL_LINES = "0";
@@ -58,7 +58,7 @@ describe("SubwaySeoulTrainmapService.listLineEventResults", () => {
 
     // Assert
     expect(client.calls).toEqual([ALL_LINES]);
-    expect(eventsOf(results)).toEqual([{ trainNo: "0493", platformId: "KR-1-0153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
+    expect(eventsOf(results)).toEqual([{ trainNo: "0493", platformId: "KR-1-P153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
   });
 
   it("reads lines 1 and 4 from the one 2026-10-17 21:16 page in one request, each through its own table", async () => {

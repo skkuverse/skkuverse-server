@@ -15,7 +15,7 @@ describe("stationIdParam", () => {
     expect(parsed).toEqual({ success: true, data: slug });
   });
 
-  it.each(["S1-4-420", "KR-1-0153", "Hyehwa", "gwanggyo--jungang", "-hyehwa", "hyehwa-", "hye_hwa", "", "hyehwa "])("refuses %j", (slug) => {
+  it.each(["S1-4-420", "KR-1-P153", "Hyehwa", "gwanggyo--jungang", "-hyehwa", "hyehwa-", "hye_hwa", "", "hyehwa "])("refuses %j", (slug) => {
     // Act
     const parsed = stationIdParam.safeParse(slug);
 

@@ -31,7 +31,7 @@ const ARRIVALS_JAMSIL = fixture<SeoulArrivalRow>("realtime-arrival-jamsil.json",
 const FETCHED_2026_10_09 = new Date("2026-10-09T13:45:00Z");
 const FETCHED_2026_10_17 = new Date("2026-10-17T12:07:00Z");
 
-const SUNGKYUNKWAN_PLATFORMS = new Map([["1001", { platformId: "KR-1-0153", trainNumbers: "timetable" as const }]]);
+const SUNGKYUNKWAN_PLATFORMS = new Map([["1001", { platformId: "KR-1-P153", trainNumbers: "timetable" as const }]]);
 const HYEHWA_PLATFORMS = new Map([["1004", { platformId: "S1-4-420", trainNumbers: "timetable" as const }]]);
 // WHY: line 2's rows are read as a timetable line here, so the raw numbers show which platform each row's countdown
 // goes to; its own numbering is pinned on the Jamsil capture below.
@@ -46,7 +46,7 @@ const LINE_1 = new Map([
   ["군포", "KR-1-P150"],
   ["당정", "KR-1-P151"],
   ["의왕", "KR-1-P152"],
-  ["성균관대", "KR-1-0153"],
+  ["성균관대", "KR-1-P153"],
   ["화서", "KR-1-P154"],
   ["수원", "KR-1-P155"],
   ["세류", "KR-1-1715"],
@@ -97,7 +97,7 @@ describe("toTrainEvents", () => {
     expect(events).toEqual([
       { trainNo: "0506", platformId: "KR-1-P155", state: "arrived", stateChangedAt: new Date("2026-10-16T13:26:34Z"), destination: "광운대" },
       { trainNo: "0503", platformId: "KR-1-P154", state: "arrived", stateChangedAt: new Date("2026-10-16T13:25:07Z"), destination: "병점" },
-      { trainNo: "0702", platformId: "KR-1-0153", state: "approaching", stateChangedAt: new Date("2026-10-16T13:26:32Z"), destination: "구로" },
+      { trainNo: "0702", platformId: "KR-1-P153", state: "approaching", stateChangedAt: new Date("2026-10-16T13:26:32Z"), destination: "구로" },
       { trainNo: "0501", platformId: "KR-1-1715", state: "arrived", stateChangedAt: new Date("2026-10-16T13:23:22Z"), destination: "서동탄" },
     ]);
   });
@@ -189,7 +189,7 @@ describe("toTrainEvents", () => {
     const events = toTrainEvents([row({ trainSttus })], LINE_1, "timetable");
 
     // Assert
-    expect(events).toEqual([expect.objectContaining({ trainNo: "0493", platformId: "KR-1-0153", state })]);
+    expect(events).toEqual([expect.objectContaining({ trainNo: "0493", platformId: "KR-1-P153", state })]);
   });
 
   it("leaves out a 전역출발 row (trainSttus 3), which names the station the train has not reached", () => {

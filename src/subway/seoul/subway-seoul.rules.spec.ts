@@ -19,7 +19,7 @@ const tables = ({ platformIdByApiName, platformIdByTrainMapName, ...line }: Retu
 });
 
 const LINE_1_NAMES = {
-  성균관대: "KR-1-0153",
+  성균관대: "KR-1-P153",
   금정: "KR-1-P149",
   군포: "KR-1-P150",
   당정: "KR-1-P151",
@@ -295,7 +295,7 @@ describe("toSeoulLines", () => {
 
     // Assert
     expect(lines).toHaveLength(REGISTRY.lines.length);
-    expect(lines[0]?.platformIdByApiName.get("성균관대")).toBe("KR-1-0153");
+    expect(lines[0]?.platformIdByApiName.get("성균관대")).toBe("KR-1-P153");
     expect(lines[0]?.platformIdByApiName.get("의정부")).toBe("KR-1-X100");
   });
 
@@ -319,7 +319,7 @@ describe("toSeoulStations", () => {
 
     // Assert
     expect(stations.map(({ seoulName, platformBySubwayId }) => [seoulName, Object.fromEntries(platformBySubwayId)])).toEqual([
-      ["성균관대", { "1001": { platformId: "KR-1-0153", trainNumbers: "timetable" } }],
+      ["성균관대", { "1001": { platformId: "KR-1-P153", trainNumbers: "timetable" } }],
       ["혜화", { "1004": { platformId: "S1-4-420", trainNumbers: "timetable" } }],
       [
         "정자",
@@ -388,7 +388,7 @@ describe("toSeoulStations", () => {
     expect(station?.seoulName).toBe("혜화");
     expect([...(station?.platformBySubwayId.entries() ?? [])].map(([subwayId, platform]) => [subwayId, platform.platformId])).toEqual([
       ["1004", "S1-4-420"],
-      ["1001", "KR-1-0153"],
+      ["1001", "KR-1-P153"],
     ]);
   });
 });
@@ -415,7 +415,7 @@ describe("toTrainMapLines", () => {
 describe("toSettledObservations", () => {
   const event = (trainNo: string): TrainEvent => ({
     trainNo,
-    platformId: "KR-1-0153",
+    platformId: "KR-1-P153",
     state: "arrived",
     stateChangedAt: new Date("2026-10-16T20:16:00Z"),
     destination: "광운대",

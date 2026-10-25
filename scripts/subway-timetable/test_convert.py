@@ -156,7 +156,7 @@ class KorailNames(unittest.TestCase):
         codes = [convert.korail_code(name, "test") for name in names]
 
         # Assert
-        self.assertEqual(codes, ["KR-1-P157", "KR-1-1715", "KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P151", "KR-1-P150", "KR-1-P149", "KR-1-P148", "KR-1-P147"])
+        self.assertEqual(codes, ["KR-1-P157", "KR-1-1715", "KR-1-P155", "KR-1-P154", "KR-1-P153", "KR-1-P152", "KR-1-P151", "KR-1-P150", "KR-1-P149", "KR-1-P148", "KR-1-P147"])
 
     def test_leaves_other_stations_unmapped(self):
         # Act & Assert
@@ -216,8 +216,8 @@ class KorailWorkbook(unittest.TestCase):
         self.assertEqual(train["direction"], "up")
         self.assertEqual(train["destination"], "1지청")
         self.assertFalse(train["express"])
-        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P150", "KR-1-P149"])
-        self.assertEqual(train["stops"][2], {"station": "KR-1-0153", "arr": 6 * 3600 + 6 * 60, "dep": 6 * 3600 + 6 * 60 + 30})
+        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-P154", "KR-1-P153", "KR-1-P152", "KR-1-P150", "KR-1-P149"])
+        self.assertEqual(train["stops"][2], {"station": "KR-1-P153", "arr": 6 * 3600 + 6 * 60, "dep": 6 * 3600 + 6 * 60 + 30})
 
     def test_keeps_only_trains_that_stop_at_the_served_station_and_ignores_other_sheets(self):
         # Act
@@ -232,7 +232,7 @@ class KorailWorkbook(unittest.TestCase):
 
         # Assert
         self.assertTrue(train["express"])
-        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-0153", "KR-1-P149"])
+        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-P153", "KR-1-P149"])
 
     def test_origin_and_terminus_have_one_time_and_midnight_rolls_over(self):
         # Act
@@ -240,7 +240,7 @@ class KorailWorkbook(unittest.TestCase):
 
         # Assert
         self.assertEqual(stops, [
-            {"station": "KR-1-0153", "arr": None, "dep": 23 * 3600 + 58 * 60},
+            {"station": "KR-1-P153", "arr": None, "dep": 23 * 3600 + 58 * 60},
             {"station": "KR-1-P152", "arr": 23 * 3600 + 59 * 60 + 30, "dep": 86400},
             {"station": "KR-1-P150", "arr": 86400 + 120, "dep": None},
         ])
@@ -339,7 +339,7 @@ class SeoulLineCoverage(unittest.TestCase):
         served = line_of("1")["served"]
 
         # Assert
-        self.assertEqual(served, ("KR-1-0153", "KR-1-P149", "S1-1-154"))
+        self.assertEqual(served, ("KR-1-P153", "KR-1-P149", "S1-1-154"))
 
 
 class SavedSeoulRows(unittest.TestCase):

@@ -70,7 +70,7 @@ const VARY = "Accept-Language, Origin";
 // leaving its first upstream platform (1) and approaching its last (its upstream count plus one); down standing at
 // its second upstream platform (2), at no position and at its next platform, which is no upstream platform (null).
 const STOPS_AWAY: Record<string, { up: Array<number | null>; down: Array<number | null> }> = {
-  "KR-1-0153": { up: [0, 1, 4], down: [2, null, null] },
+  "KR-1-P153": { up: [0, 1, 4], down: [2, null, null] },
   "S1-4-420": { up: [0, 1, 4], down: [2, null, null] },
   "DX-D1-4312": { up: [0, 1, 4], down: [2, null, null] },
   "KR-K1-K230": { up: [0, 1, 4], down: [2, null, null] },

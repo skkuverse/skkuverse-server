@@ -108,7 +108,7 @@ describe("SubwayMatchingService.onModuleInit", () => {
   it("matches only the events on the schedule's line, and neither returns nor reports another line's", () => {
     // Arrange
     const { tickAt } = setup();
-    const otherLine = event("0493", "KR-1-0153", "21:04:10", "서동탄");
+    const otherLine = event("0493", "KR-1-P153", "21:04:10", "서동탄");
 
     // Act
     const events = tickAt("21:04:15", [otherLine, event("18", PANGYO, "21:04:10")]);

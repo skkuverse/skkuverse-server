@@ -1,5 +1,5 @@
 {
- "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed. Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes. Changed 2026-10-24 with the behavior it pins (app ADR 0022, D4), no other value changed: each answer's meta gained serverNow, the clock at +09:00, each train gained isFirstTrain, from the earliest train of its direction at its platform in the instant's table, and each ETag was recomputed from the new bytes. Changed 2026-10-25 with the behavior it pins (ADR 0022, D2, D3), no other value changed: each train became the shared call plus its trainNo, in the call's key order: arrivalAt became scheduledArrivalAt, or scheduledDepartureAt at a train's origin, to the second at +09:00; each train gained the timetable departure at its platform, isLastRun and runId (<line>/2026-10-20/<trainNo>); source scheduled became basis timetable and status scheduled; destination, express and isFirstTrain became headsign, isExpress and isFirstRun; each line's generatedAt is at +09:00 to the second; and each ETag was recomputed from the new bytes.",
+ "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed. Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes. Changed 2026-10-24 with the behavior it pins (app ADR 0022, D4), no other value changed: each answer's meta gained serverNow, the clock at +09:00, each train gained isFirstTrain, from the earliest train of its direction at its platform in the instant's table, and each ETag was recomputed from the new bytes. Changed 2026-10-25 with the behavior it pins (ADR 0022, D2, D3), no other value changed: each train became the shared call plus its trainNo, in the call's key order: arrivalAt became scheduledArrivalAt, or scheduledDepartureAt at a train's origin, to the second at +09:00; each train gained the timetable departure at its platform, isLastRun and runId (<line>/2026-10-20/<trainNo>); source scheduled became basis timetable and status scheduled; destination, express and isFirstTrain became headsign, isExpress and isFirstRun; each line's generatedAt is at +09:00 to the second; and each ETag was recomputed from the new bytes. Renamed 2026-10-25 (owner decision): 성균관대's platform id KR-1-0153 became its KRIC code KR-1-P153 wherever it appears; no other value changed, except that each ETag of a 성균관대 answer was recomputed from the new bytes.",
  "instants": {
   "2026-10-20T15:20:00.000Z": {
    "sungkyunkwan": {
@@ -7,7 +7,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a8-a24pdm4bFZHmJj0BjaA0QC9DFrU\"",
+     "etag": "W/\"2a8-vkx8WaoyhBnJsb/LxZ2jntHPbqM\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -33,7 +33,7 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
+         "platformId": "KR-1-P153",
          "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
@@ -72,7 +72,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2af-nR4fPzacQzkoCVCQNjJJOxMT5Vg\"",
+     "etag": "W/\"2af-y/K8Bb+iyPUE9WK6+t6IVyMItWk\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -98,7 +98,7 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
+         "platformId": "KR-1-P153",
          "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
@@ -137,7 +137,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a9-su1X3S6aB5F4jhXrmLyBQIld0u0\"",
+     "etag": "W/\"2a9-cp1KQp7qyP0Fc7rU7RMhnZaM9TE\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -163,7 +163,7 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
+         "platformId": "KR-1-P153",
          "generatedAt": "2026-10-21T00:20:00+09:00",
          "directions": [
           {
@@ -4501,7 +4501,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a8-J0+F7H9tDJXZGMrwgZYZlP/xhEU\"",
+     "etag": "W/\"2a8-c8HuO1asrWNKkACbBbsw0U/+4f4\"",
      "body": {
       "meta": {
        "lang": "ko",
@@ -4527,7 +4527,7 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
+         "platformId": "KR-1-P153",
          "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
@@ -4566,7 +4566,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2af-mi83xEzteWAJ2bpQIjHmpTUp7Pk\"",
+     "etag": "W/\"2af-MKpxxCsG2PMfhACazBrmFeUIaUI\"",
      "body": {
       "meta": {
        "lang": "en",
@@ -4592,7 +4592,7 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
+         "platformId": "KR-1-P153",
          "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
@@ -4631,7 +4631,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"2a9-OA+n8ECR43c+14hThaXCKJ1Zxro\"",
+     "etag": "W/\"2a9-PCDqRqSmGZri/0aBU+gJhgB0Xp0\"",
      "body": {
       "meta": {
        "lang": "zh",
@@ -4657,7 +4657,7 @@
            "color": "0052A4"
           }
          },
-         "platformId": "KR-1-0153",
+         "platformId": "KR-1-P153",
          "generatedAt": "2026-10-21T02:00:00+09:00",
          "directions": [
           {
