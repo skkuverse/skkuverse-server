@@ -10,7 +10,7 @@ import path from "path";
 import ts from "typescript";
 
 /** The top-level `src/` folders that are layers every feature may use, not features. */
-export const SHARED_LAYERS: readonly string[] = ["config", "http", "infra", "scheduling", "shared"];
+export const SHARED_LAYERS: readonly string[] = ["config", "http", "infra", "perimeter", "scheduling", "shared"];
 
 export const isSharedLayer = (folder: string): boolean => SHARED_LAYERS.includes(folder);
 

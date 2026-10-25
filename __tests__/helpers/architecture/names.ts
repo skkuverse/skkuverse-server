@@ -16,6 +16,7 @@ export const ROLES = new Set([
   "config",
   "schema",
   "wire",
+  "ports",
   "types",
   "document",
   "constants",

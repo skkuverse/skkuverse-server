@@ -121,7 +121,7 @@ const MODULE_SCOPES = require("fs")
   .sort();
 
 // Feature modules read the time through `Clock` (ADR 0011, D5): every scope but the shared layers.
-const CLOCK_FREE_LAYERS = ["config", "http", "infra", "scheduling", "shared"];
+const CLOCK_FREE_LAYERS = ["config", "http", "infra", "perimeter", "scheduling", "shared"];
 const CLOCK_INJECT_DIRS = MODULE_SCOPES.filter(
   (scope) => !CLOCK_FREE_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)),
 );
@@ -353,7 +353,7 @@ const SPEC_CLOCK_SYNTAX = [
 // a file that breaks it: __tests__/architecture/import-boundaries.test.ts fails
 // on an ignored file that would violate the block.
 
-const SHARED_DIRS = ["config", "http", "infra", "scheduling", "shared"];
+const SHARED_DIRS = ["config", "http", "infra", "perimeter", "scheduling", "shared"];
 // Every other top-level folder of src/ is a feature, so a new module is
 // bounded from its first file.
 const FEATURES = require("fs")
