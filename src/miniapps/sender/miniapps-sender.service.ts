@@ -33,10 +33,11 @@ export class MiniappsSenderService {
     const registry = await this.miniApps.current();
     const credentials = registry.senderCredentialsOf(senderId);
     const call: PushCall = { ...received, credentials };
-    const refusal = toPushRefusal(call, await this.pushAuthorizer.authorize(call));
+    const decision = await this.pushAuthorizer.authorize(call);
+    const refusal = toPushRefusal(call, decision);
     if (refusal !== null) throw refusal;
     if (credentials === null) throw toMiniAppNotFound(senderId);
-    return { miniAppId: senderId, registry };
+    return { miniAppId: senderId, keyId: decision.allowed ? decision.keyId : null, registry };
   }
 
   checkDraft({ miniAppId, registry }: PushSender, draft: NotificationDraft): Promise<DraftCheck> {

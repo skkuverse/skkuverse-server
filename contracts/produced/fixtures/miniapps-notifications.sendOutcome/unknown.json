@@ -1,0 +1,9 @@
+{
+  "_about": "Synthetic, 2026-10-26: a send whose Cloud Function call timed out, as docs/reference/miniapps-api.md (5.2) describes it, written by hand when the signed send route made the shape public; no send was captured for it",
+  "data": {
+    "notificationId": "0d6f5a7e-2c1b-4f3e-9b8a-7c6d5e4f3a21",
+    "delivery": null,
+    "outcome": "unknown",
+    "error": "The operation was aborted due to timeout"
+  }
+}
