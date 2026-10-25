@@ -1,9 +1,13 @@
 /**
  * The local-development perimeter (ADR 0023, D2): it passes every port's contract, says on construction that it
  * is not the production perimeter, refuses to construct for a host off loopback, and decides only what a developer
- * on their own machine needs: loopback CORS, any http(s) fetch, every internal scope and push sender allowed.
+ * on their own machine needs: loopback CORS, an http(s) fetch to any public host, every internal scope and push
+ * sender allowed.
  */
+import axios from "axios";
 import admin from "firebase-admin";
+import type { AddressInfo } from "node:net";
+import { LoopbackServers } from "../../../__tests__/helpers/nest/loopback-servers";
 import { describeAbuseSignalsContract } from "../../../__tests__/helpers/perimeter/abuse-signals.contract";
 import { describeInternalAuthorizerContract } from "../../../__tests__/helpers/perimeter/internal-authorizer.contract";
 import { describeMiniAppPushAuthorizerContract } from "../../../__tests__/helpers/perimeter/mini-app-push-authorizer.contract";
@@ -14,6 +18,7 @@ import { capturingLogger, perimeterRequest, perimeterTestDeps } from "../../../_
 import { describePushContentPolicyContract } from "../../../__tests__/helpers/perimeter/push-content-policy.contract";
 import { describeRateLimitPolicyContract } from "../../../__tests__/helpers/perimeter/rate-limit-policy.contract";
 import { describeRequestAuthenticatorContract } from "../../../__tests__/helpers/perimeter/request-authenticator.contract";
+import { OutboundBlockedError } from "../../shared/outbound-blocked.error";
 import { INTERNAL_SCOPES, PORT_LABELS, RATE_LIMIT_CLASSES, type PortName } from "../perimeter.ports";
 import { LOCAL_DEV_CLASSES } from "./perimeter-classes";
 
@@ -160,13 +165,47 @@ describe("the LocalDev class for originTrust", () => {
 });
 
 describe("the LocalDev class for outboundPolicy", () => {
-  it("allows any http or https URL and blocks nothing it fetches", () => {
+  const servers = new LoopbackServers();
+
+  afterEach(async () => {
+    await servers.closeAll();
+  });
+
+  it("allows an http or https URL on any public host, with no domain allowlist", () => {
     // Arrange
     const policy = new LOCAL_DEV_CLASSES.outboundPolicy(perimeterTestDeps());
 
     // Act & Assert
     expect(policy.allows("notice-attachment", "https://files.example/a.pdf")).toBe(true);
-    expect(policy.allows("notice-attachment", "http://127.0.0.1:8080/a.pdf")).toBe(true);
-    expect(policy.requestConfig("notice-attachment")).toEqual({});
+    expect(policy.allows("notice-attachment", "http://8.8.8.8/a.pdf")).toBe(true);
+  });
+
+  it.each(["http://127.0.0.1/a.pdf", "http://[::1]/a.pdf", "http://169.254.169.254/opc/v1/instance/", "http://10.0.0.1/a.pdf", "https://files.example:8443/a.pdf"])(
+    "refuses %s: a non-public address, or a port other than the scheme's",
+    (url) => {
+      // Act & Assert
+      expect(new LOCAL_DEV_CLASSES.outboundPolicy(perimeterTestDeps()).allows("notice-attachment", url)).toBe(false);
+    },
+  );
+
+  it("fetches through agents that refuse a hostname resolving to loopback, and recognizes that refusal", async () => {
+    // Arrange
+    const policy = new LOCAL_DEV_CLASSES.outboundPolicy(perimeterTestDeps());
+    const server = await servers.serve((_req, res) => res.end("internal"));
+    const { port } = server.address() as AddressInfo;
+
+    // Act
+    const err = await axios.get(`http://localhost:${port}/`, { ...policy.requestConfig("notice-attachment"), timeout: 2000 }).catch((e: unknown) => e);
+
+    // Assert
+    expect(policy.isBlocked(err)).toBe(true);
+  });
+
+  it("refuses a redirect hop to a loopback address", () => {
+    // Arrange
+    const { beforeRedirect } = new LOCAL_DEV_CLASSES.outboundPolicy(perimeterTestDeps()).requestConfig("notice-attachment");
+
+    // Act & Assert
+    expect(() => beforeRedirect?.({ href: "http://127.0.0.1:3000/internal" } as never, {} as never)).toThrow(OutboundBlockedError);
   });
 });

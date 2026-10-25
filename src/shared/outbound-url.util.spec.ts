@@ -1,8 +1,9 @@
 /**
- * The attachment proxy's URL policy (security fix): an http or https URL on the default port, without userinfo, whose
- * host is one of the caller's domains or under one; anything else is refused before any request is made.
+ * The outbound URL policy (security fix): an http or https URL on the default port, without userinfo, whose host is
+ * no loopback, private or link-local address literal and, for an allowlist, one of the caller's domains or under one;
+ * anything else is refused before any request is made.
  */
-import { isAllowedHost, parseAllowedUrl } from "./outbound-url.util";
+import { isAllowedHost, parseAllowedUrl, parseOutboundUrl } from "./outbound-url.util";
 
 const SKKU_DOMAINS = ["skku.edu", "skkumed.ac.kr"] as const;
 
@@ -49,4 +50,19 @@ describe("parseAllowedUrl", () => {
     // Act & Assert
     expect(parseAllowedUrl(url, SKKU_DOMAINS)).toBeNull();
   });
+});
+
+describe("parseOutboundUrl", () => {
+  it.each(["https://files.example/a.pdf", "http://8.8.8.8/a.pdf", "https://[2001:4860:4860::8888]/a.pdf"])("accepts %s", (url) => {
+    // Act & Assert
+    expect(parseOutboundUrl(url)).not.toBeNull();
+  });
+
+  it.each(["http://127.0.0.1/", "http://[::1]/", "http://[::ffff:127.0.0.1]/", "http://169.254.169.254/", "http://0.0.0.0/", "https://files.example:8443/a.pdf", "ftp://files.example/a.pdf"])(
+    "rejects %s",
+    (url) => {
+      // Act & Assert
+      expect(parseOutboundUrl(url)).toBeNull();
+    },
+  );
 });
