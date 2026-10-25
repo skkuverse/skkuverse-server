@@ -26,7 +26,7 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | `GBIS` | `off` | `on` | No GBIS call for 7800's seats: its seat poller (`gbis-seats-7800`) does not run, so `/bus/live/gyeonggi7800` serves every `vehicle.seatsLeft` as `null` once the stored answer is 200 s old. The key's GBIS quota is 1,000 calls a day, production's too, which spends up to 867 of it. Production may set it `off`. |
 | `NOTICE_OVERVIEW` | `on` | `off` | No skkuverse-ai call for a search overview: `GET /notices/overview` answers `data.overview: null` with `meta.reason: "unavailable"` before it retrieves, so the app hides the card. The reverse of the others: production defaults it `off` until the route has a cost guard, and development keeps the feature working. Tests turn it on in `jest.setup.ts`. |
 
-No switch turns the rate limit off: the perimeter mode chooses the limiter. `local-dev` limits each IP to 300 requests a minute across every route, and every simulator request comes from one loopback address, so a burst past that answers 429 as production would.
+No switch turns the rate limit off: the perimeter mode chooses the limiter. `local-dev` limits each IP to 300 requests a minute in each rate-limit class (`general` covers every limited route but `/notices`), and every simulator request comes from one loopback address, so a burst past that answers 429 the way a deployed server does.
 
 `CACHE=off` leaves two caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 
@@ -49,7 +49,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
    npm run dev
    ```
 
-   The `Server started (NestJS)` line shows the switches as resolved: `push: "suppressed"`, `rateLimit: "off"`, `cache: "off"`.
+   The `Server started (NestJS)` line shows the perimeter mode and the switches as resolved: `perimeter: "local-dev"`, `push: "suppressed"`, `cache: "off"`.
 
 2. In `skkuverse-app/apps/mobile/.env`, set `EXPO_PUBLIC_BASE_URL` for the device:
 
@@ -67,7 +67,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
    npm run build && NODE_ENV=development PERIMETER_MODE=overlay HOST=0.0.0.0 CACHE=on npm run dev:watch
    ```
 
-   The `overlay` mode reads its rate limits from `PERIMETER_SETTINGS`, which `npm run env:pull` renders from the dev Doppler config. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
+   The `overlay` mode reads its settings, the rate limits among them, from `PERIMETER_SETTINGS`, which `npm run env:pull` renders from the dev Doppler config. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
 
 3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing (`skkuverse-app/LESSONS.md`). Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
 
@@ -108,7 +108,7 @@ Sentry is off locally: the dev keys carry no `SENTRY_DSN`, and `npm run verify:s
 | A phone cannot connect | The phone is on a different network, or the macOS firewall blocks node. A `cloudflared` tunnel avoids both. |
 | A change in a `_dev` database does not show, and no request reaches the server log | The phone's HTTP cache is answering from an earlier run with `CACHE=on` (`max-age` up to 24 h, kept across app restarts). Clear the app's storage or reinstall it once. |
 | A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
-| Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the three refused combinations. |
+| Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the two refused combinations. |
 | Boot fails with `config.invalid_role` | `ROLE` is set to a value other than `api`, `poller` or `combined`. Leave it unset for a local run, which boots as `combined`. |
 | A local web page gets no `Access-Control-Allow-Origin` | Under `PERIMETER_MODE=local-dev`, only `http://localhost:*` and `http://127.0.0.1:*` are trusted, not LAN addresses. |
 | Every request answers 403 with `"code": "LOCAL_DEV_ONLY"` | `local-dev` answers only a request sent straight to a loopback name. A `Host` such as `10.0.2.2` or a LAN address is refused, and so is a request with a forwarding header (`Forwarded`, `X-Forwarded-*`, `X-Real-IP`, `Via`, `CF-Connecting-IP`) from a proxy or a tunnel. Use `localhost` (Android: `adb reverse tcp:3000 tcp:3000`), or the `overlay` mode for a phone or a tunnel. |
