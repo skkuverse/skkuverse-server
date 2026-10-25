@@ -2,8 +2,10 @@
  * How a planned route is served (ADR 0022, D5): a walk with its label, icon, minutes as seconds, distance and path (null
  * without one), a transfer between two platforms of one station, a ride with its line's name, icon and color, its
  * board, alight and later calls as served calls, its basis the weaker of its calls, its end the alight call's arrival
- * before its departure (ADR 0022, D5, amended 2026-10-25) and its duration between them; an
- * option not running with no legs and its next service at +09:00; options in the planner's order; a leg's places by
+ * before its departure (ADR 0022, D5, amended 2026-10-25), its start the board call's board time (a late train's
+ * expected arrival) and its duration between them; an
+ * option not running with no legs and its next service at +09:00; each warning by its code and a message in the request
+ * language naming the board place of the ride it warns of; options in the planner's order; a leg's places by
  * ref and platform. Places a running option cites are resolved before; one that is not throws.
  */
 import type { Place } from "../../shared/place.wire";
@@ -54,6 +56,7 @@ const RUNNING: PlannedOption = {
     { leg: WALK, startAt: kst("14:23"), endAt: kst("14:29") },
     { leg: RIDE, line: LINE, board: call({ scheduledDepartureAt: kst("14:30") }), alight: call({ expectedArrivalAt: kst("15:52"), basis: "estimate" }), later: [call({ scheduledDepartureAt: kst("15:00") })], vehicles: [], waitSec: 60, observedAt: null },
   ],
+  warnings: [],
 };
 const ENDED: PlannedOption = { status: "notRunning", reason: "ended", nextServiceAt: new Date("2026-10-21T08:00:00+09:00") };
 
@@ -80,7 +83,7 @@ describe("toServedRoute", () => {
     // Arrange
     const [walk, ride] = (RUNNING as Extract<PlannedOption, { status: "running" }>).legs;
     const alight = call({ scheduledArrivalAt: kst("15:51"), scheduledDepartureAt: kst("15:52") });
-    const planned: PlannedOption = { status: "running", leaveAt: kst("14:23"), arriveAt: kst("15:51"), legs: [walk!, { ...(ride as Extract<typeof ride, { line: JourneyLine }>), alight }] };
+    const planned: PlannedOption = { status: "running", leaveAt: kst("14:23"), arriveAt: kst("15:51"), legs: [walk!, { ...(ride as Extract<typeof ride, { line: JourneyLine }>), alight }], warnings: [] };
 
     // Act
     const served = toServedRoute(ROUTE, { planned: [planned, ENDED], order: [0, 1] }, { places: PLACES, lang: "en" });
@@ -88,6 +91,19 @@ describe("toServedRoute", () => {
     // Assert
     expect(served.options[0]!.legs[1]).toMatchObject({ startAt: "2026-10-20T14:30:00+09:00", endAt: "2026-10-20T15:51:00+09:00", durationSec: 4860 });
     expect(served.options[0]!.legs[1]).toMatchObject({ alight: { scheduledArrivalAt: "2026-10-20T15:51:00+09:00", scheduledDepartureAt: "2026-10-20T15:52:00+09:00" } });
+  });
+
+  it("Late train: starts a ride at its board call's expected arrival when that is past its scheduled departure", () => {
+    // Arrange
+    const [walk, ride] = (RUNNING as Extract<PlannedOption, { status: "running" }>).legs;
+    const board = call({ scheduledArrivalAt: kst("14:29"), scheduledDepartureAt: kst("14:30"), expectedArrivalAt: kst("14:33"), basis: "provider" });
+    const planned: PlannedOption = { status: "running", leaveAt: kst("14:26"), arriveAt: kst("15:52"), legs: [walk!, { ...(ride as Extract<typeof ride, { line: JourneyLine }>), board }], warnings: [] };
+
+    // Act
+    const served = toServedRoute(ROUTE, { planned: [planned, ENDED], order: [0, 1] }, { places: PLACES, lang: "en" });
+
+    // Assert
+    expect(served.options[0]!.legs[1]).toMatchObject({ startAt: "2026-10-20T14:33:00+09:00", durationSec: 4740, board: { scheduledDepartureAt: "2026-10-20T14:30:00+09:00" } });
   });
 
   it("serves an option not running with no legs, its next service at +09:00, in the planner's order", () => {
@@ -101,6 +117,32 @@ describe("toServedRoute", () => {
     ]);
     expect(served.options[1]).toEqual({ id: "inja", name: "인자셔틀", mode: "shuttle", status: "notRunning", reason: "ended", nextServiceAt: "2026-10-21T08:00:00+09:00", leaveAt: null, arriveAt: null, legs: [], warnings: [] });
     expect(served.name).toBe("인사캠 → 자과캠");
+  });
+
+  it("serves each warning by its code and a message naming the board place of the ride it warns of, in the request language", () => {
+    // Arrange
+    const warned: PlannedOption = { ...RUNNING, warnings: [{ code: "tightTransfer", legIndex: 1 }, { code: "connectionAtRisk", legIndex: 1 }] } as PlannedOption;
+
+    // Act
+    const [en, ko] = (["en", "ko"] as const).map((lang) => toServedRoute(ROUTE, { planned: [warned, ENDED], order: [0, 1] }, { places: PLACES, lang }).options[0]!.warnings);
+
+    // Assert
+    expect(en).toEqual([
+      { code: "tightTransfer", message: "Tight transfer at bus_stop:hssc-bus-lot" },
+      { code: "connectionAtRisk", message: "You may miss the connection at bus_stop:hssc-bus-lot" },
+    ]);
+    expect(ko?.[0]).toEqual({ code: "tightTransfer", message: "bus_stop:hssc-bus-lot에서 갈아탈 시간이 빠듯해요" });
+  });
+
+  it("serves a not-started option's reason and its next service later this service day", () => {
+    // Arrange
+    const notStarted: PlannedOption = { status: "notRunning", reason: "notStarted", nextServiceAt: kst("06:00") };
+
+    // Act
+    const served = toServedRoute(ROUTE, { planned: [notStarted, RUNNING], order: [1, 0] }, { places: PLACES, lang: "ko" });
+
+    // Assert
+    expect(served.options[1]).toMatchObject({ id: "inja", status: "notRunning", reason: "notStarted", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
   });
 
   it("throws for a running option citing a place that was not resolved", () => {

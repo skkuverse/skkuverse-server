@@ -3,8 +3,8 @@ import type { Collection } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { mongoCollection } from "../../infra/mongo";
-import type { JongroRouteDocument } from "./bus-registry.document";
-import { jongroRouteDocument } from "./bus-registry.schema";
+import type { JongroRouteDocument, StationServiceHours } from "./bus-registry.document";
+import { jongroRouteDocument, jongroRouteServiceHours } from "./bus-registry.schema";
 
 type StoredRoute = Omit<JongroRouteDocument, "_id">;
 
@@ -28,6 +28,16 @@ export class BusRegistryRepository {
   async updateStations(routeId: string, fromVersion: string, route: StoredRoute): Promise<boolean> {
     const result = await this.routes().updateOne({ _id: routeId, stationsVersion: fromVersion }, { $set: route });
     return result.matchedCount === 1;
+  }
+
+  async listServiceHours(routeId: string): Promise<StationServiceHours[]> {
+    const doc = await this.routes().findOne({ _id: routeId }, { projection: { serviceHours: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS });
+    return doc === null ? [] : (jongroRouteServiceHours.parse(doc).serviceHours ?? []);
+  }
+
+  // WHY: one writer, the poller, so no version guard; the stations and their version stay as stored.
+  async updateServiceHours(routeId: string, serviceHours: readonly StationServiceHours[]): Promise<void> {
+    await this.routes().updateOne({ _id: routeId }, { $set: { serviceHours: [...serviceHours] } });
   }
 
   private routes(): Collection<JongroRouteDocument> {

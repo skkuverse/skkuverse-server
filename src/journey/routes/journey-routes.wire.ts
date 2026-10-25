@@ -48,8 +48,8 @@ const option = z.object({
   name: z.string(),
   mode: rideMode,
   status: z.enum(["running", "notRunning"]),
-  reason: z.enum(["ended", "unavailable"]).nullable(),
-  /** WHY: the next first departure when no run is left, from the timetable; null otherwise or when unknown. */
+  reason: z.enum(["ended", "notStarted", "unavailable"]).nullable(),
+  /** WHY: the next departure when no run is left, later this service day when `notStarted`; null otherwise or when unknown. */
   nextServiceAt: instant.nullable(),
   leaveAt: instant.nullable(),
   arriveAt: instant.nullable(),

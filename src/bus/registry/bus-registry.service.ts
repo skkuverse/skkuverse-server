@@ -7,7 +7,8 @@ import { TOPIS_ROUTES } from "../bus.constants";
 import type { JongroRoute } from "../bus.types";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
 import { BusRegistryBootstrappingError, BusRegistryMissingError } from "./bus-registry.error";
-import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
+import type { StationServiceHours } from "./bus-registry.document";
+import { toRegistryRoute, toRegistryStations, toStationServiceHours } from "./bus-registry.mapper";
 import { BusRegistryRepository } from "./bus-registry.repository";
 import {
   toAgreedTurnaroundTopisId,
@@ -19,7 +20,7 @@ import {
   toSyncDecision,
   toTurnaroundTopisId,
 } from "./bus-registry.rules";
-import type { ArrivalRowStation, ObservedStation, PendingObservation, RegistryRoute } from "./bus-registry.types";
+import type { ArrivalRowHours, ArrivalRowStation, ObservedStation, PendingObservation, RegistryRoute } from "./bus-registry.types";
 
 interface Observation {
   stations: ObservedStation[];
@@ -32,6 +33,9 @@ export class BusRegistryService {
   private readonly loaders = new Map<string, CachedLoader<RegistryRoute>>();
   private readonly pendingByRouteId = new Map<string, PendingObservation>();
   private readonly heldVersions = new Set<string>();
+  private readonly hoursLoaders = new Map<string, CachedLoader<StationServiceHours[]>>();
+  // WHY: the hours this poller last wrote per route, so an unchanged tick writes nothing.
+  private readonly writtenHoursByRouteId = new Map<string, string>();
   // WHY: the loader caches no miss, so a route that stays missing is read, and would be logged, on every request; one
   // line per route each REGISTRY_TTL_MS, as often as a stored route is read again.
   private readonly missingThrottle = createLogThrottle(REGISTRY_TTL_MS);
@@ -98,6 +102,29 @@ export class BusRegistryService {
     else if (decision.kind === "pending") this.pendingByRouteId.set(route.id, decision.pending);
     else if (decision.kind === "hold") this.hold(route, observation, decision.pending);
     else await this.apply(route, observation);
+  }
+
+  // WHY: TOPIS answers no rows overnight, so an empty tick keeps the stored hours, which name the next first run then;
+  // a change is written once, since TOPIS dates the hours by its service day.
+  async observeServiceHours(route: RegistryRoute, arrivals: readonly ArrivalRowHours[]): Promise<void> {
+    const hours = toStationServiceHours(arrivals);
+    const key = JSON.stringify(hours);
+    if (hours.length === 0 || this.writtenHoursByRouteId.get(route.id) === key) return;
+    await this.repository.updateServiceHours(route.id, hours);
+    this.writtenHoursByRouteId.set(route.id, key);
+    this.hoursLoaderOf(route.id).clear();
+  }
+
+  listServiceHours(routeId: string): Promise<StationServiceHours[]> {
+    return this.hoursLoaderOf(routeId).get();
+  }
+
+  private hoursLoaderOf(routeId: string): CachedLoader<StationServiceHours[]> {
+    const existing = this.hoursLoaders.get(routeId);
+    if (existing) return existing;
+    const loader = createCachedLoader({ name: `jongro_routes.${routeId}.service_hours`, ttlMs: REGISTRY_TTL_MS, load: () => this.repository.listServiceHours(routeId) });
+    this.hoursLoaders.set(routeId, loader);
+    return loader;
   }
 
   private async insert(route: JongroRoute, observation: Observation): Promise<void> {

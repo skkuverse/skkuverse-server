@@ -12,7 +12,9 @@ import type { BoardHours, ServiceSpan, TopisLegStations, TopisRide } from "./bus
 const DAY_MS = 86_400_000;
 const MINUTE_SEC = 60;
 
-type TopisBoardInput = { group: LiveGroup; row: JongroArrivalDoc | undefined; legStations: TopisLegStations; query: DepartureQuery };
+// WHY: the board row's hours, or the pole's last-known hours on the route when TOPIS stores no row overnight.
+type StopHours = Pick<JongroArrivalDoc, "term" | "firstTm" | "lastTm">;
+type TopisBoardInput = { group: LiveGroup; row: StopHours | undefined; legStations: TopisLegStations; query: DepartureQuery };
 
 /** WHY: an index placed by another stations version would read another stop's arrivals, so it places nothing. */
 export function toRouteStationIndexes(stop: Pick<IndexedStop, "routes"> | null, groupId: string, stationsVersion: string | null): number[] {
@@ -70,7 +72,7 @@ function toPredictedDepartures({ group, legStations, query }: TopisBoardInput): 
 }
 
 // WHY: TOPIS's end-of-service text at the board station ends its day early, so the next span is the next day's.
-function toActiveSpan(row: JongroArrivalDoc | undefined, isEnded: boolean, from: Date): ServiceSpan | null {
+function toActiveSpan(row: StopHours | undefined, isEnded: boolean, from: Date): ServiceSpan | null {
   const span = row ? toServiceSpan(row, from) : null;
   return span && isEnded && span.startsAt.getTime() <= from.getTime() ? toLaterSpan(span, 1) : span;
 }
@@ -80,7 +82,7 @@ function toContinuation(term: number | undefined, isServing: boolean, serviceEnd
 }
 
 // WHY: a stop with no first and last run stored serves a headway until TOPIS says the service ended, and names no next run.
-function toBoardHours(row: JongroArrivalDoc | undefined, isEnded: boolean, { from, until }: DepartureQuery): BoardHours {
+function toBoardHours(row: StopHours | undefined, isEnded: boolean, { from, until }: DepartureQuery): BoardHours {
   const span = toActiveSpan(row, isEnded, from);
   if (span === null) return { firstRunAt: null, continuation: toContinuation(row?.term, !isEnded, null), nextServiceAt: null };
   const isServing = span.startsAt.getTime() <= until.getTime();

@@ -3,6 +3,7 @@ import type { StopCall } from "../../shared/call.types";
 import { toCall } from "../../shared/call.util";
 import { toKstInstant } from "../../shared/kst-date.util";
 import type { LatLng } from "../../shared/lat-lng.types";
+import type { PlatformArrivals } from "../platform-arrivals/subway-platform-arrivals.types";
 import type { StoredTrainArrival, SubwayArrivalsDoc } from "../subway.document";
 import { toSubwayLine } from "../subway.rules";
 import type { PlatformDirection, SubwayDirection, SubwayPlatform, SubwayRegistry, SubwayStation } from "../subway.types";
@@ -22,9 +23,11 @@ function toScheduledArrivalAt(train: StoredTrainArrival, basis: StopCall["basis"
   return basis === "timetable" ? train.arrivalAt : null;
 }
 
-function toWireTrain(train: StoredTrainArrival, { platform, direction, serviceDate }: { platform: SubwayPlatform; direction: PlatformDirection; serviceDate: string }): WireTrain {
+type TrainAt = { platform: SubwayPlatform; direction: PlatformDirection; serviceDate: string };
+
+function toTrainCall(train: StoredTrainArrival, { platform, direction, serviceDate }: TrainAt): StopCall {
   const basis = CALL_BASIS_BY_SOURCE[train.source];
-  const stopCall: StopCall = {
+  return {
     status: toCallStatus(direction, platform.id, train),
     expectedArrivalAt: basis === "timetable" ? null : train.arrivalAt,
     expectedDepartureAt: null,
@@ -40,7 +43,13 @@ function toWireTrain(train: StoredTrainArrival, { platform, direction, serviceDa
     isExpress: train.express,
     providerText: null,
   };
-  return { ...toCall(stopCall), trainNo: train.trainNo };
+}
+
+const toWireTrain = (train: StoredTrainArrival, at: TrainAt): WireTrain => ({ ...toCall(toTrainCall(train, at)), trainNo: train.trainNo });
+
+/** WHY: a platform's trains as the calls its board serves, up then down, so a journey ride boards one by the same call. */
+export function toPlatformCalls({ platform, doc }: PlatformArrivals): StopCall[] {
+  return DIRECTIONS.flatMap((direction) => doc.directions[direction].map((train) => toTrainCall(train, { platform, direction: platform.directions[direction], serviceDate: doc.serviceDate })));
 }
 
 // WHY: a stop with no name is served as null, as a terminus is, not as a 500: a topology pushed ahead of a deploy may

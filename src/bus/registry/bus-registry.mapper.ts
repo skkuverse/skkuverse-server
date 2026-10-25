@@ -1,7 +1,7 @@
 import { isTopisPassThrough } from "../bus.rules";
 import type { JongroRoute } from "../bus.types";
-import type { JongroRouteDocument, RegistryStation } from "./bus-registry.document";
-import type { JongroStation, JongroStationMapping, ObservedStation, RegistryRoute } from "./bus-registry.types";
+import type { JongroRouteDocument, RegistryStation, StationServiceHours } from "./bus-registry.document";
+import type { ArrivalRowHours, JongroStation, JongroStationMapping, ObservedStation, RegistryRoute } from "./bus-registry.types";
 
 function toJongroStations(doc: JongroRouteDocument): JongroStation[] {
   const last = doc.stations.length - 1;
@@ -37,6 +37,10 @@ export function toRegistryRoute(route: JongroRoute, doc: JongroRouteDocument): R
     topisIds: doc.stations.map((station) => station.topisId),
     passThroughOrds: new Set(doc.stations.filter((station) => isTopisPassThrough(station.stationName)).map((station) => station.sequence)),
   };
+}
+
+export function toStationServiceHours(rows: readonly ArrivalRowHours[]): StationServiceHours[] {
+  return rows.flatMap(({ sequence, firstTm, lastTm }) => (firstTm !== undefined && lastTm !== undefined ? [{ sequence: Number(sequence), firstTm, lastTm }] : []));
 }
 
 export function toRegistryStations(stations: readonly ObservedStation[]): RegistryStation[] {

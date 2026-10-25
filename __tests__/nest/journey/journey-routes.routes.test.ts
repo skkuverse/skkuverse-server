@@ -285,6 +285,24 @@ describe("GET /journey/routes", () => {
     expectWire(journeyRoutes, res.body.data);
   });
 
+  // WHY: the service day starts at 03:00 KST, so before it the night after the last run reads 운행종료 (ended), and
+  // from it the morning before the 08:00 first run, more than the plan's three hours away, reads not started.
+  it.each([
+    ["02:30, before the service day starts", "2026-10-20T02:30:00+09:00", "ended"],
+    ["04:00, inside the service day", "2026-10-20T04:00:00+09:00", "notStarted"],
+  ])("No run in the window at %s: the option is %s, with the 08:00 first run next", async (_case, nowAt, reason) => {
+    // Arrange
+    const server = await boot(freshStores(), new Date(nowAt));
+
+    // Act
+    const res = await request(server).get("/journey/routes");
+
+    // Assert
+    const [toNsc] = res.body.data.routes as Route[];
+    expect(toNsc!.options).toEqual([expect.objectContaining({ id: "inja", status: "notRunning", reason, nextServiceAt: "2026-10-20T08:00:00+09:00", legs: [] })]);
+    expectWire(journeyRoutes, res.body.data);
+  });
+
   it("answers 503 JOURNEY_ROUTES_UNAVAILABLE with no Cache-Control when the dataset was never stored", async () => {
     // Arrange
     const stores = freshStores();
