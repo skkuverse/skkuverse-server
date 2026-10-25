@@ -5,8 +5,9 @@
  * surfaces as 403, the size cap (declared and mid-stream), the idle and overall
  * transfer timers, and the sandbox CSP for script-capable content types. axios
  * is mocked under the real attachment client and OUTBOUND_POLICY is
- * FakeOutboundPolicy (ADR 0023, D7); which hosts the production policy allows,
- * and its socket checks, are tested beside it in src/perimeter/current/.
+ * FakeOutboundPolicy (ADR 0023, D7); which hosts the production policy allows
+ * is tested beside that implementation, and the address checks beside
+ * src/shared/outbound-guard.util.ts.
  */
 
 jest.mock("axios", () => ({ get: jest.fn() }));
