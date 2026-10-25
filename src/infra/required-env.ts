@@ -3,6 +3,7 @@
  * value, and ConfigModule calls validateEnv(), which throws, so Nest fails its bootstrap loudly.
  * Each name is also in config/env.*.keys (__tests__/nest/config/env-manifest.test.ts).
  */
+import { perimeterModeErrors } from "../perimeter/perimeter-mode.rules";
 import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
 
 export interface EnvMode {
@@ -165,9 +166,18 @@ export function describeMissingRequired(env: NodeJS.ProcessEnv = process.env): s
   return listMissingRequired(env).map(({ name, env: key }) => `  ${name} (env: ${key})`);
 }
 
+function assertPerimeter(errors: readonly string[]): void {
+  if (errors.length > 0) throw new Error(`FATAL: Invalid perimeter:\n  ${errors.join("\n  ")}`);
+}
+
 export function validateEnv(env: NodeJS.ProcessEnv = process.env): void {
   const { nodeEnv, isTest } = envMode(env);
-  if (isTest) return;
+  const perimeter = perimeterModeErrors(env);
+  // WHY: a test sets its mode on purpose (jest.setup.ts), so a wrong one fails even where missing values pass.
+  if (isTest) {
+    assertPerimeter(perimeter);
+    return;
+  }
   const missing = describeMissingRequired(env);
   if (missing.length > 0) {
     throw new Error(
@@ -186,4 +196,5 @@ export function validateEnv(env: NodeJS.ProcessEnv = process.env): void {
   if (invalidRole.length > 0) {
     throw new Error(`FATAL: Invalid ROLE:\n  ${invalidRole.join("\n  ")}`);
   }
+  assertPerimeter(perimeter);
 }

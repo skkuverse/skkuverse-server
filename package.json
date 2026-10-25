@@ -15,8 +15,8 @@
   "scripts": {
     "start": "node dist/src/main.js",
     "prestart": "npm run build",
-    "dev": "npm run build && NODE_ENV=development npm run dev:watch",
-    "dev:prod-api": "npm run build && NODE_ENV=development USE_PROD_API=true npm run dev:watch",
+    "dev": "npm run build && NODE_ENV=development PERIMETER_MODE=local-dev HOST=127.0.0.1 npm run dev:watch",
+    "dev:prod-api": "npm run build && NODE_ENV=development PERIMETER_MODE=local-dev HOST=127.0.0.1 USE_PROD_API=true npm run dev:watch",
     "dev:watch": "concurrently -k \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"nodemon --watch dist dist/src/main.js\" \"nodemon --quiet --on-change-only --watch src --ext json --exec 'node scripts/copy-build-assets.js'\"",
     "build": "tsc -p tsconfig.build.json && node scripts/copy-build-assets.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
