@@ -127,6 +127,9 @@ describe("SubwayTrackingService.track", () => {
       source: "estimated",
       position: { stationId: "KR-1-P152", state: "arrived" },
       isFirstTrain: false,
+      isLastRun: false,
+      scheduledArrivalAt: new Date("2026-10-16T11:41:00.000Z"),
+      scheduledDepartureAt: new Date("2026-10-16T11:41:30.000Z"),
     });
   });
 
@@ -365,6 +368,10 @@ describe("SubwayTrackingService.track for an express passing stations it does no
       source: "estimated",
       position: { stationId: "KR-1-P157", state: "departed" },
       isFirstTrain: false,
+      isLastRun: false,
+      passedPlatformIds: ["KR-1-P154", "KR-1-1715"],
+      scheduledArrivalAt: new Date("2026-10-17T01:05:30.000Z"),
+      scheduledDepartureAt: new Date("2026-10-17T01:06:00.000Z"),
     });
   });
 });
@@ -396,6 +403,10 @@ describe("SubwayTrackingService.track for an express seen before its first stop"
       source: "estimated",
       position: { stationId: "KR-1-P152", state: "departed" },
       isFirstTrain: false,
+      isLastRun: false,
+      passedPlatformIds: ["KR-1-P152", "KR-1-P151", "KR-1-P150"],
+      scheduledArrivalAt: new Date("2026-10-17T01:25:00.000Z"),
+      scheduledDepartureAt: new Date("2026-10-17T01:25:30.000Z"),
     });
   });
 });
@@ -602,6 +613,9 @@ describe("SubwayTrackingService.track on a trainset line", () => {
       source: "estimated",
       position: { stationId: PANGYO, state: "arrived" },
       isFirstTrain: true,
+      isLastRun: false,
+      scheduledArrivalAt: new Date("2026-10-19T12:03:00.000Z"),
+      scheduledDepartureAt: new Date("2026-10-19T12:03:00.000Z"),
     });
   });
 

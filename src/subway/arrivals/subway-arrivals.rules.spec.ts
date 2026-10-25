@@ -6,10 +6,13 @@
  * place in its direction's list (nearest first, from 1) at an upstream
  * station whatever its state there, and unknown (null) for a station off the
  * list, a watched one such as Geumjeong included, or a train nothing has reported.
+ * A call's stops away (ADR 0022, D2) counts the stations with a stop before this one, plus one: 1 approaching
+ * and 0 standing here, i + 2 approaching the upstream platform at index i and i + 1 standing at or leaving it,
+ * leaving out the platforms the train's row passes, and null beyond the upstream platforms.
  */
 import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { SubwayPlatform } from "../subway.types";
-import { findPlatformName, findSubwayStation, toStopsAway } from "./subway-arrivals.rules";
+import { findPlatformName, findSubwayStation, toCallStopsAway, toStopsAway } from "./subway-arrivals.rules";
 
 const REGISTRY = subwayRegistryFixture();
 
@@ -106,5 +109,49 @@ describe("findPlatformName", () => {
   it.each(["KR-1-P151", "S1-4-499"])("finds no name for %s, which is neither a named neighbor nor served", (platformId) => {
     // Act & Assert
     expect(findPlatformName(platformId, REGISTRY)).toBeNull();
+  });
+});
+
+describe("toCallStopsAway, the call's stops away (ADR 0022, D2)", () => {
+  const SUNGKYUNKWAN = REGISTRY.stations[0]?.platforms[0] as SubwayPlatform;
+  // WHY: Sungkyunkwan Univ. down's upstream platforms, nearest first: Uiwang, Dangjeong, Gunpo.
+  const DOWN = SUNGKYUNKWAN.directions.down;
+  const at = (stationId: string, state: "approaching" | "arrived" | "departed") => ({ stationId, state });
+
+  it.each([
+    ["approaching the served platform", at("KR-1-0153", "approaching"), 1],
+    ["standing at the served platform", at("KR-1-0153", "arrived"), 0],
+    ["approaching 의왕, the nearest upstream platform", at("KR-1-P152", "approaching"), 2],
+    ["standing at 의왕", at("KR-1-P152", "arrived"), 1],
+    ["leaving 의왕", at("KR-1-P152", "departed"), 1],
+    ["approaching 당정, the second", at("KR-1-P151", "approaching"), 3],
+    ["standing at 당정", at("KR-1-P151", "arrived"), 2],
+    ["leaving 군포, the third", at("KR-1-P150", "departed"), 3],
+    ["approaching 군포", at("KR-1-P150", "approaching"), 4],
+    ["at 금정, beyond the upstream platforms", at("KR-1-P149", "departed"), null],
+    ["at 화서, after the served platform", at("KR-1-P154", "arrived"), null],
+  ] as const)("counts a local %s as %p", (_label, position, stopsAway) => {
+    // Act & Assert
+    expect(toCallStopsAway(DOWN, "KR-1-0153", { position, passedPlatformIds: [] })).toBe(stopsAway);
+  });
+
+  it.each([
+    ["leaving 군포, every platform before 성균관대 passed", at("KR-1-P150", "departed"), ["KR-1-P152", "KR-1-P151"], 1],
+    ["approaching 당정, which it passes", at("KR-1-P151", "approaching"), ["KR-1-P151"], 2],
+    ["leaving 당정, which it passes", at("KR-1-P151", "departed"), ["KR-1-P151"], 2],
+    ["approaching 군포, with 의왕 and 당정 passed", at("KR-1-P150", "approaching"), ["KR-1-P152", "KR-1-P151"], 2],
+  ] as const)("does not count the platforms an express's row passes: %s is %p", (_label, position, passedPlatformIds, stopsAway) => {
+    // Act & Assert
+    expect(toCallStopsAway(DOWN, "KR-1-0153", { position, passedPlatformIds })).toBe(stopsAway);
+  });
+
+  it("counts every upstream platform for a document written before the poller stored the passes", () => {
+    // Act & Assert
+    expect(toCallStopsAway(DOWN, "KR-1-0153", { position: at("KR-1-P150", "approaching") })).toBe(4);
+  });
+
+  it("knows nothing of a train nothing has reported", () => {
+    // Act & Assert
+    expect(toCallStopsAway(DOWN, "KR-1-0153", { position: null, passedPlatformIds: [] })).toBeNull();
   });
 });

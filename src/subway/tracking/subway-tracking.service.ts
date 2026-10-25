@@ -12,7 +12,7 @@ import type { PlatformSchedule } from "../timetable/subway-timetable.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { MAX_TRAINS_PER_DIRECTION } from "./subway-tracking.constants";
 import { toArrivalsDoc } from "./subway-tracking.mapper";
-import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents, toStopPlatformIdsByTrainNo } from "./subway-tracking.rules";
+import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents, toPassedPlatformIds, toStopPlatformIdsByTrainNo } from "./subway-tracking.rules";
 import type { RunMatcher, SourceCountdownRows, StationObservations, TrackedPlatform, TrackedTickListener, TrainHistory } from "./subway-tracking.types";
 
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
@@ -113,8 +113,14 @@ export class SubwayTrackingService {
       this.logRejections(estimated.rejections);
       return estimated.arrivals.slice(0, MAX_TRAINS_PER_DIRECTION);
     };
+    const stopPlatformIdsByTrainNo = toStopPlatformIdsByTrainNo(schedule.trains);
+    const documentedOf = (direction: SubwayDirection) =>
+      arrivalsOf(direction).map((arrival) => ({
+        arrival,
+        passedPlatformIds: toPassedPlatformIds(schedule.lineRoutes[direction], platformId, stopPlatformIdsByTrainNo.get(arrival.trainNo) ?? []),
+      }));
     const stamp = { _id: platformId, generatedAt: now, serviceDate: schedule.serviceDate };
-    return toArrivalsDoc(stamp, { up: arrivalsOf("up"), down: arrivalsOf("down") });
+    return toArrivalsDoc(stamp, { up: documentedOf("up"), down: documentedOf("down") });
   }
 
   // WHY: the live countdown is still served (ADR 0017, D5); the accuracy report later shows which was closer.
