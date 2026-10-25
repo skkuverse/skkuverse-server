@@ -2,31 +2,8 @@ import type { LinkActionType } from "../../shared/link-action.wire";
 import type { DeliveryCounts, DeliveryError } from "../miniapps.document";
 import type { MiniAppRegistry } from "../miniapps.types";
 
-export interface NotificationDraft {
-  title_ko?: unknown;
-  body_ko?: unknown;
-  title_en?: unknown;
-  body_en?: unknown;
-  actionType?: unknown;
-  actionValue?: unknown;
-}
-
-export interface NotificationContent {
-  title_ko: string;
-  body_ko: string;
-  title_en: string | null;
-  body_en: string | null;
-  actionType?: LinkActionType;
-  actionValue?: string;
-}
-
 /** WHY: the snapshot the sender was authorized against, so its link is checked against the same revision. */
 export type PushSender = { miniAppId: string; registry: Pick<MiniAppRegistry, "isKnownMiniAppTarget"> };
-
-/** WHY: the first-party game ids no target may name, held in code: `npm run data push` checks the registry against the games the target database stores, and `_dev` stores none. */
-export type PushLinkScope = PushSender & { gameIds: readonly string[] };
-
-export type DraftCheck = { problems: string[] } | { content: NotificationContent };
 
 /** WHY: what a send's own call came back as; a stored row with both fields null is still running, or never saved. */
 export type DeliveryStatus = "delivered" | DeliveryError["outcome"];
