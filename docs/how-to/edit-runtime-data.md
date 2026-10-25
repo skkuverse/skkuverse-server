@@ -260,7 +260,16 @@ npm run data -- pull app-platform-gates --prod
 npm run data -- push app-platform-gates --prod --note "iOS floor 3.6.2: <why>"
 ```
 
-The dataset has no default: a replica that never read a good revision answers 503 on the whole route, so a fresh database gets the dataset (`push --create`) before the deploy that first reads it.
+The dataset has no default: a replica that never read a good revision answers 503 on the whole route, so a fresh database gets the dataset (`push --create`) before the deploy that first reads it. The deploy rolls back when an api replica answers `/app/config` with anything but 200.
+
+Create it from the gates production serves now, and never from `__tests__/nest/app-config/fixtures/app-platform-gates.dataset.json`: that fixture holds the 2026-10-19 capture (3.5.0), which is lower than production's floor, so pushing it lowers the force-update floor.
+
+```bash
+curl -s "https://api.skkuverse.com/app/config?cb=$RANDOM" | jq '.data | {ios, android}' > /tmp/app-platform-gates.json
+npm run data -- push app-platform-gates --create --file /tmp/app-platform-gates.json --prod
+```
+
+The push prints the gates it will store. Before you type `y`, check that each platform's `minVersion`, `updateUrl` and `minOsVersion` are the values the `curl` printed from production. Run it from a checkout whose dataset catalog (`scripts/lib/datasets/`) knows `app-platform-gates`: `origin/dev` until the change that added it merges to `main`, and `main` after that. An older checkout answers `unknown dataset "app-platform-gates"`. What the move from the environment variables costs until that merge: [raise-the-minimum-app-version.md](raise-the-minimum-app-version.md#until-the-dataset-reaches-main).
 
 ### Check before a deploy
 
