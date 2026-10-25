@@ -47,6 +47,7 @@ export function perimeterTestDeps(overrides: Partial<PerimeterDeps> = {}): Perim
     host: "127.0.0.1",
     firebaseProjectId: "demo-perimeter-contract",
     settings: undefined,
+    quotas: undefined,
     counters: new MemoryPerimeterCounters(now),
     internalToken: throwingTokenReader,
     ...overrides,
