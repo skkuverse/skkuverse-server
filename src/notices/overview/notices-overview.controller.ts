@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
+import { CacheControl } from "../../http/cache-control.decorator";
 import { Lang } from "../../http/lang.decorator";
 import { withMeta } from "../../http/response.interceptor";
 import type { WithMeta } from "../../http/response.types";
@@ -15,6 +16,7 @@ export class NoticesOverviewController {
   constructor(private readonly overview: NoticesOverviewService) {}
 
   @Get("overview")
+  @CacheControl("no-store")
   async getOverview(
     @Query(new ZodValidationPipe(overviewRequest, "INVALID_PARAMS")) query: OverviewQuery,
     @Lang() lang: SupportedLang,

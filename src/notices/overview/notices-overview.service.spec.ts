@@ -1,11 +1,12 @@
 /**
  * NoticesOverviewService against stub retrieval and ai client. One block per
  * behavior: no candidates, degradation, budget pause, no answer, the
- * cache, and the bounded response time. Validation is overviewRequest's
+ * cache, the bounded response time, and NOTICE_OVERVIEW=off. Validation is overviewRequest's
  * (notices-overview.schema.spec.ts); the time is the injected clock's.
  */
 import { aiResponse, candidate } from "../../../__tests__/helpers/overview-fixtures";
 import type { Clock } from "../../infra/clock";
+import config from "../../infra/config";
 import { AI_TIMEOUT_MS, MAX_BUDGET_PAUSE_MS, RETRIEVAL_MAX_TIME_MS } from "./notices-overview.constants";
 import { NoticesOverviewService } from "./notices-overview.service";
 import type { AiOverviewResult } from "./notices-overview.types";
@@ -350,5 +351,31 @@ describe("bounded response time (answered within 24 s even when the ai never res
     // Assert
     expect(result).toEqual({ overview: null, meta: { cached: false, reason: "unavailable" } });
     expect(Date.now() - started).toBeLessThanOrEqual(BUDGET_MS);
+  });
+});
+
+describe("with NOTICE_OVERVIEW off", () => {
+  const overviewConfig = config.notices.overview as { enabled: boolean };
+
+  it("answers unavailable without retrieving or calling the ai", async () => {
+    // Arrange
+    const { service, retriever, ai } = setup();
+    retriever.retrieve.mockResolvedValue([candidate()]);
+    ai.generate.mockResolvedValue(ok());
+    const enabled = overviewConfig.enabled;
+    overviewConfig.enabled = false;
+
+    try {
+      // Act
+      const result = await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
+
+      // Assert
+      expect(result).toEqual({ overview: null, meta: { cached: false, reason: "unavailable" } });
+      // Each overview the switch lets through is one paid ai call; retrieval runs a query-time embedding.
+      expect(ai.generate).not.toHaveBeenCalled();
+      expect(retriever.retrieve).not.toHaveBeenCalled();
+    } finally {
+      overviewConfig.enabled = enabled;
+    }
   });
 });

@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-24
+last-updated: 2026-10-25
 audience: internal
 ---
 
@@ -25,6 +25,7 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | `SHUTTLE` | `off` | `on` | (A collector detail is left out of the public history.) |
 | `REGIONAL_BUS` | `off` | `on` | No TOPIS call for the regional routes (7800): neither its realtime poller (`jongro-7800`) nor its daily line sync (`jongro-path-7800`) runs. On a database where no 7800 poller ever stored its stations (a laptop's `_dev`), `/bus/live/gyeonggi7800` answers `503 JONGRO_REGISTRY_UNAVAILABLE` and logs `bus.jongro.registry_missing` at most every 30 s; where they are stored, it answers `noData`, as for a stopped poller. The key's daily quota per operation is production's too, with 6,752 arrival calls a day to spare. Production may set it `off`. |
 | `GBIS` | `off` | `on` | No GBIS call for 7800's seats: its seat poller (`gbis-seats-7800`) does not run, so `/bus/live/gyeonggi7800` serves every `vehicle.seatsLeft` as `null` once the stored answer is 200 s old. The key's GBIS quota is 1,000 calls a day, production's too, which spends up to 867 of it. Production may set it `off`. |
+| `NOTICE_OVERVIEW` | `on` | `off` | No skkuverse-ai call for a search overview: `GET /notices/overview` answers `data.overview: null` with `meta.reason: "unavailable"` before it retrieves, so the app hides the card. The reverse of the others: production defaults it `off` until the route has a cost guard, and development keeps the feature working. Tests turn it on in `jest.setup.ts`. |
 
 `CACHE=off` leaves two caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 
