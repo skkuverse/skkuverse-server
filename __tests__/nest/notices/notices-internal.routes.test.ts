@@ -17,14 +17,13 @@ import { NoticesDispatchService } from "../../../src/notices/dispatch/notices-di
 import { sweepSummary } from "../../../src/notices/dispatch/notices-dispatch.wire";
 import type { NoticeDoc } from "../../../src/notices/notices.document";
 import { NoticesModule } from "../../../src/notices/notices.module";
-import { InternalAuthorizer, RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { InternalAuthorizer } from "../../../src/perimeter/perimeter.ports";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeNoticesDispatchClient } from "../../helpers/fakes/notices/notices-dispatch.client.fake";
 import { FakeNoticesDispatchRepository } from "../../helpers/fakes/notices/notices-dispatch.repository.fake";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -54,7 +53,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, NoticesModule, NoticesDispatchModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: NoticesDispatchRepository, useValue: repository },
       { provide: NoticesDispatchClient, useValue: client },
       { provide: Clock, useValue: fakeClock },

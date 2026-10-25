@@ -16,7 +16,8 @@ import { bootstrapHttpApp } from "../../../src/http/http-app.bootstrap";
 import { RAW_BODY_ROUTE_PATHS } from "../../../src/miniapps/notifications/miniapps-notifications.constants";
 import { PerimeterModule } from "../../../src/perimeter/perimeter.module";
 import { toTestStub } from "../../../src/perimeter/perimeter-registry.rules";
-import { OriginTrust } from "../../../src/perimeter/perimeter.ports";
+import { OriginTrust, RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
+import { FakeRateLimitPolicy } from "../fakes/perimeter/rate-limit-policy.fake";
 
 export interface OverrideSpec {
   provide: unknown;
@@ -56,6 +57,8 @@ export async function buildTestApp({ imports, overrides = [], role }: TestAppOpt
   }
   const unfakedOriginTrust = overrides.some((o) => o.provide === OriginTrust) ? undefined : new UnfakedOriginTrust();
   if (unfakedOriginTrust) builder.overrideProvider(OriginTrust).useValue(unfakedOriginTrust);
+  // Every limited route reaches RATE_LIMIT_POLICY; a test that reads the counts passes its own fake.
+  if (!overrides.some((o) => o.provide === RateLimitPolicy)) builder.overrideProvider(RateLimitPolicy).useValue(new FakeRateLimitPolicy());
   const moduleRef = await builder.compile();
 
   const app = await bootstrapHttpApp(

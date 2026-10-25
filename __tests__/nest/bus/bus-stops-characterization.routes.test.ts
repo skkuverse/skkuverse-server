@@ -72,8 +72,6 @@ import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen
 import { withLineDirections, withoutLineDirections } from "../../helpers/bus/line-directions";
 import captured from "./fixtures/bus-stops-production.capture.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
@@ -292,7 +290,7 @@ beforeAll(async () => {
   const clock: Clock = { now: () => new Date(CAPTURED_AT) };
   app = await buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/", "src/ui/transit-list/", "src/ui/transit/"),
-    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: clock }],
+    overrides: [{ provide: Clock, useValue: clock }],
     role: "api",
   });
 }, APP_BOOT_TIMEOUT_MS);

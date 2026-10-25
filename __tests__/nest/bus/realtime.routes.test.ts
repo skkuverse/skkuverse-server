@@ -28,8 +28,6 @@ import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.reposi
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const busCache = new FakeBusCacheRepository();
@@ -42,7 +40,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, BusCacheModule, BusRegistryModule, BusRealtimeModule, BusRealtimeHsscModule, BusRealtimeJongroModule, BusRealtimeGroupModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: busCache },
       { provide: BusRegistryRepository, useValue: registryRepository },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },

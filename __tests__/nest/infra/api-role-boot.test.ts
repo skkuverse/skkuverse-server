@@ -23,8 +23,6 @@ import { Clock } from "../../../src/infra/clock";
 import { requiredValues } from "../../../src/infra/required-env";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type BuildPollerApp = typeof import("../../helpers/nest/poller-app")["buildPollerApp"];
@@ -89,7 +87,7 @@ async function bootAndSettle(role: "api" | "poller"): Promise<void> {
   jest.spyOn(PollerRegistryService.prototype, "registerPoller").mockImplementation(() => undefined);
   app = await buildTestApp({
     imports: appModulesUnder("src/"),
-    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: CLOCK }],
+    overrides: [{ provide: Clock, useValue: CLOCK }],
     role,
   });
   await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));

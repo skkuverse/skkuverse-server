@@ -22,8 +22,6 @@ import { buildingDetail, buildingList } from "../../../src/building/catalog/buil
 import { buildingSearchData, buildingSearchMeta } from "../../../src/building/search/building-search.wire";
 import { BuildingCatalogModule } from "../../../src/building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "../../../src/building/search/building-search.module";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -59,7 +57,6 @@ beforeAll(async () => {
     // app.module.ts order: search registers /building/search before catalog's /building/:skkuId.
     imports: [BuildingSearchModule, BuildingCatalogModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BuildingRepository, useValue: buildings },
       { provide: BuildingCatalogRepository, useValue: catalog },
       { provide: BuildingSearchRepository, useValue: search },

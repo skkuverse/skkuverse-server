@@ -117,8 +117,6 @@ import { storedStationCoordsRepository } from "../../helpers/subway/station-coor
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 import proposal from "../bus/fixtures/bus-stops-7800-proposal.json";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const TUESDAY = "2026-10-20";
 const at = (clock: string, day = TUESDAY) => new Date(`${day}T${clock}+09:00`);
@@ -166,7 +164,6 @@ async function boot(now: Date, rows: Rows = {}, seats: Seats = [], jongro08Hours
       ...[JourneyModule, JourneyDeparturesModule, JourneyPlacesModule, JourneyRoutesModule],
     ],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: busCache },
       { provide: BusRegistryRepository, useValue: registry },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },

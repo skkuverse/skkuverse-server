@@ -82,8 +82,6 @@ import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.c
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeJourneyRepository } from "../../helpers/fakes/journey/journey.repository.fake";
 import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: Tuesday 2026-10-20 14:10 KST, with the afternoon 인자셔틀 runs ahead.
 const AT_14_10_KST = new Date("2026-10-20T05:10:00.000Z");
@@ -143,7 +141,6 @@ async function boot(stores: Stores, now = AT_14_10_KST): Promise<import("http").
       ...[BusDeparturesTimetableModule, JourneyModule, JourneyDeparturesModule, JourneyPlacesModule, JourneyRoutesModule],
     ],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusCacheRepository, useValue: new FakeBusCacheRepository() },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },

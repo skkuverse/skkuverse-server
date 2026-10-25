@@ -58,8 +58,6 @@ import { campusSheet } from "../../../src/ui/campus/ui-campus.wire";
 import { homeLayout } from "../../../src/ui/home/ui-home.wire";
 import { scrollCards, scrollCardsMeta } from "../../../src/ui/scroll/ui-scroll.wire";
 import { transitList, transitListMeta } from "../../../src/ui/transit-list/ui-transit-list.wire";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
@@ -97,7 +95,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, UiModule, UiHomeModule, UiTransitListModule, UiScrollModule, UiCampusModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
@@ -315,7 +312,6 @@ describe("GET /ui/home over other stored layouts", () => {
     other = await buildTestApp({
       imports: [UiModule, UiHomeModule],
       overrides: [
-        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: Clock, useValue: CLOCK },
         { provide: UiHomeRepository, useValue: storedHomeLayout(layout) },
         { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },
@@ -369,7 +365,6 @@ describe("GET /ui/home/campus over other stored banners", () => {
     other = await buildTestApp({
       imports: [UiModule, UiCampusModule],
       overrides: [
-        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: Clock, useValue: CLOCK },
         { provide: UiCampusRepository, useValue: storedCampusBanners(banners) },
         { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },

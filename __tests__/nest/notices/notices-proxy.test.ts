@@ -22,11 +22,10 @@ import * as attachmentConstants from "../../../src/notices/attachment/notices-at
 import { NoticesAttachmentModule } from "../../../src/notices/attachment/notices-attachment.module";
 import { NoticesModule } from "../../../src/notices/notices.module";
 import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
-import { OutboundPolicy, RateLimitPolicy, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
+import { OutboundPolicy, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { FakeOutboundPolicy, FakeOutboundRefusal } from "../../helpers/fakes/perimeter/outbound-policy.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const mockedGet = axios.get as unknown as jest.Mock;
 
@@ -66,7 +65,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [NoticesModule, NoticesTabsModule, NoticesAttachmentModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: RequestAuthenticator, useValue: new FakeRequestAuthenticator() },
       { provide: Clock, useValue: fakeClock },
       { provide: OutboundPolicy, useValue: outbound },
