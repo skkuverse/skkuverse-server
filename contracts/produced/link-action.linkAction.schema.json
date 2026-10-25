@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "actionType": {
+      "type": "string",
+      "enum": [
+        "miniapp",
+        "external",
+        "webview",
+        "route"
+      ]
+    },
+    "actionValue": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "actionType",
+    "actionValue"
+  ]
+}

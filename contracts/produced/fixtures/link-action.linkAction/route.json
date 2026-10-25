@@ -1,0 +1,7 @@
+{
+  "_about": "Synthetic, never captured: the piece is served only inside the place wire, where no place carries one yet; a route action to the transit tab.",
+  "data": {
+    "actionType": "route",
+    "actionValue": "/transit"
+  }
+}

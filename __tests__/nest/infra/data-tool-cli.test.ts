@@ -491,7 +491,7 @@ describe("npm run data", () => {
 
 describe("npm run data bus-stops against the stored timetables", () => {
   const BUS_CAMPUS = "bus_campus";
-  const env = () => ({ MONGO_URL: mongoUrl, MONGO_CONTENT_DB_NAME: BASE, MONGO_DB_NAME_BUS_CAMPUS: BUS_CAMPUS });
+  const env = () => ({ MONGO_URL: mongoUrl, MONGO_CONTENT_DB_NAME: BASE, MONGO_DB_NAME_BUS_CAMPUS: BUS_CAMPUS, MONGO_BUILDING_DB_NAME: "skkumap" });
   const COMMUTE_FILE = path.join(REPO, "scripts/data/commute-schedule.json");
   const commuteTimetable = () => JSON.parse(fs.readFileSync(COMMUTE_FILE, "utf8"));
   const timetableDocs = (raw: unknown): Array<Record<string, any>> => buildDocuments(parseTimetableFile(raw));

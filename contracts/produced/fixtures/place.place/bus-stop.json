@@ -1,0 +1,14 @@
+{
+  "_about": "Synthetic, never captured from production: the board place of the 인자셔틀 ride in journey-routes.journeyRoutes/running.json, a bus stop no tap opens yet.",
+  "data": {
+    "kind": "bus_stop",
+    "id": "hssc-bus-lot",
+    "name": "학생회관 버스 주차장",
+    "coords": {
+      "lat": 37.587367,
+      "lng": 126.993643
+    },
+    "platformId": null,
+    "action": null
+  }
+}
