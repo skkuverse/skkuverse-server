@@ -17,6 +17,7 @@
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
 import { WEB_ORIGIN } from "../infra/origins";
 import { parseShellFields, resolveLogo, toIndexEntry, toMiniAppRegistry } from "./miniapps.mapper";
+import { newSigningKey } from "../../__tests__/helpers/miniapps/signing-keys";
 import { checkedRegistry, type MiniAppIndexEntryRaw } from "./miniapps.schema";
 
 const WEB = "https://web.test";
@@ -234,5 +235,29 @@ describe("toMiniAppRegistry", () => {
     // Act & Assert
     expect(snapshot().isSingleEmoji("👩‍🍳")).toBe(true);
     expect(snapshot().isSingleEmoji("🍢🍗")).toBe(false);
+  });
+});
+
+describe("toMiniAppRegistry sender credentials", () => {
+  const { keyId, publicKey } = newSigningKey();
+  const SIGNING_KEY = { keyId, publicKey };
+  const registryWith = (credentials: Record<string, unknown>) => {
+    const raw = fixtureRegistry();
+    raw.details.mukja = { ...raw.details.mukja, ...credentials };
+    return toMiniAppRegistry(checkedRegistry.parse(raw), 7, WEB_ORIGIN);
+  };
+
+  it("answers a sender with the status, scopes and signing keys its entry carries", () => {
+    // Act
+    const registry = registryWith({ status: "active", scopes: ["push.send"], signingKeys: [SIGNING_KEY] });
+
+    // Assert
+    expect(registry.senderCredentialsOf("mukja")).toEqual({ status: "active", scopes: ["push.send"], signingKeys: [SIGNING_KEY] });
+    expect(registry.senderCredentialsOf("hssc")).toEqual({ status: "pending", scopes: [], signingKeys: [] });
+  });
+
+  it("answers a sender that sets only its status with no scopes and no signing keys", () => {
+    // Act & Assert
+    expect(registryWith({ status: "suspended" }).senderCredentialsOf("mukja")).toEqual({ status: "suspended", scopes: [], signingKeys: [] });
   });
 });

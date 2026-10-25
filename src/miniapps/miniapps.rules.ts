@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { AppError } from "../http/app.error";
 import { parseMiniAppTarget } from "../shared/miniapp-target.util";
 import { isOnWebviewOrigin, toWebviewUrl } from "../shared/webview-url.util";
@@ -18,6 +19,23 @@ export function isSingleEmoji(value: string): boolean {
  */
 export function isServableStartUrl(startUrl: string): boolean {
   return !isOnWebviewOrigin(startUrl) || toWebviewUrl(startUrl) !== null;
+}
+
+const SIGNING_PUBLIC_KEY_RE = /^[A-Za-z0-9_-]{43}$/;
+const ED25519_PUBLIC_KEY_BYTES = 32;
+const KEY_ID_HEX_CHARS = 16;
+
+// SEE: docs/how-to/register-a-miniapp.md ("Register a signing key") — canonical only: the 4 unused bits of the
+// last character are 0, so one key has one spelling.
+export function isIssuedSigningKey({ keyId, publicKey }: { keyId: string; publicKey: string }): boolean {
+  if (!SIGNING_PUBLIC_KEY_RE.test(publicKey)) return false;
+  const raw = Buffer.from(publicKey, "base64url");
+  if (raw.length !== ED25519_PUBLIC_KEY_BYTES || raw.toString("base64url") !== publicKey) return false;
+  return keyId === createHash("sha256").update(raw).digest("hex").slice(0, KEY_ID_HEX_CHARS);
+}
+
+export function toDuplicateKeyIdIssues(keys: ReadonlyArray<{ keyId: string }>): RegistryIssue[] {
+  return keys.flatMap(({ keyId }, i) => (keys.findIndex((other) => other.keyId === keyId) === i ? [] : [{ path: [i], message: `duplicate keyId "${keyId}"` }]));
 }
 
 export function isKnownMiniAppTarget(value: unknown, registry: ReadonlyMap<string, unknown>): boolean {
