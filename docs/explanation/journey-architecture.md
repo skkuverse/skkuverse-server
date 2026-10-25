@@ -57,6 +57,7 @@ flowchart LR
 | Field | App use |
 | --- | --- |
 | `routes[].from`, `to`, `name` | The planner's two ends and its title |
+| a place's `action` | A tap opens the map at that place |
 | `options[].status`, `reason`, `nextServiceAt` | Whether an option runs now; an ended one shows its next first departure |
 | `options[].leaveAt`, `arriveAt` | When to leave and when the option arrives, counted against `meta.serverNow` |
 | `legs[].kind`, `mode`, `label`, `icon`, `color` | Each leg's row; an unknown kind draws from these alone |
@@ -66,6 +67,7 @@ flowchart LR
 ## Invariants
 
 - A place is cited, never copied: the dataset holds `<kind>:<id>` refs, and each resolves through its owning catalog at push (`toPlaceIssues`, against the target environment) and again at plan time (`JourneyPlacesService`). A place that no longer resolves serves the options citing it as unavailable, and a route end that does not leaves the route out.
+- A stop, station or building place's tap `action` is a `route` to `/map?place=<kind>:<id>` (`toPlaceAction`), by the id its catalog serves: a stop's canonical id, never its `seoul-<arsId>` alias. A stop area and the rider's location are not tappable.
 - A `bus-stops` push reruns this dataset's checks (`recheckTriggers`), so it cannot drop a cited stop, the alias an unlisted route's cited pole needs, or the sequence order a cited ride boards by.
 - Each ride boards the first run catchable a catch margin after the legs before it; the legs before the first ride are timed back from it (`planOption`). A vehicle with no seat left is skipped, and unknown seats are boardable.
 - A ride's `basis` is the weaker of its two calls (`toLegBasis`); an alight the door cannot place takes the leg's `rideMinutes` as an estimate.
@@ -76,7 +78,6 @@ flowchart LR
 
 ## Open questions
 
-- A place's tap `action` is served null until the app decides where a tap on a stop, building or station opens.
 - Stop areas resolve at push in `bus-stops` but not in the planner; a route end at a stop area waits for that.
 - The TOPIS and subway doors, transfers and `warnings` land with the options that need them ([transit-route-planner.md](../plans/transit-route-planner.md)).
 

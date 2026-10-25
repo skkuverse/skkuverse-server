@@ -2,7 +2,7 @@
  * Integration over JourneyRoutesController (GET /journey/routes) through the production pipeline (buildTestApp), with
  * revision 1 of `journey-routes` (the two 인자셔틀 options between 인사캠 정문 and 자과캠 정문): 200 with
  * `private, max-age=15`, `meta.serverNow` and both routes in data order, each option a walk to the boarding stop, the
- * 인자셔틀 ride and a walk to 정문, with places named in the request language; the ride's board call equals the stop
+ * 인자셔틀 ride and a walk to 정문, with places named in the request language and each tapped open on the map at it; the ride's board call equals the stop
  * page's call for the same run at 학생회관 버스 주차장, and its alight call the stop page's at N센터 앞 (ADR 0022, D1);
  * after Friday's last run the option is not running, ended, with Monday's first departure as its next service; and the
  * dataset never read answers 503 JOURNEY_ROUTES_UNAVAILABLE with no Cache-Control.
@@ -249,6 +249,25 @@ describe("GET /journey/routes", () => {
       "INJA Shuttle",
       "Walk",
     ]);
+  });
+
+  it("serves each place's tap as a route to the map at that place", async () => {
+    // Arrange
+    const server = await boot(freshStores());
+
+    // Act
+    const res = await request(server).get("/journey/routes");
+
+    // Assert
+    const [toNsc] = res.body.data.routes as Route[];
+    const ride = rideOf(toNsc!);
+    expect([toNsc!.from.action, ride.from.action, ride.to.action, toNsc!.to.action]).toEqual([
+      { actionType: "route", actionValue: "/map?place=skku_building:1" },
+      { actionType: "route", actionValue: "/map?place=bus_stop:hssc-bus-lot" },
+      { actionType: "route", actionValue: "/map?place=bus_stop:nsc-n-center" },
+      { actionType: "route", actionValue: "/map?place=skku_building:7" },
+    ]);
+    expectWire(journeyRoutes, res.body.data);
   });
 
   it("Ended: after Friday's last run the option is not running, with Monday's first departure as its next service", async () => {
