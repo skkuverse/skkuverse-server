@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { linkActionType } from "../../shared/link-action.wire";
+import { DELIVERY_OUTCOMES, type DELIVERY_COUNTS } from "../miniapps.constants";
 
 /** WHY: in the request's language, falling back to Korean: a push carries ko and en only. */
 const miniAppFeedEntry = z.object({
@@ -14,10 +15,10 @@ const miniAppFeedEntry = z.object({
 /** CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/miniapps/feed-parse.ts. */
 export const miniAppFeed = z.array(miniAppFeedEntry);
 
-const deliveryCounts = z.object({ sent: z.number(), failed: z.number(), cleanedUp: z.number() });
+/** WHY: `satisfies` holds the keys to DELIVERY_COUNTS both ways, as the stored row's counts are. */
+const deliveryCounts = z.object({ sent: z.number(), failed: z.number(), cleanedUp: z.number() } satisfies Record<(typeof DELIVERY_COUNTS)[number], z.ZodNumber>);
 
-/** WHY: what a send's own call came back as; only `not_sent` is safe to resend. */
-const deliveryStatus = z.enum(["delivered", "not_sent", "unknown"]);
+const deliveryStatus = z.enum(DELIVERY_OUTCOMES);
 
 /** SEE: docs/reference/miniapps-api.md ("5.4 Signed calls") — what a sender reads back after a send. */
 export const sendOutcome = z.object({

@@ -19,6 +19,11 @@ export const SMALL_ORDER_PUBLIC_KEYS: ReadonlySet<string> = new Set([
   "JuiVj8KyJ7BFw_SJ8u-Y8NXfrAXTxjM5sTgCiG1T_IU",
 ]);
 
+// WHY: what a send's own Cloud Function call came back as; only `not_sent` is safe to resend.
+export const DELIVERY_OUTCOMES = ["delivered", "not_sent", "unknown"] as const;
+
+export const DELIVERY_COUNTS = ["sent", "failed", "cleanedUp"] as const;
+
 export const SIGNING_KEY_MESSAGE = "a signing key is a 43-character base64url Ed25519 public key and its keyId, the first 16 hex characters of its SHA-256";
 
 /**
