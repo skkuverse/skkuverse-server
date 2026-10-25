@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { TOPIS_ROUTES } from "../bus.constants";

@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/nestjs";
 import type { Collection } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import { parseEach } from "../../shared/zod-list.util";

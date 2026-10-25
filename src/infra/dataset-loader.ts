@@ -2,7 +2,7 @@ import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../shared/dataset
 import { createCachedLoader } from "./cached-loader";
 import type { Clock } from "./clock";
 import config from "./config";
-import { createLogThrottle } from "./log-throttle";
+import { createLogThrottle } from "../shared/log-throttle.util";
 import logger from "./logger";
 
 /**

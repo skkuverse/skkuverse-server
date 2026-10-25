@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { CalendarService } from "../../calendar/calendar.service";
 import { Clock } from "../../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createLogThrottle } from "../../shared/log-throttle.util";
 import logger from "../../infra/logger";
 import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../../shared/dataset.constants";
 import type { NetworkPlatform } from "../subway.types";
