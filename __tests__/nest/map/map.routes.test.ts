@@ -44,8 +44,6 @@ import { expectWire } from "../../helpers/contracts/expect-wire";
 import { mapConfig } from "../../../src/map/config/map-config.wire";
 import { eventPlaceDetails } from "../../../src/map/event-details/map-event-details.wire";
 import { mapOverlays } from "../../../src/map/map.wire";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -113,7 +111,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [MapModule, MapLayerSetModule, MapConfigModule, MapCampusModule, MapEventModule, MapEventDetailsModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BuildingRepository, useValue: buildings },
       { provide: MapRepository, useValue: map },
       { provide: MapLayerSetRepository, useValue: fixtureLayerSetRepository() },
@@ -329,7 +326,6 @@ async function bootMapApp(map: FakeMapRepository, layerSets: FakeMapLayerSetRepo
   return buildTestApp({
     imports: [MapModule, MapLayerSetModule, MapConfigModule, MapCampusModule, MapEventModule, MapEventDetailsModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
       { provide: MapRepository, useValue: map },
       { provide: MapLayerSetRepository, useValue: layerSets },

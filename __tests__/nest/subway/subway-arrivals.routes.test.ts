@@ -58,8 +58,6 @@ import { storedSubwayTopologyRepository, subwayRegistryFixture } from "../../hel
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 import { stationCoordsFixture, storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import type { FakeSubwayStationCoordsRepository } from "../../helpers/fakes/subway/subway-station-coords.repository.fake";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const clock = { current: at("20:41:00"), now(): Date { return this.current; } };
@@ -75,7 +73,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [CalendarModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: SubwayRepository, useValue: subwayRepository },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
@@ -463,7 +460,6 @@ describe("GET /subway/stations/:stationId/arrivals with stored coords that lack 
     lackingApp = await buildTestApp({
       imports: [CalendarModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
       overrides: [
-        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
         { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },

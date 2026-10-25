@@ -29,8 +29,6 @@ import { storedRouteAttributesRepository } from "../../helpers/bus/route-attribu
 import { busStopsFixture, storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { HSSC_STOP_IDS } from "../../helpers/bus/station-stop-ids";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const registryRepository = storedBusRegistryRepository();
 
@@ -41,7 +39,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, BusStopsModule, BusConfigModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusRegistryRepository, useValue: registryRepository },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
@@ -491,7 +488,6 @@ describe("GET /bus/config/hssc for a bus-stops revision without HSSC subtitles",
     bareApp = await buildTestApp({
       imports: [SchedulingModule, BusStopsModule, BusConfigModule],
       overrides: [
-        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },
@@ -534,7 +530,6 @@ describe("GET /bus/config realtime station drop-off only", () => {
     flaggedApp = await buildTestApp({
       imports: [SchedulingModule, BusStopsModule, BusConfigModule],
       overrides: [
-        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },
@@ -625,7 +620,6 @@ describe("GET /bus/config realtime station stop ids by national station id", () 
     aliasedApp = await buildTestApp({
       imports: [SchedulingModule, BusStopsModule, BusConfigModule],
       overrides: [
-        { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },

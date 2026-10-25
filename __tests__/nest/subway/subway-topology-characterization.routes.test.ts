@@ -44,8 +44,6 @@ import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/subway-arrivals-production.capture.json";
 import night from "./fixtures/subway-arrivals-night.golden.json";
 import seeded from "./fixtures/subway-arrivals-seed.json";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const store = require("../../../scripts/lib/datasets/store");
@@ -186,7 +184,7 @@ beforeAll(async () => {
   const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   app = await buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/subway/"),
-    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: CLOCK }],
+    overrides: [{ provide: Clock, useValue: CLOCK }],
     role: "api",
   });
 }, APP_BOOT_TIMEOUT_MS);

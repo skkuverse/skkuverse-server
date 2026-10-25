@@ -46,8 +46,6 @@ import { appModulesUnder } from "../../helpers/nest/app-modules";
 import proposal from "./fixtures/bus-stops-7800-proposal.json";
 import pinned from "./fixtures/stop-calls-pinned.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
@@ -246,7 +244,7 @@ let buildTestApp: BuildTestApp;
 async function boot(at: string): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/"),
-    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: { now: () => new Date(at) } }],
+    overrides: [{ provide: Clock, useValue: { now: () => new Date(at) } }],
     role: "api",
   });
 }

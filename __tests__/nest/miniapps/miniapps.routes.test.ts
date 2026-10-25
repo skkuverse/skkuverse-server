@@ -38,8 +38,6 @@ import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { miniAppIndex } from "../../../src/miniapps/catalog/miniapps-catalog.wire";
 import { miniAppDetail } from "../../../src/miniapps/miniapps.wire";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -51,7 +49,6 @@ function bootCatalogApp(registry: FakeMiniappsRepository): Promise<NestExpressAp
   return buildTestApp({
     imports: [ConfigModule, SchedulingModule, MiniappsModule, MiniappsNotificationsModule, MiniappsCatalogModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: MiniappsRepository, useValue: registry },
       { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },

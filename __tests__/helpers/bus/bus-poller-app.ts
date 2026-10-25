@@ -27,8 +27,6 @@ import { FakeBusRealtimeJongroClient } from "../fakes/bus/bus-realtime-jongro.cl
 import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake";
 import { appModulesUnder } from "../nest/app-modules";
 import { buildTestApp } from "../nest/build-test-app";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../fakes/perimeter/rate-limit-policy.fake";
 
 export interface BusPollerUpstreams {
   naver: FakeBusEtaTravelClient;
@@ -41,7 +39,6 @@ export function buildBusPollerApp({ naver, topis, tmap = new FakeBusEtaForecastC
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/"),
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: BusEtaForecastClient, useValue: tmap },
       { provide: BusEtaProbeClient, useValue: topis },
       { provide: BusEtaTravelClient, useValue: naver },

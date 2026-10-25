@@ -22,8 +22,6 @@ import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeGamesRepository } from "../../helpers/fakes/games/games.repository.fake";
 import { emptyGames, listedGames } from "../../helpers/games/games-fixture";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // WHY: one fixed instant, so nothing these routes answer depends on the day the suite runs.
 const CLOCK: Clock = { now: () => new Date("2026-10-21T03:00:00.000Z") };
@@ -32,7 +30,6 @@ function bootGamesApp(registry: FakeGamesRepository, clock: Clock = CLOCK): Prom
   return buildTestApp({
     imports: [ConfigModule, SchedulingModule, GamesModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: GamesRepository, useValue: registry },
       { provide: Clock, useValue: clock },
     ],

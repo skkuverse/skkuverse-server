@@ -22,13 +22,12 @@ import { NoticesListRepository } from "../../../src/notices/list/notices-list.re
 import { noticeList } from "../../../src/notices/list/notices-list.wire";
 import type { NoticeDoc } from "../../../src/notices/notices.document";
 import { NoticesModule } from "../../../src/notices/notices.module";
-import { RateLimitPolicy, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
+import { RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeNoticesDetailRepository } from "../../helpers/fakes/notices/notices-detail.repository.fake";
 import { FakeNoticesListRepository } from "../../helpers/fakes/notices/notices-list.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const FIXTURE = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/prod-notice-documents.json"), "utf8")) as { documents: unknown[] };
 const documents = FIXTURE.documents.map((document) => BSON.EJSON.deserialize(document as BSON.Document, { relaxed: true }) as NoticeDoc);
@@ -43,7 +42,6 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [NoticesModule, NoticesListModule, NoticesDetailModule],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: RequestAuthenticator, useValue: new FakeRequestAuthenticator() },
       { provide: NoticesListRepository, useValue: listRepository },
       { provide: NoticesDetailRepository, useValue: detailRepository },

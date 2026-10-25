@@ -59,8 +59,6 @@ import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtim
 import { FakeBusRouteAttributesRepository } from "../../helpers/fakes/bus/bus-route-attributes.repository.fake";
 import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 const transitLayoutFixture = require("../ui/fixtures/transit-layout.dataset.json") as Record<string, unknown>;
 
@@ -122,7 +120,6 @@ async function boot(stores: Stores): Promise<NestExpressApplication> {
       UiTransitTabModule,
     ],
     overrides: [
-      { provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() },
       { provide: Clock, useValue: CLOCK },
       { provide: BusCacheRepository, useValue: stores.busCache },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },

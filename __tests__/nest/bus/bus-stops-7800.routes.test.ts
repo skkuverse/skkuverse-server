@@ -19,8 +19,6 @@ import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import proposal from "./fixtures/bus-stops-7800-proposal.json";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
@@ -84,7 +82,7 @@ beforeAll(async () => {
   const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   app = await buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/"),
-    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: { now: () => NOW } }],
+    overrides: [{ provide: Clock, useValue: { now: () => NOW } }],
     role: "api",
   });
 }, APP_BOOT_TIMEOUT_MS);

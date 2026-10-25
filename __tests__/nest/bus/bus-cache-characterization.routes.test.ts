@@ -30,8 +30,6 @@ import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
@@ -194,7 +192,7 @@ afterEach(async () => {
 function bootApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/"),
-    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: CLOCK }],
+    overrides: [{ provide: Clock, useValue: CLOCK }],
     role: "api",
   });
 }

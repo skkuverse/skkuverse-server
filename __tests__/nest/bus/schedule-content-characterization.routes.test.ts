@@ -60,8 +60,6 @@ import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../help
 import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
 import { withLineDirections, withoutLineDirections } from "../../helpers/bus/line-directions";
 import captured from "./fixtures/schedule-production.capture.json";
-import { RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
-import { FakeRateLimitPolicy } from "../../helpers/fakes/perimeter/rate-limit-policy.fake";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
@@ -163,7 +161,7 @@ async function bootAt(at: Date): Promise<NestExpressApplication> {
   const clock: Clock = { now: () => at };
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/"),
-    overrides: [{ provide: RateLimitPolicy, useValue: new FakeRateLimitPolicy() }, { provide: Clock, useValue: clock }],
+    overrides: [{ provide: Clock, useValue: clock }],
     role: "api",
   });
 }
