@@ -1,11 +1,19 @@
 import type { StopCall } from "../../shared/call.types";
 import type { RunStopTime, ShuttleRun } from "../eta/smart/bus-eta-smart.types";
 import type { ShuttleStopRoute } from "../stop-index/bus-stop-index.types";
-import { NEXT_RUN_COUNT } from "./bus-stop-arrivals.constants";
+import { t } from "../../infra/i18n";
+import type { SupportedLang } from "../../infra/types";
+import { HEADSIGN_KEY_BY_ROUTE_TYPE, NEXT_RUN_COUNT } from "./bus-stop-arrivals.constants";
 import { toTimetableArrival } from "./bus-stop-arrivals.mapper";
 import type { RunCall, TimetableArrival } from "./bus-stop-arrivals.types";
 
 const MINUTE_MS = 60_000;
+
+/** WHY: a direction-bearing route type says which way a run goes; any other keeps its service's label (ADR 0022, D2). */
+export function toRunHeadsign(routeType: string, serviceLabel: string, lang: SupportedLang): string {
+  const headsignKey = HEADSIGN_KEY_BY_ROUTE_TYPE[routeType];
+  return headsignKey === undefined ? serviceLabel : t(headsignKey, lang);
+}
 
 type RunStop = Pick<ShuttleStopRoute, "routeType" | "sequenceIndex" | "action">;
 type ListedCall = { listedAtMs: number; call: RunCall };

@@ -844,6 +844,33 @@ describe("GET /bus/stops/:stopId/arrivals and GET /bus/live/:groupId serve the c
     expectWire(busStopArrivals, res.body.data);
   });
 
+  it("a commute run is headed by its direction, 등교 up and 하교 down in the request language, where a 인자셔틀 run keeps its service's label", async () => {
+    // Arrange
+    const stores = freshStores();
+    stores.timetable.patterns = [
+      ...structuredClone(CAMPUS_INJA_PATTERNS),
+      { serviceId: "commute-jamsil", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [run(1, "15:00", "up"), run(2, "16:00", "down")] },
+    ];
+    const server = await boot(stores);
+
+    // Act
+    const [up, down, upEn] = [
+      await request(server).get("/bus/stops/nsc-n-center/arrivals"),
+      await request(server).get("/bus/stops/nsc-opposite/arrivals"),
+      await request(server).get("/bus/stops/nsc-n-center/arrivals").set("Accept-Language", "en"),
+    ];
+
+    // Assert
+    const headsignsOf = (body: { data: { routes: Route[] } }, serviceId: string, routeType: string) =>
+      [...new Set((routesOf(body).find((route) => route.serviceId === serviceId && route.routeType === routeType)!.arrivals as Array<{ headsign: string }>).map(({ headsign }) => headsign))];
+    expect(headsignsOf(up.body, "commute-jamsil", "up")).toEqual(["등교"]);
+    expect(headsignsOf(down.body, "commute-jamsil", "down")).toEqual(["하교"]);
+    expect(headsignsOf(upEn.body, "commute-jamsil", "up")).toEqual(["To campus"]);
+    expect(headsignsOf(up.body, "campus-inja", "regular")).toEqual(["인사캠 → 자과캠"]);
+    expect(routesOf(up.body).find((route) => route.serviceId === "commute-jamsil")!.label).toBe("잠실");
+    expectWire(busStopArrivals, up.body.data);
+  });
+
   it("a Jongno call carries TOPIS's last-run flag as isLastRun, its station's direction as headsign in the request language and no run; its vehicles no isLastBus", async () => {
     // Arrange
     const stores = freshStores();
