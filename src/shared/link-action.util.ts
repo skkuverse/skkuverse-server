@@ -1,4 +1,4 @@
-import { toServedWebviewUrl, toWebviewUrl } from "../infra/webview-url";
+import { toServedWebviewUrl, toWebviewUrl } from "./webview-url.util";
 import type { LinkPolicy, LinkProblem } from "./link-action.types";
 import type { LinkActionType } from "./link-action.wire";
 import { isAbsoluteHttpsUrl, isRootRelativePath } from "./link-target.util";

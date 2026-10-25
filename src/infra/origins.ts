@@ -1,6 +1,6 @@
-// SEE: docs/explanation/web-origins.md — every first-party host is named once, here, and the
-// bridge and CORS lists derive from these constants.
-export const WEBVIEW_ORIGIN = "https://webview.skkuverse.com";
+// SEE: docs/explanation/web-origins.md — every first-party host is named once, here or, for the web view, in
+// src/shared/webview-origin.constants.ts, and the bridge list derives from these constants.
+import { WEBVIEW_ORIGIN } from "../shared/webview-origin.constants";
 
 export const ESKARA_MINIAPP_ORIGIN = "https://eskara.miniapp.skkuverse.com";
 

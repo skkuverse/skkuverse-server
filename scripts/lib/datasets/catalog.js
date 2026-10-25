@@ -201,12 +201,14 @@ function loadCatalog(load) {
   const { toPoleCoords } = load("bus/stop-index/bus-stop-index.mapper");
   const { LANE_STRATEGIES } = load("bus/eta/lane/bus-eta-lane.constants");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
-  const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
+  const { isSingleEmoji, toRegistryIssues } = load("miniapps/miniapps.rules");
+  const { parseMiniAppTarget } = load("shared/miniapp-target.util");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
   const { gamesFile } = load("games/games.schema");
   const { appPlatformGatesDataset } = load("app-config/app-config.schema");
   const { gameIdsOf, toGameOriginIssues, toTakenIdIssues } = load("games/games.rules");
-  const { GAME_ID_BY_FIRST_PARTY_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
+  const { GAME_ID_BY_FIRST_PARTY_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } = load("infra/origins");
+  const { WEBVIEW_ORIGIN } = load("shared/webview-origin.constants");
   const { JONGRO_ROUTES, SERVICE_CONFIG, SLUG_LETTER_PATTERN, TOPIS_ROUTES } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");

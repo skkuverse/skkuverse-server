@@ -5,7 +5,7 @@
  * media icon becomes a uri, and nothing kept only in the stored layout (a
  * window, the untranslated text) reaches the wire.
  */
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { WEBVIEW_ORIGIN } from "../../shared/webview-origin.constants";
 import type { SupportedLang } from "../../infra/types";
 import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { toHomeLayout } from "./ui-home.mapper";

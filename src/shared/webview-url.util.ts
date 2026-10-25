@@ -1,5 +1,5 @@
-import { isAbsoluteHttpsUrl, isRootRelativePath } from "../shared/link-target.util";
-import { WEBVIEW_ORIGIN } from "./origins";
+import { isAbsoluteHttpsUrl, isRootRelativePath } from "./link-target.util";
+import { WEBVIEW_ORIGIN } from "./webview-origin.constants";
 
 /**
  * SEE: docs/explanation/web-origins.md — a malformed webview URL does not fail: it opens the wrong page

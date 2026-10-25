@@ -1,6 +1,6 @@
 import type { ItemPresentation } from "../layer-set/map-layer-set.schema";
 import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
-import { toServedWebviewUrl } from "../../infra/webview-url";
+import { toServedWebviewUrl } from "../../shared/webview-url.util";
 import { toI18nText, toOverlay } from "../map.mapper";
 import type { MarkerPresentation, OverlayBase } from "../map.types";
 import { presentationFor } from "../map.rules";

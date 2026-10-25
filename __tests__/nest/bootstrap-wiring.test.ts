@@ -32,7 +32,7 @@ import { LangMiddleware } from "../../src/http/lang.middleware";
 import { CORS_METHODS } from "../../src/http/cors.config";
 import config from "../../src/infra/config";
 import logger from "../../src/infra/logger";
-import { WEBVIEW_ORIGIN } from "../../src/infra/origins";
+import { WEBVIEW_ORIGIN } from "../../src/shared/webview-origin.constants";
 import { OriginTrust } from "../../src/perimeter/perimeter.ports";
 import { FakeOriginTrust } from "../helpers/fakes/perimeter/origin-trust.fake";
 import { buildTestApp } from "../helpers/nest/build-test-app";
