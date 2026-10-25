@@ -213,6 +213,26 @@ describe("GET /app/config", () => {
 });
 
 /**
+ * `minOsVersion` beside each platform's gate: the lowest OS that can install the store build meeting
+ * `minVersion`, read from APP_IOS_MIN_OS_VERSION and APP_ANDROID_MIN_OS_VERSION (jest.setup.ts sets
+ * values production does not use, so a hard-coded value fails here). Below it the app lets the user through.
+ */
+describe("GET /app/config minOsVersion", () => {
+  it("serves each platform's minOsVersion from its environment value, after minVersion and updateUrl", async () => {
+    // Act
+    const res = await request(httpServer).get("/app/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.ios.minOsVersion).toBe("17.0");
+    expect(res.body.data.android.minOsVersion).toBe("26");
+    expect(Object.keys(res.body.data.ios)).toEqual(["minVersion", "updateUrl", "minOsVersion"]);
+    expect(Object.keys(res.body.data.android)).toEqual(["minVersion", "updateUrl", "minOsVersion"]);
+    expectWire(appClientConfig, res.body.data);
+  });
+});
+
+/**
  * The served body against its wire schema (PR 219 F2): the contract fixture was captured once, so
  * a field the service starts to serve without the wire declaring it shows only here.
  */

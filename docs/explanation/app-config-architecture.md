@@ -3,13 +3,13 @@ title: App Config Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-25
 audience: internal
 ---
 
 # App Config Architecture
 
-> What `src/app-config/` tells the app at boot: the minimum version per platform, the origins the app may trust, mini app and game origins apart, and the app's kill switches. Read it before you raise a minimum version, add an origin or flip a switch.
+> What `src/app-config/` tells the app at boot: the minimum version per platform, the origins the app may trust, mini app and game origins apart, and the app's kill switches. Read it before you raise a minimum version or minimum OS, add an origin or flip a switch.
 
 ## Context
 
@@ -17,7 +17,7 @@ App config assembles one body, the same for every client, and the app fetches it
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
-| Doppler, through the deploy's environment | — | The minimum version and update URL per platform (`APP_IOS_MIN_VERSION` and its siblings) | `config.app` in `src/infra/config.ts` |
+| Doppler, through the deploy's environment | — | The minimum version, the minimum OS and the update URL per platform (`APP_IOS_MIN_VERSION`, `APP_IOS_MIN_OS_VERSION` and their siblings) | `config.app` in `src/infra/config.ts` |
 | The first-party web origins | — | The origins allowed to talk to the native bridge, and the web app's origin | `BRIDGE_ORIGINS` and `WEB_ORIGIN` in `src/infra/origins.ts` |
 | The first-party mini app owners | — | Each first-party mini app origin and the mini app that owns it | `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts` |
 | The first-party game owners | — | Each first-party game origin and the game that owns it | `GAME_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts` |
@@ -29,7 +29,8 @@ App config assembles one body, the same for every client, and the app fetches it
 | Term | Means | Derived from | Not |
 | --- | --- | --- | --- |
 | client config (`AppClientConfig`) | The whole `GET /app/config` body | `AppConfigService.getConfig` | `AppSettings` |
-| platform gate (`platformGate`) | One platform's `minVersion` and `updateUrl`: below `minVersion`, the app blocks on its force-update screen | `config.app` | `forceUpdate` |
+| platform gate (`platformGate`) | One platform's `minVersion`, `updateUrl` and `minOsVersion`: below `minVersion`, the app blocks on its force-update screen, unless the device OS is below `minOsVersion` | `config.app` | `forceUpdate` |
+| min OS version (`minOsVersion`) | The lowest OS that can install the store build meeting `minVersion`: an iOS version (`16.4`) or an Android API level (`24`) | `APP_IOS_MIN_OS_VERSION`, `APP_ANDROID_MIN_OS_VERSION` | — |
 | bridge origins | The origins whose pages may post messages to the app's native bridge | `BRIDGE_ORIGINS` | — |
 | web origin | The origin of the first-party web app | `WEB_ORIGIN` | — |
 | mini-app origins | Each first-party mini app's id with its origin, so the app opens such a URL in that mini app's shell | `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` | — |
@@ -51,11 +52,12 @@ flowchart LR
   route -->|features| shell["app: navigation shell"]
 ```
 
-What the app reads, from `skkuverse-app/packages/shared/src/app/parser.ts` and its callers:
+What the app reads, from `skkuverse-app/packages/shared/src/schema/app-config.schema.ts` (`parseAppConfig`) and its callers:
 
 | Field | App use |
 | --- | --- |
 | `ios.minVersion`, `android.minVersion` | The current platform's entry gates boot: below it, `InitGate` shows `ForceUpdateScreen` |
+| `ios.minOsVersion`, `android.minOsVersion` | Below it, the gate lets the user through: the store cannot install the required build there |
 | `ios.updateUrl`, `android.updateUrl` | The `ForceUpdateScreen` button opens it; `null` leaves the button inert |
 | `webview.bridgeOrigins` | The allowlist every bridge message is checked against, in the web view and the mini-app shell |
 | `miniapps.origins` | `openWebView` sends a URL on one of these origins to that mini app's shell |
@@ -69,6 +71,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/app/parser.ts` and i
 - `/app/config` never answers `503` for the kill switches. A replica that never read a good `app-features` revision (none stored, only an invalid one, or a database that never answered) serves every switch off, the safe side of a kill switch, and logs the cause at error (`app_config.features.missing`, `app_config.features.invalid`, `app_config.features.read_failed`). One that read a good revision keeps it through failed reloads for `DATASET_STALE_WINDOW_MS`, the read contract of every dataset ([ADR 0013, D6](../decisions/0013-runtime-data-in-mongodb.md)).
 - The body only grows: installed apps ignore keys they do not know, and a removed key breaks them (`CONTRACT(skkuverse-app)` on `AppClientConfig`). `features` is the last key, after every key an installed app reads.
 - A game origin is served only under `games.origins`, never in `webview.bridgeOrigins` or `miniapps.origins`, so no game page gets a mini app's grants or shell ([Web origins](web-origins.md)).
+- `minOsVersion` is required: a missing value, or one that is not an iOS version or an Android API level, stops an api replica at boot (`src/infra/required-env.ts`).
 - In the app, a failed fetch lets the boot pass the gate and keeps the cached config, so the gate holds only when the route answers.
 
 ## Open questions
@@ -78,6 +81,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/app/parser.ts` and i
 
 ## Related
 
+- [Raise the minimum app version](../how-to/raise-the-minimum-app-version.md): the checklist for a new floor
 - [Web origins](web-origins.md): why each first-party host is a constant, and bridge versus CORS
 - [Register a mini app](../how-to/register-a-miniapp.md): adding a first-party origin and its owner
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape

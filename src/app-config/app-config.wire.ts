@@ -4,11 +4,16 @@ import { z } from "zod";
 const platformGate = z.object({
   minVersion: z.string(),
   updateUrl: z.string().nullable(),
+  /**
+   * WHY: the lowest OS that can install the store build meeting `minVersion` (iOS a version, Android an API
+   * level); below it the gate lets the user through. Optional for a reader: a body cached before it was served has none.
+   */
+  minOsVersion: z.string().optional(),
 });
 
 /**
- * CONTRACT(skkuverse-app): read by skkuverse-app/packages/shared/src/app/parser.ts, which documents each
- * field. Additive only: installed apps ignore keys they do not know.
+ * CONTRACT(skkuverse-app): read by skkuverse-app/packages/shared/src/schema/app-config.schema.ts
+ * (`parseAppConfig`), which documents each field. Additive only: installed apps ignore keys they do not know.
  */
 export const appClientConfig = z.object({
   ios: platformGate,
