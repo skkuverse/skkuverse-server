@@ -1,6 +1,6 @@
 import { captureGroups } from "../shared/regex.util";
 import { JOURNEY_PLACE_KINDS, PLACE_REF_PATTERN } from "./journey.constants";
-import type { JourneyLeg, JourneyRoutesData } from "./journey.document";
+import type { JourneyLeg, JourneyLine, JourneyRoutesData, RideLeg } from "./journey.document";
 import type { CitedPlace, JourneyCatalog, JourneyIssue, JourneyReference, LegEnds, PlaceKind, PlaceRef } from "./journey.types";
 
 type Path = Array<string | number>;
@@ -59,12 +59,21 @@ function chainIssues(data: JourneyRoutesData): JourneyIssue[] {
   );
 }
 
-// WHY: a timetabled ride boards at a boarding stop and alights at an alighting one after it, in one route type's sequence.
-function isOrderedRide(sequences: Readonly<Record<string, readonly { stopId?: string; action: string }[]>> | undefined, boardId: string, alightId: string): boolean {
-  return Object.values(sequences ?? {}).some((sequence) => {
-    const board = sequence.findIndex((stop) => stop.stopId === boardId && stop.action === "board");
-    return board >= 0 && sequence.some((stop, index) => index > board && stop.stopId === alightId && stop.action === "alight");
+// WHY: a shuttle boards at a boarding stop and alights at an alighting one after it; each path is the ride leg's relative.
+function busRideIssues({ board, alight }: RideLeg, line: JourneyLine, { sequencesByService }: JourneyCatalog): JourneyIssue[] {
+  if (sequencesByService === null) return [{ path: ["line"], message: "no stored bus-stops, so the ride's stop order was not checked", warning: true }];
+  const [boardId, alightId] = [toPlaceRef(board.place)?.id ?? "", toPlaceRef(alight.place)?.id ?? ""];
+  const isOrdered = Object.values(sequencesByService[line.sourceLineId] ?? {}).some((sequence) => {
+    const boardIndex = sequence.findIndex((stop) => stop.stopId === boardId && stop.action === "board");
+    return boardIndex >= 0 && sequence.some((stop, index) => index > boardIndex && stop.stopId === alightId && stop.action === "alight");
   });
+  return isOrdered ? [] : [{ path: [], message: `${line.sourceLineId} has no sequence that boards at ${boardId} and then alights at ${alightId}` }];
+}
+
+function subwayRideIssues({ board, alight }: RideLeg, line: JourneyLine, { subwayRideIssueOf }: JourneyCatalog): JourneyIssue[] {
+  if (subwayRideIssueOf === null) return [{ path: ["line"], message: "no stored subway-timetables, so the ride's train order was not checked", warning: true }];
+  const message = subwayRideIssueOf({ lineId: line.sourceLineId, boardPlatformId: board.platformId ?? "", alightPlatformId: alight.platformId ?? "" });
+  return message === null ? [] : [{ path: [], message }];
 }
 
 function rideIssues(data: JourneyRoutesData, catalog: JourneyCatalog): JourneyIssue[] {
@@ -76,10 +85,8 @@ function rideIssues(data: JourneyRoutesData, catalog: JourneyCatalog): JourneyIs
         const at = ["routes", routeIndex, "options", optionIndex, "legs", legIndex];
         const line = lineById.get(leg.line);
         if (!line) return [{ path: [...at, "line"], message: `"${leg.line}" is no line of this dataset` }];
-        if (catalog.sequencesByService === null) return [{ path: [...at, "line"], message: "no stored bus-stops, so the ride's stop order was not checked", warning: true }];
-        const [board, alight] = [toPlaceRef(leg.board.place)?.id ?? "", toPlaceRef(leg.alight.place)?.id ?? ""];
-        if (isOrderedRide(catalog.sequencesByService[line.sourceLineId], board, alight)) return [];
-        return [{ path: at, message: `${line.sourceLineId} has no sequence that boards at ${board} and then alights at ${alight}` }];
+        const issues = line.source === "subway" ? subwayRideIssues(leg, line, catalog) : busRideIssues(leg, line, catalog);
+        return issues.map((issue) => ({ ...issue, path: [...at, ...issue.path] }));
       }),
     ),
   );

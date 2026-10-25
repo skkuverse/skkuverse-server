@@ -9,7 +9,7 @@ audience: internal
 
 # Transit Route Planner
 
-> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Nothing of `journey/` is built yet.
+> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-10-25: (a) to (e) are in production; (f) is on `dev`, its `journey-routes` revision 2 pushed to `_dev` only.
 
 ## Scope
 
@@ -305,7 +305,7 @@ Both routes, four options each, in data order. Stop ids exist in production toda
 | Option | Legs | Pushed in |
 | --- | --- | --- |
 | `inja` 인자셔틀 | walk → `bus_stop:hssc-bus-lot`; ride `inja` (`busTimetable`, `campus-inja`) `hssc-bus-lot` → `bus_stop:nsc-n-center`; walk → `skku_building:7` | (e) |
-| `line4-line1` 4호선 · 1호선 | walk → `subway_station:hyehwa`; ride `line4` (`subway`, `4`) `hyehwa` `S1-4-420` → `subway_station:geumjeong` (line 4 platform: to be filled by (b)); transfer at `geumjeong` to `KR-1-P149`; ride `line1` (`subway`, `1`) `geumjeong` `KR-1-P149` → `subway_station:sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (f) |
+| `line4-line1` 4호선 · 1호선 | walk → `subway_station:hyehwa`; ride `line4` (`subway`, `4`) `hyehwa` `S1-4-420` → `subway_station:geumjeong` `KR-4-443`; transfer at `geumjeong` to `KR-1-P149` (1 min, across one island); ride `line1` (`subway`, `1`) `geumjeong` `KR-1-P149` → `subway_station:sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (f) |
 | `jongro08-line1` 종로08 · 1호선 | walk → `bus_stop:100900046` (명륜시장.성대후문); ride `jongro08` (`topis`, `jongro08`) → `bus_stop:100900191` (종로5가역.광장시장); walk → `subway_station:jongno5ga` (platform: to be filled by (b)); ride `line1` → `sungkyunkwan` `KR-1-P153`; walk → `skku_building:7` | (g) |
 | `line4-7800` 4호선 · 7800 | walk → `hyehwa`; ride `line4` `S1-4-420` → `subway_station:sadang` (line 4 platform: to be filled by (b)); walk → `bus_stop:sadang-exit9`; ride `bus7800` (`topis`, `gyeonggi7800`, mode `expressBus`) → `bus_stop:nsc-skku-to-suwon`; walk → `skku_building:7` | (g) |
 
@@ -314,7 +314,7 @@ Both routes, four options each, in data order. Stop ids exist in production toda
 | Option | Legs | Pushed in |
 | --- | --- | --- |
 | `inja` 인자셔틀 | walk → `bus_stop:nsc-opposite`; ride `jain` (`busTimetable`, `campus-jain`) → `bus_stop:hssc-600th`; walk → `skku_building:1` | (e) |
-| `line1-line4` 1호선 · 4호선 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `geumjeong` `KR-1-P149`; transfer at `geumjeong` to its line 4 platform; ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (f) |
+| `line1-line4` 1호선 · 4호선 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `geumjeong` `KR-1-P149`; transfer at `geumjeong` to `KR-4-443` (1 min, across one island); ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (f) |
 | `line1-jongro08` 1호선 · 종로08 | walk → `sungkyunkwan`; ride `line1` `KR-1-P153` → `jongno5ga`; walk → `bus_stop:100900107` (종로5가역.중부교육지원청); ride `jongro08` → `bus_stop:100900004` (명륜시장.성대후문); walk → `skku_building:1` | (g) |
 | `7800-line4` 7800 · 4호선 | walk → `bus_stop:nsc-skku-to-sadang`; ride `bus7800` → `bus_stop:sadang-median`; walk → `sadang`; ride `line4` → `hyehwa` `S1-4-420`; walk → `skku_building:1` | (g) |
 
@@ -332,7 +332,7 @@ ADR 0022 D4 makes every boarded or alighted station a served one, so the PoC's s
 | --- | --- | --- | --- |
 | 사당, line 4 | to be filled by (b) (expected `S1-4-433`) | Seoul Metro, `SearchSTNTimeTableByIDService` | No: line 4 is `S1-4-414`..`426` (`LINE4_STATIONS` in `scripts/subway-timetable/convert.py`) |
 | 사당, line 2 | to be filled by (b) | Seoul Metro, the same | Within the line 2 stretch (건대입구 212 to 서울대입구 228), not a served platform |
-| 금정, line 4 | to be filled by (b) | Korail (south of 남태령) | No |
+| 금정, line 4 | `KR-4-443` | Korail's section, timed by the Seoul API (station code 1458) | Yes, in the `S1-4-*` tables with 혜화 |
 | 금정, line 1 | `KR-1-P149` | Korail xlsx | Yes, within 병점..안양 (`LINE1_STATIONS`), not a served platform |
 | 종로5가, line 1 | to be filled by (b) | Seoul Metro's underground section | No: north of 안양 |
 
@@ -347,7 +347,7 @@ Two things (b) settles before it pushes:
 
 - **사당 and 종로5가 on the Seoul API.** Seoul Metro stations should answer `SearchSTNTimeTableByIDService` by station code, as 혜화 does; (b) confirms each code and the KRIC id against the code list.
 - **4호선 금정.** Whether the Seoul API answers a Korail-operated line 4 station has been open since 2026-10-20. If not, the Korail xlsx for the 과천·안산선 section is the next source (**Unverified** that it exists in the same format).
-- **The train-number join across operators.** 혜화 → 금정 crosses from Seoul Metro to Korail at 남태령, and 종로5가 → 성균관대 from Seoul Metro to Korail at 서울역. The subway door joins board and alight by train number, which holds only if both operators' tables number a through train alike (**Unverified**). (f) compares one day's tables first. If they differ, the leg still plans: the board call from the timetable and the alight from `rideMinutes`, as `basis: estimate`.
+- **The train-number join across operators.** Settled in (f) on `subway-timetables` revision 3 (`_dev`, 2026-10-25). 혜화 `S1-4-420` and 금정 `KR-4-443` are both timed by the Seoul API, so they share the `S1-4-*` tables, and a through train is one row under one number across 남태령: weekday 123 trains run 혜화 → 금정 and 124 금정 → 혜화 (Saturday and holiday 106 each way). No through train is left unjoined: the 221 weekday trains at 혜화 alone end short of 금정 (110 at 사당, 1 at 서울역) or run north (110), and the 4 at 금정 alone start there or at 사당, or turn back before 혜화. 금정 `KR-1-P149` and 성균관대 `KR-1-P153` share `KR-1-*`: weekday 134 trains down and 133 up, holiday 127 each way; the 3 weekday trains at 성균관대 alone (express 1902, 1904 up and 1945 down) pass 금정, so the door never boards them for that ride. The door joins within one table by the train's own row and across two by train number, listing a train the alight table numbers apart with no alight call, which the planner fills from `rideMinutes` as `basis: estimate`; no PoC ride crosses two tables.
 - **종로5가 in the Korail xlsx.** `KORAIL_ABBREVIATIONS` names only 청량리 and 서울 in the underground section; whether the xlsx lists 종로5가 or it must come from the Seoul API decides its source (**Unverified**).
 
 ## Related

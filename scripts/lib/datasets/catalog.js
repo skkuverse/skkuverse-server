@@ -219,6 +219,7 @@ function loadCatalog(load) {
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
   const { findTimetable, toLineRoutes, toServiceWindowIssues, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
   const { timetableFile } = load("subway/timetable/subway-timetable.schema");
+  const { toRideTimetableIssue } = load("subway/timetable/departures/subway-timetable-departures.rules");
   const { journeyRoutesDataset } = load("journey/journey.schema");
   const { journeyRoutesReferences, toJourneyRoutesIssues } = load("journey/journey.rules");
   const { toPlaceIssues } = load("journey/places/journey-places.rules");
@@ -294,7 +295,8 @@ function loadCatalog(load) {
 
   // What a journey dataset's places resolve against: a stop or pole through the stop index built from the target's
   // stored bus-stops, registry and route lines (only the catalog's own stops when those are not read), the target's
-  // station coords and buildings, and this checkout's served stations and platforms.
+  // station coords and buildings, and this checkout's served stations and platforms; a subway ride's order against the
+  // target's stored timetables, joined as the subway door joins them.
   const journeyCatalogOf = (storedOf, collectionOf) => {
     const busStops = storedOf("bus-stops");
     const [registryDocs, routePathDocs, buildings] = [collectionOf("jongroRoutes"), collectionOf("jongroRoutePaths"), collectionOf("buildings")];
@@ -306,6 +308,7 @@ function loadCatalog(load) {
       return stopId === null ? undefined : resolution.coordsOf(stopId);
     };
     const stationCoords = storedOf("subway-station-coords");
+    const timetables = storedOf("subway-timetables");
     const toLatLng = (location) => (Array.isArray(location?.coordinates) ? { lat: location.coordinates[1], lng: location.coordinates[0] } : null);
     return {
       stopCoordsOf: busStops && stopCoordsOf,
@@ -313,6 +316,7 @@ function loadCatalog(load) {
       buildingCoords: buildings && new Map(buildings.map((doc) => [String(doc._id), toLatLng(doc.location)])),
       stationCoords: new Map(subwayStations.ids().map((id) => [id, stationCoords?.stations[id] ?? null])),
       platformIdsByStation: new Map(SUBWAY_STATIONS.map((station) => [station.id, new Set(station.platforms.map((platform) => platform.id))])),
+      subwayRideIssueOf: timetables && ((ride) => toRideTimetableIssue(timetables, ride)),
     };
   };
 
@@ -497,6 +501,7 @@ function loadCatalog(load) {
       "journey-routes": {
         owner: "src/journey",
         schema: journeyRoutesDataset,
+        reads: ["subway-timetables"],
         collections: ["buildings", "jongroRoutes", "jongroRoutePaths"],
         recheckTriggers: ["bus-stops"],
         issuesOf: (data, { storedOf, collectionOf }) => {

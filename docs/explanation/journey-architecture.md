@@ -17,8 +17,9 @@ Journey owns only the `journey-routes` dataset: lines, routes, options and legs,
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
-| `npm run data` (scripts/lib/datasets/store.js) | — | The `journey-routes` dataset, checked at push against the target's stops, buildings and stations | `JourneyRepository.findRoutes` |
+| `npm run data` (scripts/lib/datasets/store.js) | — | The `journey-routes` dataset, checked at push against the target's stops, buildings, stations and subway timetables | `JourneyRepository.findRoutes` |
 | bus (`BusDeparturesTimetableService`) | — | Each timetabled run's board and alight calls for one service between two stops | `JourneyDeparturesService.listDepartures` |
+| subway (`SubwayTimetableDeparturesService`) | — | Each train's board and alight calls between two platforms of one line, from the service day's stored `subway-timetables`, as the station board serves a timetable train | `JourneyDeparturesService.listDepartures` |
 | bus (`BusStopIndexService`), building (`BuildingService`), subway (`SubwayStationsService`, `SubwayStationCoordsService`) | — | The name and coords of each cited stop, building and station | `JourneyPlacesService.findPlace` |
 | TMAP pedestrian routing | — | Walk minutes, distance and path, measured once by a person at authoring time and stored with their evidence; the server never calls it | the dataset |
 
@@ -48,6 +49,7 @@ flowchart LR
   person["npm run data"] -->|journey-routes| ds[("datasets")]
   ds -->|JourneyRepository, dataset loader| svc["JourneyRoutesService"]
   door["BusDeparturesTimetableService"] -->|board and alight calls by run| reg["JourneyDeparturesService"]
+  subway["SubwayTimetableDeparturesService"] -->|board and alight calls by train| reg
   reg --> svc
   cat["stop index, buildings, stations"] -->|JourneyPlacesService| svc
   svc -->|planOption, toServedRoute, cached per route and language| route["GET /journey/routes"]
@@ -71,6 +73,9 @@ flowchart LR
 - A `bus-stops` push reruns this dataset's checks (`recheckTriggers`), so it cannot drop a cited stop, the alias an unlisted route's cited pole needs, or the sequence order a cited ride boards by.
 - Each ride boards the first run catchable a catch margin after the legs before it; the legs before the first ride are timed back from it (`planOption`). A vehicle with no seat left is skipped, and unknown seats are boardable.
 - A ride's `basis` is the weaker of its two calls (`toLegBasis`); an alight the door cannot place takes the leg's `rideMinutes` as an estimate.
+- A subway ride lists only trains that call at its board platform and then at its alight one: within one table joined by the train's row, so a train ending short or an express passing the alight platform is never boarded; across two tables by train number, a train the alight table numbers apart still listed with no alight call. Every PoC ride's two platforms read one table, and the 남태령 probe found every through train numbered alike ([transit-route-planner.md](../plans/transit-route-planner.md#probes)). Its first and last flags are across the ride's trains, so the last train of a ride is the last that reaches the alight platform.
+- A ride starts at its board call's time, departure first, and ends at its alight call's arrival, falling back to its departure (`toAlightTime`; [ADR 0022, D5](../decisions/0022-journey-and-call-spec.md), amended): a subway alight call stays the station board's, both scheduled instants included, while the rider leaves at the arrival.
+- At push a subway ride's platforms are of its stations and on its line's `sourceLineId`, and every day type's stored tables run a train from one to the other (`toRideTimetableIssue`, through `subwayRideIssueOf`); with no stored `subway-timetables` that check is a warning.
 - An option with no run left is not running, ended, with the board's `nextServiceAt`; one whose door failed is unavailable. Options run by arrival, then data order, then the rest in data order (`toOptionOrder`).
 - `JOURNEY_SOURCE_IDS` names every source the registry maps; adding one fails `tsc` until the registry maps it.
 - A planned route is cached per route and language for `PLAN_CACHE_TTL_MS`, single-flight, and served with `JOURNEY_ROUTES_CACHE_CONTROL`; the dataset never read answers `503` `JOURNEY_ROUTES_UNAVAILABLE`.
@@ -79,7 +84,7 @@ flowchart LR
 ## Open questions
 
 - Stop areas resolve at push in `bus-stops` but not in the planner; a route end at a stop area waits for that.
-- The TOPIS and subway doors, transfers and `warnings` land with the options that need them ([transit-route-planner.md](../plans/transit-route-planner.md)).
+- The TOPIS door and `warnings` land with the options that need them; a subway first leg boards from the timetable until (h) reads the platform's realtime arrivals ([transit-route-planner.md](../plans/transit-route-planner.md)).
 
 ## Related
 
