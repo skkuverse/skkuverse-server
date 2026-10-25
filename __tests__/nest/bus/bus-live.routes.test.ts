@@ -27,12 +27,14 @@ import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesModule } from "../../../src/bus/route-attributes/bus-route-attributes.module";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc } from "../../helpers/bus/bus-cache-docs";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { storedBusRoutePathRepository } from "../../helpers/bus/bus-route-path";
 import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { expectWire } from "../../helpers/contracts/expect-wire";
@@ -70,6 +72,7 @@ beforeAll(async () => {
       { provide: BusCacheRepository, useValue: busCache },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+      { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: Clock, useValue: { now: () => NOW } },
     ],
@@ -134,8 +137,9 @@ describe("GET /bus/live/:groupId for a Jongno route", () => {
             ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
             basis: "provider",
             stopsAway: 2,
-            isLastBus: false,
+            runId: null,
             vehicleId: "100000103",
+            ...{ headsign: "이화사거리 방면", isFirstRun: null, isLastRun: false, isExpress: null },
             providerText: "3분후[1번째 전]",
           },
         ],

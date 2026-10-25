@@ -1,5 +1,5 @@
+import { toCall } from "../../../shared/call.util";
 import { toKstInstant } from "../../../shared/kst-date.util";
-import { toArrival } from "../../bus.mapper";
 import type { Vehicle } from "../../bus.wire";
 import { HSSC_GROUP_ID, MAX_STATION_ARRIVALS } from "../bus-live.constants";
 import { toGroupOperation } from "../bus-live.rules";
@@ -9,7 +9,7 @@ import type { HsscLiveBus, HsscLiveReading, HsscLiveStation } from "./bus-live-h
 
 // WHY: the feed states no operation, so a stop with a fresh bus on the line is running (ADR 0019, D8).
 function toStation({ stationIndex, stopId, etas }: HsscLiveStation): LiveStation {
-  return { stationIndex, stopId, arsId: null, operation: "running", arrivals: etas.slice(0, MAX_STATION_ARRIVALS).map((eta) => toArrival(toHsscCall(eta))) };
+  return { stationIndex, stopId, arsId: null, operation: "running", arrivals: etas.slice(0, MAX_STATION_ARRIVALS).map((eta) => toCall(toHsscCall(eta))) };
 }
 
 // WHY: a stop-event feed has no coordinates, section or progress (capabilities.positionSource "stopEvents"), nor plates
@@ -18,7 +18,7 @@ function toVehicle(bus: HsscLiveBus, checkedAt: Date): Vehicle {
   const [next] = bus.lapTimes;
   return {
     id: bus.anchor.vehicleId,
-    ...{ plateNumber: null, occupancy: null, seatsLeft: null, isLastBus: null, isLowFloor: null },
+    ...{ plateNumber: null, occupancy: null, seatsLeft: null, isLowFloor: null },
     position: {
       stationIndex: bus.stationIndex,
       status: toHsscPositionStatus(bus),

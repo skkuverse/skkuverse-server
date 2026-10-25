@@ -124,10 +124,11 @@ describe("toDayRuns", () => {
         routeType: "down",
         date: "2026-10-22",
         departureAt: at("2026-10-22T12:00:00.000Z"),
+        isFirstOfDay: true,
         isLastOfDay: false,
         stopTimes: [
-          { shownAt: at("2026-10-22T12:00:00.000Z"), isEstimated: false, latestEstimateAt: null },
-          { shownAt: at("2026-10-22T13:20:00.000Z"), isEstimated: false, latestEstimateAt: null },
+          { shownAt: at("2026-10-22T12:00:00.000Z"), isEstimated: false, latestEstimateAt: null, timetableAt: at("2026-10-22T12:00:00.000Z") },
+          { shownAt: at("2026-10-22T13:20:00.000Z"), isEstimated: false, latestEstimateAt: null, timetableAt: at("2026-10-22T13:20:00.000Z") },
         ],
         estimate: null,
       },
@@ -136,10 +137,11 @@ describe("toDayRuns", () => {
         routeType: "down",
         date: "2026-10-22",
         departureAt: at("2026-10-22T14:30:00.000Z"),
+        isFirstOfDay: false,
         isLastOfDay: true,
         stopTimes: [
-          { shownAt: at("2026-10-22T14:30:00.000Z"), isEstimated: false, latestEstimateAt: null },
-          { shownAt: at("2026-10-22T15:50:00.000Z"), isEstimated: false, latestEstimateAt: null },
+          { shownAt: at("2026-10-22T14:30:00.000Z"), isEstimated: false, latestEstimateAt: null, timetableAt: at("2026-10-22T14:30:00.000Z") },
+          { shownAt: at("2026-10-22T15:50:00.000Z"), isEstimated: false, latestEstimateAt: null, timetableAt: at("2026-10-22T15:50:00.000Z") },
         ],
         estimate: null,
       },
@@ -156,6 +158,18 @@ describe("toDayRuns", () => {
 
     // Assert
     expect(runs.map((run) => run?.isLastOfDay)).toEqual([false, true, true]);
+  });
+
+  it("takes the first run of the day per route type, so an earlier run of another type leaves a type's first run its first", () => {
+    // Act
+    const runs = toDayRuns(
+      "campus-inja",
+      { date: "2026-10-23", schedule: [{ time: "13:00", routeType: "regular" }, { time: "14:00", routeType: "regular" }, { time: "14:20", routeType: "hakbu" }] },
+      { routeTypes: [], sequences: {}, estimates: new Map() },
+    );
+
+    // Assert
+    expect(runs.map((run) => run?.isFirstOfDay)).toEqual([true, false, true]);
   });
 
   it("answers null for an entry with no route type or no departure, in the entry's place", () => {
@@ -181,8 +195,23 @@ describe("toDayRuns", () => {
     // Assert
     expect(run!.estimate).toEqual({ source: "predicted", updatedAt: UPDATED_AT });
     expect(run!.stopTimes).toEqual([
-      { shownAt: at("2026-10-22T14:30:00.000Z"), isEstimated: false, latestEstimateAt: null },
-      { shownAt: at("2026-10-22T15:52:00.000Z"), isEstimated: true, latestEstimateAt: null },
+      { shownAt: at("2026-10-22T14:30:00.000Z"), isEstimated: false, latestEstimateAt: null, timetableAt: at("2026-10-22T14:30:00.000Z") },
+      { shownAt: at("2026-10-22T15:52:00.000Z"), isEstimated: true, latestEstimateAt: null, timetableAt: at("2026-10-22T15:50:00.000Z") },
+    ]);
+  });
+
+  it("keeps the timetable's own time at an estimated stop beside the estimate it shows there, and none where the timetable has none", () => {
+    // Act
+    const [run] = toDayRuns("commute-jamsil", day([{ time: "23:30", routeType: "down", stopTimes: ["23:30", null] }]), {
+      routeTypes: ["down"],
+      sequences: JAMSIL_SEQUENCES,
+      estimates: new Map([estimateOf("23:30", [0, 4890])]),
+    });
+
+    // Assert
+    expect(run!.stopTimes.map(({ shownAt, timetableAt }) => [shownAt, timetableAt])).toEqual([
+      [at("2026-10-22T14:30:00.000Z"), at("2026-10-22T14:30:00.000Z")],
+      [at("2026-10-22T15:52:00.000Z"), null],
     ]);
   });
 

@@ -20,11 +20,12 @@ export interface EstimateInputs {
   latestEstimates?: ReadonlyMap<string, ServedEstimate>;
 }
 
-/** WHY: a run at one stop of its sequence: what the smart view shows there, and its latest estimate there, if any. */
+/** WHY: a run at one stop of its sequence: what the smart view shows there, its latest estimate there, if any, and the timetable's own time. */
 export interface RunStopTime {
   shownAt: Date | null;
   isEstimated: boolean;
   latestEstimateAt: Date | null;
+  timetableAt: Date | null;
 }
 
 /** WHY: one run of the stored timetable with its stop times parsed once (ADR 0019, D12); `estimate` is the one served. */
@@ -33,6 +34,7 @@ export interface ShuttleRun {
   routeType: string;
   date: string;
   departureAt: Date;
+  isFirstOfDay: boolean;
   isLastOfDay: boolean;
   stopTimes: RunStopTime[];
   estimate: Pick<ServedEstimate, "source" | "updatedAt"> | null;

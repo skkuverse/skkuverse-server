@@ -1,4 +1,4 @@
-import type { StopCall } from "../bus.types";
+import type { StopCall } from "../../shared/call.types";
 import type { RunStopTime, ShuttleRun } from "../eta/smart/bus-eta-smart.types";
 import type { ShuttleStopRoute } from "../stop-index/bus-stop-index.types";
 import { NEXT_RUN_COUNT } from "./bus-stop-arrivals.constants";
@@ -11,9 +11,9 @@ type RunStop = Pick<ShuttleStopRoute, "routeType" | "sequenceIndex" | "action">;
 type ListedCall = { listedAtMs: number; call: RunCall };
 
 // WHY: a boarding stop fills the departure pair, an alighting stop the arrival pair; an estimate the smart view applied
-// at an estimated stop is the expected one, any other time the timetable's (ADR 0019, D1).
-function toRunInstants(at: Date | null, isEstimated: boolean, action: RunStop["action"]): Pick<StopCall, "expectedArrivalAt" | "expectedDepartureAt" | "scheduledArrivalAt" | "scheduledDepartureAt"> {
-  const [expected, scheduled] = isEstimated ? [at, null] : [null, at];
+// at an estimated stop is the expected one, beside the timetable's own time there, if any (ADR 0022, D2).
+function toRunInstants({ shownAt, timetableAt }: RunStopTime, isEstimated: boolean, action: RunStop["action"]): Pick<StopCall, "expectedArrivalAt" | "expectedDepartureAt" | "scheduledArrivalAt" | "scheduledDepartureAt"> {
+  const [expected, scheduled] = isEstimated ? [shownAt, timetableAt] : [null, shownAt];
   return action === "board"
     ? { expectedArrivalAt: null, expectedDepartureAt: expected, scheduledArrivalAt: null, scheduledDepartureAt: scheduled }
     : { expectedArrivalAt: expected, expectedDepartureAt: null, scheduledArrivalAt: scheduled, scheduledDepartureAt: null };
@@ -27,7 +27,7 @@ function toListedAtMs(departureAt: Date, { shownAt, isEstimated, latestEstimateA
   return isTimetableTime || latestEstimateAt === null ? shownAtMs : Math.max(latestEstimateAt.getTime(), shownAtMs);
 }
 
-const NO_STOP_TIME: RunStopTime = { shownAt: null, isEstimated: false, latestEstimateAt: null };
+const NO_STOP_TIME: RunStopTime = { shownAt: null, isEstimated: false, latestEstimateAt: null, timetableAt: null };
 
 function toListedCall(run: ShuttleRun, stop: RunStop): ListedCall {
   const stopTime = run.stopTimes[stop.sequenceIndex] ?? NO_STOP_TIME;
@@ -35,12 +35,11 @@ function toListedCall(run: ShuttleRun, stop: RunStop): ListedCall {
   const isEstimated = shownAt !== null && stopTime.isEstimated;
   const call: RunCall = {
     status: "scheduled",
-    ...toRunInstants(shownAt, isEstimated, stop.action),
+    ...toRunInstants(stopTime, isEstimated, stop.action),
     basis: isEstimated ? "estimate" : "timetable",
-    stopsAway: null,
-    isLastBus: run.isLastOfDay,
-    ...{ vehicleId: null, providerText: null },
-    ...{ runId: run.runId, runDepartureAt: run.departureAt },
+    ...{ stopsAway: null, runId: run.runId, vehicleId: null, headsign: null },
+    ...{ isFirstRun: run.isFirstOfDay, isLastRun: run.isLastOfDay, isExpress: null, providerText: null },
+    runDepartureAt: run.departureAt,
   };
   return { listedAtMs: toListedAtMs(run.departureAt, stopTime), call };
 }

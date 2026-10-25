@@ -12,8 +12,8 @@
     "reason": "ADR 0010 D9, no reachable seam: `resolvePlace` is one ordered method (off-campus markers, printed codes, building names, weak names, offices, the library board, online, campus only) whose steps read one `PlaceReading` and return early in that order, so the precedence is the decision; the room and alias lookups it calls are reached only from it, and a sibling sub-module cannot share rules with it (sub-modules.test.ts)."
   },
   "src/bus/bus.wire.ts": {
-    "max": 97,
-    "reason": "ADR 0010 D9, no domain seam: `arrival`, `vehicle`, `vehiclePosition` and `operation` are the one live arrival shape that GET /bus/live/:groupId and the stop page both serve (ADR 0019), and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the shapes the two routes share sit at the bus root beside the stop shapes /bus/config serves; each WHY a client reads to fall back on an open enum counts toward the cap."
+    "max": 72,
+    "reason": "ADR 0010 D9, no domain seam: `vehicle`, `vehiclePosition` and `operation` are the bus pieces of the one live shape that GET /bus/live/:groupId and the stop page both serve (ADR 0019), extending the shared call and vehicle of ADR 0022, and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the shapes the two routes share sit at the bus root beside the stop shapes /bus/config serves; each WHY a client reads to fall back on an open enum counts toward the cap."
   },
   "src/bus/config/bus-config.mapper.ts": {
     "max": 187,

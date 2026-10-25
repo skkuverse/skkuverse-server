@@ -1,4 +1,4 @@
-import type { StopCall } from "../bus.types";
+import type { StopCall } from "../../shared/call.types";
 import type { BusStopArrivals } from "./bus-stop-arrivals.wire";
 
 export type StopArrivalsRoute = BusStopArrivals["routes"][number];

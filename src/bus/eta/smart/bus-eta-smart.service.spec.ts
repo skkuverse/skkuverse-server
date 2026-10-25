@@ -163,10 +163,11 @@ describe("BusEtaSmartService.listRuns", () => {
           routeType: "regular",
           date: "2026-10-12",
           departureAt: at("2026-10-12T01:00:00.000Z"),
+          isFirstOfDay: true,
           isLastOfDay: true,
           stopTimes: [
-            { shownAt: at("2026-10-12T01:00:00.000Z"), isEstimated: false, latestEstimateAt: null },
-            { shownAt: at("2026-10-12T01:51:00.000Z"), isEstimated: true, latestEstimateAt: at("2026-10-12T01:51:00.000Z") },
+            { shownAt: at("2026-10-12T01:00:00.000Z"), isEstimated: false, latestEstimateAt: null, timetableAt: at("2026-10-12T01:00:00.000Z") },
+            { shownAt: at("2026-10-12T01:51:00.000Z"), isEstimated: true, latestEstimateAt: at("2026-10-12T01:51:00.000Z"), timetableAt: null },
           ],
           estimate: { source: "live", updatedAt: LIVE.fetchedAt },
         },
@@ -226,7 +227,7 @@ describe("BusEtaSmartService.listRuns", () => {
 
     // Assert
     expect(runs[0]!.estimate).toBeNull();
-    expect(runs[0]!.stopTimes[1]).toEqual({ shownAt: null, isEstimated: false, latestEstimateAt: at("2026-10-12T01:51:00.000Z") });
+    expect(runs[0]!.stopTimes[1]).toEqual({ shownAt: null, isEstimated: false, latestEstimateAt: at("2026-10-12T01:51:00.000Z"), timetableAt: null });
     expect(estimates.unexpiredReads).toBe(1);
   });
 
@@ -239,7 +240,7 @@ describe("BusEtaSmartService.listRuns", () => {
 
     // Assert
     expect(runs[0]!.estimate).toBeNull();
-    expect(runs[0]!.stopTimes[1]).toEqual({ shownAt: null, isEstimated: false, latestEstimateAt: null });
+    expect(runs[0]!.stopTimes[1]).toEqual({ shownAt: null, isEstimated: false, latestEstimateAt: null, timetableAt: null });
   });
 
   it("answers a suspended service as suspended with no run, even when two weeks are asked for", async () => {

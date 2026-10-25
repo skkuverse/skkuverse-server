@@ -1,5 +1,5 @@
 import { toKstInstant } from "../../../shared/kst-date.util";
-import type { StopCall } from "../../bus.types";
+import type { StopCall } from "../../../shared/call.types";
 import type { Vehicle, VehiclePosition } from "../../bus.wire";
 import type { HsscEta } from "../../realtime/hssc-eta/bus-realtime-hssc-eta.types";
 import type { HsscLiveBus } from "./bus-live-hssc.types";
@@ -19,10 +19,9 @@ export function toHsscCall(eta: HsscEta): StopCall {
     ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
     basis: "estimate",
     stopsAway: eta.stopsAway,
-    isLastBus: null,
+    runId: null,
     vehicleId: eta.vehicleId,
-    providerText: null,
-    ...{ runId: null, runDepartureAt: null },
+    ...{ headsign: null, isFirstRun: null, isLastRun: null, isExpress: null, providerText: null },
   };
 }
 

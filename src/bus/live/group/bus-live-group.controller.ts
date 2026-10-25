@@ -1,6 +1,8 @@
 import { Controller, Get, Param } from "@nestjs/common";
 import { CacheControl } from "../../../http/cache-control.decorator";
+import { Lang } from "../../../http/lang.decorator";
 import type { WithMeta } from "../../../http/response.types";
+import type { SupportedLang } from "../../../infra/types";
 import type { LiveGroup, LiveGroupMeta } from "../bus-live.wire";
 import { LIVE_CACHE_CONTROL } from "./bus-live-group.constants";
 import { BusLiveGroupService } from "./bus-live-group.service";
@@ -11,7 +13,7 @@ export class BusLiveGroupController {
 
   @Get(":groupId")
   @CacheControl(LIVE_CACHE_CONTROL)
-  getLiveGroup(@Param("groupId") groupId: string): Promise<WithMeta<LiveGroup, LiveGroupMeta>> {
-    return this.live.getLiveGroup(groupId);
+  getLiveGroup(@Param("groupId") groupId: string, @Lang() lang: SupportedLang): Promise<WithMeta<LiveGroup, LiveGroupMeta>> {
+    return this.live.getLiveGroup(groupId, lang);
   }
 }

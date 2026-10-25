@@ -1,7 +1,8 @@
 /**
  * BusLiveGroupService: the live route of a realtime group, the HSSC line's or a Jongno route's, with the server's
  * clock in meta; a schedule group has none (404 GROUP_NOT_LIVE) and an unknown group is not found (404 GROUP_NOT_FOUND).
- * The stop page reads a station's direction through it, as /bus/config names it.
+ * The stop page reads a station's direction through it, as /bus/config names it, and each call it serves is headed
+ * where its station's direction is, in the request language (ADR 0022, D2).
  */
 import { FakeBusLiveHsscService } from "../../../../__tests__/helpers/fakes/bus/bus-live-hssc.service.fake";
 import { FakeBusLiveJongroService } from "../../../../__tests__/helpers/fakes/bus/bus-live-jongro.service.fake";
@@ -38,12 +39,12 @@ describe("BusLiveGroupService.getLiveGroup", () => {
     jongro.groups.set("jongro07", jongro07);
 
     // Act & Assert
-    expect(await service.getLiveGroup("jongro07")).toEqual({ data: jongro07, meta: { serverNow: "2026-10-20T10:00:00+09:00" } });
+    expect(await service.getLiveGroup("jongro07", "ko")).toEqual({ data: jongro07, meta: { serverNow: "2026-10-20T10:00:00+09:00" } });
   });
 
   it("serves the HSSC line's live group", async () => {
     // Act & Assert
-    expect((await service.getLiveGroup("hssc")).data).toEqual(hssc.group);
+    expect((await service.getLiveGroup("hssc", "ko")).data).toEqual(hssc.group);
   });
 
   it.each([
@@ -52,11 +53,46 @@ describe("BusLiveGroupService.getLiveGroup", () => {
     ["nope", "GROUP_NOT_FOUND"],
   ])("answers %s with 404 %s", async (groupId, code) => {
     // Act
-    const failure = await service.getLiveGroup(groupId).catch((err: unknown) => err);
+    const failure = await service.getLiveGroup(groupId, "ko").catch((err: unknown) => err);
 
     // Assert
     expect(failure).toBeInstanceOf(AppError);
     expect(failure).toMatchObject({ code, httpStatus: 404 });
+  });
+});
+
+describe("BusLiveGroupService.findLiveGroup", () => {
+  const call = {
+    ...{ status: "enRoute" as const, expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
+    ...{ basis: "provider" as const, stopsAway: 2, runId: null, vehicleId: "100000201", headsign: null },
+    ...{ isFirstRun: null, isLastRun: false, isExpress: null, providerText: "4분10초후[2번째 전]" },
+  };
+  const station = (stationIndex: number) => ({ stationIndex, stopId: null, arsId: null, operation: "running" as const, arrivals: [call] });
+
+  it("heads each call where its station's /bus/config direction is, in the request language, keeping the call's key order", async () => {
+    // Arrange
+    jongro.groups.set("jongro07", { ...jongro07, stations: [station(16), station(17)] });
+
+    // Act
+    const group = await service.findLiveGroup("jongro07", "en");
+
+    // Assert
+    expect(group.stations.map(({ stationIndex, arrivals }) => [stationIndex, arrivals.map(({ headsign }) => headsign)])).toEqual([
+      [16, ["To 성균관대운동장"]],
+      [17, ["To 성균관대운동장"]],
+    ]);
+    expect(Object.keys(group.stations[0]!.arrivals[0]!)).toEqual(Object.keys(call));
+  });
+
+  it("heads no call of a group placed by another stations version than the config's", async () => {
+    // Arrange
+    jongro.groups.set("jongro07", { ...jongro07, stationsVersion: "synced-since", stations: [station(16)] });
+
+    // Act
+    const group = await service.findLiveGroup("jongro07", "ko");
+
+    // Assert
+    expect(group.stations[0]!.arrivals.map(({ headsign }) => headsign)).toEqual([null]);
   });
 });
 

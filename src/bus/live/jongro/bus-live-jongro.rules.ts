@@ -1,4 +1,4 @@
-import type { StopCall } from "../../bus.types";
+import type { StopCall } from "../../../shared/call.types";
 import type { Operation, Vehicle } from "../../bus.wire";
 import type { JongroBusType } from "../../cache/bus-cache.document";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";
@@ -34,10 +34,10 @@ export function toJongroCall(slot: TimedArrival, madeAtMs: number | null): StopC
     ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
     basis: "provider",
     stopsAway: toLiveStopsAway(arrival.stopsAway),
-    isLastBus: arrival.isLastBus,
+    isLastRun: arrival.isLastBus,
     // WHY: TOPIS names a vehicle exactly when the slot has stops away (toStopsAway).
     vehicleId: arrival.stopsAway === null ? null : bus.vehId,
-    ...{ providerText: bus.arrmsg, runId: null, runDepartureAt: null },
+    ...{ providerText: bus.arrmsg, runId: null, headsign: null, isFirstRun: null, isExpress: null },
   };
 }
 
@@ -53,14 +53,14 @@ export function toVehicleStates({ rows, positions }: Pick<JongroReading, "rows" 
   };
 }
 
-// WHY: the last bus is the bus's, so every call naming it carries the vehicle's flag (ADR 0019, D6).
+// WHY: the last bus is the bus's, so every call naming it carries one flag, whichever row said so (ADR 0022, D2).
 export function withVehicleState(call: StopCall, { lastBusIds }: JongroVehicleStates): StopCall {
-  return call.vehicleId === null ? call : { ...call, isLastBus: lastBusIds.has(call.vehicleId) };
+  return call.vehicleId === null ? call : { ...call, isLastRun: lastBusIds.has(call.vehicleId) };
 }
 
 function toStandingCall(vehicleId: string, named: StopCall | undefined, { lastBusIds, namedVehicleIds }: JongroVehicleStates): StopCall {
-  const isLastBus = namedVehicleIds.has(vehicleId) ? lastBusIds.has(vehicleId) : null;
-  return { ...STANDING_CALL, vehicleId, isLastBus, providerText: named?.providerText ?? null };
+  const isLastRun = namedVehicleIds.has(vehicleId) ? lastBusIds.has(vehicleId) : null;
+  return { ...STANDING_CALL, vehicleId, isLastRun, providerText: named?.providerText ?? null };
 }
 
 // WHY: a bus standing at the station is the one a rider boards, arriving until it leaves (ADR 0019, D14); TOPIS drops it

@@ -5,12 +5,6 @@
     "id": {
       "type": "string"
     },
-    "plateNumber": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
     "occupancy": {
       "anyOf": [
         {
@@ -59,15 +53,15 @@
         }
       ]
     },
-    "isLastBus": {
+    "isLowFloor": {
       "type": [
         "boolean",
         "null"
       ]
     },
-    "isLowFloor": {
+    "plateNumber": {
       "type": [
-        "boolean",
+        "string",
         "null"
       ]
     },
@@ -206,11 +200,10 @@
   },
   "required": [
     "id",
-    "plateNumber",
     "occupancy",
     "seatsLeft",
-    "isLastBus",
     "isLowFloor",
+    "plateNumber",
     "position",
     "trajectory"
   ]

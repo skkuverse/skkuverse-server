@@ -1,5 +1,5 @@
+import { toCall } from "../../shared/call.util";
 import { toKstInstant } from "../../shared/kst-date.util";
-import { toArrival } from "../bus.mapper";
 import type { ServedStop } from "../bus.wire";
 import type { LiveGroup } from "../live/bus-live.wire";
 import type { FoundStop, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
@@ -37,11 +37,13 @@ export function toLiveEntry(
   };
 }
 
+// WHY: a run heads where its service's label says, so each run takes the entry's label as its headsign (ADR 0022, D2).
 export function toTimetableEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">): TimetableEntry {
-  return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals };
+  const headed = arrivals.map((arrival) => ({ ...arrival, headsign: label }));
+  return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals: headed };
 }
 
 /** WHY: a run keeps its departure from the origin on the wire, so a run with no time at this stop still sorts and labels. */
 export function toTimetableArrival(call: RunCall): TimetableArrival {
-  return { ...toArrival(call), runDepartureAt: toKstInstant(call.runDepartureAt.getTime()) };
+  return { ...toCall(call), runDepartureAt: toKstInstant(call.runDepartureAt.getTime()) };
 }

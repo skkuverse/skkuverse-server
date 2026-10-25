@@ -15,7 +15,7 @@ import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import { HAS_STOP_MAPS_BY_GROUP } from "./bus-config.config";
 import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS, STOP_GROUP_IDS } from "./bus-config.constants";
 import { toBusGroupIds, toBusGroups } from "./bus-config.mapper";
-import { toJongroDirections, toLineStationDirection, toStationDirection } from "./bus-config.rules";
+import { toJongroDirections, toLineStationDirections, toStationDirections } from "./bus-config.rules";
 import type { AttributedJongroRoute, PlacedStation, StationDirection } from "./bus-config.types";
 import type { BusGroup } from "./bus-config.wire";
 
@@ -75,9 +75,14 @@ export class BusConfigService {
   // WHY: a direction adds to a stop page entry, so a group that cannot be built (another route's registry missing)
   // names none; the registry and the attributes log their own failures. An unlisted route has no group to build.
   async findStationDirection(id: string, { stationIndex, stationsVersion }: PlacedStation, lang: SupportedLang): Promise<StationDirection | null> {
-    if (TOPIS_ROUTES.some((route) => route.id === id && !route.isListed)) return this.findUnlistedStationDirection(id, { stationIndex, stationsVersion }, lang).catch(() => null);
+    return (await this.listStationDirections(id, stationsVersion, lang))[stationIndex] ?? null;
+  }
+
+  // WHY: every station's direction by index at once, so a live answer that names each station's builds its group once.
+  async listStationDirections(id: string, stationsVersion: string | null, lang: SupportedLang): Promise<Array<StationDirection | null>> {
+    if (TOPIS_ROUTES.some((route) => route.id === id && !route.isListed)) return this.listUnlistedStationDirections(id, stationsVersion, lang).catch(() => []);
     const group = await this.getGroupById(id, lang).catch(() => null);
-    return toStationDirection(group, stationIndex, stationsVersion);
+    return toStationDirections(group, stationsVersion);
   }
 
   async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
@@ -92,10 +97,10 @@ export class BusConfigService {
     return etag;
   }
 
-  private async findUnlistedStationDirection(id: string, { stationIndex, stationsVersion }: PlacedStation, lang: SupportedLang): Promise<StationDirection | null> {
+  private async listUnlistedStationDirections(id: string, stationsVersion: string | null, lang: SupportedLang): Promise<Array<StationDirection | null>> {
     const [route, routePath] = await Promise.all([this.registry.routeOf(id), this.routePaths.findRoutePath(id)]);
-    if (route.stationsVersion !== stationsVersion) return null;
-    return toLineStationDirection(toJongroDirections(route.registryStations, routePath?.stations, lang), stationIndex);
+    if (route.stationsVersion !== stationsVersion) return [];
+    return toLineStationDirections(toJongroDirections(route.registryStations, routePath?.stations, lang));
   }
 
   private async readSources(): Promise<GroupSources> {
