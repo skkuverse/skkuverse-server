@@ -32,12 +32,17 @@ export function describeOutboundPolicyContract(make: (deps: PerimeterDeps) => Ou
       expect(allowed).toEqual([false, false, false, false]);
     });
 
-    it.each(OUTBOUND_PURPOSES)("hands out a request config object for %s", (purpose) => {
+    it.each(OUTBOUND_PURPOSES)("hands out a fresh request config object for %s on every call", (purpose) => {
+      // Arrange
+      const policy = make(perimeterTestDeps());
+
       // Act
-      const requestConfig = make(perimeterTestDeps()).requestConfig(purpose);
+      const first = policy.requestConfig(purpose);
+      const second = policy.requestConfig(purpose);
 
       // Assert
-      expect(typeof requestConfig).toBe("object");
+      expect(typeof first).toBe("object");
+      expect(second).not.toBe(first);
     });
 
     it("does not report an ordinary failure, or nothing, as a refusal", () => {
