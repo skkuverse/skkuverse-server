@@ -193,7 +193,8 @@ export interface PerimeterCounters {
 export interface PerimeterDeps {
   readonly logger: Logger;
   readonly now: () => Date;
-  readonly host: string;
+  // WHY: null on the poller, which listens on nothing.
+  readonly host: string | null;
   readonly firebaseProjectId: string;
   readonly settings: string | undefined;
   readonly counters: PerimeterCounters;

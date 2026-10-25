@@ -49,7 +49,7 @@ describe("LOCAL_DEV_CLASSES", () => {
   it.each(PORT_NAMES)("refuses to construct %s for a host off loopback, and constructs for the poller, which has none", (name) => {
     // Act & Assert
     expect(() => new LOCAL_DEV_CLASSES[name](perimeterTestDeps({ host: "0.0.0.0" }))).toThrow(/serves loopback only \(HOST=0\.0\.0\.0\)/);
-    expect(() => new LOCAL_DEV_CLASSES[name](perimeterTestDeps({ host: "" }))).not.toThrow();
+    expect(() => new LOCAL_DEV_CLASSES[name](perimeterTestDeps({ host: null }))).not.toThrow();
     expect(() => new LOCAL_DEV_CLASSES[name](perimeterTestDeps({ host: "::1" }))).not.toThrow();
   });
 });
