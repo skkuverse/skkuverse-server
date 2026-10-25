@@ -15,6 +15,7 @@
     "ui.module.ts": "ui.*, *.json",
     "ui-transit.module.ts": "ui-transit.*, *.json",
     "subway.module.ts": "subway.*, *.json",
+    "subway-timetable.module.ts": "subway-timetable.*, *.json",
     "meals.module.ts": "meals.*, *.json",
     "journey.module.ts": "journey.*, *.json",
     "*.module.ts": "${capture}.schema.ts, ${capture}.wire.ts",
