@@ -4,7 +4,8 @@
  * record today, through the production HTTP pipeline, with no repository, data
  * module or service overridden. The only doubles are at the process edge: the
  * database is a real mongod, the push Cloud Function a loopback server, the time
- * a fixed `Clock`.
+ * a fixed `Clock`, and INTERNAL_AUTHORIZER a fake that allows the dispatch ping
+ * (ADR 0023, D7).
  *
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`). The app
@@ -28,6 +29,8 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
+import { InternalAuthorizer } from "../../../src/perimeter/perimeter.ports";
+import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
@@ -164,7 +167,10 @@ beforeEach(async () => {
 function bootApp(): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/notices/"),
-    overrides: [{ provide: Clock, useValue: CLOCK }],
+    overrides: [
+      { provide: Clock, useValue: CLOCK },
+      { provide: InternalAuthorizer, useValue: new FakeInternalAuthorizer() },
+    ],
     role: "api",
   });
 }
