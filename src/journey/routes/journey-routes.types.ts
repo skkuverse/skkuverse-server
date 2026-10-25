@@ -2,6 +2,7 @@ import type { StopCall } from "../../shared/call.types";
 import type { DepartureBoard } from "../../shared/departure.types";
 import type { Vehicle } from "../../shared/vehicle.wire";
 import type { JourneyLine, RideLeg, TransferLeg, WalkLeg } from "../journey.document";
+import type { WARNING_MESSAGES } from "./journey-routes.constants";
 import type { JourneyRoutes } from "./journey-routes.wire";
 
 export type ServedRoute = JourneyRoutes["routes"][number];
@@ -43,6 +44,12 @@ export interface PlannedRide {
 
 export type PlannedLeg = PlannedStep | PlannedRide;
 
+/** WHY: a connection the rider may miss, at the ride leg it boards (its index in the option's legs). */
+export interface PlannedWarning {
+  code: keyof typeof WARNING_MESSAGES;
+  legIndex: number;
+}
+
 export type PlannedOption =
-  | { status: "running"; leaveAt: Date; arriveAt: Date; legs: PlannedLeg[] }
+  | { status: "running"; leaveAt: Date; arriveAt: Date; legs: PlannedLeg[]; warnings: PlannedWarning[] }
   | { status: "notRunning"; reason: "ended" | "notStarted" | "unavailable"; nextServiceAt: Date | null };

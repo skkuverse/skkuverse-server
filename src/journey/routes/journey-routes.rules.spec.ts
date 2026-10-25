@@ -10,7 +10,9 @@
  * unavailable; when a later ride has no run left, the option is ended too, its next service the boarding of the first
  * ride that reaches that ride's next first run, never before the first ride's own next run; a ride ends at its alight call's arrival, before the run leaves that stop, so the next leg starts
  * there (ADR 0022, D5, amended 2026-10-25), and a run running late, past its scheduled departure, boards at its
- * expected arrival (toBoardTime); a leg's basis is the weaker of its calls; options run by arrival, data
+ * expected arrival (toBoardTime); a connection between two rides warns `tightTransfer` when the rider has under 120 s
+ * at the stop before the next ride, and `connectionAtRisk` when that is under the arrival's uncertainty (150 s for an
+ * estimate, plus half the headway for a ride boarded on one) or 150 s before a named run's estimated board; a leg's basis is the weaker of its calls; options run by arrival, data
  * order breaking a tie, then the ones not running in data order.
  */
 import type { StopCall } from "../../shared/call.types";
@@ -305,6 +307,88 @@ describe("planOption", () => {
     // Assert
     expect(planned).toEqual({ status: "notRunning", reason: "unavailable", nextServiceAt: null });
   });
+
+  describe("Warnings: a connection between two rides", () => {
+    // WHY: ride 1 leaves stop a at 14:10 and reaches b at 14:40; the walk reaches c at 14:42, where ride 3 boards.
+    const TWO_RIDES: JourneyOption = {
+      id: "two-rides",
+      name: NAME,
+      mode: "shuttle",
+      legs: [
+        { kind: "walk", from: "skku_building:1", to: "bus_stop:a", minutes: 5, distanceM: 400, evidence: "TMAP" },
+        { kind: "ride", line: "inja", board: { place: "bus_stop:a" }, alight: { place: "bus_stop:b" }, rideMinutes: 30, evidence: "x" },
+        { kind: "walk", from: "bus_stop:b", to: "bus_stop:c", minutes: 2, distanceM: 150, evidence: "TMAP" },
+        { kind: "ride", line: "inja", board: { place: "bus_stop:c" }, alight: { place: "bus_stop:d" }, rideMinutes: 20, evidence: "x" },
+      ],
+    };
+    const at = (clock: string) => new Date(`2026-10-20T${clock}+09:00`);
+    const plusSec = (clock: string, sec: number) => new Date(at(clock).getTime() + sec * 1000);
+    const timetabled = board([departure("14:10", call(at("14:40:00"), { scheduledDepartureAt: null, scheduledArrivalAt: at("14:40:00") }))]);
+    const secondRide = (boardAt: Date, extra: Partial<StopCall> = {}) => board([{ lineId: "campus-inja", board: call(boardAt, extra), alight: null, observedAt: null }]);
+    const plan = (first: DepartureBoard, second: DepartureBoard) => planOption(TWO_RIDES, { now: kst("14:00"), catchMarginSec: 60, lineById: new Map([["inja", LINE]]), boards: new Map([[1, first], [3, second]]) });
+    const warningsOf = (planned: PlannedOption) => running(planned).warnings;
+
+    it.each([
+      [119, [{ code: "tightTransfer", legIndex: 3 }]],
+      [120, []],
+      [121, []],
+    ])("Tight transfer: %i s between reaching the stop and the next timetabled ride", (slackSec, warnings) => {
+      // Act
+      const planned = plan(timetabled, secondRide(plusSec("14:42:00", slackSec)));
+
+      // Assert
+      expect(warningsOf(planned)).toEqual(warnings);
+    });
+
+    it.each([
+      [149, [{ code: "connectionAtRisk", legIndex: 3 }]],
+      [150, []],
+    ])("At risk: %i s after a ride whose arrival is estimated from its ride minutes", (slackSec, warnings) => {
+      // Arrange
+      const estimatedArrival = board([departure("14:10")]);
+
+      // Act
+      const planned = plan(estimatedArrival, secondRide(plusSec("14:42:00", slackSec)));
+
+      // Assert
+      expect(warningsOf(planned)).toEqual(warnings);
+    });
+
+    it.each([
+      [449, [{ code: "connectionAtRisk", legIndex: 3 }]],
+      [450, []],
+    ])("At risk: %i s after a ride boarded half a 10-minute headway after the rider is ready", (slackSec, warnings) => {
+      // Arrange
+      const headway = board([], { continuation: { kind: "headway", headwaySec: 600, serviceEndsAt: kst("23:00") } });
+
+      // Act
+      const planned = plan(headway, secondRide(plusSec("14:43:00", slackSec)));
+
+      // Assert
+      expect(rideOf(planned).board.expectedArrivalAt).toEqual(at("14:11:00"));
+      expect(warningsOf(planned)).toEqual(warnings);
+    });
+
+    it.each([
+      ["an estimate of a named run", { basis: "estimate", runId: "run-1" }, 149, [{ code: "connectionAtRisk", legIndex: 3 }]],
+      ["an estimate of a named run", { basis: "estimate", runId: "run-1" }, 150, []],
+      ["a headway estimate, which names no run to miss", { basis: "estimate", runId: null, vehicleId: null }, 149, []],
+    ] as const)("At risk: boarding %s %i s after reaching the stop", (_case, extra, slackSec, warnings) => {
+      // Act
+      const planned = plan(timetabled, secondRide(plusSec("14:42:00", slackSec), extra));
+
+      // Assert
+      expect(warningsOf(planned)).toEqual(warnings);
+    });
+
+    it("warns of no first ride, which no ride before it can make the rider miss", () => {
+      // Act
+      const planned = planOption(OPTION, context(kst("14:00"), board([departure("14:08", null, { basis: "estimate" })])));
+
+      // Assert
+      expect([rideOf(planned).waitSec, running(planned).warnings]).toEqual([60, []]);
+    });
+  });
 });
 
 describe("toLegBasis", () => {
@@ -320,7 +404,7 @@ describe("toLegBasis", () => {
 });
 
 describe("toOptionOrder", () => {
-  const runningAt = (arriveAt: string): PlannedOption => ({ status: "running", leaveAt: kst("14:00"), arriveAt: kst(arriveAt), legs: [] });
+  const runningAt = (arriveAt: string): PlannedOption => ({ status: "running", leaveAt: kst("14:00"), arriveAt: kst(arriveAt), legs: [], warnings: [] });
   const ended: PlannedOption = { status: "notRunning", reason: "ended", nextServiceAt: null };
 
   it("runs options by arrival, data order breaking a tie, then the ones not running in data order", () => {
