@@ -54,15 +54,12 @@ export abstract class InternalAuthorizer {
 export const PUSH_SCOPES = ["push.send", "push.history"] as const;
 export type PushScope = (typeof PUSH_SCOPES)[number];
 
-export interface SigningKey {
-  readonly keyId: string;
-  readonly publicKey: string;
-}
+export const SENDER_STATUSES = ["pending", "active", "suspended"] as const;
 
 export interface SenderCredentials {
-  readonly status: "pending" | "active" | "suspended";
+  readonly status: (typeof SENDER_STATUSES)[number];
   readonly scopes: readonly PushScope[];
-  readonly signingKeys: readonly SigningKey[];
+  readonly signingKeys: ReadonlyArray<{ readonly keyId: string; readonly publicKey: string }>;
 }
 
 export interface PushCall {

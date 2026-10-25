@@ -3,7 +3,7 @@ import { isMediaUrl } from "../infra/media-url";
 import { REGISTRY_ID_RE } from "../shared/registry-id.constants";
 import { SHELL_BACKGROUND_RE, SIGNING_KEY_MESSAGE } from "./miniapps.constants";
 import type { StoredMiniApps } from "./miniapps.document";
-import { PUSH_SCOPES } from "../perimeter/perimeter.ports";
+import { PUSH_SCOPES, SENDER_STATUSES } from "../perimeter/perimeter.ports";
 import { isIssuedSigningKey, isServableStartUrl, isSingleEmoji, toDuplicateKeyIdIssues, toRegistryCrossReferenceIssues } from "./miniapps.rules";
 import { miniAppDetail } from "./miniapps.wire";
 
@@ -47,7 +47,7 @@ const detailRaw = miniAppDetail
     relatedLinks: z.array(z.strictObject({ label: z.string().optional(), url: z.string().regex(HTTP_URL_RE) })),
     noticeBanner: miniAppDetail.shape.noticeBanner.unwrap().strict().optional(),
     shell: miniAppDetail.shape.shell.extend({ background: z.string().regex(SHELL_BACKGROUND_RE) }).partial().strict().optional(),
-    status: z.enum(["pending", "active", "suspended"]).optional(),
+    status: z.enum(SENDER_STATUSES).optional(),
     scopes: z.array(z.enum(PUSH_SCOPES)).optional(),
     signingKeys: signingKeys.optional(),
   })
