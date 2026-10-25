@@ -6,8 +6,8 @@
  * surrounding whitespace, and folds a backslash into a slash. A plausible
  * hand-rolled check gets several of them backwards.
  */
-import { WEBVIEW_ORIGIN } from "../../../src/infra/origins";
-import { isOnWebviewOrigin, toWebviewUrl } from "../../../src/infra/webview-url";
+import { WEBVIEW_ORIGIN } from "../../../src/shared/webview-origin.constants";
+import { isOnWebviewOrigin, toWebviewUrl } from "../../../src/shared/webview-url.util";
 
 const O = WEBVIEW_ORIGIN;
 

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { WEBVIEW_ORIGIN } from "../../shared/webview-origin.constants";
 import type { SupportedLang } from "../../infra/types";
 import { toScrollCards } from "./ui-scroll.mapper";
 import type { ScrollCards } from "./ui-scroll.wire";

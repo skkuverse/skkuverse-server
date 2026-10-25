@@ -28,7 +28,8 @@ import { storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { storedBusRoutePathService } from "../../helpers/bus/bus-route-path";
 import { storedRouteAttributesService } from "../../helpers/bus/route-attributes";
 import { storedBusStopsService } from "../../helpers/bus/bus-stops";
-import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
+import { BRIDGE_ORIGINS } from "../../../src/infra/origins";
+import { WEBVIEW_ORIGIN } from "../../../src/shared/webview-origin.constants";
 import { asReal } from "../../helpers/fakes/public-of";
 import { FakeUiCampusRepository } from "../../helpers/fakes/ui/ui-campus.repository.fake";
 

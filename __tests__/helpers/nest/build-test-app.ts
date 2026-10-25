@@ -13,6 +13,7 @@ import type { ModuleMetadata } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { bootstrapHttpApp } from "../../../src/http/http-app.bootstrap";
+import { RAW_BODY_ROUTE_PATHS } from "../../../src/miniapps/notifications/miniapps-notifications.constants";
 import { PerimeterModule } from "../../../src/perimeter/perimeter.module";
 import { toTestStub } from "../../../src/perimeter/perimeter-registry.rules";
 import { OriginTrust } from "../../../src/perimeter/perimeter.ports";
@@ -57,8 +58,9 @@ export async function buildTestApp({ imports, overrides = [], role }: TestAppOpt
   if (unfakedOriginTrust) builder.overrideProvider(OriginTrust).useValue(unfakedOriginTrust);
   const moduleRef = await builder.compile();
 
-  const app = await bootstrapHttpApp((adapter, options) =>
-    moduleRef.createNestApplication<NestExpressApplication>(adapter, options),
+  const app = await bootstrapHttpApp(
+    (adapter, options) => moduleRef.createNestApplication<NestExpressApplication>(adapter, options),
+    RAW_BODY_ROUTE_PATHS,
   );
   const close = app.close.bind(app);
   app.close = async (): Promise<void> => {

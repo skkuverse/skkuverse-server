@@ -71,6 +71,7 @@ import { NoticesAttachmentModule } from "./notices/attachment/notices-attachment
 import { NoticesDetailModule } from "./notices/detail/notices-detail.module";
 import { NoticesDispatchModule } from "./notices/dispatch/notices-dispatch.module";
 import { MiniappsModule } from "./miniapps/miniapps.module";
+import { MiniappsSenderModule } from "./miniapps/sender/miniapps-sender.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
 import { MiniappsManifestModule } from "./miniapps/manifest/miniapps-manifest.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
@@ -180,6 +181,7 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     NoticesDetailModule,
     NoticesDispatchModule,
     MiniappsModule,
+    MiniappsSenderModule,
     MiniappsNotificationsModule,
     MiniappsManifestModule,
     MiniappsCatalogModule,

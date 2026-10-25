@@ -40,7 +40,7 @@ import type { JongroRouteAttributes } from "../bus.types";
 import type { BusStopsData } from "../stops/bus-stops.document";
 import type { AnyStation, AttributedJongroRoute } from "./bus-config.types";
 import { HSSC_STOP_IDS } from "../../../__tests__/helpers/bus/station-stop-ids";
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { WEBVIEW_ORIGIN } from "../../shared/webview-origin.constants";
 import { capturedRoutePathOf } from "../../../__tests__/helpers/bus/bus-route-path";
 import { mapStations, toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 import { toHsscDirections, toJongroDirections } from "./bus-config.rules";

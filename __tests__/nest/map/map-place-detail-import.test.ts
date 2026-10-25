@@ -18,7 +18,7 @@ import { PLACE_BLOCK_TYPES, PLACE_DETAIL_ACTION_TYPES } from "../../../src/map/e
 import { PLACE_KINDS } from "../../../src/map/map.constants";
 import { isAbsoluteHttpsUrl } from "../../../src/shared/link-target.util";
 import { isInstagramPostUrl, isInstagramProfileUrl } from "../../../src/map/event-details/map-event-details.rules";
-import { parseMiniAppTarget } from "../../../src/miniapps/miniapps.rules";
+import { parseMiniAppTarget } from "../../../src/shared/miniapp-target.util";
 import { presentationFor } from "../../../src/map/map.rules";
 import { fixtureLayerSet } from "../../helpers/map/layer-sets-fixture";
 import { fixtureMiniAppIds } from "../../helpers/miniapps/registry-fixture";

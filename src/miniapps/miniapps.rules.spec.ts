@@ -1,12 +1,7 @@
 /**
- * The mini-app target grammar: `<miniAppId>[<root-relative path>]`.
- *
- * The cases that matter are the ones that would let the shell frame a page on a
- * host nobody registered. `//evil.com` and `/\evil.com` are both read by a URL
- * parser as a new authority, so a path that begins with either must be refused
- * here — the device checks the resolved origin again, but a map action never
- * reaches the device if it fails here, and that is the cheaper place to learn.
- * Also the two checks the registry schema refines with: one emoji per logo,
+ * A mini-app target names a registered mini app (the grammar's own cases are
+ * src/shared/miniapp-target.util.spec.ts). Also the two checks the registry
+ * schema refines with: one emoji per logo,
  * counted in graphemes, and a startUrl on the web view that addresses a page.
  * And the one 404 both flows answer an unregistered id with.
  *
@@ -17,38 +12,11 @@
  * its own business.
  */
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
-import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import { WEBVIEW_ORIGIN } from "../shared/webview-origin.constants";
 import { toMiniAppRegistry } from "./miniapps.mapper";
-import { isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, parseMiniAppTarget, toMiniAppNotFound, toRegistryIssues } from "./miniapps.rules";
+import { isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, toMiniAppNotFound, toRegistryIssues } from "./miniapps.rules";
 import { checkedRegistry } from "./miniapps.schema";
-
-describe("parseMiniAppTarget", () => {
-  it.each([
-    ["eskara-2026", { id: "eskara-2026" }],
-    ["eskara-2026/eskara/wristband", { id: "eskara-2026", path: "/eskara/wristband" }],
-    ["eskara-2026/eskara/lineup?day=2", { id: "eskara-2026", path: "/eskara/lineup?day=2" }],
-    ["hssc/", { id: "hssc", path: "/" }],
-  ])("parses %s", (value, expected) => {
-    // Act & Assert
-    expect(parseMiniAppTarget(value)).toEqual(expected);
-  });
-
-  it.each([
-    ["a protocol-relative path", "eskara-2026//evil.com/x"],
-    ["a backslash authority", "eskara-2026/\\evil.com"],
-    ["a trailing newline", "eskara-2026/eskara\n"],
-    ["an inner space", "eskara-2026/a b"],
-    ["an absolute URL", "https://eskara.miniapp.skkuverse.com/eskara"],
-    ["a leading slash", "/eskara-2026/x"],
-    ["an uppercase id", "Eskara-2026"],
-    ["a query with no path", "eskara-2026?x=1"],
-    ["an empty string", ""],
-    ["a non-string", 42],
-  ])("refuses %s", (_label, value) => {
-    // Act & Assert
-    expect(parseMiniAppTarget(value)).toBeNull();
-  });
-});
 
 describe("isKnownMiniAppTarget", () => {
   const registry = toMiniAppRegistry(checkedRegistry.parse(fixtureRegistry()), 1, WEB_ORIGIN);

@@ -1,9 +1,14 @@
+import type { SenderCredentials } from "../perimeter/perimeter.ports";
 import { isRecord } from "../shared/object.util";
 import { SHELL_BACKGROUND_RE, SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
-import { isKnownMiniAppTarget, isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
+import { parseMiniAppTarget } from "../shared/miniapp-target.util";
+import { isKnownMiniAppTarget, isSingleEmoji } from "./miniapps.rules";
 import type { MiniAppDetailRaw, MiniAppIndexEntryRaw, MiniAppLogoRaw, RegistryFile } from "./miniapps.schema";
 import type { MiniAppRegistry } from "./miniapps.types";
 import type { MiniAppIndexEntry, MiniAppLogo, ShellConfig } from "./miniapps.wire";
+
+// WHY: the registry holds no sender status, scopes or keys until 2A-3 adds them, so every registered sender is pending.
+const PENDING_SENDER: SenderCredentials = Object.freeze({ status: "pending", scopes: Object.freeze([]), signingKeys: Object.freeze([]) });
 
 const pick = <T extends string>(value: unknown, allowed: readonly T[]): T | undefined => allowed.find((option) => option === value);
 
@@ -59,6 +64,7 @@ export function toMiniAppRegistry({ index, details }: RegistryFile, revision: nu
     detailsById,
     isRegistered: (id: string) => detailsById.has(id),
     detailOf: (id: string) => detailsById.get(id),
+    senderCredentialsOf: (id: string) => (detailsById.has(id) ? PENDING_SENDER : null),
     isKnownMiniAppTarget: (value: unknown) => isKnownMiniAppTarget(value, detailsById),
     parseTarget: parseMiniAppTarget,
     isSingleEmoji,

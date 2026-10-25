@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import config from "../../../infra/config";
-import { createLogThrottle } from "../../../infra/log-throttle";
+import { createLogThrottle } from "../../../shared/log-throttle.util";
 import logger from "../../../infra/logger";
 import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";

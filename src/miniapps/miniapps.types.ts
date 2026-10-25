@@ -1,11 +1,7 @@
+import type { SenderCredentials } from "../perimeter/perimeter.ports";
+import type { MiniAppTarget } from "../shared/miniapp-target.types";
 import type { MiniAppDetailRaw, RegistryFile } from "./miniapps.schema";
 import type { MiniAppIndexEntry } from "./miniapps.wire";
-
-export interface MiniAppTarget {
-  id: string;
-  /** WHY: root-relative, on the mini app's registered origin; absent means its startUrl. */
-  path?: string;
-}
 
 export interface RegistryIssue {
   path: Array<string | number>;
@@ -33,6 +29,7 @@ export interface MiniAppRegistry {
   readonly detailsById: ReadonlyMap<string, Readonly<MiniAppDetailRaw>>;
   isRegistered(id: string): boolean;
   detailOf(id: string): Readonly<MiniAppDetailRaw> | undefined;
+  senderCredentialsOf(id: string): SenderCredentials | null;
   isKnownMiniAppTarget(value: unknown): boolean;
   parseTarget(value: unknown): MiniAppTarget | null;
   isSingleEmoji(value: string): boolean;

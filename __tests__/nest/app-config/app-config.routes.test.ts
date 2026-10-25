@@ -9,7 +9,8 @@
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { BRIDGE_ORIGINS, GAME_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
+import { BRIDGE_ORIGINS, GAME_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
+import { WEBVIEW_ORIGIN } from "../../../src/shared/webview-origin.constants";
 import { ConfigModule } from "../../../src/config/config.module";
 import { AppConfigModule } from "../../../src/app-config/app-config.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";

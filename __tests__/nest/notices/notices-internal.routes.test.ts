@@ -17,10 +17,12 @@ import { NoticesDispatchService } from "../../../src/notices/dispatch/notices-di
 import { sweepSummary } from "../../../src/notices/dispatch/notices-dispatch.wire";
 import type { NoticeDoc } from "../../../src/notices/notices.document";
 import { NoticesModule } from "../../../src/notices/notices.module";
+import { InternalAuthorizer } from "../../../src/perimeter/perimeter.ports";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeNoticesDispatchClient } from "../../helpers/fakes/notices/notices-dispatch.client.fake";
 import { FakeNoticesDispatchRepository } from "../../helpers/fakes/notices/notices-dispatch.repository.fake";
+import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let app: NestExpressApplication;
@@ -28,6 +30,7 @@ let httpServer: import("http").Server;
 let sweepPending: jest.SpyInstance;
 const repository = new FakeNoticesDispatchRepository();
 const client = new FakeNoticesDispatchClient();
+const internalAuthorizer = new FakeInternalAuthorizer();
 // WHY: 01:30 KST on 2026-10-20, so the 14-day age gate's floor is the KST day 2026-10-06.
 const fakeClock: Clock = { now: () => new Date("2026-10-19T16:30:00Z") };
 
@@ -53,6 +56,7 @@ beforeAll(async () => {
       { provide: NoticesDispatchRepository, useValue: repository },
       { provide: NoticesDispatchClient, useValue: client },
       { provide: Clock, useValue: fakeClock },
+      { provide: InternalAuthorizer, useValue: internalAuthorizer },
     ],
     role: "api",
   });
@@ -71,10 +75,15 @@ beforeEach(() => {
   client.pushes = [];
   client.error = null;
   client.response = { sent: 1, failed: 0, cleanedUp: 0 };
+  internalAuthorizer.allowed = true;
+  internalAuthorizer.calls.length = 0;
 });
 
 describe("POST /internal/notices/dispatch-pending", () => {
   it("rejects requests with a missing token", async () => {
+    // Arrange
+    internalAuthorizer.allowed = false;
+
     // Act
     const res = await request(httpServer)
       .post("/internal/notices/dispatch-pending")
@@ -86,7 +95,10 @@ describe("POST /internal/notices/dispatch-pending", () => {
     expect(sweepPending).not.toHaveBeenCalled();
   });
 
-  it("rejects requests with a wrong token (constant-time)", async () => {
+  it("rejects requests with a wrong token", async () => {
+    // Arrange
+    internalAuthorizer.allowed = false;
+
     // Act
     const res = await request(httpServer)
       .post("/internal/notices/dispatch-pending")
@@ -96,6 +108,25 @@ describe("POST /internal/notices/dispatch-pending", () => {
     // Assert
     expect(res.status).toBe(401);
     expect(sweepPending).not.toHaveBeenCalled();
+  });
+
+  it("asks INTERNAL_AUTHORIZER under notices.dispatch with the request as received, and answers 401 when it refuses the configured token", async () => {
+    // Arrange
+    internalAuthorizer.allowed = false;
+
+    // Act
+    const res = await request(httpServer)
+      .post("/internal/notices/dispatch-pending?cycle=1")
+      .set("X-Internal-Token", config.notices.dispatch.internalToken as string)
+      .send({ source: "crawler-main" });
+
+    // Assert
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: { code: "UNAUTHORIZED", message: "invalid or missing X-Internal-Token" } });
+    expect(sweepPending).not.toHaveBeenCalled();
+    expect(internalAuthorizer.calls.map(({ scope, request: asked }) => [scope, asked.method, asked.target, asked.header("x-internal-token")])).toEqual([
+      ["notices.dispatch", "POST", "/internal/notices/dispatch-pending?cycle=1", config.notices.dispatch.internalToken],
+    ]);
   });
 
   it("sweeps the claimable notices and answers with the sweep's summary", async () => {

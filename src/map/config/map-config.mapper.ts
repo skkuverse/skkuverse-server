@@ -1,7 +1,7 @@
 import { pick, t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
-import { toServedWebviewUrl } from "../../infra/webview-url";
+import { toServedWebviewUrl } from "../../shared/webview-url.util";
 import { toServedActionValue } from "../../shared/link-action.util";
 import type { LayerSpec, MapChipActionSpec } from "../map.types";
 import { CAMPUS_ENTRIES, CAMPUS_FOCUS_DURATION_MS, MARKER_FOCUS } from "./map-config.constants";
