@@ -24,6 +24,7 @@ export const ROLES = new Set([
   "middleware",
   "filter",
   "interceptor",
+  "guard",
   "pipe",
   "decorator",
   "bootstrap",
@@ -41,6 +42,7 @@ export const CLASS_ROLES = new Set([
   "middleware",
   "filter",
   "interceptor",
+  "guard",
   "pipe",
 ]);
 
