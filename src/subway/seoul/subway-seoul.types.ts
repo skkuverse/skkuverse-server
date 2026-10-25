@@ -7,13 +7,14 @@ export interface SeoulLine {
   lineName: string;
   trainMapLine?: string | undefined;
   trainNumbers: TrainNumbering;
+  platformIdByStatnId: ReadonlyMap<string, string>;
   platformIdByApiName: ReadonlyMap<string, string>;
   platformIdByTrainMapName: ReadonlyMap<string, string>;
 }
 
 export interface SeoulStation {
   seoulName: string;
-  platformBySubwayId: ReadonlyMap<string, CountdownPlatform>;
+  platformByStatnId: ReadonlyMap<string, CountdownPlatform>;
 }
 
 export interface SettledObservations extends ProviderObservations {

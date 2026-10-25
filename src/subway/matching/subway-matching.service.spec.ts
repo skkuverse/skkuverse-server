@@ -49,6 +49,8 @@ function schedule(line: string): PlatformSchedule {
   const platform: SubwayPlatform = {
     id: JEONGJA,
     line,
+    statnId: "1077006812",
+    frCode: "D12",
     timetable: { source: "shinbundang" },
     directions: { up: direction([MIGEUM], PANGYO), down: direction([PANGYO, CHEONGGYESAN], MIGEUM) },
   };

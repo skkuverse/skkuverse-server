@@ -7,8 +7,13 @@
  * one-character markers, Seoul ids), every station is filed under a campus or,
  * when a journey only boards or alights there (ADR 0022 D7), under none,
  * and every line's marker color reads as small text on the app's light row
- * background.
+ * background. Every platform carries the station id the Seoul real-time API
+ * writes for it (`statnId`, which its rows are matched by) and its station
+ * number (`frCode`), as the captured Seoul answers of
+ * __tests__/nest/subway/fixtures/ write them.
  */
+import fs from "fs";
+import path from "path";
 import { SUBWAY_LINES, SUBWAY_STATIONS } from "./subway.constants";
 import { subwayNetwork } from "./subway.schema";
 
@@ -99,6 +104,78 @@ describe("SUBWAY_STATIONS", () => {
       ["geumjeong", null],
       ["jongno-5-ga", null],
     ]);
+  });
+});
+
+describe("SUBWAY_STATIONS Seoul station ids", () => {
+  const FIXTURES = path.join(__dirname, "../../__tests__/nest/subway/fixtures");
+  const fixture = (name: string): Record<string, unknown> => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), "utf8")) as Record<string, unknown>;
+  type CapturedRow = { subwayId: string; statnId: string; statnNm: string };
+  type StationInfoRow = { STATION_NM: string; LINE_NUM: string; FR_CODE: string };
+
+  it("declares each platform's statnId and frCode", () => {
+    // Act
+    const ids = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => [platform.id, platform.statnId, platform.frCode]));
+
+    // Assert
+    expect(ids).toEqual([
+      ["KR-1-P153", "1001080153", "P153"],
+      ["S1-4-420", "1004000420", "420"],
+      ["DX-D1-4312", "1077006812", "D12"],
+      ["KR-K1-K230", "1075075230", "K230"],
+      ["S1-2-216", "1002000216", "216"],
+      ["S1-8-2815", "1008000814", "814"],
+      ["S1-3-334", "1003000344", "344"],
+      ["KR-K1-K217", "1075075217", "K217"],
+      ["S1-2-222", "1002000222", "222"],
+      ["DX-D1-4307", "1077000687", "D7"],
+      ["S1-3-332", "1003000342", "342"],
+      ["DX-D1-4308", "1077000688", "D8"],
+      ["DX-D1-4318", "1077006818", "D18"],
+      ["S1-2-226", "1002000226", "226"],
+      ["S1-4-433", "1004000433", "433"],
+      ["KR-1-P149", "1001080149", "P149"],
+      ["KR-4-443", "1004000443", "443"],
+      ["S1-1-154", "1001000129", "129"],
+    ]);
+  });
+
+  it("takes each statnId from the captured real-time rows of its station and line, one id each", () => {
+    // Arrange
+    const captured = fs
+      .readdirSync(FIXTURES)
+      .filter((name) => /^realtime-(arrival|position)-.*\.json$/.test(name))
+      .flatMap((name) => {
+        const body = fixture(name);
+        return (body.realtimeArrivalList ?? body.realtimePositionList ?? []) as CapturedRow[];
+      });
+    const statnIdsAt = (subwayId: string, seoulName: string) => [...new Set(captured.filter((row) => row.subwayId === subwayId && row.statnNm === seoulName).map((row) => row.statnId))];
+    const subwayIdOf = new Map(SUBWAY_LINES.map((line) => [line.code, line.seoul.subwayId]));
+
+    // Act
+    const platforms = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => ({ station, platform })));
+
+    // Assert
+    expect(platforms.map(({ station, platform }) => [platform.id, statnIdsAt(subwayIdOf.get(platform.line)!, station.seoulName)])).toEqual(
+      platforms.map(({ platform }) => [platform.id, [platform.statnId]]),
+    );
+  });
+
+  it("takes each frCode from the Seoul station info answer for its station and line", () => {
+    // Arrange
+    const infoRows = fixture("seoul-station-info.json").row as StationInfoRow[];
+    const lineNameOf = new Map(SUBWAY_LINES.map((line) => [line.code, line.seoul.lineName]));
+    // The station info writes a numbered line with a leading zero, the real-time API without.
+    const frCodesAt = (lineName: string, seoulName: string) =>
+      infoRows.filter((row) => row.STATION_NM === seoulName && row.LINE_NUM.replace(/^0/, "") === lineName).map((row) => row.FR_CODE);
+
+    // Act
+    const platforms = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => ({ station, platform })));
+
+    // Assert
+    expect(platforms.map(({ station, platform }) => [platform.id, frCodesAt(lineNameOf.get(platform.line)!, station.seoulName)])).toEqual(
+      platforms.map(({ platform }) => [platform.id, [platform.frCode]]),
+    );
   });
 });
 

@@ -12,8 +12,8 @@ import { SubwaySeoulApiError } from "./subway-seoul-api.error";
 import type { SubwaySeoulApiClient } from "./subway-seoul-api.client";
 import { SubwaySeoulApiService } from "./subway-seoul-api.service";
 
-const STATION_ID_BY_NAME = new Map([["성균관대", "KR-1-P153"]]);
-const PLATFORM_BY_SUBWAY_ID = new Map([["1001", { platformId: "KR-1-P153", trainNumbers: "timetable" as const }]]);
+const LINE_1_PLATFORM_IDS = { platformIdByStatnId: new Map([["1001080153", "KR-1-P153"]]), platformIdByName: new Map([["화서", "KR-1-P154"]]) };
+const PLATFORM_BY_STATN_ID = new Map([["1001080153", { platformId: "KR-1-P153", trainNumbers: "timetable" as const }]]);
 
 function setup() {
   const client = new FakeSubwaySeoulApiClient();
@@ -25,12 +25,12 @@ describe("SubwaySeoulApiService.listLineEvents", () => {
     // Arrange
     const { client, service } = setup();
     client.positions.set("1호선", [
-      { trainNo: "0493", statnNm: "성균관대", statnTnm: "서동탄", updnLine: "1", trainSttus: "1", recptnDt: "2026-10-16 20:44:10" },
-      { trainNo: "0509", statnNm: "시청", statnTnm: "서동탄", updnLine: "1", trainSttus: "1", recptnDt: "2026-10-16 20:44:11" },
+      { trainNo: "0493", statnId: "1001080153", statnNm: "성균관대", statnTnm: "서동탄", updnLine: "1", trainSttus: "1", recptnDt: "2026-10-16 20:44:10" },
+      { trainNo: "0509", statnId: "1001000132", statnNm: "시청", statnTnm: "서동탄", updnLine: "1", trainSttus: "1", recptnDt: "2026-10-16 20:44:11" },
     ]);
 
     // Act
-    const events = await service.listLineEvents("1호선", STATION_ID_BY_NAME, "timetable");
+    const events = await service.listLineEvents("1호선", LINE_1_PLATFORM_IDS, "timetable");
 
     // Assert
     expect(client.calls).toEqual(["realtimePosition 1호선"]);
@@ -45,7 +45,7 @@ describe("SubwaySeoulApiService.listLineEvents", () => {
     client.positions.set("1호선", new SubwaySeoulApiError("realtimePosition: HTTP 500", 500, "ERR_BAD_RESPONSE"));
 
     // Act & Assert
-    await expect(service.listLineEvents("1호선", STATION_ID_BY_NAME, "timetable")).rejects.toMatchObject({ status: 500, code: "ERR_BAD_RESPONSE" });
+    await expect(service.listLineEvents("1호선", LINE_1_PLATFORM_IDS, "timetable")).rejects.toMatchObject({ status: 500, code: "ERR_BAD_RESPONSE" });
   });
 });
 
@@ -53,10 +53,10 @@ describe("SubwaySeoulApiService.listStationCountdownRows", () => {
   it("asks for the station's arrivals once and maps them to countdown rows", async () => {
     // Arrange
     const { client, service } = setup();
-    client.arrivals.set("성균관대", [{ subwayId: "1001", btrainNo: "0493", statnNm: "성균관대", barvlDt: "120", recptnDt: "2026-10-16 20:44:10" }]);
+    client.arrivals.set("성균관대", [{ subwayId: "1001", btrainNo: "0493", statnId: "1001080153", statnNm: "성균관대", barvlDt: "120", recptnDt: "2026-10-16 20:44:10" }]);
 
     // Act
-    const countdownRows = await service.listStationCountdownRows("성균관대", PLATFORM_BY_SUBWAY_ID, new Date("2026-10-16T11:44:30Z"));
+    const countdownRows = await service.listStationCountdownRows("성균관대", PLATFORM_BY_STATN_ID, new Date("2026-10-16T11:44:30Z"));
 
     // Assert
     expect(client.calls).toEqual(["realtimeStationArrival 성균관대"]);

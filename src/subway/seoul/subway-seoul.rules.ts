@@ -2,35 +2,33 @@ import type { CountdownRow, SubwayRegistry, TrainEvent } from "../subway.types";
 import type { TrainMapLine } from "../seoul-trainmap/subway-seoul-trainmap.types";
 import type { SeoulLine, SeoulStation, SettledObservations } from "./subway-seoul.types";
 
-// WHY: a row names its station, not its platform, so each line maps the names it writes to its own platforms: the
-// served ones and their neighbors, by the Seoul API's name and by the train map's where that differs.
+// WHY: an API row carries its station's statnId, which only the served platforms declare, so each line matches those by
+// statnId and its neighbors by the Seoul API's name; the train map writes names only, the served stations' too.
 export function toSeoulLines(registry: SubwayRegistry): SeoulLine[] {
   return registry.lines.map(({ code, seoul }) => {
     const stations = registry.stations.flatMap((station) => station.platforms.filter((p) => p.line === code).map((platform) => ({ station, platform })));
     const neighbors = Object.entries(registry.neighbors).filter(([, neighbor]) => neighbor.line === code);
-    const platformIdByApiName = new Map([
-      ...stations.map(({ station, platform }) => [station.seoulName, platform.id] as const),
-      ...neighbors.map(([id, neighbor]) => [neighbor.seoulName, id] as const),
-    ]);
+    const platformIdByStatnId = new Map(stations.map(({ platform }) => [platform.statnId, platform.id] as const));
+    const platformIdByApiName = new Map(neighbors.map(([id, neighbor]) => [neighbor.seoulName, id] as const));
     const platformIdByTrainMapName = new Map([
       ...stations.map(({ station, platform }) => [station.seoulName, platform.id] as const),
       ...neighbors.map(([id, neighbor]) => [neighbor.trainMapName ?? neighbor.seoulName, id] as const),
     ]);
     const { subwayId, lineName, trainMapLine, trainNumbers } = seoul;
-    return { subwayId, lineName, trainMapLine, trainNumbers, platformIdByApiName, platformIdByTrainMapName };
+    return { subwayId, lineName, trainMapLine, trainNumbers, platformIdByStatnId, platformIdByApiName, platformIdByTrainMapName };
   });
 }
 
-// WHY: one arrival call per physical station answers every line there, so each station maps a row's `subwayId` to
+// WHY: one arrival call per physical station answers every line there, so each station maps a row's `statnId` to
 // its own platform of that line.
 export function toSeoulStations(registry: SubwayRegistry): SeoulStation[] {
   const lineByCode = new Map(registry.lines.map((line) => [line.code, line.seoul]));
   return registry.stations.map(({ seoulName, platforms }) => ({
     seoulName,
-    platformBySubwayId: new Map(
-      platforms.flatMap(({ id, line }) => {
+    platformByStatnId: new Map(
+      platforms.flatMap(({ id, line, statnId }) => {
         const seoul = lineByCode.get(line);
-        return seoul ? [[seoul.subwayId, { platformId: id, trainNumbers: seoul.trainNumbers }] as const] : [];
+        return seoul ? [[statnId, { platformId: id, trainNumbers: seoul.trainNumbers }] as const] : [];
       }),
     ),
   }));

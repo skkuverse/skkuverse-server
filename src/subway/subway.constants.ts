@@ -24,18 +24,20 @@ const KORAIL = { source: "korail" } as const;
 const SHINBUNDANG = { source: "shinbundang" } as const;
 const seoulStation = (stationCode: string) => ({ source: "seoul-station", stationCode }) as const;
 
+// EVIDENCE: each platform's statnId as the Seoul real-time rows write it and its frCode as SearchInfoBySubwayNameService
+// does, captured 2026-10-25 (__tests__/nest/subway/fixtures/; subway.constants.spec.ts checks both against them).
 export const SUBWAY_STATIONS: readonly NetworkStation[] = [
-  { id: "sungkyunkwan", name: named("성균관대", "Sungkyunkwan Univ.", "成均馆大学"), seoulName: "성균관대", campus: "nsc", platforms: [{ id: "KR-1-P153", line: "1", timetable: KORAIL }] },
-  { id: "hyehwa", name: named("혜화", "Hyehwa", "惠化"), seoulName: "혜화", campus: "hssc", platforms: [{ id: "S1-4-420", line: "4", timetable: seoulStation("0420") }] },
-  { id: "jeongja", name: named("정자", "Jeongja", "亭子"), seoulName: "정자", campus: "nsc", platforms: [{ id: "DX-D1-4312", line: "D1", timetable: SHINBUNDANG }, { id: "KR-K1-K230", line: "K1", timetable: KORAIL }] },
-  { id: "jamsil", name: named("잠실", "Jamsil", "蚕室"), seoulName: "잠실", campus: "nsc", platforms: [{ id: "S1-2-216", line: "2", timetable: seoulStation("0216") }, { id: "S1-8-2815", line: "8", timetable: seoulStation("2815") }] },
-  { id: "dogok", name: named("도곡", "Dogok", "道谷"), seoulName: "도곡", campus: "nsc", platforms: [{ id: "S1-3-334", line: "3", timetable: seoulStation("0334") }, { id: "KR-K1-K217", line: "K1", timetable: KORAIL }] },
-  { id: "gangnam", name: named("강남", "Gangnam", "江南"), seoulName: "강남", campus: "nsc", platforms: [{ id: "S1-2-222", line: "2", timetable: seoulStation("0222") }, { id: "DX-D1-4307", line: "D1", timetable: SHINBUNDANG }] },
-  { id: "yangjae", name: named("양재", "Yangjae", "良才"), seoulName: "양재", campus: "nsc", platforms: [{ id: "S1-3-332", line: "3", timetable: seoulStation("0332") }, { id: "DX-D1-4308", line: "D1", timetable: SHINBUNDANG }] },
-  { id: "gwanggyo-jungang", name: named("광교중앙", "Gwanggyojungang", "光教中央"), seoulName: "광교중앙", campus: "nsc", platforms: [{ id: "DX-D1-4318", line: "D1", timetable: SHINBUNDANG }] },
-  { id: "sadang", name: named("사당", "Sadang", "舍堂"), seoulName: "사당", campus: null, platforms: [{ id: "S1-2-226", line: "2", timetable: seoulStation("0226") }, { id: "S1-4-433", line: "4", timetable: seoulStation("0433") }] },
-  { id: "geumjeong", name: named("금정", "Geumjeong", "衿井"), seoulName: "금정", campus: null, platforms: [{ id: "KR-1-P149", line: "1", timetable: KORAIL }, { id: "KR-4-443", line: "4", timetable: seoulStation("1458") }] },
-  { id: "jongno-5-ga", name: named("종로5가", "Jongno 5(o)-ga", "钟路5街"), seoulName: "종로5가", campus: null, platforms: [{ id: "S1-1-154", line: "1", timetable: KORAIL }] },
+  { id: "sungkyunkwan", name: named("성균관대", "Sungkyunkwan Univ.", "成均馆大学"), seoulName: "성균관대", campus: "nsc", platforms: [{ id: "KR-1-P153", line: "1", statnId: "1001080153", frCode: "P153", timetable: KORAIL }] },
+  { id: "hyehwa", name: named("혜화", "Hyehwa", "惠化"), seoulName: "혜화", campus: "hssc", platforms: [{ id: "S1-4-420", line: "4", statnId: "1004000420", frCode: "420", timetable: seoulStation("0420") }] },
+  { id: "jeongja", name: named("정자", "Jeongja", "亭子"), seoulName: "정자", campus: "nsc", platforms: [{ id: "DX-D1-4312", line: "D1", statnId: "1077006812", frCode: "D12", timetable: SHINBUNDANG }, { id: "KR-K1-K230", line: "K1", statnId: "1075075230", frCode: "K230", timetable: KORAIL }] },
+  { id: "jamsil", name: named("잠실", "Jamsil", "蚕室"), seoulName: "잠실", campus: "nsc", platforms: [{ id: "S1-2-216", line: "2", statnId: "1002000216", frCode: "216", timetable: seoulStation("0216") }, { id: "S1-8-2815", line: "8", statnId: "1008000814", frCode: "814", timetable: seoulStation("2815") }] },
+  { id: "dogok", name: named("도곡", "Dogok", "道谷"), seoulName: "도곡", campus: "nsc", platforms: [{ id: "S1-3-334", line: "3", statnId: "1003000344", frCode: "344", timetable: seoulStation("0334") }, { id: "KR-K1-K217", line: "K1", statnId: "1075075217", frCode: "K217", timetable: KORAIL }] },
+  { id: "gangnam", name: named("강남", "Gangnam", "江南"), seoulName: "강남", campus: "nsc", platforms: [{ id: "S1-2-222", line: "2", statnId: "1002000222", frCode: "222", timetable: seoulStation("0222") }, { id: "DX-D1-4307", line: "D1", statnId: "1077000687", frCode: "D7", timetable: SHINBUNDANG }] },
+  { id: "yangjae", name: named("양재", "Yangjae", "良才"), seoulName: "양재", campus: "nsc", platforms: [{ id: "S1-3-332", line: "3", statnId: "1003000342", frCode: "342", timetable: seoulStation("0332") }, { id: "DX-D1-4308", line: "D1", statnId: "1077000688", frCode: "D8", timetable: SHINBUNDANG }] },
+  { id: "gwanggyo-jungang", name: named("광교중앙", "Gwanggyojungang", "光教中央"), seoulName: "광교중앙", campus: "nsc", platforms: [{ id: "DX-D1-4318", line: "D1", statnId: "1077006818", frCode: "D18", timetable: SHINBUNDANG }] },
+  { id: "sadang", name: named("사당", "Sadang", "舍堂"), seoulName: "사당", campus: null, platforms: [{ id: "S1-2-226", line: "2", statnId: "1002000226", frCode: "226", timetable: seoulStation("0226") }, { id: "S1-4-433", line: "4", statnId: "1004000433", frCode: "433", timetable: seoulStation("0433") }] },
+  { id: "geumjeong", name: named("금정", "Geumjeong", "衿井"), seoulName: "금정", campus: null, platforms: [{ id: "KR-1-P149", line: "1", statnId: "1001080149", frCode: "P149", timetable: KORAIL }, { id: "KR-4-443", line: "4", statnId: "1004000443", frCode: "443", timetable: seoulStation("1458") }] },
+  { id: "jongno-5-ga", name: named("종로5가", "Jongno 5(o)-ga", "钟路5街"), seoulName: "종로5가", campus: null, platforms: [{ id: "S1-1-154", line: "1", statnId: "1001000129", frCode: "129", timetable: KORAIL }] },
 ];
 
 export const SUBWAY_NETWORK: SubwayNetwork = { lines: SUBWAY_LINES, stations: SUBWAY_STATIONS };
