@@ -805,6 +805,24 @@ module.exports = [
     },
   },
   {
+    // ADR 0023, D8: src/perimeter/ is a shared layer, so no feature type or value reaches a port or an implementation.
+    name: "boundaries/perimeter-layer",
+    files: ["src/perimeter/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: `^(?:\\.\\./)+(?:${FEATURES.join("|")})/`,
+              message: "src/perimeter/ is a shared layer and imports no feature module: move what it needs to src/shared/.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // ADR 0023, D8: only src/perimeter/ reaches an implementation set (its own files name it `./local-dev/…`,
     // never through `perimeter/`), and no file names the overlay's private build output, which the registry loads
     // by path (src/perimeter/perimeter-overlay.rules.ts).

@@ -135,6 +135,31 @@ describe("import boundary blocks apply as specified", () => {
     expect(lint(block("boundaries/infra").rules!, "src/infra/x.ts", 'import { a } from "./logger";')).toEqual([]);
   });
 
+  it("perimeter/ imports no feature, a type included, and reaches every shared layer", () => {
+    // Arrange
+    const rules = block("boundaries/perimeter-layer").rules!;
+    const bad = [
+      ["src/perimeter/current/x.ts", 'import { checkDraft } from "../../miniapps/notifications/miniapps-notifications.rules";'],
+      ["src/perimeter/local-dev/x.ts", 'import type { NoticeDoc } from "../../notices/notices.document";'],
+      ["src/perimeter/perimeter.config.ts", 'import { BusModule } from "../bus/bus.module";'],
+    ];
+    const ok = [
+      ["src/perimeter/current/x.ts", 'import { OriginTrust } from "../perimeter.ports";'],
+      ["src/perimeter/local-dev/x.ts", 'import { isLoopbackAddress } from "../../shared/ip-address.util";'],
+      ["src/perimeter/current/x.ts", 'import { WEBVIEW_ORIGIN } from "../../infra/origins";'],
+      ["src/perimeter/current/x.ts", 'import { bearerToken } from "../../http/firebase-auth.middleware";'],
+      ["src/perimeter/perimeter.config.ts", 'import config from "../infra/config";'],
+    ];
+
+    // Act
+    const badCounts = bad.map(([file, source]) => lint(rules, file!, source!).length);
+    const okCounts = ok.map(([file, source]) => lint(rules, file!, source!).length);
+
+    // Assert
+    expect(badCounts).toEqual([1, 1, 1]);
+    expect(okCounts).toEqual([0, 0, 0, 0, 0]);
+  });
+
   it("a .rules or .mapper file does no IO, speaks no Mongo and does not read the clock", () => {
     const rules = block("boundaries/pure").rules!;
     const file = "src/building/x.rules.ts";

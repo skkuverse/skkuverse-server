@@ -34,6 +34,13 @@ const config: Linter.Config[] = require("../../eslint.config.js");
 const PURE_TAILS = [".rules.ts", ".mapper.ts", ".query.ts"];
 const MONGO_OWNERS = ["src/infra/db.ts", "src/infra/mongo.ts"];
 const FEATURE_DEPTHS = 5;
+// The boundary blocks over one shared layer, each by the folder it holds to.
+const LAYER_BY_BLOCK: Readonly<Record<string, string>> = {
+  "boundaries/shared": "shared",
+  "boundaries/infra": "infra",
+  "boundaries/http": "http",
+  "boundaries/perimeter-layer": "perimeter",
+};
 const ROLE_GLOB = /^(?:src\/)?\*\*\/\*\.(?:([a-z]+)|\{([a-z,]+)\})\.ts$/;
 
 /** `src/<m>/**\/*<tail>` per scope folder, and each root file that ends in `<tail>`. */
@@ -57,7 +64,8 @@ export function requiredGlobs(name: string, scopes: readonly string[]): string[]
   if (name === "specs/fixed-clock") return scopeSpecGlobs(scopes);
   const feature = /^boundaries\/feature\/([^/]+)\/depth-(\d+)$/.exec(name);
   if (feature !== null) return [`src/${feature[1]}/${"*/".repeat(Number(feature[2]) - 1)}*.ts`];
-  if (["boundaries/shared", "boundaries/infra", "boundaries/http"].includes(name)) return [`src/${name.slice("boundaries/".length)}/**/*.ts`];
+  const layer = LAYER_BY_BLOCK[name];
+  if (layer !== undefined) return [`src/${layer}/**/*.ts`];
   // The migrated/syntax blocks split the scopes between a pair (with and without the clock ban); the pair is read below.
   return name.startsWith("boundaries/") || name.startsWith("migrated/") ? [] : undefined;
 }
@@ -72,7 +80,7 @@ export function scopeBlockProblems(blocks: readonly Linter.Config[], scopes: rea
     if (required === undefined) continue;
     const files = filesOf(block);
     for (const glob of required) if (!files.includes(glob)) problems.push(`${block.name}: files miss ${glob}`);
-    const isSrcWide = block.name.startsWith("boundaries/") && !/^boundaries\/(?:feature\/|shared$|infra$|http$)/.test(block.name);
+    const isSrcWide = block.name.startsWith("boundaries/") && !block.name.startsWith("boundaries/feature/") && LAYER_BY_BLOCK[block.name] === undefined;
     if (isSrcWide) for (const glob of files) if (!glob.startsWith("src/**/")) problems.push(`${block.name}: files narrow src/ to ${glob}`);
     for (const ignored of (block.ignores ?? []).map(String)) {
       const roles = ROLE_GLOB.exec(ignored);
@@ -158,6 +166,18 @@ describe("scope block rule applies as specified", () => {
 
     // Act & Assert
     expect(requiredGlobs("boundaries/http", scopes)).toEqual(["src/http/**/*.ts"]);
+    expect(scopeBlockProblems(whole, scopes, new Set(["src/notices/notices.topics.ts"]))).toEqual([]);
+    expect(scopeBlockProblems(narrowed, scopes, none).length).toBeGreaterThan(0);
+  });
+
+  // WHY: src/perimeter/ imports no feature (ADR 0023, D8), a layer rule like src/shared/'s.
+  it("reads a boundary over src/perimeter/ as it reads the ones over src/shared/ and src/infra/", () => {
+    // Arrange
+    const whole = [...covering(), block("boundaries/perimeter-layer", ["src/perimeter/**/*.ts"])];
+    const narrowed = [...covering(), block("boundaries/perimeter-layer", ["src/perimeter/current/*.ts"])];
+
+    // Act & Assert
+    expect(requiredGlobs("boundaries/perimeter-layer", scopes)).toEqual(["src/perimeter/**/*.ts"]);
     expect(scopeBlockProblems(whole, scopes, new Set(["src/notices/notices.topics.ts"]))).toEqual([]);
     expect(scopeBlockProblems(narrowed, scopes, none).length).toBeGreaterThan(0);
   });
