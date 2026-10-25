@@ -1,11 +1,14 @@
 /**
- * NoticesAttachmentService over FakeNoticesAttachmentClient: the host and referer policies refuse before any
- * fetch, the referer primes a gnuboard session, an HTML answer where a file was due is retried once with a fresh
- * session, a declared length over the cap is refused before any header, and the download carries its headers.
+ * NoticesAttachmentService over FakeNoticesAttachmentClient and FakeOutboundPolicy: a url or referer the outbound
+ * policy refuses is refused before any fetch, the referer primes a gnuboard session, an HTML answer where a file
+ * was due is retried once with a fresh session, a declared length over the cap is refused before any header, and
+ * the download carries its headers.
  */
 import { Readable } from "stream";
 import { FakeNoticesAttachmentClient } from "../../../__tests__/helpers/fakes/notices/notices-attachment.client.fake";
+import { FakeOutboundPolicy } from "../../../__tests__/helpers/fakes/perimeter/outbound-policy.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import type { OutboundPolicy } from "../../perimeter/perimeter.ports";
 import type { NoticesAttachmentClient } from "./notices-attachment.client";
 import { NoticesAttachmentService } from "./notices-attachment.service";
 
@@ -15,7 +18,10 @@ const upstream = (contentType: string, contentLength?: number) => ({ contentType
 
 function setup() {
   const client = new FakeNoticesAttachmentClient();
-  return { client, service: new NoticesAttachmentService(asReal<NoticesAttachmentClient>(client)) };
+  const outbound = new FakeOutboundPolicy();
+  outbound.refused.add("https://evil.example/a.pdf");
+  outbound.refused.add("https://evil.example/");
+  return { client, outbound, service: new NoticesAttachmentService(asReal<NoticesAttachmentClient>(client), asReal<OutboundPolicy>(outbound)) };
 }
 
 beforeEach(() => warn.mockClear());
