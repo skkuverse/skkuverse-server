@@ -4,8 +4,8 @@
  * express lists only those it stops at and a train running the other way lists them reversed; it lists none for a row
  * that does not reach the alight platform after the board one, and none at all when one stop has no place.
  * toRideStopPlace places one platform: a station the code serves keeps its slug, its name in the request language, its
- * stored coords and its tap action; a neighbor of the topology its station id, its own name (its Korean Seoul name in
- * every language when it has none) and its coords, with no action; a platform neither places is no place.
+ * stored coords and its tap action; a neighbor of the topology its station id, its own name in the request language
+ * and its coords, with no action; a platform neither places, and a neighbor missing its name or coords, is no place.
  */
 import { subwayRegistryFixture } from "../../../../__tests__/helpers/subway/topology";
 import type { Place } from "../../../shared/place.wire";
@@ -65,7 +65,7 @@ describe("toRideStopPlace", () => {
 
   it.each([
     ["a named neighbor by its own name", "S1-4-432", "en", { id: "chongshin-univ", name: "Chongshin Univ. (Isu)", coords: { lat: 37.486263, lng: 126.981989 } }],
-    ["Korean-only neighbor: by its Seoul name in English too", "S1-4-426", "en", { id: "seoul-station", name: "서울", coords: { lat: 37.55281, lng: 126.972556 } }],
+    ["a neighbor whose name differs from its Seoul name, by its own name", "S1-4-426", "en", { id: "seoul-station", name: "Seoul Station", coords: { lat: 37.55281, lng: 126.972556 } }],
     ["a neighbor in Korean", "S1-4-421", "ko", { id: "dongdaemun", name: "동대문", coords: { lat: 37.57093, lng: 127.009287 } }],
   ] as const)("places %s, its station id and coords, with no action", (_case, platformId, lang, expected) => {
     // Act & Assert
@@ -79,5 +79,14 @@ describe("toRideStopPlace", () => {
   ])("is no place for %s", (_case, platformId) => {
     // Act & Assert
     expect(toRideStopPlace(platformId, { registry, coordsOf, lang: "ko" })).toBeNull();
+  });
+
+  it("is no place for a neighbor with a station id and no name, never its Korean Seoul name in English", () => {
+    // Arrange
+    const unnamed = subwayRegistryFixture();
+    delete unnamed.neighbors["S1-4-426"]?.name;
+
+    // Act & Assert
+    expect(toRideStopPlace("S1-4-426", { registry: unnamed, coordsOf, lang: "en" })).toBeNull();
   });
 });

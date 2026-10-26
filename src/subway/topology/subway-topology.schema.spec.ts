@@ -96,6 +96,11 @@ describe("subwayTopologyDataset", () => {
       /^neighbors\.S1-4-421\.coords: a neighbor with a station id needs coords$/,
     ],
     ["coords without a station id", (data: Record<string, any>) => delete data.neighbors["S1-4-421"].stationId, /^neighbors\.S1-4-421\.stationId: a neighbor with coords needs a station id$/],
+    [
+      "Station id without a name: a neighbor a journey stop could place and not name",
+      (data: Record<string, any>) => delete data.neighbors["S1-4-432"].name,
+      /^neighbors\.S1-4-432\.name: a neighbor with a station id needs a name$/,
+    ],
   ])("fails %s, with its path", (_case, arrange, message) => {
     // Arrange
     const data = fixture();
@@ -115,11 +120,11 @@ describe("subwayTopologyDataset", () => {
     expect(messagesOf(data)).toEqual([]);
   });
 
-  it("passes a neighbor with no name and no train-map name", () => {
+  it("passes a neighbor with no station id, no name and no train-map name", () => {
     // Arrange
     const data = fixture();
-    delete data.neighbors["KR-1-P151"].name;
-    delete data.neighbors["KR-1-P151"].trainMapName;
+    delete data.neighbors["S1-8-2814"].name;
+    delete data.neighbors["S1-8-2814"].trainMapName;
 
     // Act & Assert
     expect(messagesOf(data)).toEqual([]);
