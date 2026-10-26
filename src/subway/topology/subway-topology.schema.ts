@@ -9,11 +9,13 @@ const platformDirections = z.strictObject({ up: platformDirection, down: platfor
 // WHY: South Korea, generously: a swapped lat and lng lands far outside it.
 const isInSouthKorea = ({ lat, lng }: LatLng): boolean => lat >= 33 && lat <= 39 && lng >= 124 && lng <= 132;
 
-// WHY: a journey stop names a neighbor by its station id and places it by its coords, so one never comes without the other.
+// WHY: a journey stop names a neighbor by its station id and places it by its coords, so one never comes without the other,
+// and labels it by its name in the request language, so a neighbor with a station id is named.
 const placedNeighbor = subwayNeighbor
   .refine(({ coords }) => coords === undefined || isInSouthKorea(coords), { message: "must be { lat, lng } inside South Korea (lat 33 to 39, lng 124 to 132)", path: ["coords"] })
   .refine(({ stationId, coords }) => stationId === undefined || coords !== undefined, { message: "a neighbor with a station id needs coords", path: ["coords"] })
-  .refine(({ stationId, coords }) => coords === undefined || stationId !== undefined, { message: "a neighbor with coords needs a station id", path: ["stationId"] });
+  .refine(({ stationId, coords }) => coords === undefined || stationId !== undefined, { message: "a neighbor with coords needs a station id", path: ["stationId"] })
+  .refine(({ stationId, name }) => stationId === undefined || name !== undefined, { message: "a neighbor with a station id needs a name", path: ["name"] });
 
 export const subwayTopologyDataset = z.strictObject({
   platforms: z.record(platformId, platformDirections),

@@ -438,7 +438,7 @@ describe("GET /journey/routes: the stops a ride passes between its board and ali
     expect(bus7800!.stops[0].place.coords).toEqual({ lat: 37.4486082327, lng: 126.994122992 });
     // WHY: the 4호선 ride lists the stations its train calls at between 혜화 and 사당, each placed by subway-topology revision 3.
     expect(line4!.stops.map(({ place }: { place: Record<string, unknown> }) => [place.kind, place.name, place.action])).toEqual(
-      ["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"].map((name) => ["subway_station", name, null]),
+      ["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울역", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"].map((name) => ["subway_station", name, null]),
     );
   });
 
