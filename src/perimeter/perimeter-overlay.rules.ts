@@ -14,7 +14,7 @@ import {
 } from "./perimeter.ports";
 
 // WHY: no extension: Node resolves the compiled `.js` under dist/, Jest the `.ts` under src/.
-export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");
+export const OVERLAY_ENTRY = path.join(__dirname, "..", "private", "perimeter.overlay");
 
 type ParsedOverlay = { readonly overlay: PerimeterOverlay } | { readonly errors: string[] };
 

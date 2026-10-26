@@ -377,7 +377,7 @@ const FEATURE_IMPORT = `^(?:\\.\\./)+(?:${FEATURES.join("|")})/`;
 
 const PERIMETER_IMPLEMENTATION_PATTERNS = [
   {
-    regex: "(?:^|/)perimeter/(?:local-dev|current)/",
+    regex: "(?:^|/)perimeter/local-dev/",
     message: "Only src/perimeter/ reaches a perimeter implementation: inject its port from src/perimeter/perimeter.ports.",
   },
   {
@@ -414,7 +414,7 @@ const PERIMETER_OVERLAY_OUTSIDE_IMPORT = `^\\.\\./(?!perimeter/perimeter\\.ports
 
 // Feature code and src/http/ reach src/perimeter/ through the ports file alone (ADR 0023, D8).
 const PERIMETER_PORTS_ONLY_PATTERN = {
-  regex: "^(?:\\.\\./)+perimeter/(?!perimeter\\.ports$)(?!(?:local-dev|current)/)",
+  regex: "^(?:\\.\\./)+perimeter/(?!perimeter\\.ports$)(?!local-dev/)",
   message: "Feature code and src/http/ import only src/perimeter/perimeter.ports: inject the port.",
 };
 
@@ -876,10 +876,10 @@ module.exports = [
     rules: { "src-syntax/perimeter-imports": ["error", { patterns: [...PERIMETER_IMPLEMENTATION_PATTERNS, PERIMETER_PORTS_ONLY_PATTERN] }] },
   },
   {
-    // ADR 0023, D4: an implementation leaves for the overlay, which is built against the ports file, the listed
-    // src/shared/ modules and packages, so it imports nothing else from this repository but its own folder.
+    // ADR 0023, D4: the LocalDev implementations take only what the overlay is built against, the ports file, the
+    // listed src/shared/ modules and packages, so either set fits the same deps; nothing else but their own folder.
     name: "boundaries/perimeter-implementations",
-    files: ["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"],
+    files: ["src/perimeter/local-dev/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: {
@@ -926,24 +926,13 @@ module.exports = [
     },
   },
   {
-    // The overlay's specs, which no module scope's spec block reaches: specs/fixed-clock and the perimeter layer's
-    // feature ban, as they held the overlay's specs in src/perimeter/current/.
+    // The overlay's specs, which no module scope's spec block reaches: specs/fixed-clock. WHY: no feature ban, so a
+    // policy case can drive a public feature route end to end beside the policy it asserts; the sources keep it.
     name: "specs/perimeter-overlay",
     files: [`src/${OVERLAY_FOLDER}/**/*.spec.ts`],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: {
       "src-syntax/spec-clock": ["error", ...SPEC_CLOCK_SYNTAX],
-      "@typescript-eslint/no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              regex: FEATURE_IMPORT,
-              message: "The overlay is a shared layer and imports no feature module: move what it needs to src/shared/.",
-            },
-          ],
-        },
-      ],
     },
   },
   {
