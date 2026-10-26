@@ -787,6 +787,6 @@ describe("the one require in src/", () => {
     // Assert
     expect(requires).toEqual([`${LOADER}: require(OVERLAY_ENTRY)`]);
     expect(disables).toEqual([LOADER]);
-    expect(readSource(LOADER)).toContain('export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");');
+    expect(readSource(LOADER)).toContain('export const OVERLAY_ENTRY = path.join(__dirname, "..", "private", "perimeter.overlay");');
   });
 });

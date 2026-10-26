@@ -4,8 +4,8 @@
     "expects": 103
   },
   "architecture": {
-    "tests": 451,
-    "expects": 600
+    "tests": 461,
+    "expects": 615
   },
   "building": {
     "tests": 210,
@@ -20,12 +20,12 @@
     "expects": 133
   },
   "config": {
-    "tests": 10,
-    "expects": 15
+    "tests": 12,
+    "expects": 17
   },
   "contracts": {
-    "tests": 31,
-    "expects": 45
+    "tests": 32,
+    "expects": 47
   },
   "games": {
     "tests": 70,
@@ -40,8 +40,8 @@
     "expects": 88
   },
   "infra": {
-    "tests": 464,
-    "expects": 1031
+    "tests": 479,
+    "expects": 1053
   },
   "journey": {
     "tests": 126,
@@ -68,8 +68,8 @@
     "expects": 724
   },
   "perimeter": {
-    "tests": 112,
-    "expects": 188
+    "tests": 41,
+    "expects": 64
   },
   "scheduling": {
     "tests": 30,
@@ -80,8 +80,8 @@
     "expects": 59
   },
   "shared": {
-    "tests": 124,
-    "expects": 167
+    "tests": 127,
+    "expects": 170
   },
   "subway": {
     "tests": 725,

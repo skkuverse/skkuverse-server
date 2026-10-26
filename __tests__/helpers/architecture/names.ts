@@ -56,8 +56,6 @@ export const EXEMPT = new Set([
   // Imported by the hash-locked notices.topics.ts (.contracts.lock.json); changes go through the producer repo.
   "src/notices/tabConfig.ts",
   "src/notices/types.ts",
-  // The one entry the perimeter registry loads by path, named by the shape it exports (ADR 0023, D4).
-  "src/perimeter/current/perimeter.overlay.ts",
 ]);
 
 export interface ParsedName {

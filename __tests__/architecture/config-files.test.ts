@@ -85,7 +85,7 @@ describe("config file rule applies as specified", () => {
     ["a namespace import of the parser", 'import * as cfg from "../../infra/config-file";\nimport raw from "./x.json";\nexport const x = cfg.parseConfigFile("x", s, raw);'],
     ["a require of a package", 'const zod = require("zod");\nexport const x = zod;'],
     // WHY: the perimeter overlay's entry is a module, loaded by path once (ADR 0023, D4); eslint-syntax pins the call.
-    ["the overlay entry's load", 'export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");\nexport const load = () => require(OVERLAY_ENTRY);'],
+    ["the overlay entry's load", 'export const OVERLAY_ENTRY = path.join(__dirname, "..", "private", "perimeter.overlay");\nexport const load = () => require(OVERLAY_ENTRY);'],
   ])("passes %s", (_case, source) => {
     // Act & Assert
     expect(unparsedConfigFiles(["src/x/x.config.ts"], ["src/x/"], () => source)).toEqual([]);

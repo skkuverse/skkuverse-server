@@ -9,6 +9,8 @@
  * Each case requires a fresh copy of the module with jest.isolateModules,
  * under an env it restores in a `finally`.
  */
+import { OVERLAY_ENTRY } from "../perimeter/perimeter-overlay.rules";
+
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), fatal: jest.fn() };
 jest.mock("./logger", () => mockLogger);
 
@@ -75,7 +77,9 @@ describe("loading config with an invalid perimeter mode or host", () => {
   it("resolves the overlay entry in overlay mode without loading it", () => {
     // Arrange
     const loaded = jest.fn();
-    jest.doMock("../perimeter/current/perimeter.overlay", () => {
+    // WHY: by the absolute entry path, never a relative specifier: Jest keys a mock by the resolved path, which a
+    // checkout without the overlay maps to the stand-in entry (jest.config.js).
+    jest.doMock(OVERLAY_ENTRY, () => {
       loaded();
       return {};
     });
@@ -85,7 +89,7 @@ describe("loading config with an invalid perimeter mode or host", () => {
       expect(() => loadConfigWith({ NODE_ENV: "test", PERIMETER_MODE: "overlay" })).not.toThrow();
       expect(loaded).not.toHaveBeenCalled();
     } finally {
-      jest.dontMock("../perimeter/current/perimeter.overlay");
+      jest.dontMock(OVERLAY_ENTRY);
     }
   });
 
