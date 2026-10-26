@@ -24,7 +24,9 @@ function runVerifyServe(args: string[], env: Record<string, string>): Run {
   const record = path.join(bin, "docker.log");
   fs.writeFileSync(path.join(bin, "docker"), `#!/bin/sh\nprintf '%s|%s|%s\\n' "$PERIMETER_OVERLAY_DIR" "$PERIMETER_OVERLAY_SHA" "$*" > "${record}"\n`, { mode: 0o755 });
   try {
-    const run = spawnSync("node", [SCRIPT, ...args], { cwd: root, encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, ...env } });
+    // WHY: a shell that exports the overlay variables must not leak them into the case under test.
+    const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("PERIMETER_OVERLAY_")));
+    const run = spawnSync("node", [SCRIPT, ...args], { cwd: root, encoding: "utf8", env: { ...inherited, PATH: `${bin}:${process.env.PATH}`, ...env } });
     return { status: run.status, stderr: run.stderr, docker: fs.existsSync(record) ? fs.readFileSync(record, "utf8").trim() : null };
   } finally {
     fs.rmSync(bin, { recursive: true, force: true });
