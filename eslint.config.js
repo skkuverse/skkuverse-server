@@ -926,24 +926,13 @@ module.exports = [
     },
   },
   {
-    // The overlay's specs, which no module scope's spec block reaches: specs/fixed-clock and the perimeter layer's
-    // feature ban, as they held the overlay's specs in src/perimeter/current/.
+    // The overlay's specs, which no module scope's spec block reaches: specs/fixed-clock. WHY: no feature ban, so a
+    // policy case can drive a public feature route end to end beside the policy it asserts; the sources keep it.
     name: "specs/perimeter-overlay",
     files: [`src/${OVERLAY_FOLDER}/**/*.spec.ts`],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: {
       "src-syntax/spec-clock": ["error", ...SPEC_CLOCK_SYNTAX],
-      "@typescript-eslint/no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              regex: FEATURE_IMPORT,
-              message: "The overlay is a shared layer and imports no feature module: move what it needs to src/shared/.",
-            },
-          ],
-        },
-      ],
     },
   },
   {
