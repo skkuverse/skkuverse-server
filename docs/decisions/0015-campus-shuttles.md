@@ -37,7 +37,7 @@ Rejected: services per direction (the 등교 tab would interleave five stations,
 
 ### D4. Stop photos are NAVER street view captures, checked by hand
 
-(A collector detail is left out of the public history.)
+NAVER's terms do not permit using its captures as our own images; the owner accepted that on 2026-10-08, and a stop can switch to our own photo (the rendering tool is kept privately). Each semester someone checks each stop's panorama on the NAVER Map site and re-captures any NAVER has reshot. NAVER's internal panorama APIs are never automated: its terms forbid automated collection.
 
 ### D5. A Seoul pole's stop id carries the `seoul-` prefix
 

@@ -195,6 +195,6 @@ Adding a provider touches a sibling sub-module named after its jurisdiction, hol
 - [ADR 0017](../decisions/0017-subway-arrivals.md): the sources, budget and accuracy policy
 - [Holidays architecture](calendar-architecture.md): the public holidays that choose a timetable's day type
 - [Logging reference](../reference/logging.md): the subway pollers' own lines
-- (An operations detail is left out of the public history.)
+- [2026-10 late express postmortem](subway-late-express.md): why the watched stations, the longer hold and awaited trains exist
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape
 - [Docs index](../README.md): writing rules
