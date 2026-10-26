@@ -82,6 +82,39 @@ describe("subwayTopologyDataset", () => {
     expect(messagesOf(data)).toEqual([expect.stringMatching(message)]);
   });
 
+  it.each([
+    ["Station id: a neighbor's station id that is no slug", (data: Record<string, any>) => (data.neighbors["S1-4-421"].stationId = "Dongdaemun"), /^neighbors\.S1-4-421\.stationId: must be a lowercase slug$/],
+    [
+      "Coords: a neighbor's coords with lat and lng swapped",
+      (data: Record<string, any>) => (data.neighbors["S1-4-421"].coords = { lat: 127.009287, lng: 37.57093 }),
+      /^neighbors\.S1-4-421\.coords: must be \{ lat, lng \} inside South Korea/,
+    ],
+    ["a neighbor's coords without lng", (data: Record<string, any>) => delete data.neighbors["S1-4-421"].coords.lng, /^neighbors\.S1-4-421\.coords\.lng: /],
+    [
+      "Station id without coords: a neighbor a journey stop could name and not place",
+      (data: Record<string, any>) => delete data.neighbors["S1-4-421"].coords,
+      /^neighbors\.S1-4-421\.coords: a neighbor with a station id needs coords$/,
+    ],
+    ["coords without a station id", (data: Record<string, any>) => delete data.neighbors["S1-4-421"].stationId, /^neighbors\.S1-4-421\.stationId: a neighbor with coords needs a station id$/],
+  ])("fails %s, with its path", (_case, arrange, message) => {
+    // Arrange
+    const data = fixture();
+    arrange(data);
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([expect.stringMatching(message)]);
+  });
+
+  it("passes a neighbor with no station id and no coords, as revision 2 stored every one", () => {
+    // Arrange
+    const data = fixture();
+    delete data.neighbors["S1-4-421"].stationId;
+    delete data.neighbors["S1-4-421"].coords;
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([]);
+  });
+
   it("passes a neighbor with no name and no train-map name", () => {
     // Arrange
     const data = fixture();
