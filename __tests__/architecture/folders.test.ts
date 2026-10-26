@@ -4,8 +4,8 @@
  *   - a Nest sub-module: it holds its own `*.module.ts`;
  *   - a static-asset folder: it holds JSON files only (read by a sibling
  *     `*.config.ts`);
- *   - one of the perimeter's two implementation sets, `src/perimeter/local-dev/`
- *     and `src/perimeter/current/` (ADR 0023, D4).
+ *   - the perimeter's LocalDev implementation set, `src/perimeter/local-dev/`
+ *     (ADR 0023, D4).
  *
  * Layer folders (`controllers/`) and grab-bag folders are none of these.
  *
@@ -47,8 +47,8 @@ export function topLevelViolations(files: readonly string[]): string[] {
     .sort();
 }
 
-/** The perimeter's implementation sets, which the registry constructs (ADR 0023, D4). */
-const PERIMETER_IMPLEMENTATIONS = new Set(["src/perimeter/local-dev", "src/perimeter/current"]);
+/** The perimeter's implementation set in this repository, which the registry constructs (ADR 0023, D4). */
+const PERIMETER_IMPLEMENTATIONS = new Set(["src/perimeter/local-dev"]);
 
 export function folderViolation(dir: string, filesBelow: readonly string[]): boolean {
   if (PERIMETER_IMPLEMENTATIONS.has(dir)) return false;
@@ -159,11 +159,11 @@ describe("folder rule applies as specified", () => {
     expect(folderViolation("src/bus/x", ["src/bus/x/y/y.module.ts"])).toBe(true);
   });
 
-  // WHY: the perimeter's two implementation sets are no modules: the registry constructs them (ADR 0023, D4).
-  it("accepts the perimeter's implementation sets, and no other perimeter folder", () => {
+  // WHY: the perimeter's LocalDev set is no module: the registry constructs it (ADR 0023, D4).
+  it("accepts the perimeter's LocalDev set, and no other perimeter folder", () => {
     // Act & Assert
     expect(folderViolation("src/perimeter/local-dev", ["src/perimeter/local-dev/origin-trust.ts"])).toBe(false);
-    expect(folderViolation("src/perimeter/current", ["src/perimeter/current/perimeter.overlay.ts"])).toBe(false);
+    expect(folderViolation("src/perimeter/current", ["src/perimeter/current/perimeter.overlay.ts"])).toBe(true);
     expect(folderViolation("src/perimeter/policies", ["src/perimeter/policies/origin-trust.ts"])).toBe(true);
     expect(folderViolation("src/perimeter/local-dev/extra", ["src/perimeter/local-dev/extra/a.ts"])).toBe(true);
   });

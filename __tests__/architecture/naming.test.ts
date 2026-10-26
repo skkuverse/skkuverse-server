@@ -6,8 +6,8 @@
  *     `.util` is allowed only in src/shared/, `.ports` only for
  *     src/perimeter/perimeter.ports.ts. Files in src/infra/ are named by
  *     the resource they wrap (`db.ts`, `logger.ts`) and need no role, as
- *     are the perimeter implementations in src/perimeter/local-dev/ and
- *     src/perimeter/current/ by the port they implement.
+ *     are the LocalDev perimeter implementations in src/perimeter/local-dev/
+ *     by the port they implement.
  *   - kebab-case: every dot-separated part of the name.
  *   - class name: an exported class in a file whose role is a class role is
  *     PascalCase(name) + PascalCase(role): `notice-dispatch.repository.ts`
@@ -46,7 +46,7 @@ const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const inInfra = (dir: string) => dir === "src/infra" || dir.startsWith("src/infra/");
 const inShared = (dir: string) => dir === "src/shared" || dir.startsWith("src/shared/");
 // WHY: a perimeter implementation is named by the port it implements (docs/decisions/0023-perimeter-ports.md).
-const inPerimeterImplementations = (dir: string) => dir === "src/perimeter/local-dev" || dir === "src/perimeter/current";
+const inPerimeterImplementations = (dir: string) => dir === "src/perimeter/local-dev";
 // WHY: the role exists for one file, the perimeter port declarations (docs/decisions/0023-perimeter-ports.md).
 const PORTS_FILE = "src/perimeter/perimeter.ports.ts";
 
@@ -291,10 +291,8 @@ describe("naming rules apply as specified", () => {
   it.each([
     ["src/perimeter/local-dev/request-authenticator.ts", false],
     ["src/perimeter/local-dev/perimeter-classes.spec.ts", false],
-    ["src/perimeter/current/origin-trust.ts", false],
-    ["src/perimeter/current/perimeter.overlay.ts", false],
-    ["src/perimeter/current/private-file", false],
-    ["src/perimeter/current/origin.trust.ts", true],
+    ["src/perimeter/local-dev/origin.trust.ts", true],
+    ["src/perimeter/current/origin-trust.ts", true],
     ["src/perimeter/perimeter-registry.ts", true],
     ["src/perimeter/local-dev/local-dev.overlay.ts", true],
   ])("names a perimeter implementation %s by its port, violating: %s", (file, violates) => {

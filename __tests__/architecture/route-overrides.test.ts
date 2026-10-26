@@ -223,9 +223,9 @@ describe("route overrides rule applies to perimeter ports", () => {
     ["a port class", `import { OutboundPolicy } from "../../../src/perimeter/perimeter.ports";`, "{ provide: OutboundPolicy, useValue: fake }", []],
     [
       "an implementation of a port",
-      `import { OverlayOutboundPolicy } from "../../../src/perimeter/current/outbound-policy";`,
-      "{ provide: OverlayOutboundPolicy, useValue: fake }",
-      [`${FILE}: OverlayOutboundPolicy (src/perimeter/current/outbound-policy.ts)`],
+      `import { LocalDevOutboundPolicy } from "../../../src/perimeter/local-dev/outbound-policy";`,
+      "{ provide: LocalDevOutboundPolicy, useValue: fake }",
+      [`${FILE}: LocalDevOutboundPolicy (src/perimeter/local-dev/outbound-policy.ts)`],
     ],
     [
       "the registry module",

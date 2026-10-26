@@ -3,8 +3,16 @@
 // coincidence with production. Workers inherit this env; Node re-reads TZ on assignment.
 process.env.TZ = "UTC";
 
+const fs = require("node:fs");
+const path = require("node:path");
+
+// WHY: a checkout without the perimeter overlay answers overlay-mode cases from a stand-in entry; the composed
+// gate's real entry at src/private/ wins (ADR 0023, D4).
+const HAS_OVERLAY = fs.existsSync(path.join(__dirname, "src/private/perimeter.overlay.ts"));
+
 module.exports = {
   testEnvironment: "node",
+  moduleNameMapper: HAS_OVERLAY ? {} : { "^.*/src/private/perimeter\\.overlay$": "<rootDir>/__tests__/helpers/perimeter/stand-in.overlay.ts" },
   setupFiles: ["<rootDir>/__tests__/helpers/network-guard.ts", "<rootDir>/jest.setup.ts"],
   // ts-jest only transpiles. Type checking is the job of `npm run typecheck`
   // (tsc --noEmit + tsc -p tsconfig.test.json --noEmit), so `diagnostics: false`

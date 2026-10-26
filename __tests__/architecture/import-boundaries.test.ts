@@ -139,15 +139,15 @@ describe("import boundary blocks apply as specified", () => {
     // Arrange
     const rules = block("boundaries/perimeter-layer").rules!;
     const bad = [
-      ["src/perimeter/current/x.ts", 'import { checkDraft } from "../../miniapps/notifications/miniapps-notifications.rules";'],
+      ["src/perimeter/local-dev/x.ts", 'import { checkDraft } from "../../miniapps/notifications/miniapps-notifications.rules";'],
       ["src/perimeter/local-dev/x.ts", 'import type { NoticeDoc } from "../../notices/notices.document";'],
       ["src/perimeter/perimeter.config.ts", 'import { BusModule } from "../bus/bus.module";'],
     ];
     const ok = [
-      ["src/perimeter/current/x.ts", 'import { OriginTrust } from "../perimeter.ports";'],
+      ["src/perimeter/local-dev/x.ts", 'import { OriginTrust } from "../perimeter.ports";'],
       ["src/perimeter/local-dev/x.ts", 'import { isLoopbackAddress } from "../../shared/ip-address.util";'],
-      ["src/perimeter/current/x.ts", 'import { WEBVIEW_ORIGIN } from "../../infra/origins";'],
-      ["src/perimeter/current/x.ts", 'import { bearerToken } from "../../http/firebase-auth.middleware";'],
+      ["src/perimeter/local-dev/x.ts", 'import { WEBVIEW_ORIGIN } from "../../infra/origins";'],
+      ["src/perimeter/local-dev/x.ts", 'import { bearerToken } from "../../http/firebase-auth.middleware";'],
       ["src/perimeter/perimeter.config.ts", 'import config from "../infra/config";'],
     ];
 
@@ -165,20 +165,20 @@ describe("import boundary blocks apply as specified", () => {
     // Arrange
     const rules = block("boundaries/perimeter-implementations").rules!;
     const bad = [
-      ["src/perimeter/current/x.ts", 'import config from "../../infra/config";'],
-      ["src/perimeter/current/x.ts", 'import { setResponseTime } from "../../infra/response-time";'],
+      ["src/perimeter/local-dev/x.ts", 'import config from "../../infra/config";'],
+      ["src/perimeter/local-dev/x.ts", 'import { setResponseTime } from "../../infra/response-time";'],
       ["src/perimeter/local-dev/x.ts", 'import { toPerimeterRequest } from "../../http/perimeter-request.mapper";'],
-      ["src/perimeter/current/x.ts", 'import { perimeterProviders } from "../perimeter.config";'],
+      ["src/perimeter/local-dev/x.ts", 'import { perimeterProviders } from "../perimeter.config";'],
       ["src/perimeter/local-dev/x.ts", 'import { LOCAL_DEV_CLASSES } from "../local-dev/perimeter-classes";'],
-      ["src/perimeter/current/x.ts", 'import { distanceMeters } from "../../shared/distance.util";'],
-      ["src/perimeter/current/x.ts", 'import type { NoticeDoc } from "../../notices/notices.document";'],
+      ["src/perimeter/local-dev/x.ts", 'import { distanceMeters } from "../../shared/distance.util";'],
+      ["src/perimeter/local-dev/x.ts", 'import type { NoticeDoc } from "../../notices/notices.document";'],
     ];
     const ok = [
-      ["src/perimeter/current/x.ts", 'import { RateLimitPolicy } from "../perimeter.ports";'],
-      ["src/perimeter/current/x.ts", 'import { byIp } from "./rate-limit-keys";'],
+      ["src/perimeter/local-dev/x.ts", 'import { RateLimitPolicy } from "../perimeter.ports";'],
+      ["src/perimeter/local-dev/x.ts", 'import { byIp } from "./rate-limit-keys";'],
       ["src/perimeter/local-dev/x.ts", 'import { isLoopbackAddress } from "../../shared/ip-address.util";'],
-      ["src/perimeter/current/x.ts", 'import { createLogThrottle } from "../../shared/log-throttle.util";'],
-      ["src/perimeter/current/x.ts", 'import { rateLimit } from "express-rate-limit";'],
+      ["src/perimeter/local-dev/x.ts", 'import { createLogThrottle } from "../../shared/log-throttle.util";'],
+      ["src/perimeter/local-dev/x.ts", 'import { rateLimit } from "express-rate-limit";'],
     ];
 
     // Act
@@ -188,10 +188,10 @@ describe("import boundary blocks apply as specified", () => {
     // Assert
     expect(badCounts).toEqual(bad.map(() => 1));
     expect(okCounts).toEqual(ok.map(() => 0));
-    expect(block("boundaries/perimeter-implementations").files).toEqual(["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"]);
+    expect(block("boundaries/perimeter-implementations").files).toEqual(["src/perimeter/local-dev/**/*.ts"]);
   });
 
-  // WHY: the overlay compiles at src/private/, one level shallower than src/perimeter/current/ (ADR 0023, D4).
+  // WHY: the overlay compiles at src/private/, one level shallower than src/perimeter/local-dev/ (ADR 0023, D4).
   it("the overlay at src/private/ imports only the ports file, the listed shared modules, its own folder and packages", () => {
     // Arrange
     const rules = block("boundaries/perimeter-overlay").rules!;
@@ -375,7 +375,7 @@ describe("boundaries/perimeter, boundaries/http and the feature boundaries", () 
     ["the root module, the registry module", "src/app.module.ts", "./perimeter/perimeter.module", "boundaries/perimeter"],
     ["src/infra/, the mode check", "src/infra/config.ts", "../perimeter/perimeter-mode.rules", "boundaries/perimeter"],
     ["the registry, its implementation set", "src/perimeter/perimeter-registry.rules.ts", "./local-dev/perimeter-classes", "boundaries/perimeter"],
-    ["an implementation, the ports", "src/perimeter/current/origin-trust.ts", "../perimeter.ports", "boundaries/perimeter"],
+    ["an implementation, the ports", "src/perimeter/local-dev/origin-trust.ts", "../perimeter.ports", "boundaries/perimeter"],
   ])("let %s import %s", (_case, file, specifier, name) => {
     // Act
     const messages = lint(block(name).rules!, file, `import { X } from "${specifier}";`);
@@ -385,13 +385,13 @@ describe("boundaries/perimeter, boundaries/http and the feature boundaries", () 
   });
 
   it.each([
-    ["a feature, an implementation", "src/notices/attachment/notices-attachment.service.ts", "../../perimeter/current/outbound-policy", "boundaries/perimeter"],
+    ["a feature, an implementation", "src/notices/attachment/notices-attachment.service.ts", "../../perimeter/local-dev/outbound-policy", "boundaries/perimeter"],
     ["a feature, the registry module", "src/miniapps/miniapps.module.ts", "../perimeter/perimeter.module", "boundaries/feature/miniapps/depth-1"],
     ["a feature, a type of a rules file", "src/miniapps/miniapps.service.ts", "../perimeter/perimeter-registry.rules", "boundaries/feature/miniapps/depth-1"],
     ["src/http/, a rules file", "src/http/http-app.bootstrap.ts", "../perimeter/perimeter-registry.rules", "boundaries/http"],
     ["src/http/, an implementation", "src/http/x.middleware.ts", "../perimeter/local-dev/origin-trust", "boundaries/http"],
     ["src/infra/, an implementation", "src/infra/config.ts", "../perimeter/local-dev/origin-trust", "boundaries/perimeter"],
-    ["the root module, the overlay", "src/app.module.ts", "./perimeter/current/perimeter.overlay", "boundaries/perimeter"],
+    ["the root module, the overlay", "src/app.module.ts", "./private/perimeter.overlay", "boundaries/perimeter"],
     ["the registry, the private build", "src/perimeter/perimeter-registry.rules.ts", "../private/perimeter.overlay", "boundaries/perimeter"],
   ])("reject %s import of %s", (_case, file, specifier, name) => {
     // Act

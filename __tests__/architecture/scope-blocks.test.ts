@@ -44,7 +44,7 @@ const LAYER_BY_BLOCK: Readonly<Record<string, string>> = {
 // The boundary blocks over named folders, each by the folders it holds to: the perimeter's implementation sets,
 // and the folder a build copies the private overlay to, which is no module scope (ADR 0023, D4).
 const FOLDERS_BY_BLOCK: Readonly<Record<string, readonly string[]>> = {
-  "boundaries/perimeter-implementations": ["perimeter/current", "perimeter/local-dev"],
+  "boundaries/perimeter-implementations": ["perimeter/local-dev"],
   "boundaries/perimeter-overlay": ["private"],
 };
 const ROLE_GLOB = /^(?:src\/)?\*\*\/\*\.(?:([a-z]+)|\{([a-z,]+)\})\.ts$/;
@@ -183,7 +183,7 @@ describe("scope block rule applies as specified", () => {
   it("reads a boundary over src/perimeter/ as it reads the ones over src/shared/ and src/infra/", () => {
     // Arrange
     const whole = [...covering(), block("boundaries/perimeter-layer", ["src/perimeter/**/*.ts"])];
-    const narrowed = [...covering(), block("boundaries/perimeter-layer", ["src/perimeter/current/*.ts"])];
+    const narrowed = [...covering(), block("boundaries/perimeter-layer", ["src/perimeter/local-dev/*.ts"])];
 
     // Act & Assert
     expect(requiredGlobs("boundaries/perimeter-layer", scopes)).toEqual(["src/perimeter/**/*.ts"]);
@@ -191,15 +191,15 @@ describe("scope block rule applies as specified", () => {
     expect(scopeBlockProblems(narrowed, scopes, none).length).toBeGreaterThan(0);
   });
 
-  // WHY: an implementation leaves for the overlay (ADR 0023, D4), so the rule holds both implementation folders whole.
-  it("reads the boundary over the perimeter's implementation folders as a boundary over both, whole", () => {
+  // WHY: the LocalDev set fits the overlay's deps (ADR 0023, D4), so the rule holds its folder whole.
+  it("reads the boundary over the perimeter's LocalDev folder as a boundary over it, whole", () => {
     // Arrange
-    const both = ["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"];
-    const whole = [...covering(), block("boundaries/perimeter-implementations", both)];
-    const narrowed = [...covering(), block("boundaries/perimeter-implementations", ["src/perimeter/current/**/*.ts"])];
+    const localDev = ["src/perimeter/local-dev/**/*.ts"];
+    const whole = [...covering(), block("boundaries/perimeter-implementations", localDev)];
+    const narrowed = [...covering(), block("boundaries/perimeter-implementations", ["src/perimeter/local-dev/*.ts"])];
 
     // Act & Assert
-    expect(requiredGlobs("boundaries/perimeter-implementations", scopes)).toEqual(both);
+    expect(requiredGlobs("boundaries/perimeter-implementations", scopes)).toEqual(localDev);
     expect(scopeBlockProblems(whole, scopes, new Set(["src/notices/notices.topics.ts"]))).toEqual([]);
     expect(scopeBlockProblems(narrowed, scopes, none).length).toBeGreaterThan(0);
   });
