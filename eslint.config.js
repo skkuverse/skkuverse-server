@@ -112,11 +112,17 @@ const QUERY_IMPORT_PATTERN = {
   message: "Only a repository runs a query: import the *.query.ts from the module's repository.",
 };
 
+// WHY: a build or the composed gate copies the private perimeter overlay to src/private/ (ADR 0023, D4). It is no
+// module: boundaries/perimeter-overlay binds it, and the tree-derived scopes and features below skip it, as the
+// architecture tests do by reading git ls-files.
+const OVERLAY_FOLDER = "private";
+
 // The module scopes: every top-level folder of src/ (ending in "/") and every file at its root. The role,
 // function, TypeScript and clock blocks below cover them all, so a new module is bound from its first file;
 // the architecture tests derive the same list (__tests__/helpers/architecture/scopes.ts).
 const MODULE_SCOPES = require("fs")
   .readdirSync(require("path").join(__dirname, "src"), { withFileTypes: true })
+  .filter((d) => !(d.isDirectory() && d.name === OVERLAY_FOLDER))
   .flatMap((d) => (d.isDirectory() ? [`src/${d.name}/`] : d.name.endsWith(".ts") ? [`src/${d.name}`] : []))
   .sort();
 
@@ -363,7 +369,7 @@ const SHARED_DIRS = ["config", "http", "infra", "perimeter", "scheduling", "shar
 // bounded from its first file.
 const FEATURES = require("fs")
   .readdirSync(require("path").join(__dirname, "src"), { withFileTypes: true })
-  .filter((d) => d.isDirectory() && !SHARED_DIRS.includes(d.name))
+  .filter((d) => d.isDirectory() && !SHARED_DIRS.includes(d.name) && d.name !== OVERLAY_FOLDER)
   .map((d) => d.name)
   .sort();
 
@@ -399,7 +405,10 @@ const PERIMETER_SHARED_MODULES = [
 ];
 
 // An import that leaves an implementation's folder for anything but the ports file or a listed shared module.
-const PERIMETER_OUTSIDE_IMPORT = `^\\.\\./(?!perimeter\\.ports$)(?!\\.\\./shared/(?:${PERIMETER_SHARED_MODULES.map((m) => m.replaceAll(".", "\\.")).join("|")})$)`;
+const PERIMETER_SHARED_ALTERNATIVES = PERIMETER_SHARED_MODULES.map((m) => m.replaceAll(".", "\\.")).join("|");
+const PERIMETER_OUTSIDE_IMPORT = `^\\.\\./(?!perimeter\\.ports$)(?!\\.\\./shared/(?:${PERIMETER_SHARED_ALTERNATIVES})$)`;
+// The same from src/private/, where the overlay compiles: one level shallower.
+const PERIMETER_OVERLAY_OUTSIDE_IMPORT = `^\\.\\./(?!perimeter/perimeter\\.ports$)(?!shared/(?:${PERIMETER_SHARED_ALTERNATIVES})$)`;
 
 // Feature code and src/http/ reach src/perimeter/ through the ports file alone (ADR 0023, D8).
 const PERIMETER_PORTS_ONLY_PATTERN = {
@@ -880,6 +889,34 @@ module.exports = [
               regex: PERIMETER_OUTSIDE_IMPORT,
               message:
                 "A perimeter implementation imports only ../perimeter.ports, the src/shared/ modules eslint.config.js lists, its own folder and packages: take the rest through PerimeterDeps.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // ADR 0023, D4: the overlay at src/private/ is no module scope (OVERLAY_FOLDER), so this block gives it what a
+    // src/perimeter/ implementation meets there: the log rules, the function caps, the TypeScript rules and the
+    // import allowlist, and, as a shared layer, no clock rule.
+    name: "boundaries/perimeter-overlay",
+    files: [`src/${OVERLAY_FOLDER}/**/*.ts`],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...PARAMS_SYNTAX],
+      ...MIGRATED_FUNCTION_LIMITS,
+      "@typescript-eslint/explicit-module-boundary-types": "error",
+      "@typescript-eslint/no-non-null-assertion": "error",
+      "src-syntax/generic-names": ["error", ...GENERIC_NAMES],
+      "src-syntax/perimeter-implementation-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: PERIMETER_OVERLAY_OUTSIDE_IMPORT,
+              message:
+                "The overlay imports only ../perimeter/perimeter.ports, the src/shared/ modules eslint.config.js lists, its own folder and packages: take the rest through PerimeterDeps.",
             },
           ],
         },
