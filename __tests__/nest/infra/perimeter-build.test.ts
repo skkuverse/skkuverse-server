@@ -63,24 +63,32 @@ describe("the overlay build context", () => {
     expect(ignored.stdout.trim()).toBe("src/private/perimeter.overlay.ts");
   });
 
-  it("copies the perimeter-overlay context, an empty stage by default, to src/private/ before the build", () => {
+  it("copies the perimeter-overlay context to src/private/ before the build", () => {
     // Arrange
     const lines = read("Dockerfile").split("\n");
     const at = (line: string): number => lines.indexOf(line);
 
     // Act
-    const stage = at("FROM scratch AS perimeter-overlay");
     const builder = at("FROM node:22-alpine AS builder");
     const source = at("COPY . .");
     const overlay = at("COPY --from=perimeter-overlay . src/private/");
     const build = at("RUN npm run build");
 
     // Assert
-    expect([stage, builder, source, overlay, build].every((i) => i >= 0)).toBe(true);
-    expect(stage).toBeLessThan(builder);
+    expect([builder, source, overlay, build].every((i) => i >= 0)).toBe(true);
     expect(builder).toBeLessThan(source);
     expect(source).toBeLessThan(overlay);
     expect(overlay).toBeLessThan(build);
+  });
+
+  // WHY: with a stage of that name standing in, a build without the context could take a cached overlay layer
+  // and still label the image `none`; without one, it fails at the copy.
+  it("declares no stage the perimeter-overlay context could fall back to", () => {
+    // Act
+    const stages = [...read("Dockerfile").matchAll(/^FROM\s.*\bAS\s+(\S+)\s*$/gim)].map((m) => m[1]!.toLowerCase());
+
+    // Assert
+    expect(stages).toEqual(["builder", "runtime"]);
   });
 
   it("labels the image with the overlay commit, `none` when the build names none", () => {
