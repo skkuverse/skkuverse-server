@@ -172,7 +172,7 @@ describe("resolvePlace", () => {
     ["탑골공원", "hssc", unresolved("offcampus")],
     ["https://zoom.example/j/0", null, unresolved("online")],
     ["Zoom", "hssc", unresolved("online")],
-    ["person@example.com", "hssc", unresolved("online")],
+    ["office@example.com", "hssc", unresolved("online")],
     ["본교 홈페이지 인터넷 접수", null, unresolved("online")],
     ["인사캠", null, unresolved("campusOnly", "hssc")],
     ["자과캠", "hssc", unresolved("campusOnly", "nsc")],
