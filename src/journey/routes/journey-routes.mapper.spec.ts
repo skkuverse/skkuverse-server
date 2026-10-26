@@ -1,7 +1,7 @@
 /**
  * How a planned route is served (ADR 0022, D5): a walk with its label, icon, minutes as seconds, distance and path (null
  * without one), a transfer between two platforms of one station, a ride with its line's name, icon and color, its
- * board, alight and later calls as served calls, its basis the weaker of its calls, its end the alight call's arrival
+ * board, alight, later and upcoming calls as served calls, the stops it passes each as a place (null when unknown), its basis the weaker of its calls, its end the alight call's arrival
  * before its departure (ADR 0022, D5, amended 2026-10-25), its start the board call's board time (a late train's
  * expected arrival) and its duration between them; an
  * option not running with no legs and its next service at +09:00; each warning by its code and a message in the request
@@ -54,7 +54,7 @@ const RUNNING: PlannedOption = {
   arriveAt: kst("15:52"),
   legs: [
     { leg: WALK, startAt: kst("14:23"), endAt: kst("14:29") },
-    { leg: RIDE, line: LINE, board: call({ scheduledDepartureAt: kst("14:30") }), alight: call({ expectedArrivalAt: kst("15:52"), basis: "estimate" }), later: [call({ scheduledDepartureAt: kst("15:00") })], vehicles: [], waitSec: 60, observedAt: null },
+    { leg: RIDE, line: LINE, board: call({ scheduledDepartureAt: kst("14:30") }), alight: call({ expectedArrivalAt: kst("15:52"), basis: "estimate" }), later: [call({ scheduledDepartureAt: kst("15:00") })], upcoming: [call({ scheduledDepartureAt: kst("14:10") }), call({ scheduledDepartureAt: kst("14:30") })], stops: [place("bus_stop:yangjae-exit2")], vehicles: [], waitSec: 60, observedAt: null },
   ],
   warnings: [],
 };
@@ -77,6 +77,32 @@ describe("toServedRoute", () => {
       ...{ startAt: "2026-10-20T14:30:00+09:00", endAt: "2026-10-20T15:52:00+09:00", durationSec: 4920, distanceM: null, basis: "estimate", waitSec: 60, observedAt: null },
     });
     expect(ride).toMatchObject({ later: [expect.objectContaining({ scheduledDepartureAt: "2026-10-20T15:00:00+09:00" })], vehicles: [] });
+  });
+
+  it("Upcoming: serves a ride's upcoming calls as served calls, in the planner's order", () => {
+    // Act
+    const served = toServedRoute(ROUTE, { planned: [RUNNING, ENDED], order: [0, 1] }, { places: PLACES, lang: "en" });
+
+    // Assert
+    expect(served.options[0]!.legs[1]).toMatchObject({
+      upcoming: [
+        { scheduledDepartureAt: "2026-10-20T14:10:00+09:00", basis: "timetable", runId: "r" },
+        { scheduledDepartureAt: "2026-10-20T14:30:00+09:00", basis: "timetable", runId: "r" },
+      ],
+    });
+  });
+
+  it("Stops: serves each stop a ride passes as a place, and null where the door could not list them", () => {
+    // Arrange
+    const [walk, ride] = (RUNNING as Extract<PlannedOption, { status: "running" }>).legs;
+    const unlisted: PlannedOption = { ...(RUNNING as Extract<PlannedOption, { status: "running" }>), legs: [walk!, { ...(ride as Extract<typeof ride, { line: JourneyLine }>), stops: null }] };
+
+    // Act
+    const [listed, none] = [RUNNING, unlisted].map((planned) => toServedRoute(ROUTE, { planned: [planned, ENDED], order: [0, 1] }, { places: PLACES, lang: "en" }).options[0]!.legs[1]);
+
+    // Assert
+    expect(listed).toMatchObject({ stops: [{ place: place("bus_stop:yangjae-exit2") }] });
+    expect(none).toMatchObject({ stops: null });
   });
 
   it("Alight time: ends a ride at its alight call's arrival when the call also names a departure there", () => {

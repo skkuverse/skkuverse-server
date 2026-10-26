@@ -1,8 +1,10 @@
 import type { StopCall } from "../../../shared/call.types";
 import type { Call } from "../../../shared/call.wire";
 import type { Departure } from "../../../shared/departure.types";
+import type { LatLng } from "../../../shared/lat-lng.types";
 import type { Vehicle } from "../../../shared/vehicle.wire";
 import type { LiveGroup } from "../../live/bus-live.wire";
+import type { RoutePath } from "../../route-path/bus-route-path.types";
 
 export function toInstant(served: string | null): Date | null {
   return served === null ? null : new Date(served);
@@ -33,4 +35,9 @@ export function toFirstRunCall(startsAt: Date, headsign: string | null): StopCal
 export function toBoardVehicles(vehicles: LiveGroup["vehicles"], departures: readonly Departure[]): Record<string, Vehicle> {
   const ids = new Set(departures.flatMap(({ board, alight }) => [board.vehicleId, alight?.vehicleId ?? null]));
   return Object.fromEntries(vehicles.filter(({ id }) => ids.has(id)).map(({ id, occupancy, seatsLeft, isLowFloor }) => [id, { id, occupancy, seatsLeft, isLowFloor }]));
+}
+
+export function toStationCoords(routePath: Pick<RoutePath, "stations"> | null, topisId: string): LatLng | null {
+  const station = routePath?.stations.find((candidate) => candidate.topisId === topisId);
+  return station ? { lat: station.lat, lng: station.lng } : null;
 }

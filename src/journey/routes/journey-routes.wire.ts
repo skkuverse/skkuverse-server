@@ -26,13 +26,15 @@ const legBase = {
 };
 
 const rideLeg = z.object({
-  kind: z.literal("ride"),
-  ...legBase,
+  ...{ kind: z.literal("ride"), ...legBase },
   line: z.object({ id: z.string(), name: z.string() }),
-  board: call,
-  alight: call,
+  ...{ board: call, alight: call },
   /** WHY: the next catchable calls at the board stop after the one boarded, at most two. */
   later: z.array(call).max(2),
+  /** WHY: the next calls at the board stop from now, at most two, a full vehicle skipped; a headway estimate never. */
+  upcoming: z.array(call).max(2),
+  /** WHY: the stops passed between board and alight, in travel order, never either end, with no time; null where unknown. */
+  stops: z.array(z.object({ place })).nullable(),
   vehicles: z.array(vehicle),
   waitSec: z.int().min(0),
   /** WHY: when the source wrote what the board was read from; null for a published timetable. */
@@ -44,15 +46,11 @@ const transferLeg = z.object({ kind: z.literal("transfer"), ...legBase });
 
 // WHY: kind is an open enum; a client skips no leg, drawing one of a kind it does not know from the base (ADR 0019, D3).
 const option = z.object({
-  id: z.string(),
-  name: z.string(),
-  mode: rideMode,
-  status: z.enum(["running", "notRunning"]),
-  reason: z.enum(["ended", "notStarted", "unavailable"]).nullable(),
+  ...{ id: z.string(), name: z.string(), mode: rideMode },
+  ...{ status: z.enum(["running", "notRunning"]), reason: z.enum(["ended", "notStarted", "unavailable"]).nullable() },
   /** WHY: the next departure when no run is left, later this service day when `notStarted`; null otherwise or when unknown. */
   nextServiceAt: instant.nullable(),
-  leaveAt: instant.nullable(),
-  arriveAt: instant.nullable(),
+  ...{ leaveAt: instant.nullable(), arriveAt: instant.nullable() },
   legs: z.array(z.discriminatedUnion("kind", [rideLeg, walkLeg, transferLeg])),
   warnings: z.array(z.object({ code: z.string(), message: z.string() })),
 });

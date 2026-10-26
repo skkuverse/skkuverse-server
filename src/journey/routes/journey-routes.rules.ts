@@ -3,7 +3,7 @@ import { toAlightTime, toBoardTime } from "../../shared/call.util";
 import type { Departure, DepartureBoard } from "../../shared/departure.types";
 import { isKstRestDay, toKstDate, toKstTimeOfDay } from "../../shared/kst-date.util";
 import type { JourneyOption, RideLeg } from "../journey.document";
-import { ESTIMATE_UNCERTAINTY_SEC, MAX_LATER_CALLS, SERVICE_DAY_START_MS, TIGHT_TRANSFER_SEC } from "./journey-routes.constants";
+import { ESTIMATE_UNCERTAINTY_SEC, MAX_LATER_CALLS, MAX_UPCOMING_CALLS, SERVICE_DAY_START_MS, TIGHT_TRANSFER_SEC } from "./journey-routes.constants";
 import type { PlanContext, PlannedLeg, PlannedOption, PlannedRide, PlannedStep, PlannedWarning } from "./journey-routes.types";
 
 const MINUTE_MS = 60_000;
@@ -38,15 +38,16 @@ function toAlight({ board, alight }: Departure, { rideMinutes, rideMinutesBands 
   return { ...board, status: "unknown", ...NO_INSTANTS, expectedArrivalAt: new Date(boardAt.getTime() + minutes * MINUTE_MS), basis: "estimate", stopsAway: null, providerText: null };
 }
 
-function toRide(leg: RideLeg, board: DepartureBoard, { arrivedAtMs, readyAtMs, line }: { arrivedAtMs: number; readyAtMs: number; line: PlannedRide["line"] }): Ride | null {
+function toRide(leg: RideLeg, board: DepartureBoard, { arrivedAtMs, readyAtMs, nowMs, line }: { arrivedAtMs: number; readyAtMs: number; nowMs: number; line: PlannedRide["line"] }): Ride | null {
   const catchable = board.departures.filter((departure) => isCatchable(departure, readyAtMs, board));
   const boarded = catchable[0] ?? toHeadwayDeparture(board, readyAtMs);
   if (!boarded) return null;
   const boardAtMs = timeMsOf(boarded.board);
   const alight = toAlight(boarded, leg, new Date(boardAtMs));
   const later = catchable.slice(1, 1 + MAX_LATER_CALLS).map((departure) => departure.board);
-  const vehicles = [...new Set([boarded.board, alight, ...later].flatMap((call) => call.vehicleId ?? []))].flatMap((id) => board.vehicles[id] ?? []);
-  const planned = { leg, line, board: boarded.board, alight, later, vehicles, waitSec: Math.round((boardAtMs - arrivedAtMs) / 1000), observedAt: boarded.observedAt };
+  const upcoming = board.departures.filter((departure) => isCatchable(departure, nowMs, board)).slice(0, MAX_UPCOMING_CALLS).map((departure) => departure.board);
+  const vehicles = [...new Set([boarded.board, alight, ...later, ...upcoming].flatMap((call) => call.vehicleId ?? []))].flatMap((id) => board.vehicles[id] ?? []);
+  const planned = { leg, line, board: boarded.board, alight, later, upcoming, stops: board.stops ?? null, vehicles, waitSec: Math.round((boardAtMs - arrivedAtMs) / 1000), observedAt: boarded.observedAt };
   return { planned, boardAtMs, alightAtMs: toAlightTime(alight)?.getTime() ?? Number.NaN };
 }
 
@@ -92,10 +93,9 @@ function toNoService(nextServiceAt: Date | null, now: Date): PlannedOption {
 
 /** WHY: each ride boards the first run catchable a catch margin after the legs before it (ADR 0022, D5 and D7). */
 export function planOption(option: JourneyOption, { now, catchMarginSec, lineById, boards }: PlanContext): PlannedOption {
-  const [marginMs, legs]: [number, PlannedLeg[]] = [catchMarginSec * 1000, []];
+  const [marginMs, legs, warnings]: [number, PlannedLeg[], PlannedWarning[]] = [catchMarginSec * 1000, [], []];
   let atMs = now.getTime();
   let first: FirstRide | null = null;
-  const warnings: PlannedWarning[] = [];
   let arrivingUncertaintySec: number | null = null;
   for (const [index, leg] of option.legs.entries()) {
     if (leg.kind !== "ride") {
@@ -105,7 +105,7 @@ export function planOption(option: JourneyOption, { now, catchMarginSec, lineByI
     }
     const [board, line] = [boards.get(index), lineById.get(leg.line)];
     if (!board || board instanceof Error || !line) return { status: "notRunning", reason: "unavailable", nextServiceAt: null };
-    const ride = toRide(leg, board, { arrivedAtMs: atMs, readyAtMs: atMs + marginMs, line });
+    const ride = toRide(leg, board, { arrivedAtMs: atMs, readyAtMs: atMs + marginMs, nowMs: now.getTime(), line });
     if (!ride) return toNoService(toChainNextServiceAt(first, board.nextServiceAt, atMs + marginMs), now);
     if (first === null) {
       first = { leaveAtMs: Math.max(now.getTime(), ride.boardAtMs - (atMs - now.getTime()) - marginMs), boardAtMs: ride.boardAtMs, nextServiceAt: board.nextServiceAt };

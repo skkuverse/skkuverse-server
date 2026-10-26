@@ -1,0 +1,1172 @@
+{
+  "_about": "Synthetic, never captured from production, which serves no TOPIS journey to a client yet: GET /journey/routes at 18:30 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/journey/journey-topis.routes.test.ts (revision 3 of journey-routes, the TOPIS rows of 2026-10-25 moved to that Tuesday, the stored registry and route lines with 7800's); trimmed to the hssc-to-nsc route's line4-7800 and jongro08-line1 options, each walk's path to its first and last point.",
+  "data": {
+    "routes": [
+      {
+        "id": "hssc-to-nsc",
+        "name": "인사캠 → 자과캠",
+        "from": {
+          "kind": "skku_building",
+          "id": "1",
+          "name": "정문",
+          "coords": {
+            "lat": 37.584865,
+            "lng": 126.997131
+          },
+          "platformId": null,
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:1"
+          }
+        },
+        "to": {
+          "kind": "skku_building",
+          "id": "7",
+          "name": "정문",
+          "coords": {
+            "lat": 37.290649,
+            "lng": 126.974074
+          },
+          "platformId": null,
+          "action": {
+            "actionType": "route",
+            "actionValue": "/map?place=skku_building:7"
+          }
+        },
+        "options": [
+          {
+            "id": "line4-7800",
+            "name": "4호선 · 7800",
+            "mode": "expressBus",
+            "status": "running",
+            "reason": null,
+            "nextServiceAt": null,
+            "leaveAt": "2026-10-20T18:32:00+09:00",
+            "arriveAt": "2026-10-20T20:04:50+09:00",
+            "legs": [
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "skku_building",
+                  "id": "1",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.584865,
+                    "lng": 126.997131
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:1"
+                  }
+                },
+                "to": {
+                  "kind": "subway_station",
+                  "id": "hyehwa",
+                  "name": "혜화역",
+                  "coords": {
+                    "lat": 37.582336,
+                    "lng": 127.001844
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:hyehwa"
+                  }
+                },
+                "startAt": "2026-10-20T18:32:00+09:00",
+                "endAt": "2026-10-20T18:40:00+09:00",
+                "basis": "estimate",
+                "durationSec": 480,
+                "distanceM": 568,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.584867,
+                    "lng": 126.997138
+                  },
+                  {
+                    "lat": 37.582323,
+                    "lng": 127.001705
+                  }
+                ]
+              },
+              {
+                "kind": "ride",
+                "mode": "subway",
+                "from": {
+                  "kind": "subway_station",
+                  "id": "hyehwa",
+                  "name": "혜화역",
+                  "coords": {
+                    "lat": 37.582336,
+                    "lng": 127.001844
+                  },
+                  "platformId": "S1-4-420",
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:hyehwa"
+                  }
+                },
+                "to": {
+                  "kind": "subway_station",
+                  "id": "sadang",
+                  "name": "사당역",
+                  "coords": {
+                    "lat": 37.476746,
+                    "lng": 126.981597
+                  },
+                  "platformId": "S1-4-433",
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:sadang"
+                  }
+                },
+                "startAt": "2026-10-20T18:41:00+09:00",
+                "endAt": "2026-10-20T19:08:30+09:00",
+                "basis": "timetable",
+                "durationSec": 1650,
+                "distanceM": null,
+                "label": "4호선",
+                "icon": "subway",
+                "color": "00A5DE",
+                "line": {
+                  "id": "line4",
+                  "name": "4호선"
+                },
+                "board": {
+                  "status": "scheduled",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": "2026-10-20T18:40:30+09:00",
+                  "scheduledDepartureAt": "2026-10-20T18:41:00+09:00",
+                  "basis": "timetable",
+                  "stopsAway": null,
+                  "runId": "4/2026-10-20/4155",
+                  "vehicleId": null,
+                  "headsign": "사당",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": false,
+                  "providerText": null
+                },
+                "alight": {
+                  "status": "scheduled",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": "2026-10-20T19:08:30+09:00",
+                  "scheduledDepartureAt": null,
+                  "basis": "timetable",
+                  "stopsAway": null,
+                  "runId": "4/2026-10-20/4155",
+                  "vehicleId": null,
+                  "headsign": "사당",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": false,
+                  "providerText": null
+                },
+                "later": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T18:43:30+09:00",
+                    "scheduledDepartureAt": "2026-10-20T18:44:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "4/2026-10-20/4669",
+                    "vehicleId": null,
+                    "headsign": "오이도",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  },
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T20:09:30+09:00",
+                    "scheduledDepartureAt": "2026-10-20T20:10:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "4/2026-10-20/4179",
+                    "vehicleId": null,
+                    "headsign": "사당",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  }
+                ],
+                "upcoming": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T18:30:30+09:00",
+                    "scheduledDepartureAt": "2026-10-20T18:31:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "4/2026-10-20/4401",
+                    "vehicleId": null,
+                    "headsign": "오이도",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  },
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T18:34:00+09:00",
+                    "scheduledDepartureAt": "2026-10-20T18:34:30+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "4/2026-10-20/4153",
+                    "vehicleId": null,
+                    "headsign": "사당",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  }
+                ],
+                "stops": null,
+                "vehicles": [],
+                "waitSec": 60,
+                "observedAt": null
+              },
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "subway_station",
+                  "id": "sadang",
+                  "name": "사당역",
+                  "coords": {
+                    "lat": 37.476746,
+                    "lng": 126.981597
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:sadang"
+                  }
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "sadang-exit9",
+                  "name": "사당역 9번 출구 앞",
+                  "coords": {
+                    "lat": 37.4773926,
+                    "lng": 126.9813959
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:sadang-exit9"
+                  }
+                },
+                "startAt": "2026-10-20T19:08:30+09:00",
+                "endAt": "2026-10-20T19:10:30+09:00",
+                "basis": "estimate",
+                "durationSec": 120,
+                "distanceM": 101,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.476793,
+                    "lng": 126.981598
+                  },
+                  {
+                    "lat": 37.47739,
+                    "lng": 126.981451
+                  }
+                ]
+              },
+              {
+                "kind": "ride",
+                "mode": "expressBus",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "sadang-exit9",
+                  "name": "사당역 9번 출구 앞",
+                  "coords": {
+                    "lat": 37.4773926,
+                    "lng": 126.9813959
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:sadang-exit9"
+                  }
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "nsc-skku-to-suwon",
+                  "name": "성균관대학교",
+                  "coords": {
+                    "lat": 37.2970079,
+                    "lng": 126.9704823
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:nsc-skku-to-suwon"
+                  }
+                },
+                "startAt": "2026-10-20T19:15:50+09:00",
+                "endAt": "2026-10-20T19:49:50+09:00",
+                "basis": "estimate",
+                "durationSec": 2040,
+                "distanceM": null,
+                "label": "7800",
+                "icon": "expressBus",
+                "color": "E60012",
+                "line": {
+                  "id": "bus7800",
+                  "name": "7800"
+                },
+                "board": {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T19:15:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 4,
+                  "runId": null,
+                  "vehicleId": "200010898",
+                  "headsign": "호매실동차고지 방면",
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": "17분17초후[8번째 전]"
+                },
+                "alight": {
+                  "status": "unknown",
+                  "expectedArrivalAt": "2026-10-20T19:49:50+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "estimate",
+                  "stopsAway": null,
+                  "runId": null,
+                  "vehicleId": "200010898",
+                  "headsign": "호매실동차고지 방면",
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": null
+                },
+                "later": [],
+                "upcoming": [
+                  {
+                    "status": "enRoute",
+                    "expectedArrivalAt": "2026-10-20T19:01:53+09:00",
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": null,
+                    "basis": "provider",
+                    "stopsAway": 2,
+                    "runId": null,
+                    "vehicleId": "200011607",
+                    "headsign": "호매실동차고지 방면",
+                    "isFirstRun": null,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": "3분20초후[2번째 전]"
+                  },
+                  {
+                    "status": "enRoute",
+                    "expectedArrivalAt": "2026-10-20T19:15:50+09:00",
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": null,
+                    "basis": "provider",
+                    "stopsAway": 4,
+                    "runId": null,
+                    "vehicleId": "200010898",
+                    "headsign": "호매실동차고지 방면",
+                    "isFirstRun": null,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": "17분17초후[8번째 전]"
+                  }
+                ],
+                "stops": [
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "220000009",
+                      "name": "과천동행정복지센터",
+                      "coords": {
+                        "lat": 37.4486082327,
+                        "lng": 126.994122992
+                      },
+                      "platformId": null,
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "226000038",
+                      "name": "의왕톨게이트",
+                      "coords": {
+                        "lat": 37.3484703327,
+                        "lng": 126.9845379941
+                      },
+                      "platformId": null,
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "200000276",
+                      "name": "동원고교.해우재입구",
+                      "coords": {
+                        "lat": 37.3171468733,
+                        "lng": 126.9836310164
+                      },
+                      "platformId": null,
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "200000292",
+                      "name": "백선교회",
+                      "coords": {
+                        "lat": 37.311533426,
+                        "lng": 126.9776891389
+                      },
+                      "platformId": null,
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "200000251",
+                      "name": "수원고용노동청",
+                      "coords": {
+                        "lat": 37.3024456427,
+                        "lng": 126.972842794
+                      },
+                      "platformId": null,
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "200000160",
+                      "name": "성균관대역",
+                      "coords": {
+                        "lat": 37.2984847409,
+                        "lng": 126.9713405099
+                      },
+                      "platformId": null,
+                      "action": null
+                    }
+                  }
+                ],
+                "vehicles": [
+                  {
+                    "id": "200010898",
+                    "occupancy": null,
+                    "seatsLeft": null,
+                    "isLowFloor": false
+                  },
+                  {
+                    "id": "200011607",
+                    "occupancy": null,
+                    "seatsLeft": null,
+                    "isLowFloor": false
+                  }
+                ],
+                "waitSec": 320,
+                "observedAt": "2026-10-20T18:30:00+09:00"
+              },
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "nsc-skku-to-suwon",
+                  "name": "성균관대학교",
+                  "coords": {
+                    "lat": 37.2970079,
+                    "lng": 126.9704823
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:nsc-skku-to-suwon"
+                  }
+                },
+                "to": {
+                  "kind": "skku_building",
+                  "id": "7",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.290649,
+                    "lng": 126.974074
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:7"
+                  }
+                },
+                "startAt": "2026-10-20T19:49:50+09:00",
+                "endAt": "2026-10-20T20:04:50+09:00",
+                "basis": "estimate",
+                "durationSec": 900,
+                "distanceM": 1063,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.297047,
+                    "lng": 126.970365
+                  },
+                  {
+                    "lat": 37.290814,
+                    "lng": 126.974065
+                  }
+                ]
+              }
+            ],
+            "warnings": []
+          },
+          {
+            "id": "jongro08-line1",
+            "name": "종로 08 · 1호선",
+            "mode": "subway",
+            "status": "running",
+            "reason": null,
+            "nextServiceAt": null,
+            "leaveAt": "2026-10-20T19:02:09+09:00",
+            "arriveAt": "2026-10-20T21:04:00+09:00",
+            "legs": [
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "skku_building",
+                  "id": "1",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.584865,
+                    "lng": 126.997131
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:1"
+                  }
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "100900046",
+                  "name": "명륜시장.성대후문",
+                  "coords": {
+                    "lat": 37.5885110529,
+                    "lng": 126.9952543092
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:100900046"
+                  }
+                },
+                "startAt": "2026-10-20T19:02:09+09:00",
+                "endAt": "2026-10-20T19:08:09+09:00",
+                "basis": "estimate",
+                "durationSec": 360,
+                "distanceM": 478,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.584867,
+                    "lng": 126.997138
+                  },
+                  {
+                    "lat": 37.588491,
+                    "lng": 126.995272
+                  }
+                ]
+              },
+              {
+                "kind": "ride",
+                "mode": "bus",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "100900046",
+                  "name": "명륜시장.성대후문",
+                  "coords": {
+                    "lat": 37.5885110529,
+                    "lng": 126.9952543092
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:100900046"
+                  }
+                },
+                "to": {
+                  "kind": "bus_stop",
+                  "id": "100900191",
+                  "name": "종로5가역.광장시장",
+                  "coords": {
+                    "lat": 37.5707724724,
+                    "lng": 127.000038992
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:100900191"
+                  }
+                },
+                "startAt": "2026-10-20T19:09:09+09:00",
+                "endAt": "2026-10-20T19:25:09+09:00",
+                "basis": "estimate",
+                "durationSec": 960,
+                "distanceM": null,
+                "label": "종로 08",
+                "icon": "village",
+                "color": "4CAF50",
+                "line": {
+                  "id": "jongro08",
+                  "name": "종로 08"
+                },
+                "board": {
+                  "status": "enRoute",
+                  "expectedArrivalAt": "2026-10-20T19:09:09+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "provider",
+                  "stopsAway": 3,
+                  "runId": null,
+                  "vehicleId": "100000074",
+                  "headsign": "종로5가 방면",
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": "2분후[2번째 전]"
+                },
+                "alight": {
+                  "status": "unknown",
+                  "expectedArrivalAt": "2026-10-20T19:25:09+09:00",
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": null,
+                  "scheduledDepartureAt": null,
+                  "basis": "estimate",
+                  "stopsAway": null,
+                  "runId": null,
+                  "vehicleId": "100000074",
+                  "headsign": "종로5가 방면",
+                  "isFirstRun": null,
+                  "isLastRun": false,
+                  "isExpress": null,
+                  "providerText": null
+                },
+                "later": [],
+                "upcoming": [
+                  {
+                    "status": "enRoute",
+                    "expectedArrivalAt": "2026-10-20T19:09:09+09:00",
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": null,
+                    "basis": "provider",
+                    "stopsAway": 3,
+                    "runId": null,
+                    "vehicleId": "100000074",
+                    "headsign": "종로5가 방면",
+                    "isFirstRun": null,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": "2분후[2번째 전]"
+                  }
+                ],
+                "stops": [
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900064",
+                      "name": "새마을금고",
+                      "coords": {
+                        "lat": 37.5877370613,
+                        "lng": 126.996518051
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900064"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900031",
+                      "name": "서울국제고등학교",
+                      "coords": {
+                        "lat": 37.5890715947,
+                        "lng": 126.9972902593
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900031"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900017",
+                      "name": "국민생활관",
+                      "coords": {
+                        "lat": 37.5897456349,
+                        "lng": 126.9988619666
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900017"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900003",
+                      "name": "혜화초등학교",
+                      "coords": {
+                        "lat": 37.5872532276,
+                        "lng": 126.9998516643
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900003"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900063",
+                      "name": "혜화우체국",
+                      "coords": {
+                        "lat": 37.5860376565,
+                        "lng": 127.0006137149
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900063"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900027",
+                      "name": "혜화역4번출구",
+                      "coords": {
+                        "lat": 37.583509,
+                        "lng": 127.001555
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900027"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100000125",
+                      "name": "혜화역3번출구.서울대병원입구",
+                      "coords": {
+                        "lat": 37.5809559696,
+                        "lng": 127.0018481852
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100000125"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900028",
+                      "name": "방송통신대앞",
+                      "coords": {
+                        "lat": 37.5786973612,
+                        "lng": 127.0019926794
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900028"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100900090",
+                      "name": "이화사거리",
+                      "coords": {
+                        "lat": 37.576513,
+                        "lng": 127.002101
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100900090"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100000127",
+                      "name": "연지공원앞.현대그룹빌딩",
+                      "coords": {
+                        "lat": 37.576119355,
+                        "lng": 127.0006951494
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100000127"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100000102",
+                      "name": "원남동",
+                      "coords": {
+                        "lat": 37.5745325055,
+                        "lng": 126.9973383362
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100000102"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "bus_stop",
+                      "id": "100000153",
+                      "name": "서울특별시재향군인회관",
+                      "coords": {
+                        "lat": 37.5725807445,
+                        "lng": 126.9974787875
+                      },
+                      "platformId": null,
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=bus_stop:100000153"
+                      }
+                    }
+                  }
+                ],
+                "vehicles": [
+                  {
+                    "id": "100000074",
+                    "occupancy": {
+                      "level": "relaxed",
+                      "passengerCount": 0
+                    },
+                    "seatsLeft": null,
+                    "isLowFloor": false
+                  }
+                ],
+                "waitSec": 60,
+                "observedAt": "2026-10-20T18:30:00+09:00"
+              },
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "bus_stop",
+                  "id": "100900191",
+                  "name": "종로5가역.광장시장",
+                  "coords": {
+                    "lat": 37.5707724724,
+                    "lng": 127.000038992
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=bus_stop:100900191"
+                  }
+                },
+                "to": {
+                  "kind": "subway_station",
+                  "id": "jongno-5-ga",
+                  "name": "종로5가역",
+                  "coords": {
+                    "lat": 37.570926,
+                    "lng": 127.001849
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:jongno-5-ga"
+                  }
+                },
+                "startAt": "2026-10-20T19:25:09+09:00",
+                "endAt": "2026-10-20T19:28:09+09:00",
+                "basis": "estimate",
+                "durationSec": 180,
+                "distanceM": 155,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.570791,
+                    "lng": 127.000036
+                  },
+                  {
+                    "lat": 37.570813,
+                    "lng": 127.001719
+                  }
+                ]
+              },
+              {
+                "kind": "ride",
+                "mode": "subway",
+                "from": {
+                  "kind": "subway_station",
+                  "id": "jongno-5-ga",
+                  "name": "종로5가역",
+                  "coords": {
+                    "lat": 37.570926,
+                    "lng": 127.001849
+                  },
+                  "platformId": "S1-1-154",
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:jongno-5-ga"
+                  }
+                },
+                "to": {
+                  "kind": "subway_station",
+                  "id": "sungkyunkwan",
+                  "name": "성균관대역",
+                  "coords": {
+                    "lat": 37.300349,
+                    "lng": 126.97075
+                  },
+                  "platformId": "KR-1-P153",
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:sungkyunkwan"
+                  }
+                },
+                "startAt": "2026-10-20T19:36:30+09:00",
+                "endAt": "2026-10-20T20:41:00+09:00",
+                "basis": "timetable",
+                "durationSec": 3870,
+                "distanceM": null,
+                "label": "1호선",
+                "icon": "subway",
+                "color": "0052A4",
+                "line": {
+                  "id": "line1",
+                  "name": "1호선"
+                },
+                "board": {
+                  "status": "scheduled",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": "2026-10-20T19:36:00+09:00",
+                  "scheduledDepartureAt": "2026-10-20T19:36:30+09:00",
+                  "basis": "timetable",
+                  "stopsAway": null,
+                  "runId": "1/2026-10-20/0493",
+                  "vehicleId": null,
+                  "headsign": "서동탄",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": false,
+                  "providerText": null
+                },
+                "alight": {
+                  "status": "scheduled",
+                  "expectedArrivalAt": null,
+                  "expectedDepartureAt": null,
+                  "scheduledArrivalAt": "2026-10-20T20:41:00+09:00",
+                  "scheduledDepartureAt": "2026-10-20T20:41:30+09:00",
+                  "basis": "timetable",
+                  "stopsAway": null,
+                  "runId": "1/2026-10-20/0493",
+                  "vehicleId": null,
+                  "headsign": "서동탄",
+                  "isFirstRun": false,
+                  "isLastRun": false,
+                  "isExpress": false,
+                  "providerText": null
+                },
+                "later": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T19:45:30+09:00",
+                    "scheduledDepartureAt": "2026-10-20T19:46:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "1/2026-10-20/0691",
+                    "vehicleId": null,
+                    "headsign": "천안",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  },
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T19:56:00+09:00",
+                    "scheduledDepartureAt": "2026-10-20T19:56:30+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "1/2026-10-20/0495",
+                    "vehicleId": null,
+                    "headsign": "서동탄",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  }
+                ],
+                "upcoming": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T19:09:00+09:00",
+                    "scheduledDepartureAt": "2026-10-20T19:09:30+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "1/2026-10-20/0489",
+                    "vehicleId": null,
+                    "headsign": "서동탄",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  },
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": "2026-10-20T19:16:00+09:00",
+                    "scheduledDepartureAt": "2026-10-20T19:16:30+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "1/2026-10-20/0491",
+                    "vehicleId": null,
+                    "headsign": "서동탄",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": false,
+                    "providerText": null
+                  }
+                ],
+                "stops": null,
+                "vehicles": [],
+                "waitSec": 501,
+                "observedAt": null
+              },
+              {
+                "kind": "walk",
+                "mode": "walk",
+                "from": {
+                  "kind": "subway_station",
+                  "id": "sungkyunkwan",
+                  "name": "성균관대역",
+                  "coords": {
+                    "lat": 37.300349,
+                    "lng": 126.97075
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=subway_station:sungkyunkwan"
+                  }
+                },
+                "to": {
+                  "kind": "skku_building",
+                  "id": "7",
+                  "name": "정문",
+                  "coords": {
+                    "lat": 37.290649,
+                    "lng": 126.974074
+                  },
+                  "platformId": null,
+                  "action": {
+                    "actionType": "route",
+                    "actionValue": "/map?place=skku_building:7"
+                  }
+                },
+                "startAt": "2026-10-20T20:41:00+09:00",
+                "endAt": "2026-10-20T21:04:00+09:00",
+                "basis": "estimate",
+                "durationSec": 1380,
+                "distanceM": 1590,
+                "label": "도보",
+                "icon": "walk",
+                "color": null,
+                "path": [
+                  {
+                    "lat": 37.300344,
+                    "lng": 126.970749
+                  },
+                  {
+                    "lat": 37.290814,
+                    "lng": 126.974065
+                  }
+                ]
+              }
+            ],
+            "warnings": []
+          }
+        ]
+      }
+    ]
+  }
+}

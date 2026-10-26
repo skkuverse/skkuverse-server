@@ -20,7 +20,10 @@
  *   it the ride boards that first run at TOPIS's published time; overnight, with no rows stored, the next first run
  *   comes from the hours the poller kept on the route;
  * - an option whose first ride is a subway line after its last train, or whose TOPIS ride after 4호선 has ended, names
- *   its next service too.
+ *   its next service too;
+ * - a ride's `upcoming` lists the next buses at its board pole from now, with no catch margin and a full bus skipped,
+ *   their vehicles joining the ride's; its `stops` are the poles between its two in travel order, 7800's `(미정차)`
+ *   stations left out and 종로 08's taken around its turnaround, and a subway ride's are null (2026-10-26).
  *
  * Every store is in memory; the pollers never start (ROLE=api), and each clock instant boots its own app.
  */
@@ -250,7 +253,11 @@ describe("GET /journey/routes with the TOPIS options", () => {
     expect(bus7800!.from).toMatchObject({ kind: "bus_stop", id: "sadang-exit9" });
     expect(bus7800!.board).toMatchObject({ vehicleId: "200010898", expectedArrivalAt: "2026-10-20T19:15:50+09:00" });
     expect(await liveCall(server, "gyeonggi7800", "sadang-exit9", "200010898")).toEqual(bus7800!.board);
-    expect(bus7800!.vehicles).toEqual([{ id: "200010898", occupancy: null, seatsLeft: null, isLowFloor: false }]);
+    // WHY: the vehicles also hold the earlier bus `upcoming` names at 사당 (2026-10-26 upcoming calls).
+    expect(bus7800!.vehicles).toEqual([
+      { id: "200010898", occupancy: null, seatsLeft: null, isLowFloor: false },
+      { id: "200011607", occupancy: null, seatsLeft: null, isLowFloor: false },
+    ]);
   });
 
   it("Full bus: skips the vehicle GBIS reports with no seat left and boards half a headway after the rider is ready", async () => {
@@ -280,7 +287,8 @@ describe("GET /journey/routes with the TOPIS options", () => {
     // Ready at 19:14:55, the walk and the margin from 19:07:55; the walk is then timed back from the boarding.
     expect([option.leaveAt, option.legs[0]!.endAt]).toEqual(["2026-10-20T19:12:25+09:00", "2026-10-20T19:18:25+09:00"]);
     expect(jongro!.board).toMatchObject({ status: "unknown", vehicleId: null, runId: null, basis: "estimate", expectedArrivalAt: "2026-10-20T19:19:25+09:00" });
-    expect([jongro!.basis, jongro!.vehicles]).toEqual(["estimate", []]);
+    // WHY: the board names no vehicle; the one listed is the bus `upcoming` names, which the rider cannot reach (2026-10-26 upcoming calls).
+    expect([jongro!.basis, jongro!.vehicles.map((vehicle: { id: string }) => vehicle.id)]).toEqual(["estimate", ["100000074"]]);
   });
 
   it("Connection at risk: a 1호선 board within the 종로 08 headway's uncertainty warns, naming 종로5가", async () => {
@@ -406,5 +414,91 @@ describe("GET /journey/routes with the TOPIS options", () => {
       // Assert
       expect(option).toMatchObject({ status: "notRunning", reason, nextServiceAt, legs: [] });
     });
+  });
+});
+
+describe("GET /journey/routes: the stops a ride passes between its board and alight stops", () => {
+  it("Stops: the 7800 ride lists its stops from 사당 to 성균관대 in travel order, neither end and no 미정차 station", async () => {
+    // Arrange
+    const server = await boot(at("18:30:00"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "line4-7800");
+
+    // Assert
+    const [line4, bus7800] = ridesOf(option);
+    expect(bus7800!.stops.map(({ place }: { place: Record<string, unknown> }) => [place.kind, place.id, place.name, place.action])).toEqual([
+      ["bus_stop", "220000009", "과천동행정복지센터", null],
+      ["bus_stop", "226000038", "의왕톨게이트", null],
+      ["bus_stop", "200000276", "동원고교.해우재입구", null],
+      ["bus_stop", "200000292", "백선교회", null],
+      ["bus_stop", "200000251", "수원고용노동청", null],
+      ["bus_stop", "200000160", "성균관대역", null],
+    ]);
+    expect(bus7800!.stops[0].place.coords).toEqual({ lat: 37.4486082327, lng: 126.994122992 });
+    // WHY: no stored dataset holds the coords of the subway stations between two served ones, so a subway ride lists none.
+    expect(line4!.stops).toBeNull();
+  });
+
+  it("Stops: the 종로 08 ride lists the poles from 명륜시장 to 종로5가 around its turnaround, each tapped open on the map", async () => {
+    // Arrange
+    const server = await boot(at("19:00:00"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
+
+    // Assert
+    const [jongro] = ridesOf(option);
+    const stops = jongro!.stops as Array<{ place: { id: string; name: string; action: { actionValue: string } | null } }>;
+    expect(stops.map(({ place }) => place.id)).toEqual([
+      "100900064", "100900031", "100900017", "100900003", "100900063", "100900027", "100000125", "100900028", "100900090", "100000127", "100000102", "100000153",
+    ]);
+    expect([stops[0]!.place.name, stops.at(-1)!.place.name]).toEqual(["새마을금고", "서울특별시재향군인회관"]);
+    expect(stops.every(({ place }) => place.action?.actionValue === `/map?place=bus_stop:${place.id}`)).toBe(true);
+  });
+});
+
+describe("GET /journey/routes: a ride's upcoming calls at its board stop, from now", () => {
+  it("Upcoming: the 7800 ride after 4호선 lists the next buses at 사당 from now, the first before the one the connection boards", async () => {
+    // Arrange
+    const server = await boot(at("18:30:00"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "line4-7800");
+
+    // Assert
+    const [, bus7800] = ridesOf(option);
+    expect(bus7800!.board.vehicleId).toBe("200010898");
+    expect(bus7800!.upcoming.map((call: Call) => [call.vehicleId, call.expectedArrivalAt])).toEqual([
+      ["200011607", "2026-10-20T19:01:53+09:00"],
+      ["200010898", "2026-10-20T19:15:50+09:00"],
+    ]);
+    expect(bus7800!.vehicles.map((vehicle: { id: string }) => vehicle.id).sort()).toEqual(["200010898", "200011607"]);
+  });
+
+  it("Upcoming: skips the bus GBIS reports full, and lists no headway call beside a ride boarded on one", async () => {
+    // Arrange
+    const server = await boot(at("18:30:00"), {}, [{ vehicleId: "200010898", seatsLeft: 0 }]);
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "line4-7800");
+
+    // Assert
+    const [, bus7800] = ridesOf(option);
+    expect(bus7800!.board).toMatchObject({ vehicleId: null, basis: "estimate" });
+    expect(bus7800!.upcoming.map((call: Call) => call.vehicleId)).toEqual(["200011607"]);
+  });
+
+  it("Upcoming: lists the predicted 종로 08 bus the rider cannot reach on foot, since it counts from now with no catch margin", async () => {
+    // Arrange
+    const server = await boot(at("19:07:55"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
+
+    // Assert
+    const [jongro] = ridesOf(option);
+    expect(jongro!.board.vehicleId).toBeNull();
+    expect(jongro!.upcoming.map((call: Call) => [call.vehicleId, call.expectedArrivalAt])).toEqual([["100000074", "2026-10-20T19:09:09+09:00"]]);
   });
 });
