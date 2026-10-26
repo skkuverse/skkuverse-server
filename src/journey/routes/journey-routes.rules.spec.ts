@@ -16,7 +16,8 @@
  * estimate, plus half the headway for a ride boarded on one) or 150 s before a named run's estimated board; a leg's basis is the weaker of its calls; options run by arrival, data
  * order breaking a tie, then the ones not running in data order; a ride's `upcoming` lists at most the next two listed
  * calls at its board stop from now, with no catch margin, a full vehicle skipped and never a headway estimate, and
- * their vehicles join the ride's (2026-10-26).
+ * their vehicles join the ride's, and its `stops` are those its door lists between the board and alight stops, null
+ * when the door cannot list them (2026-10-26).
  */
 import type { StopCall } from "../../shared/call.types";
 import { toBoardTime } from "../../shared/call.util";
@@ -517,6 +518,25 @@ describe("planOption: a ride's upcoming calls at its board stop, counted from no
 
     // Assert
     expect([rideOf(planned).board.basis, rideOf(planned).upcoming]).toEqual(["estimate", []]);
+  });
+});
+
+describe("planOption: a ride's stops between its board and alight stops", () => {
+  const PASSED = { kind: "bus_stop", id: "yangjae-exit2", name: "양재역 2번 출구", coords: { lat: 37.485406, lng: 127.033382 }, platformId: null, action: null } as const;
+
+  it.each([
+    ["the stops the door lists", [PASSED], [PASSED]],
+    ["none listed when the door lists none between", [], []],
+    ["null when the door cannot list them", undefined, null],
+  ])("are %s", (_case, stops, expected) => {
+    // Arrange
+    const runs = board([departure("14:30")], stops === undefined ? {} : { stops });
+
+    // Act
+    const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+    // Assert
+    expect(rideOf(planned).stops).toEqual(expected);
   });
 });
 

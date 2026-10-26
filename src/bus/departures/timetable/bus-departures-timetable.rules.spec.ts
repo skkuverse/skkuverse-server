@@ -5,11 +5,12 @@
  * filled as the stop page fills them (toTimetabledCall), listed from the current minute to the window's end by board
  * time; a run's first and last flags taken across every route type on its day, so a hakbu run after the last
  * regular one is the day's last; a run with no time at the board left out, and an alight with none answered as null;
- * and the first departure after the window as the next service.
+ * and the first departure after the window as the next service; the stops a leg passes between its two, listed only
+ * when every route type serving it calls at the same ones, each a catalog stop (2026-10-26).
  */
 import type { SequenceStop } from "../../stops/bus-stops.types";
 import type { RunStopTime, ShuttleRun } from "../../eta/smart/bus-eta-smart.types";
-import { toKstDayStart, toLegStops, toTimetableBoard } from "./bus-departures-timetable.rules";
+import { toKstDayStart, toLegStopIds, toLegStops, toTimetableBoard } from "./bus-departures-timetable.rules";
 
 const kst = (date: string, time: string) => new Date(`${date}T${time}:00+09:00`);
 const timetable = (at: Date | null): RunStopTime => ({ shownAt: at, isEstimated: false, latestEstimateAt: null, timetableAt: at });
@@ -57,6 +58,39 @@ describe("toLegStops", () => {
     // Act & Assert
     expect(toLegStops(undefined, "hssc-bus-lot", "nsc-n-center").size).toBe(0);
     expect(toLegStops(SEQUENCES, "hssc-bus-lot", null).get("regular")).toEqual({ board: { index: 0, action: "board" }, alight: null });
+  });
+});
+
+describe("toLegStopIds", () => {
+  const between = (...stopIds: string[]) => ({ up: [stop("gangnam-exit5", "board"), ...stopIds.map((stopId) => stop(stopId, "board")), stop("nsc-n-center", "alight")] });
+
+  it.each([
+    ["the stops between, in travel order", between("yangjae-exit2", "pangyo"), ["yangjae-exit2", "pangyo"]],
+    ["none when the alight stop follows the board stop", between(), []],
+  ])("lists %s", (_case, sequences, expected) => {
+    // Act & Assert
+    expect(toLegStopIds(sequences, toLegStops(sequences, "gangnam-exit5", "nsc-n-center"))).toEqual(expected);
+  });
+
+  it("lists them when every route type serving the leg calls at the same ones", () => {
+    // Arrange
+    const sequences = { ...between("yangjae-exit2"), express: between("yangjae-exit2").up };
+
+    // Act & Assert
+    expect(toLegStopIds(sequences, toLegStops(sequences, "gangnam-exit5", "nsc-n-center"))).toEqual(["yangjae-exit2"]);
+  });
+
+  it.each([
+    ["route types serving the leg call at different stops between", { ...between("yangjae-exit2"), express: between().up }],
+    ["a stop between names no catalog stop", { up: [stop("gangnam-exit5", "board"), { action: "board" as const, timing: "scheduled" as const }, stop("nsc-n-center", "alight")] }],
+  ])("lists none when %s", (_case, sequences) => {
+    // Act & Assert
+    expect(toLegStopIds(sequences, toLegStops(sequences, "gangnam-exit5", "nsc-n-center"))).toBeNull();
+  });
+
+  it("lists none for a leg asked with no alight stop", () => {
+    // Act & Assert
+    expect(toLegStopIds(between("yangjae-exit2"), toLegStops(between("yangjae-exit2"), "gangnam-exit5", null))).toBeNull();
   });
 });
 

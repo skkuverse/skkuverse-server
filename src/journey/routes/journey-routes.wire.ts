@@ -26,15 +26,15 @@ const legBase = {
 };
 
 const rideLeg = z.object({
-  kind: z.literal("ride"),
-  ...legBase,
+  ...{ kind: z.literal("ride"), ...legBase },
   line: z.object({ id: z.string(), name: z.string() }),
-  board: call,
-  alight: call,
+  ...{ board: call, alight: call },
   /** WHY: the next catchable calls at the board stop after the one boarded, at most two. */
   later: z.array(call).max(2),
   /** WHY: the next calls at the board stop from now, at most two, a full vehicle skipped; a headway estimate never. */
   upcoming: z.array(call).max(2),
+  /** WHY: the stops passed between board and alight, in travel order, never either end, with no time; null where unknown. */
+  stops: z.array(z.object({ place })).nullable(),
   vehicles: z.array(vehicle),
   waitSec: z.int().min(0),
   /** WHY: when the source wrote what the board was read from; null for a published timetable. */

@@ -1,12 +1,13 @@
 /**
  * The TOPIS door's reshaping: a live route's served call read back as a stop call that toCall serves byte for byte,
  * its null instants staying null; TOPIS's first run as a timetable call naming no vehicle; and the shared vehicle of
- * each vehicle the departures name, a vehicle no departure names left out.
+ * each vehicle the departures name, a vehicle no departure names left out; a pole's coords on the stored route line,
+ * none for a pole the line does not hold or with no line read.
  */
 import { toCall } from "../../../shared/call.util";
 import type { Call } from "../../../shared/call.wire";
 import type { Vehicle } from "../../bus.wire";
-import { toBoardVehicles, toFirstRunCall, toInstant, toStopCall } from "./bus-departures-topis.mapper";
+import { toBoardVehicles, toFirstRunCall, toInstant, toStationCoords, toStopCall } from "./bus-departures-topis.mapper";
 
 const SERVED: Call = {
   status: "enRoute",
@@ -55,5 +56,18 @@ describe("toBoardVehicles", () => {
 
     // Assert
     expect(vehicles).toEqual({ "200011607": { id: "200011607", occupancy: null, seatsLeft: 0, isLowFloor: true } });
+  });
+});
+
+describe("toStationCoords", () => {
+  const LINE = { stations: [{ topisId: "220000009", arsId: "37033", stationName: "과천동행정복지센터", sequence: 44, lng: 126.994122992, lat: 37.4486082327, isTurnaround: false }] };
+
+  it.each([
+    ["a pole the line holds", LINE, "220000009", { lat: 37.4486082327, lng: 126.994122992 }],
+    ["a pole the line does not hold", LINE, "220000020", null],
+    ["no line read", null, "220000009", null],
+  ])("is the coords of %s", (_case, routePath, topisId, expected) => {
+    // Act & Assert
+    expect(toStationCoords(routePath, topisId)).toEqual(expected);
   });
 });

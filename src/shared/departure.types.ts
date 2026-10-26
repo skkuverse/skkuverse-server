@@ -1,5 +1,6 @@
 import type { SupportedLang } from "../infra/types";
 import type { StopCall } from "./call.types";
+import type { Place } from "./place.wire";
 import type { Vehicle } from "./vehicle.wire";
 
 export interface DepartureQuery {
@@ -32,6 +33,8 @@ export interface DepartureBoard {
   continuation: DepartureContinuation;
   /** WHY: the first departure after the window, the next service day's first when the day has ended; null when none is known. */
   nextServiceAt: Date | null;
+  /** WHY: the stops a ride from the board stop to the alight one passes between them, in travel order; absent when the door cannot list them. */
+  stops?: readonly Place[];
 }
 
 export interface DepartureSource {

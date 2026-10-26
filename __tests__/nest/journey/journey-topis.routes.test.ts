@@ -20,7 +20,10 @@
  *   it the ride boards that first run at TOPIS's published time; overnight, with no rows stored, the next first run
  *   comes from the hours the poller kept on the route;
  * - an option whose first ride is a subway line after its last train, or whose TOPIS ride after 4호선 has ended, names
- *   its next service too.
+ *   its next service too;
+ * - a ride's `upcoming` lists the next buses at its board pole from now, with no catch margin and a full bus skipped,
+ *   their vehicles joining the ride's; its `stops` are the poles between its two in travel order, 7800's `(미정차)`
+ *   stations left out and 종로 08's taken around its turnaround, and a subway ride's are null (2026-10-26).
  *
  * Every store is in memory; the pollers never start (ROLE=api), and each clock instant boots its own app.
  */
@@ -411,6 +414,47 @@ describe("GET /journey/routes with the TOPIS options", () => {
       // Assert
       expect(option).toMatchObject({ status: "notRunning", reason, nextServiceAt, legs: [] });
     });
+  });
+});
+
+describe("GET /journey/routes: the stops a ride passes between its board and alight stops", () => {
+  it("Stops: the 7800 ride lists its stops from 사당 to 성균관대 in travel order, neither end and no 미정차 station", async () => {
+    // Arrange
+    const server = await boot(at("18:30:00"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "line4-7800");
+
+    // Assert
+    const [line4, bus7800] = ridesOf(option);
+    expect(bus7800!.stops.map(({ place }: { place: Record<string, unknown> }) => [place.kind, place.id, place.name, place.action])).toEqual([
+      ["bus_stop", "220000009", "과천동행정복지센터", null],
+      ["bus_stop", "226000038", "의왕톨게이트", null],
+      ["bus_stop", "200000276", "동원고교.해우재입구", null],
+      ["bus_stop", "200000292", "백선교회", null],
+      ["bus_stop", "200000251", "수원고용노동청", null],
+      ["bus_stop", "200000160", "성균관대역", null],
+    ]);
+    expect(bus7800!.stops[0].place.coords).toEqual({ lat: 37.4486082327, lng: 126.994122992 });
+    // WHY: no stored dataset holds the coords of the subway stations between two served ones, so a subway ride lists none.
+    expect(line4!.stops).toBeNull();
+  });
+
+  it("Stops: the 종로 08 ride lists the poles from 명륜시장 to 종로5가 around its turnaround, each tapped open on the map", async () => {
+    // Arrange
+    const server = await boot(at("19:00:00"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
+
+    // Assert
+    const [jongro] = ridesOf(option);
+    const stops = jongro!.stops as Array<{ place: { id: string; name: string; action: { actionValue: string } | null } }>;
+    expect(stops.map(({ place }) => place.id)).toEqual([
+      "100900064", "100900031", "100900017", "100900003", "100900063", "100900027", "100000125", "100900028", "100900090", "100000127", "100000102", "100000153",
+    ]);
+    expect([stops[0]!.place.name, stops.at(-1)!.place.name]).toEqual(["새마을금고", "서울특별시재향군인회관"]);
+    expect(stops.every(({ place }) => place.action?.actionValue === `/map?place=bus_stop:${place.id}`)).toBe(true);
   });
 });
 
