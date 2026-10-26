@@ -94,6 +94,32 @@ describe("toArrivalState", () => {
   });
 });
 
+// WHY: arrmsg is upstream text read on every request; a backtracking pattern over a crafted or broken
+// 100k-character message would hold the event loop for seconds (security scan F8, CWE-1333).
+describe("reading a pathological 100k-character arrival text", () => {
+  const MAX_ELAPSED_MS = 1_000;
+  const PATHOLOGICAL_LENGTH = 100_000;
+
+  it.each([
+    ["unclosed brackets", "[".repeat(PATHOLOGICAL_LENGTH)],
+    ["a minutes token followed by whitespace", `1분${" ".repeat(PATHOLOGICAL_LENGTH)}`],
+    ["a seconds-alone digit followed by whitespace", `1${" ".repeat(PATHOLOGICAL_LENGTH)}`],
+    ["a digit run", "1".repeat(PATHOLOGICAL_LENGTH)],
+  ])("returns quickly on %s", (_label, arrmsg) => {
+    // Arrange
+    const bus = jongroArrivalBus({ traTime: 0, arrmsg });
+    const startedAt = performance.now();
+
+    // Act
+    const state = toArrivalState(arrmsg);
+    const seconds = toTravelSeconds(bus);
+
+    // Assert
+    expect(performance.now() - startedAt).toBeLessThan(MAX_ELAPSED_MS);
+    expect([state, seconds]).toEqual(["unknown", null]);
+  });
+});
+
 describe("isLastBus", () => {
   it.each([
     [true, "3분후[2번째 전]", true],

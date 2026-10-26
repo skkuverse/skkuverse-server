@@ -7,7 +7,7 @@ import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "../bus-realtime.mapper";
-import { toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
+import { toArrmsg, toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
 import { isNoResultHeaderCd, isQuotaExceeded, isUsableHeaderCd, toBusType, toObservedAt, toServiceHours, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
@@ -118,7 +118,7 @@ export class BusRealtimeJongroClient {
       carNumber: toCarNumber(row.plainNo1),
       eventDate: row.mkTm,
       stationNumber: row.arsId,
-      eta: row.arrmsg1,
+      eta: toArrmsg(row.arrmsg1),
       ...{ buses: BUS_SLOTS.map((slot) => this.toArrivalBus(row, slot, what)), ...toServiceHours(row) },
     };
   }
@@ -129,7 +129,7 @@ export class BusRealtimeJongroClient {
       traTime: this.requireInteger(row, `traTime${slot}`, what),
       sectOrd: this.requireInteger(row, `sectOrd${slot}`, what),
       staOrd: this.requireInteger(row, "staOrd", what),
-      arrmsg: row[`arrmsg${slot}`],
+      arrmsg: toArrmsg(row[`arrmsg${slot}`]),
       isLast: row[`isLast${slot}`] === "1",
       plainNo: row[`plainNo${slot}`],
       vehId: row[`vehId${slot}`],
