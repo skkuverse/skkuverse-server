@@ -234,7 +234,6 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       NAVER_API_KEY: "poller",
       TMAP_APP_KEY: "poller",
       SEOUL_SUBWAY_API_KEY: "poller",
-      SHUTTLE_TOKEN: "poller",
       DATA_GO_KR_SERVICE_KEY: "poller",
       SENTRY_DSN: "all",
     });

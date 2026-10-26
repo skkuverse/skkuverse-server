@@ -9,7 +9,8 @@
  * next first run comes from the hours last stated for it on the route's registry document (ADR 0022 PR (h)). Its
  * board lists the stations the ride passes between its two poles, in travel order, leaving out those TOPIS names
  * `(미정차)`: a stop the catalog holds by its catalog id and name, a bare pole by its station id and TOPIS name with the
- * coords of the stored route line; with a pole that has no coords, or no alight pole, it lists none (2026-10-26).
+ * coords of the stored route line; with a pole that has no coords, or no alight pole, it lists none (2026-10-26). A stop
+ index that cannot look up a passed station (its registry unread) leaves the board intact with no stops (2026-10-26).
  */
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
@@ -21,6 +22,7 @@ import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes
 import { FakeBusRoutePathService } from "../../../../__tests__/helpers/fakes/bus/bus-route-path.service.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import proposal from "../../../../__tests__/nest/bus/fixtures/bus-stops-7800-proposal.json";
+import { AppError } from "../../../http/app.error";
 import { DepartureUnavailableError } from "../../../shared/departure.error";
 import type { DepartureQuery } from "../../../shared/departure.types";
 import type { Call } from "../../../shared/call.wire";
@@ -87,7 +89,7 @@ function setup({ group = liveGroup(), hasArrivals = true, hasRows = true, servic
   const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cacheService, registryService, CLOCK);
   const live = new FakeBusLiveGroupService();
   live.groups.set("gyeonggi7800", group);
-  return { service: new BusDeparturesTopisService(asReal<BusLiveGroupService>(live), jongro, index, asReal<BusRoutePathService>(routePaths)), live };
+  return { service: new BusDeparturesTopisService(asReal<BusLiveGroupService>(live), jongro, index, asReal<BusRoutePathService>(routePaths)), live, index };
 }
 
 describe("BusDeparturesTopisService.listDepartures", () => {
@@ -202,6 +204,25 @@ describe("BusDeparturesTopisService.listDepartures", () => {
         action: { actionType: "route", actionValue: "/map?place=bus_stop:sadang-exit9" },
       });
       expect(board.stops?.map((stop) => stop.id)).not.toContain("277101688");
+    });
+
+    it("serves the board with no stops when the stop index cannot look up a station the ride passes", async () => {
+      // Arrange
+      const { stops, ...withoutStops } = await setup().service.listDepartures(query());
+      const { service, index } = setup();
+      const findStop = index.findStop.bind(index);
+      const legPoles = new Set([query().boardStopId, query().alightStopId]);
+      jest.spyOn(index, "findStop").mockImplementation((stopId) =>
+        legPoles.has(stopId) ? findStop(stopId) : Promise.reject(new AppError("JONGRO_REGISTRY_UNAVAILABLE", "The Jongro station registry is unavailable", 503)),
+      );
+
+      // Act
+      const board = await service.listDepartures(query());
+
+      // Assert
+      expect(stops).not.toBeUndefined();
+      expect(board).toEqual(withoutStops);
+      expect(board).not.toHaveProperty("stops");
     });
 
     it.each([

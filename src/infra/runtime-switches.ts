@@ -10,7 +10,6 @@ export interface RuntimeSwitches {
   cacheEnabled: boolean;
   shuttleEtaEnabled: boolean;
   subwayEnabled: boolean;
-  shuttleEnabled: boolean;
   regionalBusEnabled: boolean;
   gbisEnabled: boolean;
   noticeOverviewEnabled: boolean;
@@ -21,7 +20,6 @@ export const RUNTIME_SWITCH_NAMES = [
   "CACHE",
   "SHUTTLE_ETA",
   "SUBWAY",
-  "SHUTTLE",
   "REGIONAL_BUS",
   "GBIS",
   "NOTICE_OVERVIEW",
@@ -69,7 +67,7 @@ function pushDelivery(resolution: Resolution): PushDelivery {
 
 function isOn(
   resolution: Resolution,
-  name: "CACHE" | "SHUTTLE_ETA" | "SUBWAY" | "SHUTTLE" | "REGIONAL_BUS" | "GBIS",
+  name: "CACHE" | "SHUTTLE_ETA" | "SUBWAY" | "REGIONAL_BUS" | "GBIS",
 ): boolean {
   return (resolution.read(name, ON_OFF) ?? (resolution.mode === "development" ? "off" : "on")) === "on";
 }
@@ -102,7 +100,6 @@ export function resolveRuntimeSwitches(
       cacheEnabled: isGuardOn(resolution, "CACHE"),
       shuttleEtaEnabled: isOn(resolution, "SHUTTLE_ETA"),
       subwayEnabled: isOn(resolution, "SUBWAY"),
-      shuttleEnabled: isOn(resolution, "SHUTTLE"),
       regionalBusEnabled: isOn(resolution, "REGIONAL_BUS"),
       gbisEnabled: isOn(resolution, "GBIS"),
       noticeOverviewEnabled: isNoticeOverviewOn(resolution),

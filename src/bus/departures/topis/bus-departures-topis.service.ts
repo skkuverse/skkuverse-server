@@ -47,7 +47,9 @@ export class BusDeparturesTopisService implements DepartureSource {
     const row = arrivals.value.find(({ sequence }) => Number(sequence) - 1 === legStations.boardIndex);
     const known = serviceHours.find(({ sequence }) => sequence - 1 === legStations.boardIndex);
     const board = toTopisBoard({ group, row: { ...(known && { firstTm: known.firstTm, lastTm: known.lastTm }), ...row }, legStations, query });
-    const stops = await this.findLegStops(route.id, legStations, { stationsVersion: group.stationsVersion, lang: query.lang });
+    // WHY: the stop index logs a registry it cannot read (`bus.stop_index.registry_unread`); the stops are optional to
+    // the board, so a failed lookup leaves them unlisted rather than failing the board.
+    const stops = await this.findLegStops(route.id, legStations, { stationsVersion: group.stationsVersion, lang: query.lang }).catch(() => null);
     return stops === null ? board : { ...board, stops };
   }
 

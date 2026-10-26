@@ -204,14 +204,6 @@ const config = {
     },
   },
 
-  // (A collector detail is left out of the public history.)
-  shuttle: {
-    enabled: switches.shuttleEnabled,
-    get token(): string {
-      return roleScoped("SHUTTLE_TOKEN");
-    },
-  },
-
   // WHY: the regional bus pollers spend production's TOPIS quota per operation, which has 6,752 calls a day to spare.
   regionalBus: {
     enabled: switches.regionalBusEnabled,
@@ -293,7 +285,6 @@ const config = {
     cache: string;
     shuttleEta: string;
     subway: string;
-    shuttle: string;
     regionalBus: string;
     gbis: string;
     noticeOverview: string;
@@ -303,7 +294,6 @@ const config = {
       cache: switches.cacheEnabled ? "on" : "off",
       shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
       subway: switches.subwayEnabled ? "on" : "off",
-      shuttle: switches.shuttleEnabled ? "on" : "off",
       regionalBus: switches.regionalBusEnabled ? "on" : "off",
       gbis: switches.gbisEnabled ? "on" : "off",
       noticeOverview: switches.noticeOverviewEnabled ? "on" : "off",
