@@ -8,12 +8,17 @@ on:
   pull_request_review:
     types: [submitted]
 
+permissions: {}
+
 jobs:
   claude:
+    # WHY: the repository is public and the job holds CLAUDE_CODE_OAUTH_TOKEN, so it starts only for a
+    # maintainer; anyone else's `@claude` starts nothing. An issue comment runs in this repository's context,
+    # with its secrets, even when it sits on a fork's pull request.
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,7 +27,7 @@ jobs:
       id-token: write
       actions: read
     # WHY: `@claude …` is read-only: read code, run read-only git/gh, comment.
-    # `@claude edit …` from an OWNER/MEMBER/COLLABORATOR may also edit, commit and push.
+    # `@claude edit …` may also edit, commit and push; the mode step checks the association again.
     # QUIRK(claude-code-action): the action pushes with its GitHub App token, not GITHUB_TOKEN, and passes
     # `--permission-mode acceptEdits` ahead of claude_args, so neither the job's permissions nor the
     # appended `--permission-mode default` is the lock: the --disallowedTools deny list of the action's
