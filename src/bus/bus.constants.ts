@@ -1,6 +1,6 @@
 import type { JongroRoute, JongroRouteCapabilities, ServiceConfigEntry, ServiceConfigMap } from "./bus.types";
 
-export const SEOUL_BUS_API_URL = "http://ws.bus.go.kr/api/rest";
+export const SEOUL_BUS_API_URL = "http://ws.bus.go.kr/api/rest"; // QUIRK(topis): HTTP only, so the key is cleartext (443 timed out, 2026-10-26).
 
 // EVIDENCE: TOPIS's dataTm advances about every 20 s (2026-10-17). SEE: docs/project-docs.md ("Daily Usage and Quota Check")
 const JONGRO_POLL_INTERVAL_MS = 25_000;
