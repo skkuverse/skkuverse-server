@@ -1,8 +1,8 @@
 /**
  * How the build carries the perimeter overlay (ADR 0023, D4): the build empties dist/ before it compiles, so an
- * entry left by an earlier build (a removed overlay, a stale private one) can never load; the overlay entry, which
- * only a load by path reaches, is a knip entry so its tree counts as used; and the package is private, so no publish
- * can ship a build that carries a production overlay.
+ * entry left by an earlier build (a removed overlay, a stale private one) can never load; knip names no overlay
+ * entry, which a public checkout does not hold; and the package is private, so no publish can ship a build that
+ * carries a production overlay.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -34,9 +34,11 @@ describe("the perimeter build", () => {
     }
   });
 
-  it("makes the overlay entry a knip entry, since only a load by path reaches it", () => {
+  // WHY: the overlay compiles only at src/private/, which git ignores and knip never reads; an entry there or in the
+  // retired src/perimeter/current/ would name a file a public checkout does not hold.
+  it("names no overlay entry for knip", () => {
     // Act & Assert
-    expect(knip.entry).toContain("src/perimeter/current/perimeter.overlay.ts");
+    expect(knip.entry.filter((entry) => /^src\/(?:private|perimeter\/current)\//.test(entry))).toEqual([]);
   });
 
   it("is a private package", () => {

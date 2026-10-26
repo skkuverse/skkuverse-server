@@ -690,24 +690,30 @@ describe("boundaries/perimeter-overlay", () => {
   });
 });
 
-// WHY: the overlay's specs move with it from src/perimeter/current/, where specs/fixed-clock and the perimeter
-// layer's feature ban held them; src/private/ is no module scope, so neither block reaches it.
+// WHY: src/private/ is no module scope, so specs/fixed-clock does not reach the overlay's specs on its own. They may
+// import a feature module, so a policy case that drives a public feature route end to end sits beside the policy
+// it asserts; the overlay's sources keep the feature ban (boundaries/perimeter-overlay).
 describe("specs/perimeter-overlay", () => {
-  const ruleIdsFor = (source: string): (string | null)[] =>
-    new Linter({ configType: "flat", cwd: ROOT }).verify(source, config, path.join(ROOT, "src/private/x.spec.ts")).map((m) => m.ruleId);
+  const ruleIdsAt = (file: string, source: string): (string | null)[] =>
+    new Linter({ configType: "flat", cwd: ROOT }).verify(source, config, path.join(ROOT, file)).map((m) => m.ruleId);
+  const ruleIdsFor = (source: string): (string | null)[] => ruleIdsAt("src/private/x.spec.ts", source);
 
-  it("rejects the real Clock and a feature import in an overlay spec", () => {
+  it("rejects the real Clock in an overlay spec", () => {
+    // Act & Assert
+    expect(ruleIdsFor("export const policy = new RateLimitPolicy(settings, new Clock());")).toEqual(["src-syntax/spec-clock"]);
+  });
+
+  it("lets an overlay spec import a feature module, and still refuses one in an overlay source", () => {
     // Arrange
-    const sources = [
-      "export const policy = new RateLimitPolicy(settings, new Clock());",
-      'import { busRoutes } from "../bus/bus.constants";\nexport const used = busRoutes;',
-    ];
+    const source = 'import { MiniappsModule } from "../miniapps/miniapps.module";\nexport const used = MiniappsModule;';
 
     // Act
-    const ruleIds = sources.map(ruleIdsFor);
+    const inSpec = ruleIdsFor(source);
+    const inSource = ruleIdsAt("src/private/x.ts", source);
 
     // Assert
-    expect(ruleIds).toEqual([["src-syntax/spec-clock"], ["@typescript-eslint/no-restricted-imports"]]);
+    expect(inSpec).toEqual([]);
+    expect(inSource).toEqual(["src-syntax/perimeter-implementation-imports"]);
   });
 
   it("passes a fixed clock and the ports", () => {
@@ -781,6 +787,6 @@ describe("the one require in src/", () => {
     // Assert
     expect(requires).toEqual([`${LOADER}: require(OVERLAY_ENTRY)`]);
     expect(disables).toEqual([LOADER]);
-    expect(readSource(LOADER)).toContain('export const OVERLAY_ENTRY = path.join(__dirname, "current", "perimeter.overlay");');
+    expect(readSource(LOADER)).toContain('export const OVERLAY_ENTRY = path.join(__dirname, "..", "private", "perimeter.overlay");');
   });
 });

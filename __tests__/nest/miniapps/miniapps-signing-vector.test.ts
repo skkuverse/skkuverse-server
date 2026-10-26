@@ -1,5 +1,9 @@
 /**
- * (A perimeter detail is left out of the public history.)
+ * The known-answer vector of docs/reference/miniapps-api.md ("Known-answer vector"), against the test signer every
+ * signed-route test uses (__tests__/helpers/miniapps/signing-keys.ts, written from the public spec). What it guards:
+ * the published key is RFC 8032's TEST 1 key and its keyId is the registry's format; the signer builds the published
+ * string to sign and signature from the published call, so the spec, the vector and the tests' signer agree. That the
+ * overlay verifies the vector is pinned beside it (the overlay's authorizer spec).
  */
 import crypto from "node:crypto";
 import { signedHeaders, stringToSign } from "../../helpers/miniapps/signing-keys";
