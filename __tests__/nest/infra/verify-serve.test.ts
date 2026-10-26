@@ -55,6 +55,18 @@ describe("npm run verify:serve", () => {
     expect([pkg.scripts["verify:serve"], pkg.scripts["verify:serve:down"]]).toEqual(["node scripts/verify-serve.js up", "node scripts/verify-serve.js down"]);
   });
 
+  it("takes the overlay from the sibling the private companion repository checkout when PERIMETER_OVERLAY_DIR is unset", () => {
+    // Arrange
+    const sibling = path.join(root, "..", "private-companion-repository", "server-overlay", "src");
+
+    // Act
+    const run = runVerifyServe(["up"], {});
+
+    // Assert
+    // WHY: with the sibling checked out compose runs with it; without, the refusal names it.
+    expect(`${run.stderr}${run.docker ?? ""}`).toContain(sibling);
+  });
+
   it("refuses to start without the overlay entry, naming the folder, and runs no compose", () => {
     // Arrange
     const empty = fs.mkdtempSync(path.join(os.tmpdir(), "verify-serve-empty-"));
