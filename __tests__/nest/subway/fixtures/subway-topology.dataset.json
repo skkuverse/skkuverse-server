@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the subway-topology dataset: the committed subway registry file as production served it at commit d856f333 (captured 2026-10-20; the file is deleted), its platform directions keyed by platform id in the registry order, and its neighbors. The lines, stations and platform identities stay in code as SUBWAY_LINES and SUBWAY_STATIONS. Not trimmed. Revision 2 (2026-10-25, ADR 0022 D4), pushed to skku_content_dev from this checkout, adds the platforms of 사당 (S1-2-226, S1-4-433), 금정 (KR-1-P149, KR-4-443) and 종로5가 (S1-1-154), carries the line 1, 2 and 4 platforms' upstream, watched and next platforms to the wider stretches of subway-timetables revision 2, and adds those stretches' stops as neighbors (Seoul API and train-map names as both wrote them on 2026-10-25 12:23-12:27 KST). Renamed 2026-10-25 (owner decision): 성균관대's platform id KR-1-0153 became its KRIC code KR-1-P153 wherever it appears; no other value changed.",
+  "_about": "Revision 1 of the subway-topology dataset: the committed subway registry file as production served it at commit d856f333 (captured 2026-10-20; the file is deleted), its platform directions keyed by platform id in the registry order, and its neighbors. The lines, stations and platform identities stay in code as SUBWAY_LINES and SUBWAY_STATIONS. Not trimmed. Revision 2 (2026-10-25, ADR 0022 D4), pushed to skku_content_dev from this checkout, adds the platforms of 사당 (S1-2-226, S1-4-433), 금정 (KR-1-P149, KR-4-443) and 종로5가 (S1-1-154), carries the line 1, 2 and 4 platforms' upstream, watched and next platforms to the wider stretches of subway-timetables revision 2, and adds those stretches' stops as neighbors (Seoul API and train-map names as both wrote them on 2026-10-25 12:23-12:27 KST). Renamed 2026-10-25 (owner decision): 성균관대's platform id KR-1-0153 became its KRIC code KR-1-P153 wherever it appears; no other value changed. Revision 3 (2026-10-26, ADR 0022 D5), drafted from this checkout and pushed after its deploy, gives every line 1 and 4 neighbor a station id (a slug of its English name in the Seoul SearchSTNBySubwayLineInfo) and its coords (the Seoul subwayStationMaster row of the same station code), so a journey ride can list the stops it passes; both APIs called once on 2026-10-26; no other value changed.",
   "platforms": {
     "KR-1-P153": {
       "up": {
@@ -894,15 +894,30 @@
   "neighbors": {
     "KR-1-P157": {
       "line": "1",
-      "seoulName": "병점"
+      "seoulName": "병점",
+      "stationId": "byeongjeom",
+      "coords": {
+        "lat": 37.207503,
+        "lng": 127.032731
+      }
     },
     "KR-1-1715": {
       "line": "1",
-      "seoulName": "세류"
+      "seoulName": "세류",
+      "stationId": "seryu",
+      "coords": {
+        "lat": 37.245025,
+        "lng": 127.013222
+      }
     },
     "KR-1-P155": {
       "line": "1",
-      "seoulName": "수원"
+      "seoulName": "수원",
+      "stationId": "suwon",
+      "coords": {
+        "lat": 37.266348,
+        "lng": 126.999561
+      }
     },
     "KR-1-P154": {
       "line": "1",
@@ -911,6 +926,11 @@
         "ko": "화서",
         "en": "Hwaseo",
         "zh": "华西"
+      },
+      "stationId": "hwaseo",
+      "coords": {
+        "lat": 37.283862,
+        "lng": 126.989627
       }
     },
     "KR-1-P152": {
@@ -920,11 +940,21 @@
         "ko": "의왕",
         "en": "Uiwang",
         "zh": "义王"
+      },
+      "stationId": "uiwang",
+      "coords": {
+        "lat": 37.320852,
+        "lng": 126.948217
       }
     },
     "KR-1-P151": {
       "line": "1",
-      "seoulName": "당정"
+      "seoulName": "당정",
+      "stationId": "dangjeong",
+      "coords": {
+        "lat": 37.344285,
+        "lng": 126.948345
+      }
     },
     "KR-1-P150": {
       "line": "1",
@@ -933,6 +963,11 @@
         "ko": "군포",
         "en": "Gunpo",
         "zh": "军浦"
+      },
+      "stationId": "gunpo",
+      "coords": {
+        "lat": 37.35356,
+        "lng": 126.948462
       }
     },
     "KR-1-P148": {
@@ -942,31 +977,66 @@
         "ko": "명학",
         "en": "Myeonghak",
         "zh": "鸣鹤"
+      },
+      "stationId": "myeonghak",
+      "coords": {
+        "lat": 37.384653,
+        "lng": 126.935433
       }
     },
     "KR-1-P147": {
       "line": "1",
-      "seoulName": "안양"
+      "seoulName": "안양",
+      "stationId": "anyang",
+      "coords": {
+        "lat": 37.401592,
+        "lng": 126.922874
+      }
     },
     "S1-4-414": {
       "line": "4",
-      "seoulName": "수유"
+      "seoulName": "수유",
+      "stationId": "suyu",
+      "coords": {
+        "lat": 37.638052,
+        "lng": 127.025732
+      }
     },
     "S1-4-415": {
       "line": "4",
-      "seoulName": "미아"
+      "seoulName": "미아",
+      "stationId": "mia",
+      "coords": {
+        "lat": 37.62667,
+        "lng": 127.025983
+      }
     },
     "S1-4-416": {
       "line": "4",
-      "seoulName": "미아사거리"
+      "seoulName": "미아사거리",
+      "stationId": "miasageori",
+      "coords": {
+        "lat": 37.613292,
+        "lng": 127.030053
+      }
     },
     "S1-4-417": {
       "line": "4",
-      "seoulName": "길음"
+      "seoulName": "길음",
+      "stationId": "gireum",
+      "coords": {
+        "lat": 37.603407,
+        "lng": 127.025053
+      }
     },
     "S1-4-418": {
       "line": "4",
-      "seoulName": "성신여대입구"
+      "seoulName": "성신여대입구",
+      "stationId": "sungshin-womens-univ",
+      "coords": {
+        "lat": 37.592612,
+        "lng": 127.016441
+      }
     },
     "S1-4-419": {
       "line": "4",
@@ -975,6 +1045,11 @@
         "ko": "한성대입구",
         "en": "Hansung Univ.",
         "zh": "汉城大入口"
+      },
+      "stationId": "hansung-univ",
+      "coords": {
+        "lat": 37.588458,
+        "lng": 127.006221
       }
     },
     "S1-4-421": {
@@ -984,27 +1059,57 @@
         "ko": "동대문",
         "en": "Dongdaemun",
         "zh": "东大门"
+      },
+      "stationId": "dongdaemun",
+      "coords": {
+        "lat": 37.57093,
+        "lng": 127.009287
       }
     },
     "S1-4-422": {
       "line": "4",
-      "seoulName": "동대문역사문화공원"
+      "seoulName": "동대문역사문화공원",
+      "stationId": "dongdaemun-history-culture-park",
+      "coords": {
+        "lat": 37.565133,
+        "lng": 127.007885
+      }
     },
     "S1-4-423": {
       "line": "4",
-      "seoulName": "충무로"
+      "seoulName": "충무로",
+      "stationId": "chungmuro",
+      "coords": {
+        "lat": 37.561207,
+        "lng": 126.99408
+      }
     },
     "S1-4-424": {
       "line": "4",
-      "seoulName": "명동"
+      "seoulName": "명동",
+      "stationId": "myeong-dong",
+      "coords": {
+        "lat": 37.560989,
+        "lng": 126.986325
+      }
     },
     "S1-4-425": {
       "line": "4",
-      "seoulName": "회현"
+      "seoulName": "회현",
+      "stationId": "hoehyeon",
+      "coords": {
+        "lat": 37.558514,
+        "lng": 126.978246
+      }
     },
     "S1-4-426": {
       "line": "4",
-      "seoulName": "서울"
+      "seoulName": "서울",
+      "stationId": "seoul-station",
+      "coords": {
+        "lat": 37.55281,
+        "lng": 126.972556
+      }
     },
     "S1-2-212": {
       "line": "2",
@@ -1435,67 +1540,147 @@
     },
     "KR-1-P146": {
       "line": "1",
-      "seoulName": "관악"
+      "seoulName": "관악",
+      "stationId": "gwanak",
+      "coords": {
+        "lat": 37.419232,
+        "lng": 126.908706
+      }
     },
     "KR-1-P145": {
       "line": "1",
-      "seoulName": "석수"
+      "seoulName": "석수",
+      "stationId": "seoksu",
+      "coords": {
+        "lat": 37.435047,
+        "lng": 126.902295
+      }
     },
     "KR-1-P144": {
       "line": "1",
-      "seoulName": "금천구청"
+      "seoulName": "금천구청",
+      "stationId": "geumcheon-gu-office",
+      "coords": {
+        "lat": 37.455626,
+        "lng": 126.89398
+      }
     },
     "KR-1-P143": {
       "line": "1",
-      "seoulName": "독산"
+      "seoulName": "독산",
+      "stationId": "doksan",
+      "coords": {
+        "lat": 37.466613,
+        "lng": 126.889249
+      }
     },
     "KR-1-P142": {
       "line": "1",
-      "seoulName": "가산디지털단지"
+      "seoulName": "가산디지털단지",
+      "stationId": "gasan-digital-complex",
+      "coords": {
+        "lat": 37.481581,
+        "lng": 126.882581
+      }
     },
     "KR-1-141": {
       "line": "1",
-      "seoulName": "구로"
+      "seoulName": "구로",
+      "stationId": "guro",
+      "coords": {
+        "lat": 37.503039,
+        "lng": 126.881966
+      }
     },
     "KR-1-140": {
       "line": "1",
-      "seoulName": "신도림"
+      "seoulName": "신도림",
+      "stationId": "sindorim",
+      "coords": {
+        "lat": 37.508787,
+        "lng": 126.891144
+      }
     },
     "KR-1-139": {
       "line": "1",
-      "seoulName": "영등포"
+      "seoulName": "영등포",
+      "stationId": "yeongdeungpo",
+      "coords": {
+        "lat": 37.515504,
+        "lng": 126.907628
+      }
     },
     "KR-1-138": {
       "line": "1",
-      "seoulName": "신길"
+      "seoulName": "신길",
+      "stationId": "singil",
+      "coords": {
+        "lat": 37.516862,
+        "lng": 126.917865
+      }
     },
     "KR-1-137": {
       "line": "1",
-      "seoulName": "대방"
+      "seoulName": "대방",
+      "stationId": "daebang",
+      "coords": {
+        "lat": 37.513342,
+        "lng": 126.926382
+      }
     },
     "KR-1-136": {
       "line": "1",
-      "seoulName": "노량진"
+      "seoulName": "노량진",
+      "stationId": "noryangjin",
+      "coords": {
+        "lat": 37.514149,
+        "lng": 126.94271
+      }
     },
     "KR-1-135": {
       "line": "1",
-      "seoulName": "용산"
+      "seoulName": "용산",
+      "stationId": "yongsan",
+      "coords": {
+        "lat": 37.529849,
+        "lng": 126.964561
+      }
     },
     "KR-1-134": {
       "line": "1",
-      "seoulName": "남영"
+      "seoulName": "남영",
+      "stationId": "namyeong",
+      "coords": {
+        "lat": 37.541021,
+        "lng": 126.9713
+      }
     },
     "S1-1-150": {
       "line": "1",
-      "seoulName": "서울"
+      "seoulName": "서울",
+      "stationId": "seoul-station",
+      "coords": {
+        "lat": 37.556228,
+        "lng": 126.972135
+      }
     },
     "S1-1-151": {
       "line": "1",
-      "seoulName": "시청"
+      "seoulName": "시청",
+      "stationId": "city-hall",
+      "coords": {
+        "lat": 37.565715,
+        "lng": 126.977088
+      }
     },
     "S1-1-152": {
       "line": "1",
-      "seoulName": "종각"
+      "seoulName": "종각",
+      "stationId": "jonggak",
+      "coords": {
+        "lat": 37.570161,
+        "lng": 126.982923
+      }
     },
     "S1-1-153": {
       "line": "1",
@@ -1504,6 +1689,11 @@
         "ko": "종로3가",
         "en": "Jongno 3(sam)-ga",
         "zh": "钟路3街"
+      },
+      "stationId": "jongno-3-ga",
+      "coords": {
+        "lat": 37.570406,
+        "lng": 126.991847
       }
     },
     "S1-1-155": {
@@ -1513,27 +1703,57 @@
         "ko": "동대문",
         "en": "Dongdaemun",
         "zh": "东大门"
+      },
+      "stationId": "dongdaemun",
+      "coords": {
+        "lat": 37.571687,
+        "lng": 127.01093
       }
     },
     "S1-1-159": {
       "line": "1",
-      "seoulName": "동묘앞"
+      "seoulName": "동묘앞",
+      "stationId": "dongmyo",
+      "coords": {
+        "lat": 37.573197,
+        "lng": 127.01648
+      }
     },
     "S1-1-156": {
       "line": "1",
-      "seoulName": "신설동"
+      "seoulName": "신설동",
+      "stationId": "sinseol-dong",
+      "coords": {
+        "lat": 37.576048,
+        "lng": 127.024634
+      }
     },
     "S1-1-157": {
       "line": "1",
-      "seoulName": "제기동"
+      "seoulName": "제기동",
+      "stationId": "jegi-dong",
+      "coords": {
+        "lat": 37.578103,
+        "lng": 127.034893
+      }
     },
     "S1-1-158": {
       "line": "1",
-      "seoulName": "청량리"
+      "seoulName": "청량리",
+      "stationId": "cheongnyangni",
+      "coords": {
+        "lat": 37.579956,
+        "lng": 127.044585
+      }
     },
     "KR-1-123": {
       "line": "1",
-      "seoulName": "회기"
+      "seoulName": "회기",
+      "stationId": "hoegi",
+      "coords": {
+        "lat": 37.58946,
+        "lng": 127.057583
+      }
     },
     "S1-2-229": {
       "line": "2",
@@ -1553,19 +1773,39 @@
     },
     "KR-4-448": {
       "line": "4",
-      "seoulName": "상록수"
+      "seoulName": "상록수",
+      "stationId": "sangnoksu",
+      "coords": {
+        "lat": 37.302795,
+        "lng": 126.866489
+      }
     },
     "KR-4-447": {
       "line": "4",
-      "seoulName": "반월"
+      "seoulName": "반월",
+      "stationId": "banwol",
+      "coords": {
+        "lat": 37.312212,
+        "lng": 126.903524
+      }
     },
     "KR-4-446": {
       "line": "4",
-      "seoulName": "대야미"
+      "seoulName": "대야미",
+      "stationId": "daeyami",
+      "coords": {
+        "lat": 37.328467,
+        "lng": 126.917332
+      }
     },
     "KR-4-445": {
       "line": "4",
-      "seoulName": "수리산"
+      "seoulName": "수리산",
+      "stationId": "surisan",
+      "coords": {
+        "lat": 37.349801,
+        "lng": 126.925365
+      }
     },
     "KR-4-444": {
       "line": "4",
@@ -1574,6 +1814,11 @@
         "ko": "산본",
         "en": "Sanbon",
         "zh": "山本"
+      },
+      "stationId": "sanbon",
+      "coords": {
+        "lat": 37.358101,
+        "lng": 126.933274
       }
     },
     "KR-4-442": {
@@ -1583,35 +1828,75 @@
         "ko": "범계",
         "en": "Beomgye",
         "zh": "凡溪"
+      },
+      "stationId": "beomgye",
+      "coords": {
+        "lat": 37.389793,
+        "lng": 126.950806
       }
     },
     "KR-4-441": {
       "line": "4",
-      "seoulName": "평촌"
+      "seoulName": "평촌",
+      "stationId": "pyeongchon",
+      "coords": {
+        "lat": 37.394287,
+        "lng": 126.963883
+      }
     },
     "KR-4-440": {
       "line": "4",
-      "seoulName": "인덕원"
+      "seoulName": "인덕원",
+      "stationId": "indeogwon",
+      "coords": {
+        "lat": 37.401553,
+        "lng": 126.976715
+      }
     },
     "KR-4-439": {
       "line": "4",
-      "seoulName": "정부과천청사"
+      "seoulName": "정부과천청사",
+      "stationId": "government-complex-gwacheon",
+      "coords": {
+        "lat": 37.426513,
+        "lng": 126.98978
+      }
     },
     "KR-4-438": {
       "line": "4",
-      "seoulName": "과천"
+      "seoulName": "과천",
+      "stationId": "gwacheon",
+      "coords": {
+        "lat": 37.433021,
+        "lng": 126.996568
+      }
     },
     "KR-4-437": {
       "line": "4",
-      "seoulName": "대공원"
+      "seoulName": "대공원",
+      "stationId": "seoul-grand-park",
+      "coords": {
+        "lat": 37.435675,
+        "lng": 127.006523
+      }
     },
     "KR-4-436": {
       "line": "4",
-      "seoulName": "경마공원"
+      "seoulName": "경마공원",
+      "stationId": "seoul-racecourse-park",
+      "coords": {
+        "lat": 37.443885,
+        "lng": 127.007888
+      }
     },
     "KR-4-435": {
       "line": "4",
-      "seoulName": "선바위"
+      "seoulName": "선바위",
+      "stationId": "seonbawi",
+      "coords": {
+        "lat": 37.451673,
+        "lng": 127.002303
+      }
     },
     "S1-4-434": {
       "line": "4",
@@ -1620,6 +1905,11 @@
         "ko": "남태령",
         "en": "Namtaeryeong",
         "zh": "南泰岭"
+      },
+      "stationId": "namtaeryeong",
+      "coords": {
+        "lat": 37.463873,
+        "lng": 126.989134
       }
     },
     "S1-4-432": {
@@ -1629,27 +1919,57 @@
         "ko": "총신대입구(이수)",
         "en": "Chongshin Univ. (Isu)",
         "zh": "总神大入口(梨水)"
+      },
+      "stationId": "chongshin-univ",
+      "coords": {
+        "lat": 37.486263,
+        "lng": 126.981989
       }
     },
     "S1-4-431": {
       "line": "4",
-      "seoulName": "동작"
+      "seoulName": "동작",
+      "stationId": "dongjak",
+      "coords": {
+        "lat": 37.502852,
+        "lng": 126.980347
+      }
     },
     "S1-4-430": {
       "line": "4",
-      "seoulName": "이촌"
+      "seoulName": "이촌",
+      "stationId": "ichon",
+      "coords": {
+        "lat": 37.522295,
+        "lng": 126.974733
+      }
     },
     "S1-4-429": {
       "line": "4",
-      "seoulName": "신용산"
+      "seoulName": "신용산",
+      "stationId": "sinyongsan",
+      "coords": {
+        "lat": 37.52917,
+        "lng": 126.967894
+      }
     },
     "S1-4-428": {
       "line": "4",
-      "seoulName": "삼각지"
+      "seoulName": "삼각지",
+      "stationId": "samgakji",
+      "coords": {
+        "lat": 37.534075,
+        "lng": 126.9726
+      }
     },
     "S1-4-427": {
       "line": "4",
-      "seoulName": "숙대입구"
+      "seoulName": "숙대입구",
+      "stationId": "sookmyung-womens-univ",
+      "coords": {
+        "lat": 37.54456,
+        "lng": 126.972106
+      }
     }
   }
 }

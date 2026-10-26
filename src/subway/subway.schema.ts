@@ -63,7 +63,7 @@ const stationFields = { id: z.string().regex(SLUG, { error: "must be a lowercase
 
 const subwayStationFile = z.strictObject({ ...stationFields, platforms: z.array(subwayPlatformFile).min(1) });
 
-export const subwayNeighbor = z.strictObject({ line: z.string().min(1), seoulName: z.string().min(1), trainMapName: z.string().min(1).optional(), name: localizedName.optional() });
+export const subwayNeighbor = z.strictObject({ line: z.string().min(1), seoulName: z.string().min(1), trainMapName: z.string().min(1).optional(), name: localizedName.optional(), stationId: z.string().regex(SLUG, { error: "must be a lowercase slug" }).optional(), coords: z.strictObject({ lat: z.number(), lng: z.number() }).optional() });
 
 // WHY: the identities and labels the code holds (ADR 0013, D2); directions and neighbors are subway-topology's.
 export const subwayNetwork = z.strictObject({
