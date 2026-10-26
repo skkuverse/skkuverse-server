@@ -15,7 +15,7 @@ export class NoticesAttachmentService {
   ) {}
 
   // WHY: a referer only where the outbound policy allows a fetch: clients send the notice's sourceUrl, and anything
-  // else is refused before any outbound request (security fix).
+  // else is refused before any outbound request.
   async fetchDownload({ url, referer, mode, name }: AttachmentRequest, log: AttachmentLog): Promise<AttachmentDownload> {
     if (!this.outbound.allows("notice-attachment", url)) throw new AppError("FORBIDDEN", "host not allowed", 403);
     if (referer && !this.outbound.allows("notice-attachment", referer)) throw new AppError("INVALID_PARAMS", "referer not allowed", 400);

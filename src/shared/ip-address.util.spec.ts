@@ -1,7 +1,7 @@
 /**
  * isLoopbackAddress decides whether an IP address names this machine: all of 127.0.0.0/8, ::1 and the IPv6 forms
  * that map an IPv4 loopback address. isPublicAddress refuses every special-purpose address an outbound request must
- * never reach (security fix). A host name, a bracketed literal or an empty string is no address at all.
+ * never reach (a security fix). A host name, a bracketed literal or an empty string is no address at all.
  */
 import { isLoopbackAddress, isPublicAddress } from "./ip-address.util";
 
