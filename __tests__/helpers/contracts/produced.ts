@@ -46,8 +46,13 @@ export function diffProduced(expected: ReadonlyMap<string, string>, actual: Read
 export const isEmptyDiff = (diff: ProducedDiff) =>
   diff.stale.length === 0 && diff.missing.length === 0 && diff.extra.length === 0;
 
-/** Writes the stale and missing files and deletes each extra `<id>.schema.json`; any other extra file stays. */
+/**
+ * (An operations detail is left out of the public history.)
+ */
 export function writeProduced(dir: string, expected: ReadonlyMap<string, string>, diff: ProducedDiff): void {
+  if (fs.existsSync(path.join(dir, "../../src/private"))) {
+    throw new Error("[contracts] Refusing to write contracts/produced/ while src/private/ holds the perimeter overlay: remove it first.");
+  }
   fs.mkdirSync(dir, { recursive: true });
   for (const name of [...diff.stale, ...diff.missing]) fs.writeFileSync(path.join(dir, name), expected.get(name)!);
   for (const name of diff.extra.filter((n) => n.endsWith(SCHEMA_SUFFIX))) fs.rmSync(path.join(dir, name));

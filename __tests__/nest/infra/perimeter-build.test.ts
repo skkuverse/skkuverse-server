@@ -144,25 +144,3 @@ describe("the boot lines", () => {
     }
   });
 });
-
-// (An operations detail is left out of the public history.)
-describe("the contract export", () => {
-  it("refuses to run while src/private/ holds an overlay", () => {
-    // Arrange
-    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "export-contracts-"));
-    fs.mkdirSync(path.join(scratch, "scripts"));
-    fs.copyFileSync(path.join(root, "scripts/export-contracts.js"), path.join(scratch, "scripts/export-contracts.js"));
-    fs.mkdirSync(path.join(scratch, "src/private"), { recursive: true });
-
-    try {
-      // Act
-      const run = spawnSync(process.execPath, ["scripts/export-contracts.js", "--check"], { cwd: scratch, encoding: "utf8" });
-
-      // Assert
-      expect(run.status).toBe(1);
-      expect(run.stderr).toContain("src/private/");
-    } finally {
-      fs.rmSync(scratch, { recursive: true, force: true });
-    }
-  });
-});

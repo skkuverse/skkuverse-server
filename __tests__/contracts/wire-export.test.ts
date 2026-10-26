@@ -92,6 +92,20 @@ describe("drift check applies as specified", () => {
     expect(fs.readFileSync(path.join(dir, "fixtures/gone.z/case.json"), "utf8")).toBe('{ "_about": "kept" }\n');
   });
 
+  // (An operations detail is left out of the public history.)
+  it("refuses to write into a checkout whose src/private/ holds an overlay", () => {
+    // Arrange
+    const produced = path.join(dir, "contracts/produced");
+    fs.mkdirSync(path.join(dir, "src/private"), { recursive: true });
+
+    // Act
+    const exportInto = () => writeProduced(produced, expected, diffProduced(expected, readProduced(produced)));
+
+    // Assert
+    expect(exportInto).toThrow("src/private/");
+    expect(readProduced(produced)).toEqual(new Map());
+  });
+
   it("points a failure at the stale, missing and extra names and at the export script", () => {
     // Act
     const message = driftMessage({ stale: ["index.json"], missing: ["b.y.schema.json"], extra: ["notes.json"] });
