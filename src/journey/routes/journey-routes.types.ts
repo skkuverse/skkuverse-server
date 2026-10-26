@@ -37,6 +37,8 @@ export interface PlannedRide {
   board: StopCall;
   alight: StopCall;
   later: StopCall[];
+  /** WHY: the next calls at the board stop from now, whatever the legs before it, never a headway estimate. */
+  upcoming: StopCall[];
   vehicles: Vehicle[];
   waitSec: number;
   observedAt: Date | null;

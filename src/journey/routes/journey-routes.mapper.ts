@@ -45,7 +45,7 @@ function timeOf(call: StopCall): Date {
   return at;
 }
 
-function toServedRide({ leg, line, board, alight, later, vehicles, waitSec, observedAt }: PlannedRide, served: Served): ServedLeg {
+function toServedRide({ leg, line, board, alight, later, upcoming, vehicles, waitSec, observedAt }: PlannedRide, served: Served): ServedLeg {
   const { from, to } = placesOf(toLegPlaces(leg), served);
   const [startAt, endAt] = [timeOf(board), toAlightTime(alight)];
   if (!endAt) throw new Error("journey: a ride was planned on an alight call with no time");
@@ -55,7 +55,7 @@ function toServedRide({ leg, line, board, alight, later, vehicles, waitSec, obse
     ...{ mode: line.mode, from, to, startAt: servedInstant(startAt), endAt: servedInstant(endAt), basis: toLegBasis(board, alight) },
     ...{ durationSec: Math.round((endAt.getTime() - startAt.getTime()) / 1000), distanceM: null, label: name, icon: line.icon, color: line.color },
     line: { id: line.id, name },
-    ...{ board: toCall(board), alight: toCall(alight), later: later.map(toCall), vehicles, waitSec, observedAt: observedAt && servedInstant(observedAt) },
+    ...{ board: toCall(board), alight: toCall(alight), later: later.map(toCall), upcoming: upcoming.map(toCall), vehicles, waitSec, observedAt: observedAt && servedInstant(observedAt) },
   };
 }
 
