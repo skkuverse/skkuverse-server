@@ -1,0 +1,32 @@
+skkuverse-server
+Copyright 2024-2026 spencer0124
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+The license covers the code and documentation written for this project. It
+does not cover the third-party data described below.
+
+Data from third-party sites
+---------------------------
+
+Some files in this repository hold data copied or derived from public web
+pages and services of Sungkyunkwan University (SKKU) and of public bodies,
+for example:
+
+  - shuttle timetables, campus building and place names, and campus map
+    shapes (such as scripts/data/ and src/building/place/);
+  - the lists of department notice boards and their categories
+    (src/notices/sources.json, src/notices/categories.json);
+  - public transit timetables and station data from Seoul's open data
+    services (such as scripts/subway-timetable/).
+
+That data belongs to its sources and stays under their terms. Its presence
+here grants no license to it, and the Apache License does not apply to it.
+
+Third-party content in test fixtures
+------------------------------------
+
+Test fixtures (files under __tests__/ and contracts/produced/fixtures/) may
+hold trimmed copies of third-party content, such as excerpts of university
+notices or responses from public APIs, captured so that the tests run
+offline. That content is not covered by the Apache License. It belongs to
+its authors and is included only to test this software.
