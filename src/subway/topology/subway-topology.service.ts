@@ -38,6 +38,16 @@ export class SubwayTopologyService {
     return this.loader.get();
   }
 
+  // WHY: null for a topology never read (the loader logs why), for a reader that serves without it.
+  async findCurrent(): Promise<TopologySnapshot | null> {
+    try {
+      return await this.current();
+    } catch (err) {
+      if (err instanceof SubwayTopologyUnavailableError) return null;
+      throw err;
+    }
+  }
+
   private async loadSnapshot(): Promise<TopologySnapshot | null> {
     const stored = await this.repository.findTopology();
     if (stored === null) return null;

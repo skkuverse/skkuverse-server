@@ -1,11 +1,16 @@
 import { Injectable } from "@nestjs/common";
+import type { SupportedLang } from "../../../infra/types";
 import { DepartureUnavailableError } from "../../../shared/departure.error";
 import type { DepartureBoard, DepartureQuery, DepartureSource } from "../../../shared/departure.types";
 import { SubwayArrivalsService } from "../../arrivals/subway-arrivals.service";
+import { SubwayStationCoordsService } from "../../station-coords/subway-station-coords.service";
+import { SubwayTopologyService } from "../../topology/subway-topology.service";
 import { SubwayTimetablesUnavailableError } from "../subway-timetable.error";
 import { SubwayTimetableService } from "../subway-timetable.service";
 import type { PlatformSchedule } from "../subway-timetable.types";
+import { toRideStopPlace, toRideStops } from "./subway-timetable-departures.mapper";
 import { toLegTrains, toNextServiceDayStart, toTimetableDepartureBoard } from "./subway-timetable-departures.rules";
+import type { RideStopsOf } from "./subway-timetable-departures.types";
 
 type Ride = Pick<DepartureQuery, "lineId" | "boardStopId"> & { alightStopId: string };
 
@@ -19,6 +24,8 @@ export class SubwayTimetableDeparturesService implements DepartureSource {
   constructor(
     private readonly timetable: SubwayTimetableService,
     private readonly arrivals: SubwayArrivalsService,
+    private readonly topology: SubwayTopologyService,
+    private readonly stationCoords: SubwayStationCoordsService,
   ) {}
 
   // WHY: a train the board platform's station board lists live boards by that board's call (ADR 0022 PR (h)).
@@ -26,8 +33,8 @@ export class SubwayTimetableDeparturesService implements DepartureSource {
     const { alightStopId } = query;
     if (alightStopId === null) throw new DepartureUnavailableError(`subway line ${query.lineId} takes its direction from an alight platform`);
     const ride = { ...query, alightStopId };
-    const [[board, alight], liveCalls] = await Promise.all([this.findSchedules(ride, query.from), this.arrivals.listPlatformCalls(query.boardStopId)]);
-    const today = toTimetableDepartureBoard(board, alight, { ...query, liveCalls });
+    const [[board, alight], liveCalls, stopsOf] = await Promise.all([this.findSchedules(ride, query.from), this.arrivals.listPlatformCalls(query.boardStopId), this.findStopsOf(ride, query.lang)]);
+    const today = toTimetableDepartureBoard(board, alight, { ...query, liveCalls, stopsOf });
     if (today.nextServiceAt !== null) return today;
     if (toLegTrains(board, alight).length === 0) throw new DepartureUnavailableError(`no train of line ${ride.lineId} runs from ${ride.boardStopId} to ${alightStopId}`);
     return { ...today, nextServiceAt: await this.findNextServiceAt(ride, board.serviceDate) };
@@ -46,6 +53,15 @@ export class SubwayTimetableDeparturesService implements DepartureSource {
       if (err instanceof SubwayTimetablesUnavailableError) throw new DepartureUnavailableError(err.message);
       throw err;
     }
+  }
+
+  // WHY: a ride lists no stops with no topology read; the board still serves (SubwayTopologyService logs why).
+  private async findStopsOf({ boardStopId, alightStopId }: Ride, lang: SupportedLang): Promise<RideStopsOf | undefined> {
+    const registry = (await this.topology.findCurrent())?.registry;
+    if (registry === undefined) return undefined;
+    const coordsById = new Map(await Promise.all(registry.stations.map(async ({ id }) => [id, await this.stationCoords.findCoords(id)] as const)));
+    const catalog = { registry, coordsOf: (stationId: string) => coordsById.get(stationId) ?? null, lang };
+    return (train) => toRideStops(train, [boardStopId, alightStopId], (platformId) => toRideStopPlace(platformId, catalog));
   }
 
   private findNextServiceAt(ride: Ride, serviceDate: string): Promise<Date | null> {
