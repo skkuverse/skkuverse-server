@@ -309,7 +309,6 @@
     "source": "src/miniapps/notifications/miniapps-notifications.wire.ts",
     "export": "miniAppNotificationHistory",
     "routes": [
-      "GET internal/miniapps/:id/notifications",
       "GET miniapps/:id/notifications/history"
     ]
   },
@@ -317,7 +316,6 @@
     "source": "src/miniapps/notifications/miniapps-notifications.wire.ts",
     "export": "sendOutcome",
     "routes": [
-      "POST internal/miniapps/:id/notifications",
       "POST miniapps/:id/notifications"
     ]
   },

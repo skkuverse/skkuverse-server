@@ -22,20 +22,7 @@ const DOC: SentNotificationDoc = {
 };
 
 describe("toSentNotification", () => {
-  it("writes the row in the stored key order, with delivery null", () => {
-    // Arrange
-    const content = { title_ko: "제목", body_ko: "본문", title_en: "Title", body_en: null, actionType: "route", actionValue: "/campus" } as const;
-
-    // Act
-    const doc = toSentNotification(content, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT });
-
-    // Assert
-    expect(JSON.stringify(doc)).toBe(JSON.stringify(DOC));
-  });
-});
-
-describe("toSentNotification with an Idempotency-Key", () => {
-  it("writes the key last, after the row's other fields", () => {
+  it("writes the row in the stored key order, with delivery null and the key last", () => {
     // Arrange
     const content = { title_ko: "제목", body_ko: "본문", title_en: "Title", body_en: null, actionType: "route", actionValue: "/campus" } as const;
 
@@ -75,7 +62,7 @@ describe("toSentNotification with a map target", () => {
 
   it("writes chipId and placeId after the action, before the send time", () => {
     // Act
-    const doc = toSentNotification({ ...CONTENT, chipId: "eskara-2026_all", placeId: "bus_stop:hssc-600th" }, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT });
+    const doc = toSentNotification({ ...CONTENT, chipId: "eskara-2026_all", placeId: "bus_stop:hssc-600th" }, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT, idempotencyKey: "retry-1" });
 
     // Assert
     expect(JSON.stringify(doc)).toBe(
@@ -92,16 +79,17 @@ describe("toSentNotification with a map target", () => {
         placeId: "bus_stop:hssc-600th",
         sentAt: SENT_AT,
         delivery: null,
+        idempotencyKey: "retry-1",
       }),
     );
   });
 
   it("writes neither key when both are null", () => {
     // Act
-    const doc = toSentNotification({ ...CONTENT, chipId: null, placeId: null }, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT });
+    const doc = toSentNotification({ ...CONTENT, chipId: null, placeId: null }, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT, idempotencyKey: "retry-1" });
 
     // Assert
-    expect(JSON.stringify(doc)).toBe(JSON.stringify(DOC));
+    expect(JSON.stringify(doc)).toBe(JSON.stringify({ ...DOC, idempotencyKey: "retry-1" }));
   });
 
   it("takes the map target back from a row, so a repeat with another place is told apart", () => {

@@ -44,7 +44,7 @@ export abstract class RateLimitPolicy {
   abstract handlerFor(limitClass: RateLimitClass): RequestHandler;
 }
 
-export const INTERNAL_SCOPES = ["notices.dispatch", "subway.accuracy", "miniapps.push"] as const;
+export const INTERNAL_SCOPES = ["notices.dispatch", "subway.accuracy"] as const;
 export type InternalScopeName = (typeof INTERNAL_SCOPES)[number];
 
 export abstract class InternalAuthorizer {

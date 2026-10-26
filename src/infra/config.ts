@@ -142,10 +142,6 @@ const config = {
       manifests: "miniapp_manifests",
     },
     feedLimit: 50,
-    // SEE: docs/decisions/0020-miniapp-push-link-policy.md ("D4. A send credential of its own")
-    get pushToken(): string {
-      return roleScoped("MINIAPP_PUSH_TOKEN");
-    },
   },
 
   firebase: {

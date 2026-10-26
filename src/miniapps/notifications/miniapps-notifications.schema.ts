@@ -3,8 +3,7 @@ import { PUSH_PLACE_KINDS } from "./miniapps-notifications.constants";
 
 export const idempotencyKeyHeader = z
   .string()
-  .regex(/^[A-Za-z0-9_-]{1,128}$/, { error: "Idempotency-Key must be 1-128 characters of A-Z, a-z, 0-9, _ and -" })
-  .optional();
+  .regex(/^[A-Za-z0-9_-]{1,128}$/, { error: "Idempotency-Key must be 1-128 characters of A-Z, a-z, 0-9, _ and -" });
 
 const CHIP_ID_MESSAGE = "chipId must be 1-64 characters of a-z, 0-9, _ and -, starting with a letter or digit";
 const PLACE_ID_MESSAGE = `placeId must be [<kind>:]<id>, kind one of ${PUSH_PLACE_KINDS.join(", ")} and id 1-128 characters of a-z, 0-9 and -`;

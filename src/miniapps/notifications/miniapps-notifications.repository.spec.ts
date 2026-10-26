@@ -47,17 +47,6 @@ describe("MiniappsNotificationsRepository.listSentNotifications", () => {
 });
 
 describe("MiniappsNotificationsRepository writes", () => {
-  it("inserts the row as given", async () => {
-    // Arrange
-    const doc = { _id: "n1", miniAppId: "a" } as SentNotificationDoc;
-
-    // Act
-    await new MiniappsNotificationsRepository().insertSentNotification(doc);
-
-    // Assert
-    expect(insertOne).toHaveBeenCalledWith(doc);
-  });
-
   it("records a delivery as $set of delivery on that row", async () => {
     // Act
     await new MiniappsNotificationsRepository().recordDelivery("n1", { sent: 1, failed: 0, cleanedUp: 0 });

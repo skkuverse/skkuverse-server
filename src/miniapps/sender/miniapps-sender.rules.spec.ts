@@ -10,7 +10,7 @@ describe("toPushRefusal", () => {
   const call = (method: string, headers: Record<string, string>, rawBody: Buffer | undefined): PushCall => ({
     senderId: "hssc",
     scope: "push.send",
-    request: { method, target: "/internal/miniapps/hssc/notifications", ip: undefined, header: (name) => headers[name.toLowerCase()] },
+    request: { method, target: "/miniapps/hssc/notifications", ip: undefined, header: (name) => headers[name.toLowerCase()] },
     rawBody,
     credentials: null,
   });

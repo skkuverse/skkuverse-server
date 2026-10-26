@@ -6,7 +6,7 @@
 import type { IncomingMessage } from "node:http";
 import { jsonBodyOptions } from "./json-body.config";
 
-const ROUTE = "/internal/miniapps/:id/notifications";
+const ROUTE = "/miniapps/:id/notifications";
 
 function rawBodyOf(paths: readonly string[], url: string): Buffer | undefined {
   const req = { url } as IncomingMessage & { rawBody?: Buffer };
@@ -16,14 +16,14 @@ function rawBodyOf(paths: readonly string[], url: string): Buffer | undefined {
 
 describe("jsonBodyOptions", () => {
   it.each([
-    ["/internal/miniapps/eskara-2026/notifications", true],
-    ["/internal/miniapps/eskara-2026/notifications?dryRun=1", true],
-    ["/internal/miniapps/eskara-2026/notifications/", false],
-    ["/Internal/miniapps/eskara-2026/notifications", false],
-    ["/internal/miniapps//notifications", false],
-    ["/internal/miniapps/a/b/notifications", false],
-    ["/internal/miniapps/a/notificationsx", false],
-    ["/x/internal/miniapps/a/notifications", false],
+    ["/miniapps/eskara-2026/notifications", true],
+    ["/miniapps/eskara-2026/notifications?dryRun=1", true],
+    ["/miniapps/eskara-2026/notifications/", false],
+    ["/Miniapps/eskara-2026/notifications", false],
+    ["/miniapps//notifications", false],
+    ["/miniapps/a/b/notifications", false],
+    ["/miniapps/a/notificationsx", false],
+    ["/x/miniapps/a/notifications", false],
     ["/internal/notices/dispatch-pending", false],
   ])("keeps the raw body of %s: %s", (url, kept) => {
     // Act & Assert
@@ -37,7 +37,7 @@ describe("jsonBodyOptions", () => {
 
   it("keeps no raw body when no route path is given", () => {
     // Act & Assert
-    expect(rawBodyOf([], "/internal/miniapps/eskara-2026/notifications")).toBeUndefined();
+    expect(rawBodyOf([], "/miniapps/eskara-2026/notifications")).toBeUndefined();
   });
 
   it("limits every body to 100 kB", () => {
