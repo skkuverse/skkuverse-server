@@ -12,7 +12,7 @@ interface NewNotification {
   id: string;
   miniAppId: string;
   sentAt: Date;
-  idempotencyKey?: string;
+  idempotencyKey: string;
 }
 
 const actionOf = ({ actionType, actionValue }: Pick<SentNotificationDoc, "actionType" | "actionValue">): Pick<
@@ -30,8 +30,7 @@ export function toSentNotification(
   { id, miniAppId, sentAt, idempotencyKey }: NewNotification,
 ): SentNotificationDoc {
   const { title_ko, body_ko, title_en, body_en } = content;
-  const key = idempotencyKey === undefined ? {} : { idempotencyKey };
-  return { _id: id, miniAppId, title_ko, body_ko, title_en, body_en, ...actionOf(content), ...mapTargetOf(content), sentAt, delivery: null, ...key };
+  return { _id: id, miniAppId, title_ko, body_ko, title_en, body_en, ...actionOf(content), ...mapTargetOf(content), sentAt, delivery: null, idempotencyKey };
 }
 
 export function toNotificationContent({ title_ko, body_ko, title_en, body_en, ...rest }: SentNotificationDoc): NotificationContent & PushMapTarget {

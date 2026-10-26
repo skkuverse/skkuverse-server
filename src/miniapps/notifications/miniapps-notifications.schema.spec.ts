@@ -1,5 +1,5 @@
 /**
- * The send's Idempotency-Key header: absent is no key, and a present key is
+ * The send's Idempotency-Key header: a key is required, and is
  * 1-128 characters of A-Z, a-z, 0-9, `_` and `-`, refused with the message
  * the 400 shows at one below, at and one above each bound.
  */
@@ -8,9 +8,9 @@ import { idempotencyKeyHeader, pushMapTarget } from "./miniapps-notifications.sc
 const MESSAGE = "Idempotency-Key must be 1-128 characters of A-Z, a-z, 0-9, _ and -";
 
 describe("idempotencyKeyHeader", () => {
-  it("reads an absent header as no key", () => {
+  it("refuses an absent header", () => {
     // Act & Assert
-    expect(idempotencyKeyHeader.parse(undefined)).toBeUndefined();
+    expect(idempotencyKeyHeader.safeParse(undefined).success).toBe(false);
   });
 
   it.each(["k", "k".repeat(127), "k".repeat(128), "Retry_2026-10-22", "0123456789"])("accepts %j as given", (key) => {
