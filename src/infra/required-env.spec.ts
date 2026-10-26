@@ -228,7 +228,6 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       FCM_FUNCTION_URL: "all",
       FCM_API_KEY: "all",
       INTERNAL_DISPATCH_TOKEN: "api",
-      MINIAPP_PUSH_TOKEN: "api",
       SUBWAY_ACCURACY_TOKEN: "api",
       AI_API_URL: "api",
       NAVER_API_KEY_ID: "poller",
@@ -268,13 +267,10 @@ describe("listMissingRequired checks only the values the role needs", () => {
     expect(missingIn(role, "AI_API_URL")).toEqual(missing);
   });
 
-  it.each([
-    ["api", ["MINIAPP_PUSH_TOKEN"]],
-    ["combined", ["MINIAPP_PUSH_TOKEN"]],
-    ["poller", []],
-  ])("without MINIAPP_PUSH_TOKEN, ROLE=%s misses %j", (role, missing) => {
+  // WHY: the shared push token is retired with the internal push routes (ADR 0020, D6); Doppler drops it one release later.
+  it.each(["api", "combined", "poller"])("without MINIAPP_PUSH_TOKEN, ROLE=%s misses nothing", (role) => {
     // Act & Assert
-    expect(missingIn(role, "MINIAPP_PUSH_TOKEN")).toEqual(missing);
+    expect(missingIn(role, "MINIAPP_PUSH_TOKEN")).toEqual([]);
   });
 
   it("refuses a poller boot without SEOUL_BUS_SERVICE_KEY, naming it", () => {

@@ -6,7 +6,10 @@
  *
  *   - a .env holding only the listed names passes the bootstrap validation, so
  *     a rendered file always boots;
- *   - every listed name is read somewhere in src/, so no dead key is rendered;
+ *   - every listed name is read somewhere in src/, so no dead key is rendered,
+ *     except a name kept for rollback: one release after the code stops reading
+ *     it, a name stays in both lists, read nowhere, so the image a failed deploy
+ *     restarts against the new .env still finds a value it requires;
  *   - no listed name is also set inline in docker-compose.yml, where the inline
  *     value would silently win over the rendered one;
  *   - config.ts and the Nest bootstrap both check the one required list in
@@ -48,6 +51,10 @@ function sourceFiles(dir: string): string[] {
 
 const PRD = allowlist("config/env.prd.keys");
 const DEV = allowlist("config/env.dev.keys");
+// (An operations detail is left out of the public history.)
+const KEPT_FOR_ROLLBACK: Readonly<Record<string, string>> = {
+  MINIAPP_PUSH_TOKEN: "required by the api role of every image before 2A-3 deploy 2a (ADR 0020, D6); deleted in deploy 2b",
+};
 // Production adds SENTRY_DSN, and its overlay mode PERIMETER_SETTINGS, so its list is the longest.
 const REQUIRED = requiredValues({ NODE_ENV: "production", PERIMETER_MODE: "overlay" }).map((v) => v.env);
 
@@ -126,11 +133,27 @@ describe("config/env.*.keys — the names render_env.py writes", () => {
 
     // Act
     const unread = [...new Set([...PRD, ...DEV])].filter(
-      (name) => !new RegExp(`\\b${name}\\b`).test(source),
+      (name) => !(name in KEPT_FOR_ROLLBACK) && !new RegExp(`\\b${name}\\b`).test(source),
     );
 
     // Assert
     expect(unread).toEqual([]);
+  });
+
+  it("a name kept for rollback is in both lists, read nowhere in src/, and no longer required", () => {
+    // Arrange
+    const source = sourceFiles(path.join(root, "src"))
+      .map((file) => fs.readFileSync(file, "utf8"))
+      .join("\n");
+    const required = new Set(REQUIRED);
+
+    // Act
+    const misplaced = Object.keys(KEPT_FOR_ROLLBACK).filter(
+      (name) => !PRD.includes(name) || !DEV.includes(name) || required.has(name) || new RegExp(`\\b${name}\\b`).test(source),
+    );
+
+    // Assert
+    expect(misplaced).toEqual([]);
   });
 
   it("no listed name is also set inline in docker-compose.yml", () => {
