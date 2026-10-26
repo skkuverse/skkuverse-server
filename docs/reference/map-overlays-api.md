@@ -906,7 +906,14 @@ this route only once a user turns a line on. The app's `MapRouteOverlay` reads `
 `outlineWidth`, `outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath
 every marker, so the lines never cover a building label.
 
-(A collector detail is left out of the public history.)
+**The HSSC loop.** The `hssc` overlay is the shuttle's road as its buses drive it, measured from their
+GPS on 2026-10-20, 22 and 23 and stored as the `hssc-route-line` dataset ([ADR 0018, D9](../decisions/0018-hssc-arrival-estimates.md)):
+235 points over 3,692 m, closed (its last point repeats its first), starting at 농구장, served as stored.
+It is named as `/bus/config` names the line (인사캠 셔틀버스 / HSSC Shuttle Bus / 人文校区班车), and drawn in
+the HSSC card's SKKU green, `{ color: "003626", width: 5, outlineWidth: 1.5, outlineColor: "FFFFFF",
+minZoom: 12 }`: a white edge, since the Jongno lines' dark green edge would vanish against a near-black
+line. Its layer is last, so it lies above 08 and 07 where they share a road. A push of the dataset reaches
+the origin within a minute and a client within the hour this route is cached.
 
 **One green.** Every Jongno route is drawn in the village-bus green `4CAF50`, the map's own constant: a push of
 a route's card colour (`themeColor` in `jongro-route-attributes`) never moves it, and the route test

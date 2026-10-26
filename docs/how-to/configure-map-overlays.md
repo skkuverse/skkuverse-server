@@ -220,7 +220,13 @@ control that does nothing.
 
 ### Change the HSSC shuttle line
 
-(A collector detail is left out of the public history.)
+The `hssc_route` layer draws the HSSC loop from `GET /map/overlays/transit`. Its
+geometry is the `hssc-route-line` dataset, measured from the shuttles' GPS and
+pushed with `npm run data`, no deploy ([ADR 0018, D9 and
+D11](../decisions/0018-hssc-arrival-estimates.md)). Its
+colour (SKKU green `003626`, white edge), its place on top of the Jongno lines
+and its default (off) are its `BASE_LAYERS` entry in `map.constants.ts`: a
+deploy.
 
 ### Change the Jongno route lines
 
