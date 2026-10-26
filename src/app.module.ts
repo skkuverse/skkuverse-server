@@ -36,8 +36,6 @@ import { BusLiveGroupModule } from "./bus/live/group/bus-live-group.module";
 import { BusStopIndexModule } from "./bus/stop-index/bus-stop-index.module";
 import { BusStopArrivalsModule } from "./bus/stop-arrivals/bus-stop-arrivals.module";
 import { BusStopListModule } from "./bus/stop-list/bus-stop-list.module";
-import { BusShuttleGpsModule } from "./bus/private-file";
-import { BusShuttleStopModule } from "./bus/private-file";
 import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
@@ -143,8 +141,6 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     BusStopIndexModule,
     BusStopArrivalsModule,
     BusStopListModule,
-    BusShuttleGpsModule,
-    BusShuttleStopModule,
     AppConfigModule,
     UiModule,
     UiHomeModule,

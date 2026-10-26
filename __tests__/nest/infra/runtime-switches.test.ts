@@ -34,7 +34,6 @@ describe("resolveRuntimeSwitches defaults", () => {
         cacheEnabled: true,
         shuttleEtaEnabled: true,
         subwayEnabled: true,
-        shuttleEnabled: true,
         regionalBusEnabled: true,
         gbisEnabled: true,
         noticeOverviewEnabled: false,
@@ -51,7 +50,6 @@ describe("resolveRuntimeSwitches defaults", () => {
         cacheEnabled: false,
         shuttleEtaEnabled: false,
         subwayEnabled: false,
-        shuttleEnabled: false,
         regionalBusEnabled: false,
         gbisEnabled: false,
         noticeOverviewEnabled: true,
@@ -120,16 +118,6 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(prod).toEqual({ switches: expect.objectContaining({ subwayEnabled: false }), errors: [] });
   });
 
-  it("development may turn the Shuttle pollers on, and production may turn them off", () => {
-    // Act
-    const dev = resolveRuntimeSwitches({ SHUTTLE: "on" }, "development");
-    const prod = resolveRuntimeSwitches({ SHUTTLE: "off" }, "production");
-
-    // Assert
-    expect(dev).toEqual({ switches: expect.objectContaining({ shuttleEnabled: true }), errors: [] });
-    expect(prod).toEqual({ switches: expect.objectContaining({ shuttleEnabled: false }), errors: [] });
-  });
-
   it("development may turn the regional bus pollers on, and production may turn them off", () => {
     // Act
     const dev = resolveRuntimeSwitches({ REGIONAL_BUS: "on" }, "development");
@@ -193,7 +181,6 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["CACHE", "no-store"],
     ["SHUTTLE_ETA", "true"],
     ["SUBWAY", "yes"],
-    ["SHUTTLE", "1"],
     ["REGIONAL_BUS", "true"],
     ["GBIS", "yes"],
     ["NOTICE_OVERVIEW", "true"],
@@ -286,14 +273,6 @@ describe("where the switches may be set", () => {
     ])("%s run no subway poller", (_label, env) => {
       // Assert
       expect(env).toMatch(/- SUBWAY=off\n/);
-    });
-
-    it.each([
-      ["the api replicas", apiEnv],
-      ["the poller", pollerEnv],
-    ])("%s run no Shuttle poller", (_label, env) => {
-      // Assert
-      expect(env).toMatch(/- SHUTTLE=off\n/);
     });
 
     it.each([
