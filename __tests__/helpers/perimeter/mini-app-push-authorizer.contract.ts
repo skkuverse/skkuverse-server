@@ -9,7 +9,7 @@
 import { PUSH_SCOPES, type MiniAppPushAuthorizer, type PerimeterDeps, type PerimeterRequest, type PushAuthorization, type SenderCredentials } from "../../../src/perimeter/perimeter.ports";
 import { itConstructsLikeThePoller, perimeterRequest, perimeterTestDeps } from "./perimeter-deps";
 
-const TARGET = "/internal/miniapps/mukja/notifications";
+const TARGET = "/miniapps/mukja/notifications";
 const HEADERS = { "Content-Type": "application/json" };
 
 const CALLS: ReadonlyArray<readonly [string, PerimeterRequest, Buffer | undefined]> = [

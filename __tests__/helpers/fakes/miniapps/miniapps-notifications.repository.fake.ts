@@ -19,11 +19,6 @@ export class FakeMiniappsNotificationsRepository implements PublicOf<MiniappsNot
 
   async onModuleInit(): Promise<void> {}
 
-  async insertSentNotification(doc: SentNotificationDoc): Promise<void> {
-    this.fail();
-    this.notifications.push({ ...doc });
-  }
-
   async claimSentNotification(doc: SentNotificationDoc): Promise<boolean> {
     this.fail();
     const { miniAppId, idempotencyKey } = doc;
