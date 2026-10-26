@@ -127,6 +127,24 @@ describe("the overlay build context", () => {
   });
 });
 
+// WHY: after a deploy, the boot line is where an operator reads which overlay commit the running image carries.
+describe("the boot lines", () => {
+  it("name the overlay build in both roles' boot events", () => {
+    // Arrange
+    const main = read("src/main.ts");
+
+    // Act
+    const fieldsByEvent = new Map(
+      [...main.matchAll(/logger\.info\(\s*\{([^}]*)\}/g)].map((m) => [/event: "([^"]+)"/.exec(m[1]!)?.[1], m[1]!] as const),
+    );
+
+    // Assert
+    for (const event of ["app.poller_mode", "app.started"]) {
+      expect(fieldsByEvent.get(event)).toContain("overlayBuild: config.perimeter.overlayBuild");
+    }
+  });
+});
+
 // (An operations detail is left out of the public history.)
 describe("the contract export", () => {
   it("refuses to run while src/private/ holds an overlay", () => {

@@ -48,7 +48,16 @@ function exitOnSignals(app: NestExpressApplication, message: string): void {
 
 // WHY: init() runs the lifecycle hooks, so PollerRegistryService starts the pollers, and binds no port.
 async function runPoller(app: NestExpressApplication, role: string): Promise<void> {
-  logger.info({ event: "app.poller_mode", role, perimeter: config.perimeter.mode, ...config.getSideEffectsSummary() }, "Running in poller-only mode");
+  logger.info(
+    {
+      event: "app.poller_mode",
+      role,
+      perimeter: config.perimeter.mode,
+      overlayBuild: config.perimeter.overlayBuild,
+      ...config.getSideEffectsSummary(),
+    },
+    "Running in poller-only mode",
+  );
   await app.init();
   exitOnSignals(app, "Shutting down poller...");
 }
@@ -62,6 +71,7 @@ async function serveHttp(app: NestExpressApplication, role: string): Promise<voi
       port: config.port,
       host: config.host,
       perimeter: config.perimeter.mode,
+      overlayBuild: config.perimeter.overlayBuild,
       db: config.mongo.dbName,
       api: config.useProdApi ? "PROD" : "DEV",
       role,
