@@ -94,6 +94,32 @@ describe("toArrivalState", () => {
   });
 });
 
+// WHY: the bounds that keep both patterns linear (CWE-1333) are intended limits, not gaps. A bracket token's body
+// is at most 20 characters, so a longer one stays in the text and a time inside it is read; a time is at most
+// 999 minutes or 999 seconds, so 1000 is no time. TOPIS's own tokens (`[막차]`, `[12번째 전]`) and times are far
+// below both.
+describe("toMinutes at the bounds of the arrival text patterns", () => {
+  it.each([
+    ["a 19-character token holding a time is stripped", `[${"가".repeat(16)}3분후]`, null],
+    ["a 20-character token holding a time is stripped", `[${"가".repeat(17)}3분후]`, null],
+    ["a 21-character token is left, so the time inside it is read", `[${"가".repeat(18)}3분후]`, 3],
+    ["998 minutes", "998분후", 998],
+    ["999 minutes", "999분후", 999],
+    ["1000 minutes is no time", "1000분후", null],
+    ["999 seconds", "999초후", 17],
+    ["1000 seconds is no time", "1000초후", null],
+  ])("%s", (_label, arrmsg, expected) => {
+    // Arrange
+    const bus = jongroArrivalBus({ traTime: 0, arrmsg });
+
+    // Act
+    const minutes = toMinutes(bus);
+
+    // Assert
+    expect(minutes).toBe(expected);
+  });
+});
+
 // WHY: arrmsg is upstream text read on every request; a backtracking pattern over a crafted or broken
 // 100k-character message would hold the event loop for seconds (security scan F8, CWE-1333).
 describe("reading a pathological 100k-character arrival text", () => {
