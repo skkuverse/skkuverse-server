@@ -14,6 +14,9 @@ export const SHARED_LAYERS: readonly string[] = ["config", "http", "infra", "per
 
 export const isSharedLayer = (folder: string): boolean => SHARED_LAYERS.includes(folder);
 
+/** The gitignored `src/` folder a build or the composed gate copies the private perimeter overlay to: no module. */
+export const OVERLAY_FOLDER = "private";
+
 /** Nest's lifecycle hooks: public because Nest calls them, never production code. */
 export const NEST_LIFECYCLE: ReadonlySet<string> = new Set([
   "onModuleInit",

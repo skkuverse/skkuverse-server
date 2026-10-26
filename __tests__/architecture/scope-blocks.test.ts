@@ -41,9 +41,11 @@ const LAYER_BY_BLOCK: Readonly<Record<string, string>> = {
   "boundaries/http": "http",
   "boundaries/perimeter-layer": "perimeter",
 };
-// The boundary blocks over named folders of a shared layer, each by the folders it holds to.
+// The boundary blocks over named folders, each by the folders it holds to: the perimeter's implementation sets,
+// and the folder a build copies the private overlay to, which is no module scope (ADR 0023, D4).
 const FOLDERS_BY_BLOCK: Readonly<Record<string, readonly string[]>> = {
   "boundaries/perimeter-implementations": ["perimeter/current", "perimeter/local-dev"],
+  "boundaries/perimeter-overlay": ["private"],
 };
 const ROLE_GLOB = /^(?:src\/)?\*\*\/\*\.(?:([a-z]+)|\{([a-z,]+)\})\.ts$/;
 

@@ -54,6 +54,8 @@ const config = {
   perimeter: {
     mode: process.env.PERIMETER_MODE as PerimeterMode,
     settings: perimeterSettingsOf(process.env),
+    // (An operations detail is left out of the public history.)
+    overlayBuild: process.env.PERIMETER_OVERLAY_SHA || "none",
   },
 
   mongo: {

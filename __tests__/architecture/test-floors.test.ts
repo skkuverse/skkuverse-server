@@ -7,6 +7,7 @@
  * raise the floors.
  */
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { ROOT } from "../helpers/architecture/ratchet";
 import { readSource } from "../helpers/architecture/tree";
@@ -49,6 +50,12 @@ export function floorViolations(actual: Record<string, Counts>, floors: Record<s
   });
 }
 
+/** Why the floors may not be rewritten in the checkout at `root`, or undefined when they may. */
+export function floorsWriteRefusal(root: string): string | undefined {
+  if (!fs.existsSync(path.join(root, "src/private"))) return undefined;
+  return "[architecture:test-floors] Refusing to rewrite the floors while src/private/ holds the perimeter overlay: remove it first.";
+}
+
 describe("test floor rules apply as specified", () => {
   it.each([
     ["src/building/sync/building-sync.client.spec.ts", "building"],
@@ -72,6 +79,27 @@ describe("test floor rules apply as specified", () => {
     expect(counts).toEqual({ x: { tests: 3, expects: 3 } });
   });
 
+  // (An operations detail is left out of the public history.)
+  it("refuses to rewrite the floors while src/private/ holds an overlay", () => {
+    // Arrange
+    const withOverlay = fs.mkdtempSync(path.join(os.tmpdir(), "test-floors-"));
+    const without = fs.mkdtempSync(path.join(os.tmpdir(), "test-floors-"));
+    fs.mkdirSync(path.join(withOverlay, "src/private"), { recursive: true });
+
+    try {
+      // Act
+      const refused = floorsWriteRefusal(withOverlay);
+      const allowed = floorsWriteRefusal(without);
+
+      // Assert
+      expect(refused).toContain("src/private/");
+      expect(allowed).toBeUndefined();
+    } finally {
+      fs.rmSync(withOverlay, { recursive: true, force: true });
+      fs.rmSync(without, { recursive: true, force: true });
+    }
+  });
+
   it("fails a count below its floor, including a module that vanished, and passes a rise", () => {
     // Arrange
     const floors = { a: { tests: 5, expects: 9 }, b: { tests: 2, expects: 2 }, c: { tests: 1, expects: 1 } };
@@ -90,6 +118,8 @@ describe("test floors", () => {
     // Arrange
     const actual = countTests(testFiles().map((f) => [f, readSource(f)] as const));
     if (process.env.TEST_FLOORS_WRITE === "1") {
+      const refusal = floorsWriteRefusal(ROOT);
+      if (refusal !== undefined) throw new Error(refusal);
       fs.writeFileSync(FLOORS_FILE, `${JSON.stringify(actual, null, 2)}\n`);
     }
     const floors = JSON.parse(fs.readFileSync(FLOORS_FILE, "utf8")) as Record<string, Counts>;

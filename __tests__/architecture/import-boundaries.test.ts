@@ -7,7 +7,7 @@
 import fs from "fs";
 import path from "path";
 import { Linter } from "eslint";
-import { isSharedLayer } from "../helpers/architecture/ast";
+import { isSharedLayer, OVERLAY_FOLDER } from "../helpers/architecture/ast";
 import { ROOT } from "../helpers/architecture/ratchet";
 
 const tsparser = require("@typescript-eslint/parser");
@@ -123,7 +123,7 @@ describe("import boundary blocks apply as specified", () => {
     );
     const topLevel = fs
       .readdirSync(path.join(ROOT, "src"), { withFileTypes: true })
-      .filter((d) => d.isDirectory() && !isSharedLayer(d.name))
+      .filter((d) => d.isDirectory() && !isSharedLayer(d.name) && d.name !== OVERLAY_FOLDER)
       .map((d) => d.name);
     expect([...featureBlocks].sort()).toEqual(topLevel.sort());
   });
@@ -189,6 +189,37 @@ describe("import boundary blocks apply as specified", () => {
     expect(badCounts).toEqual(bad.map(() => 1));
     expect(okCounts).toEqual(ok.map(() => 0));
     expect(block("boundaries/perimeter-implementations").files).toEqual(["src/perimeter/current/**/*.ts", "src/perimeter/local-dev/**/*.ts"]);
+  });
+
+  // WHY: the overlay compiles at src/private/, one level shallower than src/perimeter/current/ (ADR 0023, D4).
+  it("the overlay at src/private/ imports only the ports file, the listed shared modules, its own folder and packages", () => {
+    // Arrange
+    const rules = block("boundaries/perimeter-overlay").rules!;
+    const file = "src/private/x.ts";
+    const bad = [
+      'import config from "../infra/config";',
+      'import { toPerimeterRequest } from "../http/perimeter-request.mapper";',
+      'import { perimeterProviders } from "../perimeter/perimeter.config";',
+      'import { LOCAL_DEV_CLASSES } from "../perimeter/local-dev/perimeter-classes";',
+      'import { distanceMeters } from "../shared/distance.util";',
+      'import type { NoticeDoc } from "../notices/notices.document";',
+      'import { RateLimitPolicy } from "../../src/perimeter/perimeter.ports";',
+    ];
+    const ok = [
+      'import { RateLimitPolicy } from "../perimeter/perimeter.ports";',
+      'import { byIp } from "./rate-limit-keys";',
+      'import { isLoopbackAddress } from "../shared/ip-address.util";',
+      'import { createLogThrottle } from "../shared/log-throttle.util";',
+      'import { rateLimit } from "express-rate-limit";',
+    ];
+
+    // Act
+    const badCounts = bad.map((source) => lint(rules, file, source).length);
+    const okCounts = ok.map((source) => lint(rules, file, source).length);
+
+    // Assert
+    expect(badCounts).toEqual(bad.map(() => 1));
+    expect(okCounts).toEqual(ok.map(() => 0));
   });
 
   it("a .rules or .mapper file does no IO, speaks no Mongo and does not read the clock", () => {
