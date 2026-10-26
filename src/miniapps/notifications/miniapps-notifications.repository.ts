@@ -13,10 +13,6 @@ export class MiniappsNotificationsRepository implements OnModuleInit {
     return ensureIndexesAtBoot("miniapps", () => this.ensureIndexes(), { attempts: 3, backoffMs: 1_000, failLevel: "error" });
   }
 
-  async insertSentNotification(doc: SentNotificationDoc): Promise<void> {
-    await this.sentNotifications().insertOne(doc);
-  }
-
   // WHY: the insert is the claim: the unique index refuses a second row with the key, however many sends race.
   async claimSentNotification(doc: SentNotificationDoc): Promise<boolean> {
     try {

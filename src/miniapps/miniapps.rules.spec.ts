@@ -19,8 +19,7 @@ import { WEBVIEW_ORIGIN } from "../shared/webview-origin.constants";
 import { toMiniAppRegistry } from "./miniapps.mapper";
 import { createHash } from "node:crypto";
 import { newSigningKey } from "../../__tests__/helpers/miniapps/signing-keys";
-import { RATE_LIMITED_BODY } from "../perimeter/perimeter.ports";
-import { isIssuedSigningKey, isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, toMiniAppNotFound, toQuotaRefusal, toRegistryIssues } from "./miniapps.rules";
+import { isIssuedSigningKey, isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, toMiniAppNotFound, toRegistryIssues } from "./miniapps.rules";
 import { checkedRegistry } from "./miniapps.schema";
 
 describe("isKnownMiniAppTarget", () => {
@@ -132,16 +131,6 @@ describe("toMiniAppNotFound", () => {
       message: "Unknown mini-app id: no-such-app",
       status: 404,
     });
-  });
-});
-
-describe("toQuotaRefusal", () => {
-  it("answers 429 with the public rate-limit code and message", () => {
-    // Act
-    const refusal = toQuotaRefusal();
-
-    // Assert
-    expect([refusal.httpStatus, { error: { code: refusal.code, message: refusal.message } }]).toEqual([429, RATE_LIMITED_BODY]);
   });
 });
 

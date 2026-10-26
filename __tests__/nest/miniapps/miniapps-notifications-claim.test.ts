@@ -127,10 +127,11 @@ describe("MiniappsNotificationsRepository.claimSentNotification over the unique 
     expect(other).toBe(true);
   });
 
+  // WHY: rows stored before every send carried a key have none, and the index must keep accepting them.
   it("never refuses rows without a key", async () => {
     // Act
-    await repository.insertSentNotification(row("n1", "hssc"));
-    await repository.insertSentNotification(row("n2", "hssc"));
+    await sentNotifications.insertOne(row("n1", "hssc"));
+    await sentNotifications.insertOne(row("n2", "hssc"));
 
     // Assert
     expect(await sentNotifications.countDocuments({ miniAppId: "hssc" })).toBe(2);
@@ -155,7 +156,7 @@ describe("MiniappsNotificationsRepository.findSentNotificationByIdempotencyKey o
     // Arrange
     // The planner uses a partial index only for a filter it can prove lies inside the index's own filter.
     await repository.claimSentNotification(row("n1", "hssc", "retry-5"));
-    await repository.insertSentNotification(row("n2", "hssc"));
+    await sentNotifications.insertOne(row("n2", "hssc"));
     const before = await uniqueIndexAccesses();
 
     // Act
