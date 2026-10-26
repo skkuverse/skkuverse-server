@@ -373,6 +373,8 @@ const FEATURES = require("fs")
   .map((d) => d.name)
   .sort();
 
+const FEATURE_IMPORT = `^(?:\\.\\./)+(?:${FEATURES.join("|")})/`;
+
 const PERIMETER_IMPLEMENTATION_PATTERNS = [
   {
     regex: "(?:^|/)perimeter/(?:local-dev|current)/",
@@ -503,7 +505,7 @@ function sizeCapExemptionBlocks() {
 function roleSizeBlocks() {
   return Object.entries(ROLE_MAX_LINES).map(([role, max]) => ({
     name: `size/${role}`,
-    files: scopeGlobs(`.${role}.ts`),
+    files: [...scopeGlobs(`.${role}.ts`), `src/${OVERLAY_FOLDER}/**/*.${role}.ts`],
     rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: false }] },
   }));
 }
@@ -849,7 +851,7 @@ module.exports = [
         {
           patterns: [
             {
-              regex: `^(?:\\.\\./)+(?:${FEATURES.join("|")})/`,
+              regex: FEATURE_IMPORT,
               message: "src/perimeter/ is a shared layer and imports no feature module: move what it needs to src/shared/.",
             },
           ],
@@ -917,6 +919,27 @@ module.exports = [
               regex: PERIMETER_OVERLAY_OUTSIDE_IMPORT,
               message:
                 "The overlay imports only ../perimeter/perimeter.ports, the src/shared/ modules eslint.config.js lists, its own folder and packages: take the rest through PerimeterDeps.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The overlay's specs, which no module scope's spec block reaches: specs/fixed-clock and the perimeter layer's
+    // feature ban, as they held the overlay's specs in src/perimeter/current/.
+    name: "specs/perimeter-overlay",
+    files: [`src/${OVERLAY_FOLDER}/**/*.spec.ts`],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/spec-clock": ["error", ...SPEC_CLOCK_SYNTAX],
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: FEATURE_IMPORT,
+              message: "The overlay is a shared layer and imports no feature module: move what it needs to src/shared/.",
             },
           ],
         },

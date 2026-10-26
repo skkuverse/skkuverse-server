@@ -670,6 +670,53 @@ describe("boundaries/perimeter-overlay", () => {
       ["src-syntax/generic-names"],
     ]);
   });
+
+  it("holds each role file in the overlay to its role's size cap", () => {
+    // Arrange
+    const caps = Object.entries(require("./caps/role-max-lines.json") as Record<string, number>);
+    const linesOf = (count: number): string => Array.from({ length: count }, (_, i) => `export const v${i} = ${i};`).join("\n");
+    const capReported = (role: string, count: number): boolean =>
+      new Linter({ configType: "flat", cwd: ROOT })
+        .verify(linesOf(count), config, path.join(ROOT, `src/private/x.${role}.ts`))
+        .some((m) => m.ruleId === "max-lines");
+
+    // Act
+    const atCap = caps.filter(([role, max]) => capReported(role, max));
+    const overCap = caps.filter(([role, max]) => !capReported(role, max + 1));
+
+    // Assert
+    expect(atCap).toEqual([]);
+    expect(overCap).toEqual([]);
+  });
+});
+
+// WHY: the overlay's specs move with it from src/perimeter/current/, where specs/fixed-clock and the perimeter
+// layer's feature ban held them; src/private/ is no module scope, so neither block reaches it.
+describe("specs/perimeter-overlay", () => {
+  const ruleIdsFor = (source: string): (string | null)[] =>
+    new Linter({ configType: "flat", cwd: ROOT }).verify(source, config, path.join(ROOT, "src/private/x.spec.ts")).map((m) => m.ruleId);
+
+  it("rejects the real Clock and a feature import in an overlay spec", () => {
+    // Arrange
+    const sources = [
+      "export const policy = new RateLimitPolicy(settings, new Clock());",
+      'import { busRoutes } from "../bus/bus.constants";\nexport const used = busRoutes;',
+    ];
+
+    // Act
+    const ruleIds = sources.map(ruleIdsFor);
+
+    // Assert
+    expect(ruleIds).toEqual([["src-syntax/spec-clock"], ["@typescript-eslint/no-restricted-imports"]]);
+  });
+
+  it("passes a fixed clock and the ports", () => {
+    // Arrange
+    const source = 'import { RATE_LIMIT_POLICY } from "../perimeter/perimeter.ports";\nconst clock = { now: () => NOW };\nexport const used = [RATE_LIMIT_POLICY, clock];';
+
+    // Act & Assert
+    expect(ruleIdsFor(source)).toEqual([]);
+  });
 });
 
 // WHY: a limiter, a token verification or a constant-time comparison is a perimeter decision (ADR 0023, D8), made
