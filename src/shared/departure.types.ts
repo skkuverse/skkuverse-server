@@ -22,6 +22,8 @@ export interface Departure {
   alight: StopCall | null;
   /** WHY: when the source's own document was written; null for a published timetable with no observation. */
   observedAt: Date | null;
+  /** WHY: the stops this run passes between the board and alight stops, for a door whose runs call at different ones (an express); null when it cannot list them. */
+  stops?: readonly Place[] | null;
 }
 
 export type DepartureContinuation = { kind: "listed" } | { kind: "headway"; headwaySec: number; serviceEndsAt: Date | null };
