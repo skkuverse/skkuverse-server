@@ -7,11 +7,7 @@ type IssuePath = NetworkIssue["path"];
 
 const DIRECTIONS: readonly SubwayDirection[] = ["up", "down"];
 
-interface NamedStop {
-  at: IssuePath;
-  id: string;
-  isNeighborStop: boolean;
-}
+type NamedStop = { at: IssuePath; id: string; isNeighborStop: boolean };
 
 export function toMissingPlatformIds({ platforms }: SubwayTopologyData, platformIds: readonly string[]): string[] {
   return platformIds.filter((platformId) => !Object.hasOwn(platforms, platformId));
@@ -48,9 +44,11 @@ function namedPlatformIssues(topology: SubwayTopologyData, network: SubwayNetwor
   });
 }
 
-function neighborLineIssues({ neighbors }: SubwayTopologyData, network: SubwayNetwork): NetworkIssue[] {
-  const lineByCode = new Map(network.lines.map((line) => [line.code, line]));
+function neighborIssues({ neighbors }: SubwayTopologyData, network: SubwayNetwork): NetworkIssue[] {
+  const [lineByCode, servedIds] = [new Map(network.lines.map((line) => [line.code, line])), new Set(network.stations.map((station) => station.id))];
   return Object.entries(neighbors).flatMap(([id, neighbor]) => {
+    const { stationId } = neighbor;
+    if (stationId !== undefined && servedIds.has(stationId)) return [{ path: ["neighbors", id, "stationId"], message: `"${stationId}" is the id of a station the checked-out code serves` }];
     const line = lineByCode.get(neighbor.line);
     if (line === undefined) return [{ path: ["neighbors", id, "line"], message: `"${neighbor.line}" is not a listed line` }];
     const hasNoTrainMap = neighbor.trainMapName !== undefined && line.seoul.trainMapLine === undefined;
@@ -68,7 +66,7 @@ export function toTopologyIssues(topology: SubwayTopologyData, network: SubwayNe
     })),
     ...toUnknownPlatformIds(topology, platformIds).map((id) => ({ path: ["platforms", id], message: `"${id}" is not a platform the checked-out code serves` })),
     ...namedPlatformIssues(topology, network),
-    ...neighborLineIssues(topology, network),
+    ...neighborIssues(topology, network),
   ];
 }
 

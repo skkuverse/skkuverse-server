@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured from production, which serves no TOPIS journey to a client yet: GET /journey/routes at 18:30 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/journey/journey-topis.routes.test.ts (revision 3 of journey-routes, the TOPIS rows of 2026-10-25 moved to that Tuesday, the stored registry and route lines with 7800's); trimmed to the hssc-to-nsc route's line4-7800 and jongro08-line1 options, each walk's path to its first and last point.",
+  "_about": "Synthetic, never captured from production, which serves no TOPIS journey to a client yet: GET /journey/routes at 18:30 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/journey/journey-topis.routes.test.ts (revision 3 of journey-routes, the TOPIS rows of 2026-10-25 moved to that Tuesday, the stored registry and route lines with 7800's); trimmed to the hssc-to-nsc route's line4-7800 and jongro08-line1 options, each walk's path to its first and last point. Each subway ride's stops follow subway-topology revision 3 (2026-10-26).",
   "data": {
     "routes": [
       {
@@ -237,7 +237,164 @@
                     "providerText": null
                   }
                 ],
-                "stops": null,
+                "stops": [
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "dongdaemun",
+                      "name": "동대문",
+                      "coords": {
+                        "lat": 37.57093,
+                        "lng": 127.009287
+                      },
+                      "platformId": "S1-4-421",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "dongdaemun-history-culture-park",
+                      "name": "동대문역사문화공원",
+                      "coords": {
+                        "lat": 37.565133,
+                        "lng": 127.007885
+                      },
+                      "platformId": "S1-4-422",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "chungmuro",
+                      "name": "충무로",
+                      "coords": {
+                        "lat": 37.561207,
+                        "lng": 126.99408
+                      },
+                      "platformId": "S1-4-423",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "myeong-dong",
+                      "name": "명동",
+                      "coords": {
+                        "lat": 37.560989,
+                        "lng": 126.986325
+                      },
+                      "platformId": "S1-4-424",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "hoehyeon",
+                      "name": "회현",
+                      "coords": {
+                        "lat": 37.558514,
+                        "lng": 126.978246
+                      },
+                      "platformId": "S1-4-425",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "seoul-station",
+                      "name": "서울",
+                      "coords": {
+                        "lat": 37.55281,
+                        "lng": 126.972556
+                      },
+                      "platformId": "S1-4-426",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "sookmyung-womens-univ",
+                      "name": "숙대입구",
+                      "coords": {
+                        "lat": 37.54456,
+                        "lng": 126.972106
+                      },
+                      "platformId": "S1-4-427",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "samgakji",
+                      "name": "삼각지",
+                      "coords": {
+                        "lat": 37.534075,
+                        "lng": 126.9726
+                      },
+                      "platformId": "S1-4-428",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "sinyongsan",
+                      "name": "신용산",
+                      "coords": {
+                        "lat": 37.52917,
+                        "lng": 126.967894
+                      },
+                      "platformId": "S1-4-429",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "ichon",
+                      "name": "이촌",
+                      "coords": {
+                        "lat": 37.522295,
+                        "lng": 126.974733
+                      },
+                      "platformId": "S1-4-430",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "dongjak",
+                      "name": "동작",
+                      "coords": {
+                        "lat": 37.502852,
+                        "lng": 126.980347
+                      },
+                      "platformId": "S1-4-431",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "chongshin-univ",
+                      "name": "총신대입구(이수)",
+                      "coords": {
+                        "lat": 37.486263,
+                        "lng": 126.981989
+                      },
+                      "platformId": "S1-4-432",
+                      "action": null
+                    }
+                  }
+                ],
                 "vehicles": [],
                 "waitSec": 60,
                 "observedAt": null
@@ -1107,7 +1264,310 @@
                     "providerText": null
                   }
                 ],
-                "stops": null,
+                "stops": [
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "jongno-3-ga",
+                      "name": "종로3가",
+                      "coords": {
+                        "lat": 37.570406,
+                        "lng": 126.991847
+                      },
+                      "platformId": "S1-1-153",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "jonggak",
+                      "name": "종각",
+                      "coords": {
+                        "lat": 37.570161,
+                        "lng": 126.982923
+                      },
+                      "platformId": "S1-1-152",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "city-hall",
+                      "name": "시청",
+                      "coords": {
+                        "lat": 37.565715,
+                        "lng": 126.977088
+                      },
+                      "platformId": "S1-1-151",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "seoul-station",
+                      "name": "서울",
+                      "coords": {
+                        "lat": 37.556228,
+                        "lng": 126.972135
+                      },
+                      "platformId": "S1-1-150",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "namyeong",
+                      "name": "남영",
+                      "coords": {
+                        "lat": 37.541021,
+                        "lng": 126.9713
+                      },
+                      "platformId": "KR-1-134",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "yongsan",
+                      "name": "용산",
+                      "coords": {
+                        "lat": 37.529849,
+                        "lng": 126.964561
+                      },
+                      "platformId": "KR-1-135",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "noryangjin",
+                      "name": "노량진",
+                      "coords": {
+                        "lat": 37.514149,
+                        "lng": 126.94271
+                      },
+                      "platformId": "KR-1-136",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "daebang",
+                      "name": "대방",
+                      "coords": {
+                        "lat": 37.513342,
+                        "lng": 126.926382
+                      },
+                      "platformId": "KR-1-137",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "singil",
+                      "name": "신길",
+                      "coords": {
+                        "lat": 37.516862,
+                        "lng": 126.917865
+                      },
+                      "platformId": "KR-1-138",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "yeongdeungpo",
+                      "name": "영등포",
+                      "coords": {
+                        "lat": 37.515504,
+                        "lng": 126.907628
+                      },
+                      "platformId": "KR-1-139",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "sindorim",
+                      "name": "신도림",
+                      "coords": {
+                        "lat": 37.508787,
+                        "lng": 126.891144
+                      },
+                      "platformId": "KR-1-140",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "guro",
+                      "name": "구로",
+                      "coords": {
+                        "lat": 37.503039,
+                        "lng": 126.881966
+                      },
+                      "platformId": "KR-1-141",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "gasan-digital-complex",
+                      "name": "가산디지털단지",
+                      "coords": {
+                        "lat": 37.481581,
+                        "lng": 126.882581
+                      },
+                      "platformId": "KR-1-P142",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "doksan",
+                      "name": "독산",
+                      "coords": {
+                        "lat": 37.466613,
+                        "lng": 126.889249
+                      },
+                      "platformId": "KR-1-P143",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "geumcheon-gu-office",
+                      "name": "금천구청",
+                      "coords": {
+                        "lat": 37.455626,
+                        "lng": 126.89398
+                      },
+                      "platformId": "KR-1-P144",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "seoksu",
+                      "name": "석수",
+                      "coords": {
+                        "lat": 37.435047,
+                        "lng": 126.902295
+                      },
+                      "platformId": "KR-1-P145",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "gwanak",
+                      "name": "관악",
+                      "coords": {
+                        "lat": 37.419232,
+                        "lng": 126.908706
+                      },
+                      "platformId": "KR-1-P146",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "anyang",
+                      "name": "안양",
+                      "coords": {
+                        "lat": 37.401592,
+                        "lng": 126.922874
+                      },
+                      "platformId": "KR-1-P147",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "myeonghak",
+                      "name": "명학",
+                      "coords": {
+                        "lat": 37.384653,
+                        "lng": 126.935433
+                      },
+                      "platformId": "KR-1-P148",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "geumjeong",
+                      "name": "금정",
+                      "coords": {
+                        "lat": 37.372215,
+                        "lng": 126.943423
+                      },
+                      "platformId": "KR-1-P149",
+                      "action": {
+                        "actionType": "route",
+                        "actionValue": "/map?place=subway_station:geumjeong"
+                      }
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "gunpo",
+                      "name": "군포",
+                      "coords": {
+                        "lat": 37.35356,
+                        "lng": 126.948462
+                      },
+                      "platformId": "KR-1-P150",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "dangjeong",
+                      "name": "당정",
+                      "coords": {
+                        "lat": 37.344285,
+                        "lng": 126.948345
+                      },
+                      "platformId": "KR-1-P151",
+                      "action": null
+                    }
+                  },
+                  {
+                    "place": {
+                      "kind": "subway_station",
+                      "id": "uiwang",
+                      "name": "의왕",
+                      "coords": {
+                        "lat": 37.320852,
+                        "lng": 126.948217
+                      },
+                      "platformId": "KR-1-P152",
+                      "action": null
+                    }
+                  }
+                ],
                 "vehicles": [],
                 "waitSec": 501,
                 "observedAt": null

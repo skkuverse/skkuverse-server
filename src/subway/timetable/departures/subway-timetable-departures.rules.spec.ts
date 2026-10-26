@@ -249,6 +249,23 @@ describe("toTimetableDepartureBoard with the board platform's stored calls", () 
   });
 });
 
+describe("toTimetableDepartureBoard with the stops each train passes", () => {
+  it("Stops: lists on each departure the stops its door gives for that train's own row, and none without a door's stops", () => {
+    // Arrange
+    const stopsOf = (row: { trainNo: string }) => (row.trainNo === "4501" ? [] : null);
+
+    // Act
+    const [listed, unlisted] = [toTimetableDepartureBoard(...LINE4_RIDE, { ...query(kst(SERVICE_DATE, "08:00:00")), stopsOf }), toTimetableDepartureBoard(...LINE4_RIDE, query(kst(SERVICE_DATE, "08:00:00")))];
+
+    // Assert
+    expect(listed.departures.map((departure) => [departure.board.runId, departure.stops])).toEqual([
+      ["4/2026-10-20/4501", []],
+      ["4/2026-10-20/4505", null],
+    ]);
+    expect(unlisted.departures.every((departure) => !("stops" in departure))).toBe(true);
+  });
+});
+
 describe("toNextServiceDayStart", () => {
   it("is 03:00 KST of the following date, where the UTC date is still the service date", () => {
     // Act

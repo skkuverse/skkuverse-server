@@ -7,12 +7,19 @@
  * polls after the last train do not read the tables again; and a platform off the ride's line, an unserved one, a
  * ride no train runs and a missing table each throw DepartureUnavailableError. A train the board platform's station
  * board lists live (a FakeSubwayArrivalsService) boards by that board's call, and only the board platform is read.
+ * Each listed train carries the stops its own row calls at between the two platforms (ADR 0022, D5), placed by the
+ * drafted revision 3 of `subway-topology` and the stored station coords: Hyehwa to Sadang, Hyehwa to Geumjeong through
+ * Sadang and the Gwacheon line, Sadang back to Hyehwa, and Geumjeong to Sungkyunkwan Univ. on a local and on an
+ * express; with no topology a train lists none.
  */
 jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { FakeCalendarService } from "../../../../__tests__/helpers/fakes/calendar/calendar.service.fake";
 import { storedSubwayTimetableRepository, storedSubwayTimetableService, subwayTimetablesFixture } from "../../../../__tests__/helpers/subway/timetables";
 import { FakeSubwayArrivalsService } from "../../../../__tests__/helpers/fakes/subway/subway-arrivals.service.fake";
+import { FakeSubwayTopologyRepository } from "../../../../__tests__/helpers/fakes/subway/subway-topology.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import { storedStationCoordsService } from "../../../../__tests__/helpers/subway/station-coords";
+import { storedSubwayTopologyRepository, storedSubwayTopologyService } from "../../../../__tests__/helpers/subway/topology";
 import type { StopCall } from "../../../shared/call.types";
 import { DepartureUnavailableError } from "../../../shared/departure.error";
 import type { SubwayArrivalsService } from "../../arrivals/subway-arrivals.service";
@@ -29,11 +36,12 @@ function query(lineId: string, [boardStopId, alightStopId]: [string, string | nu
 const LINE4_DOWN: [string, string] = ["S1-4-420", "KR-4-443"];
 const LINE1_DOWN: [string, string] = ["KR-1-P149", "KR-1-P153"];
 
-function setup(tables = subwayTimetablesFixture()) {
+function setup(tables = subwayTimetablesFixture(), topology: FakeSubwayTopologyRepository = storedSubwayTopologyRepository()) {
   const holidays = new FakeCalendarService();
   const repository = storedSubwayTimetableRepository(tables);
   const arrivals = new FakeSubwayArrivalsService();
-  const door = new SubwayTimetableDeparturesService(storedSubwayTimetableService({ repository, holidays }), asReal<SubwayArrivalsService>(arrivals));
+  const timetable = storedSubwayTimetableService({ repository, holidays });
+  const door = new SubwayTimetableDeparturesService(timetable, asReal<SubwayArrivalsService>(arrivals), storedSubwayTopologyService(topology), storedStationCoordsService());
   return { holidays, repository, arrivals, door };
 }
 
@@ -140,5 +148,74 @@ describe("SubwayTimetableDeparturesService.listDepartures", () => {
 
     // Assert
     await expect(listed).rejects.toThrow(new DepartureUnavailableError("The subway timetables are unavailable: S1-4-weekday"));
+  });
+});
+
+describe("SubwayTimetableDeparturesService.listDepartures: the stops each train passes", () => {
+  const TUESDAY_07_50 = kst("2026-10-20", "07:50:00");
+  const TO_SADANG = ["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"];
+  const namesOf = (stops: readonly { name: string }[] | null | undefined) => stops?.map((place) => place.name);
+
+  it("혜화 to 사당: lists the twelve stations between, in travel order, each placed by its station id and coords", async () => {
+    // Arrange
+    const { door } = setup();
+
+    // Act
+    const board = await door.listDepartures(query("4", ["S1-4-420", "S1-4-433"], TUESDAY_07_50));
+
+    // Assert
+    const [first] = board.departures;
+    expect(namesOf(first?.stops)).toEqual(TO_SADANG);
+    expect(first?.stops?.[0]).toEqual({ kind: "subway_station", id: "dongdaemun", name: "동대문", coords: { lat: 37.57093, lng: 127.009287 }, platformId: "S1-4-421", action: null });
+    expect(board.departures.every((departure) => namesOf(departure.stops)?.join() === TO_SADANG.join())).toBe(true);
+  });
+
+  it("혜화 to 금정: passes 사당, served and tappable, then 남태령 and the 과천선 stations", async () => {
+    // Arrange
+    const { door } = setup();
+
+    // Act
+    const board = await door.listDepartures(query("4", ["S1-4-420", "KR-4-443"], TUESDAY_07_50));
+
+    // Assert
+    const stops = board.departures[0]?.stops ?? [];
+    expect(namesOf(stops)).toEqual([...TO_SADANG, "사당", "남태령", "선바위", "경마공원", "대공원", "과천", "정부과천청사", "인덕원", "평촌", "범계"]);
+    expect(stops[12]).toMatchObject({ id: "sadang", platformId: "S1-4-433", action: { actionType: "route", actionValue: "/map?place=subway_station:sadang" } });
+  });
+
+  it("Reverse: 사당 to 혜화 lists the same stations the other way", async () => {
+    // Arrange
+    const { door } = setup();
+
+    // Act
+    const board = await door.listDepartures(query("4", ["S1-4-433", "S1-4-420"], TUESDAY_07_50));
+
+    // Assert
+    expect(namesOf(board.departures[0]?.stops)).toEqual([...TO_SADANG].reverse());
+  });
+
+  it("금정 to 성균관대: a local lists 군포, 당정 and 의왕, an express only 의왕, where its own row stops", async () => {
+    // Arrange
+    const { door } = setup();
+
+    // Act
+    const board = await door.listDepartures(query("1", LINE1_DOWN, kst("2026-10-20", "07:30:00")));
+
+    // Assert
+    const stopsByRun = new Map(board.departures.map((departure) => [departure.board.runId, [departure.board.isExpress, namesOf(departure.stops)]]));
+    expect(stopsByRun.get("1/2026-10-20/1903")).toEqual([true, ["의왕"]]);
+    expect(stopsByRun.get("1/2026-10-20/0415")).toEqual([false, ["군포", "당정", "의왕"]]);
+  });
+
+  it("No topology: lists every train with no stops, the board still serving", async () => {
+    // Arrange
+    const { door } = setup(subwayTimetablesFixture(), new FakeSubwayTopologyRepository());
+
+    // Act
+    const board = await door.listDepartures(query("4", ["S1-4-420", "S1-4-433"], TUESDAY_07_50));
+
+    // Assert
+    expect(board.departures.length).toBeGreaterThan(0);
+    expect(board.departures.every((departure) => departure.stops === undefined)).toBe(true);
   });
 });

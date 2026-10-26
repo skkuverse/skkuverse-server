@@ -5,7 +5,8 @@
  * a push is served within a minute and kept through a failed reload for DATASET_STALE_WINDOW_MS. An entry for a
  * platform the code does not serve is ignored, and a served platform the revision lacks is left out; each is logged
  * at error once per revision, as is a previous or next stop the registry has no name for, which the route serves as
- * null. With no good value, `current()` throws the 503 SubwayTopologyUnavailableError.
+ * null. With no good value, `current()` throws the 503 SubwayTopologyUnavailableError, and `findCurrent()`, for a
+ * reader that serves without the topology, answers null; a fault in the code still throws.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake system time.
  */
@@ -209,5 +210,41 @@ describe("SubwayTopologyService.current", () => {
     expect(held.revision).toBe(1);
     expect(platformIdsOf("hyehwa", held.registry)).toEqual(["S1-4-420"]);
     expect(past).toBeInstanceOf(SubwayTopologyUnavailableError);
+  });
+});
+
+describe("SubwayTopologyService.findCurrent", () => {
+  it("answers the revision current() answers", async () => {
+    // Arrange
+    const { repository, topology } = setup();
+    repository.storeTopology(subwayTopologyFixture());
+
+    // Act
+    const found = await topology.findCurrent();
+
+    // Assert
+    expect(found).toEqual(await topology.current());
+  });
+
+  it("Fresh replica, database down: answers null where current() throws the unavailable error", async () => {
+    // Arrange
+    const { repository, topology } = setup();
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    const found = await topology.findCurrent();
+
+    // Assert
+    expect(found).toBeNull();
+  });
+
+  it("throws a fault that is not the dataset's unavailability", async () => {
+    // Arrange
+    const { repository, topology } = setup();
+    repository.storeTopology(subwayTopologyFixture());
+    jest.spyOn(topology, "current").mockRejectedValueOnce(new TypeError("a fault in the code"));
+
+    // Act & Assert
+    await expect(topology.findCurrent()).rejects.toThrow(TypeError);
   });
 });

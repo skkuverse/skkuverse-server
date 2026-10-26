@@ -23,7 +23,7 @@
  *   its next service too;
  * - a ride's `upcoming` lists the next buses at its board pole from now, with no catch margin and a full bus skipped,
  *   their vehicles joining the ride's; its `stops` are the poles between its two in travel order, 7800's `(미정차)`
- *   stations left out and 종로 08's taken around its turnaround, and a subway ride's are null (2026-10-26).
+ *   stations left out and 종로 08's taken around its turnaround, and a subway ride's the stations its train calls at (2026-10-26).
  *
  * Every store is in memory; the pollers never start (ROLE=api), and each clock instant boots its own app.
  */
@@ -436,8 +436,10 @@ describe("GET /journey/routes: the stops a ride passes between its board and ali
       ["bus_stop", "200000160", "성균관대역", null],
     ]);
     expect(bus7800!.stops[0].place.coords).toEqual({ lat: 37.4486082327, lng: 126.994122992 });
-    // WHY: no stored dataset holds the coords of the subway stations between two served ones, so a subway ride lists none.
-    expect(line4!.stops).toBeNull();
+    // WHY: the 4호선 ride lists the stations its train calls at between 혜화 and 사당, each placed by subway-topology revision 3.
+    expect(line4!.stops.map(({ place }: { place: Record<string, unknown> }) => [place.kind, place.name, place.action])).toEqual(
+      ["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"].map((name) => ["subway_station", name, null]),
+    );
   });
 
   it("Stops: the 종로 08 ride lists the poles from 명륜시장 to 종로5가 around its turnaround, each tapped open on the map", async () => {
