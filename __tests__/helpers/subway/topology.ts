@@ -1,5 +1,5 @@
 /**
- * Revision 1 of the `subway-topology` dataset as production stores it
+ * The `subway-topology` dataset as production stores it at revision 4, held as revision 1
  * (fixtures/subway-topology.dataset.json of subway, without its provenance
  * note), an in-memory repository holding it, and a SubwayTopologyService over
  * that repository, which a spec or route test of a reader of the topology (the

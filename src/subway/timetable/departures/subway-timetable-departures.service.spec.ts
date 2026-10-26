@@ -153,7 +153,7 @@ describe("SubwayTimetableDeparturesService.listDepartures", () => {
 
 describe("SubwayTimetableDeparturesService.listDepartures: the stops each train passes", () => {
   const TUESDAY_07_50 = kst("2026-10-20", "07:50:00");
-  const TO_SADANG = ["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"];
+  const TO_SADANG = ["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울역", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"];
   const namesOf = (stops: readonly { name: string }[] | null | undefined) => stops?.map((place) => place.name);
 
   it("혜화 to 사당: lists the twelve stations between, in travel order, each placed by its station id and coords", async () => {

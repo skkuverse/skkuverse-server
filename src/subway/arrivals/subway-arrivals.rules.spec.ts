@@ -75,12 +75,13 @@ describe("findPlatformName", () => {
     ["DX-D1-D13", { ko: "미금", en: "Migeum", zh: "美金" }],
     ["DX-D1-4307", { ko: "강남", en: "Gangnam", zh: "江南" }],
     ["DX-D1-4308", { ko: "양재", en: "Yangjae", zh: "良才" }],
+    ["KR-1-P151", { ko: "당정", en: "Dangjeong", zh: "堂井" }],
   ])("names %s in every language", (platformId, name) => {
     // Act & Assert
     expect(findPlatformName(platformId, REGISTRY)).toEqual(name);
   });
 
-  it.each(["KR-1-P151", "S1-4-499"])("finds no name for %s, which is neither a named neighbor nor served", (platformId) => {
+  it.each(["S1-2-212", "S1-4-499"])("finds no name for %s, which is neither a named neighbor nor served", (platformId) => {
     // Act & Assert
     expect(findPlatformName(platformId, REGISTRY)).toBeNull();
   });
