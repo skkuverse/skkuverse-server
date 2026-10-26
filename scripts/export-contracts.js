@@ -33,6 +33,11 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  // WHY: the produced contracts are public; none is computed from a tree that holds the private perimeter overlay.
+  const overlayFolder = path.join("src", "private");
+  if (fs.existsSync(path.join(ROOT, overlayFolder))) {
+    throw new Error(`${overlayFolder}/ holds the perimeter overlay; remove it before exporting the contracts`);
+  }
   if (!fs.existsSync(path.join(ROOT, EXPORT_TEST))) {
     throw new Error(`${EXPORT_TEST} is missing; it computes and compares the artifacts`);
   }
