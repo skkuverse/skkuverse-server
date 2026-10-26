@@ -3,7 +3,8 @@
  * revision 1 of `bus-stops`: an INJA shuttle leg from hssc-bus-lot to nsc-n-center lists every run of the shown week from the
  * start of the KST day, regular and hakbu alike, joined by run and headed by the service's label in the request
  * language; it reads the following week only when nothing follows the window, for the next service; a service that
- * does not call at the stops in that order throws DepartureUnavailableError.
+ * does not call at the stops in that order throws DepartureUnavailableError. Its board lists the stops a leg passes
+ * between its two as places named in the request language, none for the INJA shuttle's two-stop sequences (2026-10-26).
  */
 import type { BusEtaSmartService } from "../../eta/smart/bus-eta-smart.service";
 import type { RunStopTime, ShuttleRun } from "../../eta/smart/bus-eta-smart.types";
@@ -62,6 +63,30 @@ describe("BusDeparturesTimetableService.listDepartures", () => {
     expect(board.departures.map((departure) => departure.lineId)).toEqual(["campus-inja", "campus-inja"]);
     expect(board.nextServiceAt).toEqual(lastOfDay.departureAt);
     expect(smart.followingReadServiceIds).toEqual([]);
+  });
+
+  it("Stops: lists the stops a leg passes between its two as places in the request language, none on the INJA shuttle", async () => {
+    // Arrange
+    const smart = new FakeBusEtaSmartService();
+    smart.runLists.set("campus-inja", { status: "active", runs: [run("2026-10-20", "14:30")] });
+    smart.runLists.set("commute-gangnam-yangjae", { status: "active", runs: [] });
+    const commuteQuery = { ...query(AT_14_10_KST, { boardStopId: "gangnam-exit5", alightStopId: "nsc-n-center", lang: "en" }), lineId: "commute-gangnam-yangjae" };
+
+    // Act
+    const [inja, commute] = [await serviceOver(smart).listDepartures(query(AT_14_10_KST)), await serviceOver(smart).listDepartures(commuteQuery)];
+
+    // Assert
+    expect(inja.stops).toEqual([]);
+    expect(commute.stops).toEqual([
+      {
+        kind: "bus_stop",
+        id: "yangjae-exit2",
+        name: "Yangjae Stn. Exit 2",
+        coords: { lat: 37.485406, lng: 127.033382 },
+        platformId: null,
+        action: { actionType: "route", actionValue: "/map?place=bus_stop:yangjae-exit2" },
+      },
+    ]);
   });
 
   it("Day ended: reads the following week for the next service when nothing follows the window", async () => {

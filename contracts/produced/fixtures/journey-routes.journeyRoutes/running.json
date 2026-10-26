@@ -204,6 +204,41 @@
                     "providerText": null
                   }
                 ],
+                "upcoming": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": "2026-10-20T14:30:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "campus-inja|regular|2026-10-20|14:30",
+                    "vehicleId": null,
+                    "headsign": "인사캠 → 자과캠",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": null
+                  },
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": "2026-10-20T15:00:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "campus-inja|regular|2026-10-20|15:00",
+                    "vehicleId": null,
+                    "headsign": "인사캠 → 자과캠",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": null
+                  }
+                ],
+                "stops": [],
                 "vehicles": [],
                 "waitSec": 60,
                 "observedAt": "2026-10-20T14:05:00+09:00"
@@ -448,6 +483,41 @@
                     "providerText": null
                   }
                 ],
+                "upcoming": [
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": "2026-10-20T14:30:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "campus-jain|regular|2026-10-20|14:30",
+                    "vehicleId": null,
+                    "headsign": "자과캠 → 인사캠",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": null
+                  },
+                  {
+                    "status": "scheduled",
+                    "expectedArrivalAt": null,
+                    "expectedDepartureAt": null,
+                    "scheduledArrivalAt": null,
+                    "scheduledDepartureAt": "2026-10-20T16:00:00+09:00",
+                    "basis": "timetable",
+                    "stopsAway": null,
+                    "runId": "campus-jain|regular|2026-10-20|16:00",
+                    "vehicleId": null,
+                    "headsign": "자과캠 → 인사캠",
+                    "isFirstRun": false,
+                    "isLastRun": false,
+                    "isExpress": null,
+                    "providerText": null
+                  }
+                ],
+                "stops": [],
                 "vehicles": [],
                 "waitSec": 60,
                 "observedAt": null

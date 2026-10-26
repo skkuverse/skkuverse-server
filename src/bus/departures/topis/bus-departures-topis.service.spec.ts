@@ -6,12 +6,15 @@
  * and boards past them at half the stored headway of the board station's row; it throws DepartureUnavailableError
  * for a line that is no TOPIS route, a stop the route does not call at, a reversed pair, a live group placed by
  * another stations version, and a route with no stored arrival rows. Overnight, when TOPIS stores no rows, the pole's
- * next first run comes from the hours last stated for it on the route's registry document (ADR 0022 PR (h)).
+ * next first run comes from the hours last stated for it on the route's registry document (ADR 0022 PR (h)). Its
+ * board lists the stations the ride passes between its two poles, in travel order, leaving out those TOPIS names
+ * `(미정차)`: a stop the catalog holds by its catalog id and name, a bare pole by its station id and TOPIS name with the
+ * coords of the stored route line; with a pole that has no coords, or no alight pole, it lists none (2026-10-26).
  */
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import { jongroArrivalDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
-import { registryDoc7800 } from "../../../../__tests__/helpers/bus/topis-7800";
+import { registryDoc7800, routePathDoc7800 } from "../../../../__tests__/helpers/bus/topis-7800";
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusLiveGroupService } from "../../../../__tests__/helpers/fakes/bus/bus-live-group.service.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
@@ -65,13 +68,16 @@ const query = (extra: Partial<DepartureQuery> = {}): DepartureQuery => ({
   ...extra,
 });
 
-function setup({ group = liveGroup(), hasArrivals = true, hasRows = true, serviceHours = [] as StationServiceHours[] } = {}) {
+function setup({ group = liveGroup(), hasArrivals = true, hasRows = true, serviceHours = [] as StationServiceHours[], hasRoutePath = true } = {}) {
   const data = busStopsFixture() as { stops: unknown[] };
   data.stops.push(...proposal.stops);
   const registry = storedBusRegistryRepository();
   registry.routes.set("gyeonggi7800", { ...registryDoc7800(), serviceHours });
   const registryService = storedBusRegistryService(registry);
-  const index = new BusStopIndexService(storedBusStopsService(storedBusStopsRepository(data), CLOCK), registryService, asReal<BusRoutePathService>(new FakeBusRoutePathService()), CLOCK);
+  const routePaths = new FakeBusRoutePathService();
+  const { path, stations } = routePathDoc7800();
+  if (hasRoutePath) routePaths.routePaths = { routePaths: [{ routeId: "gyeonggi7800", code: "7800", path, stations }], hasMissingRoutes: false };
+  const index = new BusStopIndexService(storedBusStopsService(storedBusStopsRepository(data), CLOCK), registryService, asReal<BusRoutePathService>(routePaths), CLOCK);
   const cache = new FakeBusCacheRepository();
   if (hasArrivals) {
     const row = jongroArrivalDoc({ stationId: "119000302", sequence: "41", term: 10, firstTm: "2026-10-25T05:52:00+09:00", lastTm: "2026-10-25T23:50:00+09:00" });
@@ -81,7 +87,7 @@ function setup({ group = liveGroup(), hasArrivals = true, hasRows = true, servic
   const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cacheService, registryService, CLOCK);
   const live = new FakeBusLiveGroupService();
   live.groups.set("gyeonggi7800", group);
-  return { service: new BusDeparturesTopisService(asReal<BusLiveGroupService>(live), jongro, index), live };
+  return { service: new BusDeparturesTopisService(asReal<BusLiveGroupService>(live), jongro, index, asReal<BusRoutePathService>(routePaths)), live };
 }
 
 describe("BusDeparturesTopisService.listDepartures", () => {
@@ -157,5 +163,60 @@ describe("BusDeparturesTopisService.listDepartures", () => {
 
     // Act & Assert
     await expect(service.listDepartures(query())).rejects.toThrow("no stored arrivals for gyeonggi7800");
+  });
+
+  describe("Stops: the stations a ride passes between its board and alight poles, in travel order", () => {
+    it("lists 7800's stops from 사당 to 성균관대, leaving out the stations it passes without stopping (미정차)", async () => {
+      // Arrange
+      const { service } = setup();
+
+      // Act
+      const board = await service.listDepartures(query());
+
+      // Assert
+      expect(board.stops?.map((stop) => [stop.id, stop.name, stop.action])).toEqual([
+        ["220000009", "과천동행정복지센터", null],
+        ["226000038", "의왕톨게이트", null],
+        ["200000276", "동원고교.해우재입구", null],
+        ["200000292", "백선교회", null],
+        ["200000251", "수원고용노동청", null],
+        ["200000160", "성균관대역", null],
+      ]);
+      expect(board.stops?.[0]).toEqual({ kind: "bus_stop", id: "220000009", name: "과천동행정복지센터", coords: { lat: 37.4486082327, lng: 126.994122992 }, platformId: null, action: null });
+    });
+
+    it("serves a stop the catalog aliases by its catalog id and name in the request language, tapped open on the map", async () => {
+      // Arrange
+      const { service } = setup();
+
+      // Act
+      const board = await service.listDepartures(query({ boardStopId: "sadang-median" }));
+
+      // Assert
+      expect(board.stops?.[0]).toEqual({
+        kind: "bus_stop",
+        id: "sadang-exit9",
+        name: "Sadang Stn. Exit 9",
+        coords: { lat: 37.4773926, lng: 126.9813959 },
+        platformId: null,
+        action: { actionType: "route", actionValue: "/map?place=bus_stop:sadang-exit9" },
+      });
+      expect(board.stops?.map((stop) => stop.id)).not.toContain("277101688");
+    });
+
+    it.each([
+      ["a pole the catalog does not hold, with no stored route line to place it", { hasRoutePath: false }, query()],
+      ["a board asked with no alight pole", {}, query({ alightStopId: null })],
+    ])("lists none for %s", async (_case, options, asked) => {
+      // Arrange
+      const { service } = setup(options);
+
+      // Act
+      const board = await service.listDepartures(asked);
+
+      // Assert
+      expect(board.stops).toBeUndefined();
+      expect(board.departures.length).toBeGreaterThan(0);
+    });
   });
 });

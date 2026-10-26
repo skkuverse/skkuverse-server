@@ -10,6 +10,9 @@ export const PLAN_HORIZON_MS = 3 * 60 * 60_000;
 // WHY: the owner's two later departures per ride leg (ADR 0022, D5).
 export const MAX_LATER_CALLS = 2;
 
+// WHY: the app's next two departures at a ride's board stop from now, shown as minutes away (app request, 2026-10-26).
+export const MAX_UPCOMING_CALLS = 2;
+
 // WHY: a service day runs from 03:00 KST, so from the last run to then reads 운행종료, as Korean transit apps show it
 // (owner, 2026-10-25); every PoC line's night ends before it: 7800's last bus reaches 호매실 about 02:00 (ADR 0019).
 export const SERVICE_DAY_START_MS = 3 * 60 * 60_000;
