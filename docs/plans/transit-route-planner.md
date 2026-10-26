@@ -172,7 +172,7 @@ The call is ADR 0022 D2's. Every producer fills it from stored state and a `now`
 | `basis` | `provider` | `estimate` | `timetable`, or `estimate` once an estimate fills the expected pair | `provider` for `live`, `estimate` for `estimated` | `timetable` | `estimate` |
 | `stopsAway` | As `/bus/live`: stopping stations before this one plus one, pass-through stations skipped (ADR 0019, D4) | null | null | C4 (ADR 0022, D2) from the stored position, from (b) | null | The engine's |
 | `runId` | null | null | `serviceId\|routeType\|date\|HH:mm` | `<line>/<serviceDate>/<trainNo>`, the timetable's train number | The same | null |
-| `vehicleId` | TOPIS `vehId` | null | null | null | null | The Shuttle bus id |
+| `vehicleId` | TOPIS `vehId` | null | null | null | null | The operator's bus id, collected privately |
 | `headsign` | The direction's terminal, the route-path `direction` (ADR 0019, D16) | The same | The service's direction label | The destination | The same | 등교 or 하교 (D16) |
 | `isFirstRun` | null | null | The first run of the day at this stop | `isFirstTrain` | The same | null |
 | `isLastRun` | TOPIS `isLast1`/`isLast2` | null | The last run of the day at this stop (`isLastOfDay`) | The last train of its direction at this platform on the service day's table, from (b) | The same | The HSSC last-bus flag |

@@ -52,7 +52,9 @@ function sourceFiles(dir: string): string[] {
 const PRD = allowlist("config/env.prd.keys");
 const DEV = allowlist("config/env.dev.keys");
 // (An operations detail is left out of the public history.)
-const KEPT_FOR_ROLLBACK: Readonly<Record<string, string>> = {};
+const KEPT_FOR_ROLLBACK: Readonly<Record<string, string>> = {
+  SHUTTLE_TOKEN: "required by the poller role of every image before 2A-5 step 5, whose collectors moved to the private companion repository; deleted in its release 2",
+};
 // Production adds SENTRY_DSN, and its overlay mode PERIMETER_SETTINGS, so its list is the longest.
 const REQUIRED = requiredValues({ NODE_ENV: "production", PERIMETER_MODE: "overlay" }).map((v) => v.env);
 

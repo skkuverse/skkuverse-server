@@ -12,8 +12,8 @@
     "expects": 394
   },
   "bus": {
-    "tests": 2117,
-    "expects": 3950
+    "tests": 2044,
+    "expects": 3839
   },
   "calendar": {
     "tests": 80,
@@ -40,12 +40,12 @@
     "expects": 88
   },
   "infra": {
-    "tests": 479,
-    "expects": 1053
+    "tests": 477,
+    "expects": 1050
   },
   "journey": {
-    "tests": 126,
-    "expects": 208
+    "tests": 141,
+    "expects": 240
   },
   "map": {
     "tests": 465,

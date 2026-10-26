@@ -14,7 +14,7 @@ audience: internal
 ## Context
 
 - The realtime route grew route by route: TOPIS's Jongno arrivals as minutes plus TOPIS's text, its buses as an `estimated`/`tracked` union over legacy fields (`carNumber: "0000"`, `estimatedTime`, coordinates as strings), and the HSSC shuttle as positions only. A client had to know which source it read to render it.
-- The HSSC shuttle now has arrival estimates ([ADR 0018](0018-hssc-arrival-estimates.md)), and a Shuttle GPS feed is collected for later. App 3.6.2 takes OTA updates, so the app moves to new routes by OTA while installed bundles keep calling the old one.
+- The HSSC shuttle now has arrival estimates ([ADR 0018](0018-hssc-arrival-estimates.md)) and its GPS is collected privately for later. App 3.6.2 takes OTA updates, so the app moves to new routes by OTA while installed bundles keep calling the old one.
 - Prior art: GTFS-Realtime (`StopTimeEvent` arrival and departure, `VehicleStopStatus`, `OccupancyStatus`), SIRI StopMonitoring (`ExpectedArrivalTime` beside `AimedArrivalTime`, `NumberOfStopsAway`, `RecordedAtTime`), TfL's Unified API (`expectedArrival`, `towards`), and Seoul's BIS stop signage, which shows a bus standing at the stop as 곧 도착 until it leaves and has no departure countdown (D14).
 - The first draft was reviewed on 2026-10-22; the decisions below fold in the accepted findings.
 
@@ -28,7 +28,7 @@ Rejected for now: an uncertainty window. Summed per-segment spreads are no bound
 
 ### D2. One shape; null is "unknown now", capabilities are "never"
 
-Every key is always present, and what a source cannot supply is null, never a missing key or a placeholder (`"0000"`, `"----"`). What a source can never supply is stated once per group in `/bus/config` (`capabilities`: `positionSource` `gps` or `stopEvents`, `occupancy`, `plateNumber`, `lastBus`, `lowFloor`), so a client tells "this line has no plates" from "this bus's plate is unknown". A new source (the Shuttle GPS feed) changes a group's capabilities and fills fields; the shape does not move.
+Every key is always present, and what a source cannot supply is null, never a missing key or a placeholder (`"0000"`, `"----"`). What a source can never supply is stated once per group in `/bus/config` (`capabilities`: `positionSource` `gps` or `stopEvents`, `occupancy`, `plateNumber`, `lastBus`, `lowFloor`), so a client tells "this line has no plates" from "this bus's plate is unknown". A new source (a shuttle GPS feed) changes a group's capabilities and fills fields; the shape does not move.
 
 ### D3. Every enum is open
 

@@ -74,7 +74,7 @@ Read them in this order: each depends only on the ones before it.
 | Change how a pin or zone is drawn | `BASE_LAYERS[].style`, `EVENT_LAYER_STYLE`, `EVENT_SHAPE_STYLE` | Yes |
 | Recolour the Jongno route lines, change which one lies on top, or turn them on by default | `ROUTE_LINE_LAYER` in `map.constants.ts` (one style in the routes' `themeColor`, and the default), the order of their `BASE_LAYERS` entries | Yes; the default reaches installed apps with the next `/map/config` |
 | Fix a Jongno route's geometry | nothing in `src/map/`: `src/bus/route-path/` syncs it from TOPIS daily ([configure map overlays](../how-to/configure-map-overlays.md)) | No |
-| Fix or remeasure the HSSC loop | (A collector detail is left out of the public history.) | No |
+| Fix or remeasure the HSSC loop | nothing in `src/map/`: push the `hssc-route-line` dataset ([ADR 0018, D9](../decisions/0018-hssc-arrival-estimates.md)); its color, edge and draw order are its `BASE_LAYERS` entry | No |
 | Add a field to every overlay | `map.wire.ts`, then every producer (`map-campus.mapper.ts`, `map-event.mapper.ts`) | Yes, plus an app release |
 | Add a sheet block type | `map-event-details.wire.ts`, `map-event-details.mapper.ts`, the importer's copy, an app renderer | Yes, plus an app release; older builds drop it |
 | Add an overlay kind | an arm in `mapOverlay`, a producer branch, an app renderer | Yes, plus an app release |
