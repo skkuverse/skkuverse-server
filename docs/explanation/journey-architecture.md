@@ -3,7 +3,7 @@ title: Journey Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-26
 audience: internal
 ---
 
@@ -66,6 +66,7 @@ flowchart LR
 | `options[].leaveAt`, `arriveAt` | When to leave and when the option arrives, counted against `meta.serverNow` |
 | `legs[].kind`, `mode`, `label`, `icon`, `color` | Each leg's row; an unknown kind draws from these alone |
 | `legs[].board`, `alight`, `later`, `waitSec`, `basis` | A ride's calls, its next catchable calls and its certainty, an estimate shown as approximate |
+| `legs[].upcoming` | The next departures at a ride's board stop from now, shown as minutes away |
 | `legs[].path` | A walk's line on the map |
 
 ## Invariants
@@ -83,6 +84,7 @@ flowchart LR
 - At push a subway ride's platforms are of its stations and on its line's `sourceLineId`, and every day type's stored tables run a train from one to the other (`toRideTimetableIssue`, through `subwayRideIssueOf`); with no stored `subway-timetables` that check is a warning.
 - An option with no run left on any ride is not running, never running with a leg missing: `notStarted` when its next service falls later in the same service day as now, which starts `SERVICE_DAY_START_MS` after KST midnight, else `ended`, so from the last run until then it reads 운행종료 with the morning's first run (`toNoService`). Its `nextServiceAt` is the board's when the first ride has none left; when a later ride has none, it is the first ride's boarding that reaches that ride's next first run, as long before it as this plan's legs took, and never before the first ride's own next run (`toChainNextServiceAt`). An option whose door failed is unavailable. Options run by arrival, then data order, then the rest in data order (`toOptionOrder`).
 - A ride's `later` lists at most the next two catchable listed calls after the boarded one, a full vehicle skipped; a TOPIS ride boarded on its headway lists none, since a headway names no run a rider could let pass.
+- A ride's `upcoming` lists at most the next two listed calls at its board stop from now, whatever the legs before it: no catch margin, a full vehicle skipped, never a headway estimate. Their vehicles join the ride's `vehicles`.
 - Each connection between two rides is judged by the next ride's wait at its stop: under `TIGHT_TRANSFER_SEC` it warns `tightTransfer`; under the uncertainty of the arrival before it (`ESTIMATE_UNCERTAINTY_SEC` for an estimated arrival, plus half the headway for a ride boarded on one) or of a named run's estimated board, `connectionAtRisk` (`toConnectionWarnings`). The first ride has no connection. A warning's message names the next ride's board place in the request language.
 - `JOURNEY_SOURCE_IDS` names every source the registry maps; adding one fails `tsc` until the registry maps it.
 - A planned route is cached per route and language for `PLAN_CACHE_TTL_MS`, single-flight, and served with `JOURNEY_ROUTES_CACHE_CONTROL`; the dataset never read answers `503` `JOURNEY_ROUTES_UNAVAILABLE`.

@@ -250,7 +250,11 @@ describe("GET /journey/routes with the TOPIS options", () => {
     expect(bus7800!.from).toMatchObject({ kind: "bus_stop", id: "sadang-exit9" });
     expect(bus7800!.board).toMatchObject({ vehicleId: "200010898", expectedArrivalAt: "2026-10-20T19:15:50+09:00" });
     expect(await liveCall(server, "gyeonggi7800", "sadang-exit9", "200010898")).toEqual(bus7800!.board);
-    expect(bus7800!.vehicles).toEqual([{ id: "200010898", occupancy: null, seatsLeft: null, isLowFloor: false }]);
+    // WHY: the vehicles also hold the earlier bus `upcoming` names at 사당 (2026-10-26 upcoming calls).
+    expect(bus7800!.vehicles).toEqual([
+      { id: "200010898", occupancy: null, seatsLeft: null, isLowFloor: false },
+      { id: "200011607", occupancy: null, seatsLeft: null, isLowFloor: false },
+    ]);
   });
 
   it("Full bus: skips the vehicle GBIS reports with no seat left and boards half a headway after the rider is ready", async () => {
@@ -280,7 +284,8 @@ describe("GET /journey/routes with the TOPIS options", () => {
     // Ready at 19:14:55, the walk and the margin from 19:07:55; the walk is then timed back from the boarding.
     expect([option.leaveAt, option.legs[0]!.endAt]).toEqual(["2026-10-20T19:12:25+09:00", "2026-10-20T19:18:25+09:00"]);
     expect(jongro!.board).toMatchObject({ status: "unknown", vehicleId: null, runId: null, basis: "estimate", expectedArrivalAt: "2026-10-20T19:19:25+09:00" });
-    expect([jongro!.basis, jongro!.vehicles]).toEqual(["estimate", []]);
+    // WHY: the board names no vehicle; the one listed is the bus `upcoming` names, which the rider cannot reach (2026-10-26 upcoming calls).
+    expect([jongro!.basis, jongro!.vehicles.map((vehicle: { id: string }) => vehicle.id)]).toEqual(["estimate", ["100000074"]]);
   });
 
   it("Connection at risk: a 1호선 board within the 종로 08 headway's uncertainty warns, naming 종로5가", async () => {
@@ -406,5 +411,50 @@ describe("GET /journey/routes with the TOPIS options", () => {
       // Assert
       expect(option).toMatchObject({ status: "notRunning", reason, nextServiceAt, legs: [] });
     });
+  });
+});
+
+describe("GET /journey/routes: a ride's upcoming calls at its board stop, from now", () => {
+  it("Upcoming: the 7800 ride after 4호선 lists the next buses at 사당 from now, the first before the one the connection boards", async () => {
+    // Arrange
+    const server = await boot(at("18:30:00"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "line4-7800");
+
+    // Assert
+    const [, bus7800] = ridesOf(option);
+    expect(bus7800!.board.vehicleId).toBe("200010898");
+    expect(bus7800!.upcoming.map((call: Call) => [call.vehicleId, call.expectedArrivalAt])).toEqual([
+      ["200011607", "2026-10-20T19:01:53+09:00"],
+      ["200010898", "2026-10-20T19:15:50+09:00"],
+    ]);
+    expect(bus7800!.vehicles.map((vehicle: { id: string }) => vehicle.id).sort()).toEqual(["200010898", "200011607"]);
+  });
+
+  it("Upcoming: skips the bus GBIS reports full, and lists no headway call beside a ride boarded on one", async () => {
+    // Arrange
+    const server = await boot(at("18:30:00"), {}, [{ vehicleId: "200010898", seatsLeft: 0 }]);
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "line4-7800");
+
+    // Assert
+    const [, bus7800] = ridesOf(option);
+    expect(bus7800!.board).toMatchObject({ vehicleId: null, basis: "estimate" });
+    expect(bus7800!.upcoming.map((call: Call) => call.vehicleId)).toEqual(["200011607"]);
+  });
+
+  it("Upcoming: lists the predicted 종로 08 bus the rider cannot reach on foot, since it counts from now with no catch margin", async () => {
+    // Arrange
+    const server = await boot(at("19:07:55"));
+
+    // Act
+    const option = await optionOf(server, "hssc-to-nsc", "jongro08-line1");
+
+    // Assert
+    const [jongro] = ridesOf(option);
+    expect(jongro!.board.vehicleId).toBeNull();
+    expect(jongro!.upcoming.map((call: Call) => [call.vehicleId, call.expectedArrivalAt])).toEqual([["100000074", "2026-10-20T19:09:09+09:00"]]);
   });
 });

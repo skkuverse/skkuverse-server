@@ -3,7 +3,7 @@ title: Journey and Call Spec
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-26
 audience: internal
 ---
 
@@ -142,7 +142,8 @@ A ride leg's `startAt` and `endAt` are its calls' times. Its `basis` is the weak
 
 - Amended 2026-10-25 (owner): a ride leg's `startAt` is its board call's time, departure first, as D2 orders it, and its `endAt` is its alight call's arrival first (`expectedArrivalAt`, then `scheduledArrivalAt`), falling back to its departure, since a rider leaves the vehicle when it arrives (GTFS and OTP time a leg the same way). The calls themselves stay as the boards serve them; only the leg's instants, the option's `arriveAt` and the next leg's start follow the arrival.
 - Amended 2026-10-25 (PR (h)): a ride boards at its board call's time or, when later, at the call's expected arrival (`toBoardTime`), since a run running late leaves no earlier than it arrives. A live subway call keeps its timetable departure beside its expected arrival, so D2's order alone would board a late train at its timetable time. Every other producer's board call carries no expected arrival beside a departure, so its board time is D2's.
-- Amended 2026-10-25 (PR (h)): `later` holds only listed calls, never a headway estimate past a source's predicted vehicles (D7's realtime reach). `warnings` are `tightTransfer`, a connection under 120 s, and `connectionAtRisk`, one under the uncertainty of an estimate it rests on: 150 s, plus half the headway for a ride boarded on one. The evidence for both numbers is in [transit-route-planner.md](../plans/transit-route-planner.md#the-planner).
+- Amended 2026-10-25 (PR (h)): `later` holds only listed calls, never a headway estimate past a source's predicted vehicles (D7's realtime reach).
+- Amended 2026-10-26 (app request, owner-approved): a ride leg adds `upcoming`, at most the next two listed calls at its board stop counted from the plan's now, not from the connection. These are the first board calls whose board time (`toBoardTime`) is now or later, in board order, with no catch margin. A full vehicle is skipped and unknown seats count, as for boarding. A headway estimate never enters it, so a board that lists nothing from now gives none. Each upcoming call's vehicle joins `vehicles`. The app shows them as minutes away, mainly on a later ride, whose `board` is the connection's call. `warnings` are `tightTransfer`, a connection under 120 s, and `connectionAtRisk`, one under the uncertainty of an estimate it rests on: 150 s, plus half the headway for a ride boarded on one. The evidence for both numbers is in [transit-route-planner.md](../plans/transit-route-planner.md#the-planner).
 
 A new mode adds a kind only when it needs different required fields. Taxi will add `taxi`, its fare and its pickup wait, with times from a travel-time source fed by a poller over fixed pairs ([ADR 0012](0012-runtime-roles.md), D2). The wire carries no reserved, unserved kind.
 

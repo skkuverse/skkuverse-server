@@ -3,7 +3,7 @@ title: Transit Route Planner
 type: plan
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-26
 audience: internal
 ---
 
@@ -184,7 +184,7 @@ Rules the doors share:
 - **The time of a call** is the first non-null of expected departure, scheduled departure, expected arrival and scheduled arrival (D2). The planner compares calls only by it.
 - **On a ride leg's board, `isLastRun` means the last run that reaches the alight stop.** The timetable doors compute it from runs calling at both stops in order; on TOPIS, a route's last bus passes every later stop, so the board's flag holds. The journey's 인자셔틀 line spans every route type (regular and 학부대학, D7), so its last run is the day's last across them, while the boards keep theirs per route type.
 - **A ride leg's `basis`** is the weaker of its board and alight, in the order timetable, provider, estimate (D5). An alight time taken from `rideMinutes` is `estimate`.
-- **Vehicles.** A ride leg's `vehicles` are the shared base, keyed by the `vehicleId`s of its board, alight and `later` calls. `seatsLeft` comes from the GBIS read `/bus/live` uses; unknown is null, never 0.
+- **Vehicles.** A ride leg's `vehicles` are the shared base, keyed by the `vehicleId`s of its board, alight, `later` and `upcoming` calls. `seatsLeft` comes from the GBIS read `/bus/live` uses; unknown is null, never 0.
 
 ## Producers
 

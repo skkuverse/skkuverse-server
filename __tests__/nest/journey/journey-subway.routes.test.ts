@@ -209,6 +209,23 @@ describe("GET /journey/routes with the subway options", () => {
     expect(boards).toEqual([line4!.board, line4!.alight, line1!.board, line1!.alight]);
     expect(line4!.alight).toMatchObject({ runId: line4!.board.runId, basis: "timetable", status: "scheduled", scheduledArrivalAt: "2026-10-20T08:46:00+09:00" });
   });
+
+  it("Upcoming: the 1호선 ride after 4호선 lists the next two trains at 금정 from now, long before the one the connection boards", async () => {
+    // Arrange
+    const server = await boot(AT_07_40_KST);
+
+    // Act
+    const option = await subwayOption(server, "hssc-to-nsc", "line4-line1");
+
+    // Assert
+    const line1 = option.legs.filter((leg) => leg.kind === "ride")[1]!;
+    const departsAt = (call: Call) => Date.parse(call.scheduledDepartureAt ?? call.scheduledArrivalAt ?? "");
+    const upcoming = line1.upcoming as Call[];
+    expect(upcoming).toHaveLength(2);
+    expect(upcoming.map((call) => call.runId)).not.toContain(line1.board.runId);
+    expect(upcoming.every((call) => departsAt(call) >= AT_07_40_KST.getTime() && departsAt(call) < departsAt(line1.board))).toBe(true);
+    expect(departsAt(upcoming[0]!)).toBeLessThan(departsAt(upcoming[1]!));
+  });
 });
 
 describe("GET /journey/routes with 혜화's line 4 platform tracked live", () => {

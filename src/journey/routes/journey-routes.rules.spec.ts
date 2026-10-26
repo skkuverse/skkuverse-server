@@ -14,7 +14,9 @@
  * expected arrival (toBoardTime); a connection between two rides warns `tightTransfer` when the rider has under 120 s
  * at the stop before the next ride, and `connectionAtRisk` when that is under the arrival's uncertainty (150 s for an
  * estimate, plus half the headway for a ride boarded on one) or 150 s before a named run's estimated board; a leg's basis is the weaker of its calls; options run by arrival, data
- * order breaking a tie, then the ones not running in data order.
+ * order breaking a tie, then the ones not running in data order; a ride's `upcoming` lists at most the next two listed
+ * calls at its board stop from now, with no catch margin, a full vehicle skipped and never a headway estimate, and
+ * their vehicles join the ride's (2026-10-26).
  */
 import type { StopCall } from "../../shared/call.types";
 import { toBoardTime } from "../../shared/call.util";
@@ -434,6 +436,87 @@ describe("planOption", () => {
       // Assert
       expect([rideOf(planned).waitSec, running(planned).warnings]).toEqual([60, []]);
     });
+  });
+});
+
+describe("planOption: a ride's upcoming calls at its board stop, counted from now", () => {
+  const at = (clock: string) => new Date(`2026-10-20T${clock}+09:00`);
+  const seats = (id: string, seatsLeft: number | null) => ({ id, occupancy: null, seatsLeft, isLowFloor: null });
+  const HEADWAY = { kind: "headway", headwaySec: 600, serviceEndsAt: kst("23:00") } as const;
+  const upcomingOf = (planned: PlannedOption) => rideOf(planned).upcoming.map((upcoming) => toBoardTime(upcoming));
+
+  it("lists a later ride's next calls from now, before the call the connection boards", () => {
+    // Arrange
+    const twoRides: JourneyOption = {
+      ...OPTION,
+      legs: [
+        { kind: "walk", from: "skku_building:1", to: "bus_stop:a", minutes: 5, distanceM: 400, evidence: "TMAP" },
+        { kind: "ride", line: "inja", board: { place: "bus_stop:a" }, alight: { place: "bus_stop:b" }, rideMinutes: 30, evidence: "x" },
+        { kind: "ride", line: "inja", board: { place: "bus_stop:b" }, alight: { place: "bus_stop:c" }, rideMinutes: 20, evidence: "x" },
+      ],
+    };
+    const first = board([departure("14:10", call(kst("14:40"), { scheduledDepartureAt: null, scheduledArrivalAt: kst("14:40") }))]);
+    const second = board([departure("14:05"), departure("14:20"), departure("14:50"), departure("15:20")]);
+
+    // Act
+    const planned = planOption(twoRides, { now: kst("14:00"), catchMarginSec: 60, lineById: new Map([["inja", LINE]]), boards: new Map([[1, first], [2, second]]) });
+
+    // Assert
+    const secondRide = running(planned).legs[2] as PlannedRide;
+    expect(secondRide.board.scheduledDepartureAt).toEqual(kst("14:50"));
+    expect(secondRide.upcoming.map((upcoming) => upcoming.scheduledDepartureAt)).toEqual([kst("14:05"), kst("14:20")]);
+  });
+
+  it.each([
+    ["one second before now", "13:59:59", ["14:00:00", "14:00:01"]],
+    ["at now", "14:00:00", ["14:00:00", "14:00:01"]],
+    ["one second after now", "14:00:01", ["14:00:01", "14:00:02"]],
+  ])("counts a call boarding %s, at most two, with no catch margin", (_case, firstAt, expected) => {
+    // Arrange
+    const times = [...new Set([firstAt, "14:00:00", "14:00:01", "14:00:02", "14:30:00"])].filter((time) => time >= firstAt);
+    const runs = board(times.map((time) => ({ lineId: "campus-inja", board: call(at(time)), alight: null, observedAt: null })));
+
+    // Act
+    const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+    // Assert
+    expect(upcomingOf(planned)).toEqual(expected.map(at));
+  });
+
+  it("leaves out a call that has left before now", () => {
+    // Arrange
+    const runs = board([{ lineId: "campus-inja", board: call(at("13:59:59")), alight: null, observedAt: null }, departure("14:30")]);
+
+    // Act
+    const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+    // Assert
+    expect(upcomingOf(planned)).toEqual([kst("14:30")]);
+  });
+
+  it("skips a vehicle with no seat left, counts unknown seats, and serves each upcoming vehicle once", () => {
+    // Arrange
+    const vehicles = { full: seats("full", 0), unknown: seats("unknown", null), seated: seats("seated", 4) };
+    const runs = board([["full", "14:01"], ["unknown", "14:02"], ["seated", "14:10"]].map(([id, time]) => departure(time!, null, { vehicleId: id!, basis: "provider" })), { vehicles });
+
+    // Act
+    const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+    // Assert
+    expect(rideOf(planned).upcoming.map((upcoming) => upcoming.vehicleId)).toEqual(["unknown", "seated"]);
+    expect(rideOf(planned).board.vehicleId).toBe("seated");
+    expect(rideOf(planned).vehicles.map((vehicle) => vehicle.id)).toEqual(["seated", "unknown"]);
+  });
+
+  it.each([
+    ["a board with only a headway past the listed vehicles", board([], { continuation: HEADWAY })],
+    ["a board with nothing listed from now", board([departure("13:30")], { continuation: HEADWAY })],
+  ])("is empty for %s, naming no headway estimate", (_case, runs) => {
+    // Act
+    const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+    // Assert
+    expect([rideOf(planned).board.basis, rideOf(planned).upcoming]).toEqual(["estimate", []]);
   });
 });
 
