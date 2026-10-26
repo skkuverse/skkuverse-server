@@ -1,8 +1,5 @@
 # syntax=docker/dockerfile:1.7
 
-# (An operations detail is left out of the public history.)
-FROM scratch AS perimeter-overlay
-
 # --- builder stage ---
 # devDeps 포함 (tsc + scripts/copy-build-assets.js 필요).
 # 이 stage의 산출물은 dist/ 디렉토리뿐 — runtime stage가 그것만 가져감.
@@ -20,6 +17,9 @@ RUN MONGOMS_DISABLE_POSTINSTALL=1 npm ci
 # __fixtures__/, scripts/, docs/ 등을 제외.
 COPY . .
 # The overlay compiles only at src/private/, where its relative imports resolve (.gitignore keeps it out of git).
+# WHY: `perimeter-overlay` is a named build context, which docker-compose.yml always supplies (an empty folder by
+# default). No stage of that name stands in, so a plain `docker build` fails here instead of reusing a cached overlay
+# under the label `none`; pass --build-context perimeter-overlay=<dir>.
 COPY --from=perimeter-overlay . src/private/
 RUN npm run build
 
