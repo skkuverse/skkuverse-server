@@ -12,3 +12,7 @@ export const BUS_TYPE_BY_CODE: ReadonlyMap<string, JongroBusType> = new Map([
   ["1", "lowFloor"],
   ["2", "articulated"],
 ]);
+
+// EVIDENCE: the longest of 206 captured arrmsg texts (topis-*-arrivals.json, 2026-10-17 to 10-25) is 15 characters;
+// the arrival rules match patterns on it per request, so a longer text is cut (CWE-1333).
+export const MAX_ARRMSG_LENGTH = 64;

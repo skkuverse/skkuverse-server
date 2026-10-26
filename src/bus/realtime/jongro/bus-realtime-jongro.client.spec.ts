@@ -21,6 +21,9 @@
  * `bus.topis.quota_exceeded` with the data.go.kr operation, at most once a
  * minute per operation, which an alert reads: every TOPIS route of that
  * operation stops until the quota resets.
+ * A bus's arrival text (and the station's eta, the first bus's text) is cut
+ * to 64 characters: every captured text is 15 or fewer, and the arrival rules
+ * match patterns on it per request (security scan F8).
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
@@ -267,6 +270,21 @@ describe("BusRealtimeJongroClient.fetchArrivals buses", () => {
 
     // Assert
     expect(station.buses[0]).toMatchObject({ rerideDiv: null, rerideNum: null });
+  });
+
+  it("cuts an arrival text over 64 characters to 64, in the bus and in the eta", async () => {
+    // Arrange
+    const [row] = arrivalsFixture.jongro07Running.msgBody.itemList;
+    const longText = `1분${" ".repeat(100_000)}`;
+    const atCap = "[막차]".padEnd(64, "가");
+    const longRow = { ...arrivalsFixture.jongro07Running, msgBody: { itemList: [{ ...row, arrmsg1: longText, arrmsg2: atCap }] } };
+
+    // Act
+    const station = await stationAt(longRow, row!.staOrd);
+
+    // Assert
+    expect(station.buses.map((bus) => bus.arrmsg)).toEqual([longText.slice(0, 64), atCap]);
+    expect(station.eta).toBe(longText.slice(0, 64));
   });
 
   it("rejects a row whose travel time is not a number, naming the field", async () => {

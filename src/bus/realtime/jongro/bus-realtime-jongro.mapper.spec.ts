@@ -6,10 +6,11 @@
  * The two TOPIS URLs every Jongro route polls: the arrival URL byte-identical
  * to the one production has called since the registry was introduced, and the
  * position URL of getBusPosByRtid, which answers the whole route (no ord
- * range) and names its turnaround stop.
+ * range) and names its turnaround stop. An arrival text is cut to 64
+ * characters, so the per-request arrival patterns read bounded text.
  */
 import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sighting";
-import { toJongroArrivalsUrl, toJongroBusPosition, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
+import { toArrmsg, toJongroArrivalsUrl, toJongroBusPosition, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
 
 describe("toJongroBusPosition", () => {
   it.each([
@@ -96,6 +97,19 @@ describe("toJongroBusPosition", () => {
 
 const FIXED_KEY =
   "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
+
+describe("toArrmsg", () => {
+  it.each([
+    ["가".repeat(63), "가".repeat(63)],
+    ["가".repeat(64), "가".repeat(64)],
+    ["가".repeat(65), "가".repeat(64)],
+    ["2분8초후[1번째 전]", "2분8초후[1번째 전]"],
+    ["", ""],
+  ])("%j → %j", (text, expected) => {
+    // Act & Assert
+    expect(toArrmsg(text)).toBe(expected);
+  });
+});
 
 describe("toJongroArrivalsUrl", () => {
   it("builds the 종로02 list URL identically (busRouteId=100900008)", () => {
