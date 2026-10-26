@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
+# (An operations detail is left out of the public history.)
+FROM scratch AS perimeter-overlay
+
 # --- builder stage ---
 # devDeps 포함 (tsc + scripts/copy-build-assets.js 필요).
 # 이 stage의 산출물은 dist/ 디렉토리뿐 — runtime stage가 그것만 가져감.
@@ -16,6 +19,8 @@ RUN MONGOMS_DISABLE_POSTINSTALL=1 npm ci
 # 나머지 source 복사 후 빌드. .dockerignore가 dist/, node_modules/, __tests__/,
 # __fixtures__/, scripts/, docs/ 등을 제외.
 COPY . .
+# The overlay compiles only at src/private/, where its relative imports resolve (.gitignore keeps it out of git).
+COPY --from=perimeter-overlay . src/private/
 RUN npm run build
 
 # --- runtime stage ---
@@ -38,6 +43,10 @@ EXPOSE 3000
 # Last, so a new commit invalidates no layer above.
 ARG GIT_SHA
 ENV GIT_SHA=$GIT_SHA
+# The companion commit of the overlay compiled in, `none` for a build without one (unset or empty).
+ARG PERIMETER_OVERLAY_SHA
+ENV PERIMETER_OVERLAY_SHA=${PERIMETER_OVERLAY_SHA:-none}
+LABEL org.skkuverse.perimeter-overlay=${PERIMETER_OVERLAY_SHA:-none}
 
 # /health/ready: lib/db pingDb() + (role==="api" OR pollers.isReady()).
 # 127.0.0.1, not localhost: HOST=0.0.0.0 listens on IPv4 only, and localhost may resolve to ::1.
