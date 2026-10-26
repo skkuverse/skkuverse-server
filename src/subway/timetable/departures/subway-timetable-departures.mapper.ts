@@ -4,7 +4,8 @@ import { SUBWAY_STATIONS } from "../../subway.constants";
 import type { ScheduledTrain } from "../subway-timetable.types";
 import type { RideStopCatalog } from "./subway-timetable-departures.types";
 
-// WHY: a served station keeps its slug and tap action; a neighbor its station id and no action, its Seoul name standing in for a name it lacks.
+// WHY: a served station keeps its slug and tap action; a neighbor its station id and no action. A neighbor without a name is no
+// place, so the ride lists no stops rather than a Korean Seoul name in another language.
 export function toRideStopPlace(platformId: string, { registry, coordsOf, lang }: RideStopCatalog): Place | null {
   const served = SUBWAY_STATIONS.find((station) => station.platforms.some((platform) => platform.id === platformId));
   if (served) {
@@ -12,8 +13,8 @@ export function toRideStopPlace(platformId: string, { registry, coordsOf, lang }
     return coords && { kind: "subway_station", id: served.id, name: served.name[lang], coords, platformId, action: toPlaceAction("subway_station", served.id) };
   }
   const neighbor = registry.neighbors[platformId];
-  if (neighbor?.stationId === undefined || neighbor.coords === undefined) return null;
-  return { kind: "subway_station", id: neighbor.stationId, name: neighbor.name?.[lang] ?? neighbor.seoulName, coords: neighbor.coords, platformId, action: null };
+  if (neighbor?.stationId === undefined || neighbor.coords === undefined || neighbor.name === undefined) return null;
+  return { kind: "subway_station", id: neighbor.stationId, name: neighbor.name[lang], coords: neighbor.coords, platformId, action: null };
 }
 
 // WHY: the train's own row, so an express lists only the platforms it calls at (ADR 0022, D5); never a partial list.

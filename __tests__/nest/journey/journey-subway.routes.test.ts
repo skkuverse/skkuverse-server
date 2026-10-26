@@ -223,7 +223,7 @@ describe("GET /journey/routes with the subway options", () => {
     // Assert
     const [line4, line1] = option.legs.filter((leg) => leg.kind === "ride") as Array<Leg & { stops: Array<{ place: Record<string, any> }> }>;
     expect(line4!.stops.map(({ place }) => place.name)).toEqual([
-      ...["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"],
+      ...["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울역", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"],
       ...["사당", "남태령", "선바위", "경마공원", "대공원", "과천", "정부과천청사", "인덕원", "평촌", "범계"],
     ]);
     expect(line4!.stops[12]!.place).toMatchObject({ kind: "subway_station", id: "sadang", platformId: "S1-4-433", action: { actionValue: "/map?place=subway_station:sadang" } });
