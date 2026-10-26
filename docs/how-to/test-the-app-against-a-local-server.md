@@ -61,11 +61,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 
    `npm run dev` sets `PERIMETER_MODE=local-dev` and `HOST=127.0.0.1`, so the server listens on loopback only, port `PORT` or 3000. The simulator and the emulator reach it; a phone on the Wi-Fi does not. `local-dev` refuses to start on any other address, and answers only a request whose `Host` is a loopback name, so the emulator's `10.0.2.2` alias gets a 403 ([ADR 0023](../decisions/0023-perimeter-ports.md)). Run `adb reverse` again after the emulator restarts. Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
 
-   A phone or a tunnel needs the `overlay` mode, the perimeter production runs:
-
-   ```bash
-   npm run build && NODE_ENV=development PERIMETER_MODE=overlay HOST=0.0.0.0 CACHE=on npm run dev:watch
-   ```
+   A phone or a tunnel needs the `overlay` mode, the perimeter production runs. Its implementation is not in this repository ([ADR 0023](../decisions/0023-perimeter-ports.md)): a checkout without it refuses to start in `overlay` mode. With access to the private companion, run `npm run verify:serve`, which builds the production topology with the companion's overlay; never copy the overlay into a checkout you work in, because the public `npm test` would then run it with dummy settings. Without that access, use the simulator or the emulator.
 
    The `overlay` mode reads its settings, the rate limits among them, from `PERIMETER_SETTINGS`, and the push quotas from `PERIMETER_SETTINGS_QUOTAS`, which `npm run env:pull` renders from the dev Doppler config. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
 
