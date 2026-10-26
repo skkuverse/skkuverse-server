@@ -32,7 +32,7 @@ export function sentryOptions(): Sentry.NodeOptions {
     // QUIRK(data-go-kr): its gateway answers 400 INVALID_REQUEST_PARAMETER_ERROR to a request whose header
     // holds `environment=`, as Sentry's `baggage` does. No service this server calls reads Sentry traces.
     tracePropagationTargets: [],
-    initialScope: { tags: { role: config.role() } },
+    initialScope: { tags: { role: config.role(), perimeter_overlay: config.perimeter.overlayBuild } },
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,
     beforeSendLog: flattenLogAttributes,

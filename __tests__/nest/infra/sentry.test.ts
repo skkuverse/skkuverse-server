@@ -143,6 +143,18 @@ describe("error events", () => {
     expect((events[0]!.tags as Record<string, string>).request_id).toBe("req-123");
     expect(JSON.stringify(events[0]!.exception)).toContain("kaboom");
   });
+
+  // WHY: the release stays the server commit, so source maps and release history keep their meaning; the overlay
+  // compiled into the image rides along as a tag.
+  it("are tagged with the perimeter overlay the image carries, `none` for a build without one", async () => {
+    // Act
+    Sentry.captureEvent({ message: "boom" });
+    await Sentry.flush(1000);
+
+    // Assert
+    const [event] = items("event");
+    expect((event!.tags as Record<string, string>).perimeter_overlay).toBe("none");
+  });
 });
 
 describe("logs", () => {

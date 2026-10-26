@@ -12,19 +12,21 @@
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), fatal: jest.fn() };
 jest.mock("./logger", () => mockLogger);
 
-const TOUCHED = ["NODE_ENV", "ROLE", "SEOUL_BUS_SERVICE_KEY", "PERIMETER_MODE", "HOST"] as const;
+const TOUCHED = ["NODE_ENV", "ROLE", "SEOUL_BUS_SERVICE_KEY", "PERIMETER_MODE", "HOST", "PERIMETER_OVERLAY_SHA"] as const;
 
-/** Requires a fresh config.ts with `env` over the test env, and restores it after. */
-function loadConfigWith(env: Partial<Record<(typeof TOUCHED)[number], string | undefined>>): void {
+/** Requires a fresh config.ts with `env` over the test env, returns it, and restores the env after. */
+function loadConfigWith(env: Partial<Record<(typeof TOUCHED)[number], string | undefined>>): typeof import("./config") {
   const saved = new Map(TOUCHED.map((key) => [key, process.env[key]]));
   try {
     for (const [key, value] of Object.entries(env)) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
+    let loaded: typeof import("./config") | undefined;
     jest.isolateModules(() => {
-      require("./config");
+      loaded = require("./config");
     });
+    return loaded!;
   } finally {
     for (const [key, value] of saved) {
       if (value === undefined) delete process.env[key];
@@ -85,6 +87,20 @@ describe("loading config with an invalid perimeter mode or host", () => {
     } finally {
       jest.dontMock("../perimeter/current/perimeter.overlay");
     }
+  });
+
+  // WHY: the image bakes the overlay's companion commit into PERIMETER_OVERLAY_SHA (Dockerfile); a build without one
+  // reads `none`, so the boot line and the Sentry tag never show an empty identity.
+  it.each([
+    ["unset", undefined, "none"],
+    ["empty", "", "none"],
+    ["a commit", "0123456789abcdef0123456789abcdef01234567", "0123456789abcdef0123456789abcdef01234567"],
+  ])("reports the overlay build as the image names it, %s", (_case, value, expected) => {
+    // Act
+    const loaded = loadConfigWith({ NODE_ENV: "test", PERIMETER_OVERLAY_SHA: value });
+
+    // Assert
+    expect(loaded.perimeter.overlayBuild).toBe(expected);
   });
 
   it("throws in a listening role without HOST, and loads the poller without one", () => {

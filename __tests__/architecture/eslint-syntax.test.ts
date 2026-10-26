@@ -50,8 +50,11 @@
  *     `moment.utc()` and `moment.now()` without an argument, and
  *     `moment.tz(zone)`.
  */
+import fs from "fs";
+import path from "path";
 import { Linter } from "eslint";
 import { SHARED_LAYERS } from "../helpers/architecture/ast";
+import { ROOT } from "../helpers/architecture/ratchet";
 import { moduleScopes } from "../helpers/architecture/scopes";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -585,6 +588,134 @@ describe("firebase/no-credential", () => {
     // Act & Assert
     expect(files).toEqual(["src/**/*.ts"]);
     expect(ignores).toEqual(["src/**/*.spec.ts"]);
+  });
+});
+
+/** Each block's name, files and ignores, from eslint.config.js loaded afresh while `src/` holds a `private/` or not. */
+function blockGlobsWithPrivateFolder(present: boolean): unknown[] {
+  const src = path.join(ROOT, "src");
+  const realReaddir = fs.readdirSync;
+  const spy = jest.spyOn(fs, "readdirSync").mockImplementation(((dir: fs.PathLike, options?: unknown) => {
+    const entries = (realReaddir as (d: fs.PathLike, o?: unknown) => fs.Dirent[])(dir, options);
+    if (path.resolve(String(dir)) !== src) return entries;
+    const others = entries.filter((entry) => entry.name !== "private");
+    return present ? [...others, { name: "private", isDirectory: () => true, isFile: () => false }] : others;
+  }) as typeof fs.readdirSync);
+  try {
+    let fresh: Linter.Config[] = [];
+    jest.isolateModules(() => {
+      fresh = require("../../eslint.config.js");
+    });
+    return fresh.map((b) => ({ name: b.name, files: b.files, ignores: b.ignores }));
+  } finally {
+    spy.mockRestore();
+  }
+}
+
+// WHY: the overlay is copied to src/private/ only by a build or the composed gate (ADR 0023, D4). The architecture
+// tests never see it (git ls-files), so the config must not take it for a module either: the clock rule would
+// refuse its Date.now(), and specs/fixed-clock would name a __tests__/nest/private/ that no scope owns.
+describe("boundaries/perimeter-overlay", () => {
+  // The whole config, so a later block that drops a rule for these files shows too.
+  const ruleIdsFor = (source: string): (string | null)[] =>
+    new Linter({ configType: "flat", cwd: ROOT }).verify(source, config, path.join(ROOT, "src/private/x.ts")).map((m) => m.ruleId);
+
+  it("binds no module scope, feature or spec glob to a src/private/ folder", () => {
+    // Act
+    const withOverlay = blockGlobsWithPrivateFolder(true);
+    const without = blockGlobsWithPrivateFolder(false);
+
+    // Assert
+    expect(withOverlay).toEqual(without);
+  });
+
+  it("covers the overlay's sources at src/private/, its specs left out", () => {
+    // Arrange
+    const { files, ignores } = block("boundaries/perimeter-overlay");
+
+    // Act & Assert
+    expect(files).toEqual(["src/private/**/*.ts"]);
+    expect(ignores).toEqual(["src/**/*.spec.ts"]);
+  });
+
+  it("lets the overlay read the clock, as src/perimeter/ does", () => {
+    // Act
+    const ruleIds = ruleIdsFor("export const at = (): number => Date.now() + new Date().getTime();");
+
+    // Assert
+    expect(ruleIds).toEqual([]);
+  });
+
+  it("holds the overlay to the log rules, the function caps and the TypeScript rules", () => {
+    // Arrange
+    const sources = [
+      'export const warn = (req: { log: { warn: (m: string) => void } }): void => req.log.warn("plain");',
+      "export function sum(a: number, b: number, c: number, d: number): number { return a + b + c + d; }",
+      "export function depth(a: number): number { if (a) { if (a) { if (a) { return 1; } } } return 0; }",
+      "export function untyped(a: number) { return a; }",
+      "export const value = (a?: { b: number }): number => a!.b;",
+      "export const info = 1;",
+    ];
+
+    // Act
+    const ruleIds = sources.map(ruleIdsFor);
+
+    // Assert
+    expect(ruleIds).toEqual([
+      ["no-restricted-syntax"],
+      ["no-restricted-syntax"],
+      ["max-depth"],
+      ["@typescript-eslint/explicit-module-boundary-types"],
+      ["@typescript-eslint/no-non-null-assertion"],
+      ["src-syntax/generic-names"],
+    ]);
+  });
+
+  it("holds each role file in the overlay to its role's size cap", () => {
+    // Arrange
+    const caps = Object.entries(require("./caps/role-max-lines.json") as Record<string, number>);
+    const linesOf = (count: number): string => Array.from({ length: count }, (_, i) => `export const v${i} = ${i};`).join("\n");
+    const capReported = (role: string, count: number): boolean =>
+      new Linter({ configType: "flat", cwd: ROOT })
+        .verify(linesOf(count), config, path.join(ROOT, `src/private/x.${role}.ts`))
+        .some((m) => m.ruleId === "max-lines");
+
+    // Act
+    const atCap = caps.filter(([role, max]) => capReported(role, max));
+    const overCap = caps.filter(([role, max]) => !capReported(role, max + 1));
+
+    // Assert
+    expect(atCap).toEqual([]);
+    expect(overCap).toEqual([]);
+  });
+});
+
+// WHY: the overlay's specs move with it from src/perimeter/current/, where specs/fixed-clock and the perimeter
+// layer's feature ban held them; src/private/ is no module scope, so neither block reaches it.
+describe("specs/perimeter-overlay", () => {
+  const ruleIdsFor = (source: string): (string | null)[] =>
+    new Linter({ configType: "flat", cwd: ROOT }).verify(source, config, path.join(ROOT, "src/private/x.spec.ts")).map((m) => m.ruleId);
+
+  it("rejects the real Clock and a feature import in an overlay spec", () => {
+    // Arrange
+    const sources = [
+      "export const policy = new RateLimitPolicy(settings, new Clock());",
+      'import { busRoutes } from "../bus/bus.constants";\nexport const used = busRoutes;',
+    ];
+
+    // Act
+    const ruleIds = sources.map(ruleIdsFor);
+
+    // Assert
+    expect(ruleIds).toEqual([["src-syntax/spec-clock"], ["@typescript-eslint/no-restricted-imports"]]);
+  });
+
+  it("passes a fixed clock and the ports", () => {
+    // Arrange
+    const source = 'import { RATE_LIMIT_POLICY } from "../perimeter/perimeter.ports";\nconst clock = { now: () => NOW };\nexport const used = [RATE_LIMIT_POLICY, clock];';
+
+    // Act & Assert
+    expect(ruleIdsFor(source)).toEqual([]);
   });
 });
 
