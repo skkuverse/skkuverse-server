@@ -5,7 +5,8 @@
  * 인자셔틀 ride and a walk to 정문, with places named in the request language and each tapped open on the map at it; the ride's board call equals the stop
  * page's call for the same run at 학생회관 버스 주차장, and its alight call the stop page's at N센터 앞 (ADR 0022, D1);
  * after Friday's last run the option is not running, ended, with Monday's first departure as its next service; and the
- * dataset never read answers 503 JOURNEY_ROUTES_UNAVAILABLE with no Cache-Control.
+ * dataset never read answers 503 JOURNEY_ROUTES_UNAVAILABLE with no Cache-Control. The ride lists its next runs from
+ * now as `upcoming` and no stop between its two (2026-10-26).
  *
  * Every store is in memory: the registry and route lines production stored (helpers/bus/), revision 1 of `bus-stops`,
  * the stored subway station coords, the two gates as buildings, a timetable and an estimate seeded per test. The
@@ -214,6 +215,21 @@ describe("GET /journey/routes", () => {
     expect(rideOf(toNsc!).later.map((call: Call) => call.runId)).toEqual(["campus-inja|regular|2026-10-20|15:00", "campus-inja|regular|2026-10-20|15:30"]);
     expectWire(journeyRoutes, res.body.data);
     expectWire(journeyRoutesMeta, withoutLang(res.body.meta));
+  });
+
+  it("Upcoming and stops: the 인자셔틀 ride lists its next runs from now and no stop between its two", async () => {
+    // Arrange
+    const server = await boot(freshStores());
+
+    // Act
+    const res = await request(server).get("/journey/routes");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(journeyRoutes, res.body.data);
+    const ride = rideOf((res.body.data.routes as Route[])[0]!);
+    expect(ride.upcoming.map((call: Call) => call.runId)).toEqual(["campus-inja|regular|2026-10-20|14:30", "campus-inja|regular|2026-10-20|15:00"]);
+    expect(ride.stops).toEqual([]);
   });
 
   it("The 인자셔틀 leg's board and alight calls equal the stop pages' calls for the same run", async () => {

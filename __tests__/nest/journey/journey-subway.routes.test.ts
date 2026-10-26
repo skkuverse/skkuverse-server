@@ -8,7 +8,8 @@
  * calls the station boards serve for the same run at both platforms, read when each board lists that train (ADR 0022,
  * D1 and D2). With 혜화's line 4 platform tracked live, the first ride boards the late train by the very call
  * `/subway/stations/hyehwa/arrivals` serves for its run, at its expected arrival, carries its delay to 금정 as an
- * estimate, and lists the next two trains of the ride from the timetable as later calls (ADR 0022 PR (h)).
+ * estimate, and lists the next two trains of the ride from the timetable as later calls (ADR 0022 PR (h)). The line 1
+ * ride after the transfer lists the next two trains at 금정 from now as `upcoming`, before the one it boards (2026-10-26).
  *
  * Every store is in memory, as in journey-routes.routes.test.ts; the pollers never start (ROLE=api), and each clock
  * instant boots its own app.

@@ -1,5 +1,6 @@
 import type { StopCall } from "../../shared/call.types";
 import type { DepartureBoard } from "../../shared/departure.types";
+import type { Place } from "../../shared/place.wire";
 import type { Vehicle } from "../../shared/vehicle.wire";
 import type { JourneyLine, RideLeg, TransferLeg, WalkLeg } from "../journey.document";
 import type { WARNING_MESSAGES } from "./journey-routes.constants";
@@ -39,6 +40,8 @@ export interface PlannedRide {
   later: StopCall[];
   /** WHY: the next calls at the board stop from now, whatever the legs before it, never a headway estimate. */
   upcoming: StopCall[];
+  /** WHY: the stops passed between board and alight, in travel order; null where the door cannot list them. */
+  stops: readonly Place[] | null;
   vehicles: Vehicle[];
   waitSec: number;
   observedAt: Date | null;

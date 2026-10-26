@@ -31,8 +31,9 @@ export interface TopisDeparturesParts {
 }
 
 export function topisDepartures({ live = new FakeBusLiveGroupService(), cache = new FakeBusCacheRepository(), stops, registry = storedBusRegistryService(), clock }: TopisDeparturesParts): BusDeparturesTopisService {
-  const index = new BusStopIndexService(stops ?? storedBusStopsService(undefined, clock), registry, asReal<BusRoutePathService>(new FakeBusRoutePathService()), clock);
+  const routePaths = asReal<BusRoutePathService>(new FakeBusRoutePathService());
+  const index = new BusStopIndexService(stops ?? storedBusStopsService(undefined, clock), registry, routePaths, clock);
   const cacheService = new BusCacheService(asReal<BusCacheRepository>(cache));
   const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cacheService, registry, clock);
-  return new BusDeparturesTopisService(asReal<BusLiveGroupService>(live), jongro, index);
+  return new BusDeparturesTopisService(asReal<BusLiveGroupService>(live), jongro, index, routePaths);
 }

@@ -5,6 +5,7 @@ import type { Departure, DepartureBoard, DepartureQuery } from "../../../shared/
 import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import type { RunStopTime, ShuttleRun } from "../../eta/smart/bus-eta-smart.types";
 import type { SequenceStop } from "../../stops/bus-stops.types";
+import { toStopsBetween } from "../bus-departures.rules";
 import type { LegStops, LegStopsByRouteType } from "./bus-departures-timetable.types";
 
 const MINUTE_MS = 60_000;
@@ -31,6 +32,16 @@ export function toLegStops(sequences: Sequences | undefined, boardStopId: string
     return legStops ? [[routeType, legStops] as const] : [];
   });
   return new Map(entries);
+}
+
+/** WHY: a leg's stops between its two, listed only when every route type serving it calls at the same catalog stops. */
+export function toLegStopIds(sequences: Sequences | undefined, legStops: LegStopsByRouteType): string[] | null {
+  const idLists = [...legStops].map(([routeType, { board, alight }]) =>
+    alight === null ? null : toStopsBetween(sequences?.[routeType] ?? [], { boardIndex: board.index, alightIndex: alight.index }).map((stop) => stop.stopId ?? null),
+  );
+  const [first] = idLists;
+  const isAgreed = first != null && idLists.every((ids) => ids !== null && ids.join("|") === first.join("|"));
+  return isAgreed && first.every((id): id is string => id !== null) ? first : null;
 }
 
 export function toKstDayStart(at: Date): Date {
