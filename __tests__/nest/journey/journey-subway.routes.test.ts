@@ -10,6 +10,8 @@
  * `/subway/stations/hyehwa/arrivals` serves for its run, at its expected arrival, carries its delay to 금정 as an
  * estimate, and lists the next two trains of the ride from the timetable as later calls (ADR 0022 PR (h)). The line 1
  * ride after the transfer lists the next two trains at 금정 from now as `upcoming`, before the one it boards (2026-10-26).
+ * Each ride's `stops` are the stations its own train calls at between its two platforms: the 4호선 ride's through 사당
+ * (tappable, a served station) and the 과천선, the 1호선 express's only 의왕 (2026-10-26).
  *
  * Every store is in memory, as in journey-routes.routes.test.ts; the pollers never start (ROLE=api), and each clock
  * instant boots its own app.
@@ -209,6 +211,23 @@ describe("GET /journey/routes with the subway options", () => {
     // Assert
     expect(boards).toEqual([line4!.board, line4!.alight, line1!.board, line1!.alight]);
     expect(line4!.alight).toMatchObject({ runId: line4!.board.runId, basis: "timetable", status: "scheduled", scheduledArrivalAt: "2026-10-20T08:46:00+09:00" });
+  });
+
+  it("Stops: the 4호선 ride lists 사당 and the 과천선 stations to 금정, and the 1호선 express only 의왕, where it stops", async () => {
+    // Arrange
+    const server = await boot(AT_07_40_KST);
+
+    // Act
+    const option = await subwayOption(server, "hssc-to-nsc", "line4-line1");
+
+    // Assert
+    const [line4, line1] = option.legs.filter((leg) => leg.kind === "ride") as Array<Leg & { stops: Array<{ place: Record<string, any> }> }>;
+    expect(line4!.stops.map(({ place }) => place.name)).toEqual([
+      ...["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"],
+      ...["사당", "남태령", "선바위", "경마공원", "대공원", "과천", "정부과천청사", "인덕원", "평촌", "범계"],
+    ]);
+    expect(line4!.stops[12]!.place).toMatchObject({ kind: "subway_station", id: "sadang", platformId: "S1-4-433", action: { actionValue: "/map?place=subway_station:sadang" } });
+    expect([line1!.board.isExpress, line1!.stops.map(({ place }) => [place.id, place.name, place.platformId, place.action])]).toEqual([true, [["uiwang", "의왕", "KR-1-P152", null]]]);
   });
 
   it("Upcoming: the 1호선 ride after 4호선 lists the next two trains at 금정 from now, long before the one the connection boards", async () => {

@@ -102,6 +102,15 @@ describe("toTopologyIssues", () => {
     expect(issueLinesOf(data)).toContain(issue);
   });
 
+  it("Served station id: reports a neighbor taking the id of a station the code serves, with its path", () => {
+    // Arrange
+    const data = fixture();
+    data.neighbors["S1-4-421"].stationId = "hyehwa";
+
+    // Act & Assert
+    expect(issueLinesOf(data)).toEqual(['neighbors.S1-4-421.stationId: "hyehwa" is the id of a station the checked-out code serves']);
+  });
+
   it("accepts a served platform named as a neighbor stop, which takes its station's name", () => {
     // Arrange
     const data = fixture();

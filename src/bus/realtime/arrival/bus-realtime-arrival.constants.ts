@@ -10,13 +10,15 @@ export const ARRIVAL_STATE_PHRASES: ArrivalStatePhrases = [
 ];
 
 // QUIRK(topis): the last-bus token, the stops-away token and other bracket tokens sit before or after the time.
-export const BRACKET_TOKEN_PATTERN = /\[[^\]]*\]/g;
+// WHY: a body without `[` and of bounded length keeps each try linear on text TOPIS did not shape (CWE-1333).
+export const BRACKET_TOKEN_PATTERN = /\[[^[\]]{0,20}\]/g;
 
 // QUIRK(topis): the last bus carries this word as a bracket token or as a bare prefix before the time.
 export const LAST_BUS_WORD = "막차";
 
 // QUIRK(topis): minutes and seconds, minutes alone or seconds alone, then "after", with or without spaces.
-export const TIMED_TEXT_PATTERN = /(?:(\d+)\s*분\s*(?:(\d+)\s*초)?|(\d+)\s*초)\s*후/;
+// WHY: bounded digit runs and no two adjacent whitespace runs keep the match linear (CWE-1333).
+export const TIMED_TEXT_PATTERN = /(?<!\d)(?:(\d{1,3})\s*분(?:\s*(\d{1,3})\s*초)?|(\d{1,3})\s*초)\s*후/;
 
 export const NO_VEHICLE_ID = "0";
 

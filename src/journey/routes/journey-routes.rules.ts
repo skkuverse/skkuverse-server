@@ -47,7 +47,7 @@ function toRide(leg: RideLeg, board: DepartureBoard, { arrivedAtMs, readyAtMs, n
   const later = catchable.slice(1, 1 + MAX_LATER_CALLS).map((departure) => departure.board);
   const upcoming = board.departures.filter((departure) => isCatchable(departure, nowMs, board)).slice(0, MAX_UPCOMING_CALLS).map((departure) => departure.board);
   const vehicles = [...new Set([boarded.board, alight, ...later, ...upcoming].flatMap((call) => call.vehicleId ?? []))].flatMap((id) => board.vehicles[id] ?? []);
-  const planned = { leg, line, board: boarded.board, alight, later, upcoming, stops: board.stops ?? null, vehicles, waitSec: Math.round((boardAtMs - arrivedAtMs) / 1000), observedAt: boarded.observedAt };
+  const planned = { leg, line, board: boarded.board, alight, later, upcoming, stops: boarded.stops ?? board.stops ?? null, vehicles, waitSec: Math.round((boardAtMs - arrivedAtMs) / 1000), observedAt: boarded.observedAt };
   return { planned, boardAtMs, alightAtMs: toAlightTime(alight)?.getTime() ?? Number.NaN };
 }
 

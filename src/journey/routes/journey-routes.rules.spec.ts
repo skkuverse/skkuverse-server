@@ -538,6 +538,20 @@ describe("planOption: a ride's stops between its board and alight stops", () => 
     // Assert
     expect(rideOf(planned).stops).toEqual(expected);
   });
+
+  it.each([
+    ["Per run: the boarded run's own stops, not a later run's", [PASSED], [PASSED]],
+    ["null when the door cannot list the boarded run's", null, null],
+  ])("are %s", (_case, boardedStops, expected) => {
+    // Arrange
+    const runs = board([{ ...departure("14:30"), stops: boardedStops }, { ...departure("15:00"), stops: [] }]);
+
+    // Act
+    const planned = planOption(OPTION, context(kst("14:00"), runs));
+
+    // Assert
+    expect(rideOf(planned).stops).toEqual(expected);
+  });
 });
 
 describe("toLegBasis", () => {

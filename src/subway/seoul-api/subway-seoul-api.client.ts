@@ -11,6 +11,8 @@ import {
   type SeoulPositionRow,
 } from "./subway-seoul-api.schema";
 
+// QUIRK(seoul-subway-api): swopenapi.seoul.go.kr serves HTTP only (a TLS connect to port 443 timed out, probed
+// 2026-10-26), so the key in the path travels in cleartext until Seoul offers HTTPS.
 const API_ROOT = "http://swopenapi.seoul.go.kr/api/subway";
 const REQUEST_TIMEOUT_MS = 5_000;
 const MAX_POSITION_ROWS = 400;

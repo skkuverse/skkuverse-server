@@ -12,7 +12,9 @@ import { FakeBusCacheRepository } from "../../../__tests__/helpers/fakes/bus/bus
 import { FakeBusLiveGroupService } from "../../../__tests__/helpers/fakes/bus/bus-live-group.service.fake";
 import { FakeBusEtaSmartService } from "../../../__tests__/helpers/fakes/bus/bus-eta-smart.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { storedStationCoordsService } from "../../../__tests__/helpers/subway/station-coords";
 import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
+import { storedSubwayTopologyService } from "../../../__tests__/helpers/subway/topology";
 import { BusDeparturesTimetableService } from "../../bus/departures/timetable/bus-departures-timetable.service";
 import type { BusEtaSmartService } from "../../bus/eta/smart/bus-eta-smart.service";
 import { FakeSubwayArrivalsService } from "../../../__tests__/helpers/fakes/subway/subway-arrivals.service.fake";
@@ -33,7 +35,8 @@ const CLOCK = { now: () => kst("19:07") };
 
 function registryOver(smart = new FakeBusEtaSmartService(), { live = new FakeBusLiveGroupService(), cache = new FakeBusCacheRepository() } = {}): JourneyDeparturesService {
   const timetable = new BusDeparturesTimetableService(asReal<BusEtaSmartService>(smart), storedBusStopsService());
-  const subway = new SubwayTimetableDeparturesService(storedSubwayTimetableService(), asReal<SubwayArrivalsService>(new FakeSubwayArrivalsService()));
+  const arrivals = asReal<SubwayArrivalsService>(new FakeSubwayArrivalsService());
+  const subway = new SubwayTimetableDeparturesService(storedSubwayTimetableService(), arrivals, storedSubwayTopologyService(), storedStationCoordsService());
   return new JourneyDeparturesService(timetable, subway, topisDepartures({ live, cache, clock: CLOCK }));
 }
 
