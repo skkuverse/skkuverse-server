@@ -8,6 +8,10 @@ node_modules
 # cached layer on the host.
 .env.*
 npm-debug.log
+# The overlay reaches the builder only through the named context `perimeter-overlay` (Dockerfile): a local copy
+# under src/private/ must not ride in with `COPY . .`, and the empty default folder has no place in /app.
+src/private
+perimeter-overlay.empty
 coverage/
 __tests__/
 __fixtures__/
