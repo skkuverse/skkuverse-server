@@ -32,13 +32,13 @@ export class BuildingPlaceService {
     return index;
   }
 
-  private warnLexiconGaps({ unpinnedFacilities, droppedAliases }: PlaceIndex): void {
-    if (unpinnedFacilities.length === 0 && droppedAliases.length === 0) return;
-    const ticket = this.gapsThrottle.take([...unpinnedFacilities, ...droppedAliases].join("|"));
+  private warnLexiconGaps({ unpinnedFacilities }: PlaceIndex): void {
+    if (unpinnedFacilities.length === 0) return;
+    const ticket = this.gapsThrottle.take(unpinnedFacilities.join("|"));
     if (!ticket) return;
     logger.warn(
-      { event: "building.place.lexicon_gaps", unpinnedFacilities, droppedAliases, suppressed: ticket.suppressed },
-      "Place lexicon gaps: a facility has no pinned slug, or an alias names a place skkumap does not hold",
+      { event: "building.place.lexicon_gaps", unpinnedFacilities, suppressed: ticket.suppressed },
+      "Place lexicon gaps: a facility has no pinned slug",
     );
   }
 }
