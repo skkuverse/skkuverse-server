@@ -10,7 +10,7 @@
         "repo": "umbrella",
         "path": "docs/_template.md",
         "ref": "main",
-        "commit": "8f0ba33a4b8e3630d6728037089a1896f2d9bc63",
+        "commit": "03611c6e9ddbdc40cd60e2bd25a6b7f945c2bc73",
         "sha256": "8d9a74eb073480a90a0e46e3d4149315bf53a1709987fcffd0a3a243465f90c2"
       },
       "syncedAt": "2026-08-15T09:33:08Z"
@@ -22,7 +22,7 @@
         "repo": "umbrella",
         "path": "conventions/markdownlint.jsonc",
         "ref": "main",
-        "commit": "8f0ba33a4b8e3630d6728037089a1896f2d9bc63",
+        "commit": "03611c6e9ddbdc40cd60e2bd25a6b7f945c2bc73",
         "sha256": "e9657ea55ddfdca15b1a7a3e81be94c8d4845fd6da452f6d5689f12dabb865a5"
       },
       "syncedAt": "2026-08-15T09:33:07Z"
@@ -34,7 +34,7 @@
         "repo": "umbrella",
         "path": "conventions/render_env.py",
         "ref": "main",
-        "commit": "8f0ba33a4b8e3630d6728037089a1896f2d9bc63",
+        "commit": "03611c6e9ddbdc40cd60e2bd25a6b7f945c2bc73",
         "sha256": "3ea2a2038d3a6dfbdd96ff736b1a7b9bab51e081cb18e8a4bf081a6e9f3ea75e"
       },
       "syncedAt": "2026-10-05T02:49:27Z"
@@ -46,7 +46,7 @@
         "repo": "crawler",
         "path": "py/generated/server-categories.json",
         "ref": "main",
-        "commit": "0ac591e333ec036387c84f8fbe17a3e74eabd424",
+        "commit": "6f869081c1206d82ecb61793b8d94a5abd7db8fe",
         "sha256": "36e26285167b79517800f6136a1fc729445e6a2795747c4bac7fcb92b7513ce2"
       },
       "syncedAt": "2026-08-04T10:48:30Z"
@@ -58,7 +58,7 @@
         "repo": "crawler",
         "path": "py/generated/server-exclude-reasons.json",
         "ref": "main",
-        "commit": "0ac591e333ec036387c84f8fbe17a3e74eabd424",
+        "commit": "6f869081c1206d82ecb61793b8d94a5abd7db8fe",
         "sha256": "33d092f8c2f0d13f585a6f24660f2fd0bde38893e3a35e6c72ef277f6ec14f8c"
       },
       "syncedAt": "2026-08-04T10:48:30Z"
@@ -70,7 +70,7 @@
         "repo": "crawler",
         "path": "py/generated/server-sources.json",
         "ref": "main",
-        "commit": "0ac591e333ec036387c84f8fbe17a3e74eabd424",
+        "commit": "6f869081c1206d82ecb61793b8d94a5abd7db8fe",
         "sha256": "c18defa82ae4615ce66e15bc80c2833c9804d1d7bed37a9afa5bbbcd7b49100d"
       },
       "syncedAt": "2026-10-16T05:00:32Z"
@@ -82,7 +82,7 @@
         "repo": "umbrella",
         "path": "exported/lint_conventions.py",
         "ref": "main",
-        "commit": "8f0ba33a4b8e3630d6728037089a1896f2d9bc63",
+        "commit": "03611c6e9ddbdc40cd60e2bd25a6b7f945c2bc73",
         "sha256": "d4a90b8ea4169d369ec96747f81f4c782fccc2248ebf63f618df53e091f14ab3"
       },
       "syncedAt": "2026-10-27T00:32:58Z"
@@ -94,21 +94,22 @@
         "repo": "umbrella",
         "path": "contracts/manifest.json",
         "ref": "main",
-        "commit": "8f0ba33a4b8e3630d6728037089a1896f2d9bc63"
+        "commit": "03611c6e9ddbdc40cd60e2bd25a6b7f945c2bc73",
+        "sha256": "99f719d92f89550ba9865765368997d5fe6f01de03578e91d9bea1c71eccf4af"
       },
-      "syncedAt": "2026-10-27T00:32:59Z"
+      "syncedAt": "2026-10-27T08:59:09Z"
     },
     "tooling.sync-contracts": {
       "path": ".github/contract-tools/exported/sync_contracts.py",
-      "sha256": "26786e58f00ae2a46e06e345b1ba00b861f629925396a31a2ed2d08ab569fc92",
+      "sha256": "0d81d218951e16e661962bb0d492599d8d01fe61034bdbf649625a1734a11190",
       "producer": {
         "repo": "umbrella",
         "path": "exported/sync_contracts.py",
         "ref": "main",
-        "commit": "8f0ba33a4b8e3630d6728037089a1896f2d9bc63",
-        "sha256": "26786e58f00ae2a46e06e345b1ba00b861f629925396a31a2ed2d08ab569fc92"
+        "commit": "03611c6e9ddbdc40cd60e2bd25a6b7f945c2bc73",
+        "sha256": "0d81d218951e16e661962bb0d492599d8d01fe61034bdbf649625a1734a11190"
       },
-      "syncedAt": "2026-10-27T00:32:57Z"
+      "syncedAt": "2026-10-27T08:59:09Z"
     }
   }
 }
