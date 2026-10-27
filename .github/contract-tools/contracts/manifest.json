@@ -3,7 +3,6 @@
   "note": "GENERATED - do not edit. The slice of the umbrella's contracts/manifest.json that `sync_contracts.py check --repo server` reads: this repo's contracts and its own consumer entries. Hash-locked in .contracts.lock.json; refresh it with `sync_contracts.py pull --repo server` in the umbrella.",
   "repos": {
     "server": {
-      "github": "spencer0124/skkuverse-server",
       "branch": "main",
       "dir": "skkuverse-server"
     }
@@ -15,12 +14,7 @@
       "status": "active",
       "producer": {
         "repo": "crawler",
-        "path": "py/generated/server-sources.json",
-        "derivedFrom": [
-          "sources.json",
-          "exclude-reasons.json"
-        ],
-        "generatedBy": "py/scripts/generate_artifacts.py :: gen_sources_json"
+        "path": "py/generated/server-sources.json"
       },
       "consumers": [
         {
@@ -39,12 +33,7 @@
       "status": "active",
       "producer": {
         "repo": "crawler",
-        "path": "py/generated/server-categories.json",
-        "derivedFrom": [
-          "categories.json",
-          "sources.json"
-        ],
-        "generatedBy": "py/scripts/generate_artifacts.py :: gen_server_categories"
+        "path": "py/generated/server-categories.json"
       },
       "consumers": [
         {
@@ -63,11 +52,7 @@
       "status": "active",
       "producer": {
         "repo": "crawler",
-        "path": "py/generated/server-exclude-reasons.json",
-        "derivedFrom": [
-          "exclude-reasons.json"
-        ],
-        "generatedBy": "py/scripts/generate_artifacts.py :: gen_exclude_reasons_map"
+        "path": "py/generated/server-exclude-reasons.json"
       },
       "consumers": [
         {
