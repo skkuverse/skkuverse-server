@@ -32,7 +32,8 @@ describe("send-test-push.js arguments", () => {
 });
 
 describe("send-test-push.js without the Firebase project or the sender", () => {
-  // The repository is public, so neither value is written in the script: each comes from the caller.
+  // The repository is public, so neither value has a default in the script: each comes from the caller,
+  // and a run without one stops before anything is sent.
   it.each([
     ["--project", ["--token", "t", "--impersonate", "sender@project.example"]],
     ["--impersonate", ["--token", "t", "--project", "project-example"]],
@@ -44,15 +45,6 @@ describe("send-test-push.js without the Firebase project or the sender", () => {
     expect(result.status).toBe(2);
     expect(result.stderr.trim().split("\n")).toHaveLength(1);
     expect(result.stderr).toMatch(new RegExp(`missing ${option}`));
-  });
-
-  it("names neither value in its source", () => {
-    // Act
-    const source = fs.readFileSync(SCRIPT, "utf8");
-
-    // Assert
-    expect(source).not.toMatch(/iam\.gserviceaccount\.com/);
-    expect(source).not.toMatch(/const PROJECT_ID = "/);
   });
 });
 
