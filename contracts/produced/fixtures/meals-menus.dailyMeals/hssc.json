@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-assembled, since the route is not deployed yet: GET /meals?campus=hssc&date=2026-10-14 as the app is coded against it (a local path, handed over 2026-10-17), which is what toDailyMeals builds from __tests__/nest/meals/fixtures/crawler-meal-docs-2026-10-14.json and the meals-catalog.cafeteriaList hssc fixture (meals-menus.routes.test.ts pins the two equal); every cafeteria of the campus, untrimmed",
+  "_about": "Hand-assembled, since the route is not deployed yet: GET /meals?campus=hssc&date=2026-10-14 as the app is coded against it (the app's sample response, handed over 2026-10-17), which is what toDailyMeals builds from __tests__/nest/meals/fixtures/crawler-meal-docs-2026-10-14.json and the meals-catalog.cafeteriaList hssc fixture (meals-menus.routes.test.ts pins the two equal); every cafeteria of the campus, untrimmed",
   "data": {
     "date": "2026-10-14",
     "campus": "hssc",

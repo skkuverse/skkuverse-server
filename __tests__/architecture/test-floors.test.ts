@@ -79,7 +79,8 @@ describe("test floor rules apply as specified", () => {
     expect(counts).toEqual({ x: { tests: 3, expects: 3 } });
   });
 
-  // (An operations detail is left out of the public history.)
+  // WHY: the floors file is public, so it is never rewritten from a tree that holds the private perimeter
+  // overlay, whose specs it would count.
   it("refuses to rewrite the floors while src/private/ holds an overlay", () => {
     // Arrange
     const withOverlay = fs.mkdtempSync(path.join(os.tmpdir(), "test-floors-"));

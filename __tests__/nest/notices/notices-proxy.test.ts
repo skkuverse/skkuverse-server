@@ -1,5 +1,5 @@
 /**
- * Route coverage for GET /notices/proxy/attachment (security fix): a `url`
+ * Route coverage for GET /notices/proxy/attachment (a security fix): a `url`
  * or `referer` the outbound policy refuses never leaves the process, every
  * outbound call carries the policy's request config, a refusal while fetching
  * surfaces as 403, the size cap (declared and mid-stream), the idle and overall

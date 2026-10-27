@@ -1,0 +1,185 @@
+{
+  "manifestVersion": 1,
+  "note": "GENERATED - do not edit. The slice of the umbrella's contracts/manifest.json that `sync_contracts.py check --repo server` reads: this repo's contracts and its own consumer entries. Hash-locked in .contracts.lock.json; refresh it with `sync_contracts.py pull --repo server` in the umbrella.",
+  "repos": {
+    "server": {
+      "branch": "main",
+      "dir": "skkuverse-server"
+    }
+  },
+  "contracts": [
+    {
+      "id": "notices.sources",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "crawler",
+        "path": "py/generated/server-sources.json"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": "src/notices/sources.json",
+          "mode": "copy",
+          "requires": [
+            "server-build-asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "notices.categories",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "crawler",
+        "path": "py/generated/server-categories.json"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": "src/notices/categories.json",
+          "mode": "copy",
+          "requires": [
+            "server-build-asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "notices.exclude-reasons",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "crawler",
+        "path": "py/generated/server-exclude-reasons.json"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": "src/notices/exclude-reasons.json",
+          "mode": "copy",
+          "requires": [
+            "server-build-asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "search.config",
+      "kind": "file",
+      "status": "planned",
+      "producer": {
+        "repo": "crawler",
+        "path": "search.json"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": "src/notices/search.json",
+          "mode": "copy",
+          "requires": [
+            "server-build-asset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "conventions.markdownlint",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "umbrella",
+        "path": "conventions/markdownlint.jsonc"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": ".markdownlint.jsonc",
+          "mode": "copy"
+        }
+      ]
+    },
+    {
+      "id": "conventions.docs-template",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "umbrella",
+        "path": "docs/_template.md"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": "docs/_template.md",
+          "mode": "copy"
+        }
+      ]
+    },
+    {
+      "id": "conventions.render-env",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "umbrella",
+        "path": "conventions/render_env.py"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": "scripts/render_env.py",
+          "mode": "copy"
+        }
+      ]
+    },
+    {
+      "id": "tooling.sync-contracts",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "umbrella",
+        "path": "exported/sync_contracts.py"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": ".github/contract-tools/exported/sync_contracts.py",
+          "mode": "copy"
+        }
+      ]
+    },
+    {
+      "id": "tooling.lint-conventions",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "umbrella",
+        "path": "exported/lint_conventions.py"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": ".github/contract-tools/exported/lint_conventions.py",
+          "mode": "copy"
+        }
+      ]
+    },
+    {
+      "id": "tooling.server-manifest",
+      "kind": "file",
+      "status": "active",
+      "producer": {
+        "repo": "umbrella",
+        "path": "contracts/manifest.json"
+      },
+      "consumers": [
+        {
+          "repo": "server",
+          "path": ".github/contract-tools/contracts/manifest.json",
+          "mode": "generate",
+          "generator": "server_manifest"
+        }
+      ]
+    }
+  ]
+}

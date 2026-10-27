@@ -31,6 +31,23 @@ describe("send-test-push.js arguments", () => {
   });
 });
 
+describe("send-test-push.js without the Firebase project or the sender", () => {
+  // The repository is public, so neither value has a default in the script: each comes from the caller,
+  // and a run without one stops before anything is sent.
+  it.each([
+    ["--project", ["--token", "t", "--impersonate", "sender@project.example"]],
+    ["--impersonate", ["--token", "t", "--project", "project-example"]],
+  ])("exits 2 with one line naming %s when it is missing", (option, args) => {
+    // Act
+    const result = run(args);
+
+    // Assert
+    expect(result.status).toBe(2);
+    expect(result.stderr.trim().split("\n")).toHaveLength(1);
+    expect(result.stderr).toMatch(new RegExp(`missing ${option}`));
+  });
+});
+
 describe("send-test-push.js when gcloud cannot mint a token", () => {
   let fakeBin: string;
 
@@ -58,7 +75,7 @@ describe("send-test-push.js when gcloud cannot mint a token", () => {
     const env = { ...process.env, PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}` };
 
     // Act
-    const result = run(["--token", "device-token-not-printed"], env);
+    const result = run(["--token", "device-token-not-printed", "--project", "project-example", "--impersonate", "sender@project.example"], env);
 
     // Assert
     expect(result.status).toBe(1);

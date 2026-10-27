@@ -11,8 +11,6 @@ const { parseArgs } = require("node:util");
 const { initializeApp } = require("firebase-admin/app");
 const { getMessaging } = require("firebase-admin/messaging");
 
-const PROJECT_ID = "skkubus-95723";
-const SENDER = "sender@project.example";
 const CHANNELS = ["notice_general", "miniapp_v2"];
 // gcloud mints impersonated tokens for an hour; firebase-admin refreshes before this.
 const TOKEN_LIFETIME_S = 3000;
@@ -33,7 +31,8 @@ function parseOptions(argv) {
         channel: { type: "string", default: "notice_general" },
         data: { type: "string" },
         cred: { type: "string", default: "gcloud" },
-        impersonate: { type: "string", default: SENDER },
+        project: { type: "string" },
+        impersonate: { type: "string" },
         send: { type: "boolean", default: false },
       },
     }).values;
@@ -45,6 +44,8 @@ function parseOptions(argv) {
 function readOptions(argv) {
   const values = parseOptions(argv);
   if (!values.token) fail("missing --token");
+  if (!values.project) fail("missing --project");
+  if (!values.impersonate) fail("missing --impersonate");
   if (values.cred !== "gcloud") fail("--cred must be gcloud: this script holds no key");
   if (!CHANNELS.includes(values.channel)) fail(`--channel must be one of ${CHANNELS.join(", ")}`);
   return { ...values, data: values.data === undefined ? undefined : readData(values.data) };
@@ -105,7 +106,7 @@ function toMessage(options) {
 async function main() {
   const options = readOptions(process.argv.slice(2));
   const credential = gcloudCredential(options.impersonate);
-  initializeApp({ projectId: PROJECT_ID, credential });
+  initializeApp({ projectId: options.project, credential });
 
   const dryRun = !options.send;
   console.log(
