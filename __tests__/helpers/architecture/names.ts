@@ -51,11 +51,8 @@ export const EXEMPT = new Set([
   "src/instrument.ts",
   "src/app.module.ts",
   "src/types.d.ts",
-  // Pinned by the umbrella repo's contract manifest (.contracts.lock.json).
+  // Not yet a role file: it reads the loaded categories itself; it joins a `.rules` file once it takes them as input.
   "src/notices/notices.topics.ts",
-  // Imported by the hash-locked notices.topics.ts (.contracts.lock.json); changes go through the producer repo.
-  "src/notices/tabConfig.ts",
-  "src/notices/types.ts",
 ]);
 
 export interface ParsedName {

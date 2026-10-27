@@ -1,39 +1,31 @@
-/**
- * (An operations detail is left out of the public history.)
- *
- *
- */
-import { categories } from "./tabConfig";
-import type { CategoryConfig } from "./types";
+import { noticesConfig } from "./notices.config";
+import type { CategoryConfig } from "./notices.types";
 
-// (An operations detail is left out of the public history.)
-//
-//
+// WHY: Firestore's `array-contains-any` limit; the push Cloud Function queries subscribers with it and rejects more.
 const TOPIC_CAP = 30;
 
-// Minimal shape — buildTopics only reads sourceId. Compatible with the
-// fully-typed NoticeDoc as well as test fixtures that pass arbitrary
-// partial docs.
 interface NoticeForTopic {
   sourceId?: string;
 }
 
+// WHY: each string must equal a topic the push Cloud Function derives from a device's preferences,
+// or no device matches.
+function topicOf(category: CategoryConfig, sourceId: string): string | undefined {
+  if (category.tabMode === "fixed") return category.sourceId === sourceId ? `category:${category.id}` : undefined;
+  if (category.tabMode === "picker" && Array.isArray(category.sourceIds) && category.sourceIds.includes(sourceId)) {
+    return `${category.id}:${sourceId}`;
+  }
+  return undefined;
+}
+
 function buildTopics(noticeDoc: NoticeForTopic | null | undefined): string[] {
-  const sourceId = noticeDoc && noticeDoc.sourceId;
+  const sourceId = noticeDoc?.sourceId;
   if (!sourceId || typeof sourceId !== "string") return [];
 
   const out = new Set<string>();
-  // Redundant cast: tabConfig.ts already exports `categories` typed.
-  for (const cat of categories as ReadonlyArray<CategoryConfig>) {
-    if (cat.tabMode === "fixed") {
-      if (cat.sourceId === sourceId) {
-        out.add(`category:${cat.id}`);
-      }
-    } else if (cat.tabMode === "picker") {
-      if (Array.isArray(cat.sourceIds) && cat.sourceIds.includes(sourceId)) {
-        out.add(`${cat.id}:${sourceId}`);
-      }
-    }
+  for (const category of noticesConfig.categories) {
+    const topic = topicOf(category, sourceId);
+    if (topic !== undefined) out.add(topic);
     if (out.size >= TOPIC_CAP) break;
   }
   return Array.from(out);

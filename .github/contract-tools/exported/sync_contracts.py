@@ -30,7 +30,7 @@ gains a contract gate without touching its dependency manifest.
     python3 exported/sync_contracts.py check --repo server --root .
     python3 exported/sync_contracts.py check --fleet
     python3 exported/sync_contracts.py pull --all
-    python3 exported/sync_contracts.py explain private.contract
+    python3 exported/sync_contracts.py explain notices.categories
     python3 exported/sync_contracts.py validate-manifest
 """
 
@@ -163,9 +163,7 @@ def _load_generators() -> dict[str, Callable[[bytes], bytes]]:
     # consumer that runs this script.
     sys.path.insert(0, str(EXPORTED_DIR))
     from generators.consumer_manifest import server_manifest
-    from generators.private_file import private_file
-
-    return {"private_file": private_file, "server_manifest": server_manifest}
+    return {"server_manifest": server_manifest}
 
 
 def run_generator(name: str, producer_bytes: bytes) -> bytes:
