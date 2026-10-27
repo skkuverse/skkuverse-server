@@ -1,6 +1,6 @@
 import "./env-file";
 import { perimeterModeErrors } from "../perimeter/perimeter-mode.rules";
-import { perimeterSettingsOf } from "../perimeter/perimeter-overlay.rules";
+import { overlayResolveErrors, perimeterSettingsOf } from "../perimeter/perimeter-overlay.rules";
 import type { PerimeterMode } from "../perimeter/perimeter.ports";
 import logger from "./logger";
 import * as requiredEnv from "./required-env";
@@ -301,6 +301,22 @@ const config = {
   },
 };
 
+function exitOnInvalidPerimeter(errors: readonly string[]): void {
+  if (errors.length === 0) return;
+  logger.fatal(
+    { event: "config.invalid_perimeter", errors },
+    "Invalid PERIMETER_MODE, HOST or overlay entry — fix what `errors` names",
+  );
+  // WHY: jest.setup.ts sets the mode and host, so a test that changes one did it on purpose and fails as the boot does.
+  if (isTest) {
+    throw new Error(`FATAL: Invalid perimeter:\n  ${errors.join("\n  ")}`);
+  }
+  process.exit(1);
+}
+
+// WHY: before the missing values: a checkout without the overlay also lacks the values only the overlay reads.
+if (process.env.PERIMETER_MODE === "overlay") exitOnInvalidPerimeter(overlayResolveErrors());
+
 // SEE: docs/decisions/0004-strict-config-pre-deploy-dry-load.md — the pre-deploy dry-load requires this
 // file, so a deploy with a missing value stops before it replaces a running container.
 const missing = requiredEnv.listMissingRequired(process.env).map(({ name, env }) => ({ name, env }));
@@ -348,17 +364,6 @@ if (invalidRole.length > 0) {
   }
 }
 
-const invalidPerimeter = perimeterModeErrors(process.env);
-if (invalidPerimeter.length > 0) {
-  logger.fatal(
-    { event: "config.invalid_perimeter", errors: invalidPerimeter },
-    "Invalid PERIMETER_MODE or HOST — set them per execution context as `errors` says",
-  );
-  // WHY: jest.setup.ts sets both, so a test that changes one did it on purpose and fails as the boot does.
-  if (isTest) {
-    throw new Error(`FATAL: Invalid perimeter:\n  ${invalidPerimeter.join("\n  ")}`);
-  }
-  process.exit(1);
-}
+exitOnInvalidPerimeter(perimeterModeErrors(process.env));
 
 export = config;

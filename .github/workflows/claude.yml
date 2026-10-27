@@ -29,13 +29,13 @@ env:
 jobs:
   # WHY: the repository is public and the jobs below hold CLAUDE_CODE_OAUTH_TOKEN, so nothing starts unless a
   # maintainer asked; anyone else's `@claude` starts nothing. An issue comment runs in this repository's context,
-  # with its secrets, even when it sits on a fork's pull request. `read` and `edit` need this job, so they are
-  # skipped with it.
+  # with its secrets, even when it sits on a fork's pull request; a review or review comment there runs without
+  # them, so it is skipped instead of failing. `read` and `edit` need this job, so they are skipped with it.
   mode:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association))
+      (github.event_name == 'pull_request_review_comment' && !github.event.pull_request.head.repo.fork && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && !github.event.pull_request.head.repo.fork && contains(github.event.review.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association))
     runs-on: ubuntu-latest
     permissions: {}
     outputs:

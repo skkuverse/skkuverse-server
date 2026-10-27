@@ -434,6 +434,39 @@ describe("validateEnv loads the overlay entry in overlay mode", () => {
   });
 });
 
+/** validateEnv from a fresh module registry in which the overlay entry does not resolve, as in a public checkout. */
+function validateWithoutEntry(env: NodeJS.ProcessEnv): void {
+  let validate: typeof validateEnv | undefined;
+  jest.isolateModules(() => {
+    // WHY: Jest maps a missing entry to the stand-in (jest.config.js), so only the resolve check can say it is gone.
+    jest.doMock("../perimeter/perimeter-overlay.rules", () => ({
+      ...jest.requireActual("../perimeter/perimeter-overlay.rules"),
+      overlayResolveErrors: () => ["PERIMETER_MODE=overlay needs its implementation entry, which does not resolve (synthetic)"],
+    }));
+    validate = (require("./required-env") as typeof import("./required-env")).validateEnv;
+  });
+  try {
+    validate!(env);
+  } finally {
+    jest.dontMock("../perimeter/perimeter-overlay.rules");
+  }
+}
+
+describe("validateEnv names a missing overlay entry first", () => {
+  // WHY: a checkout without the overlay also lacks the values only the overlay reads, and those are not the cause.
+  it.each([
+    ["production", { NODE_ENV: "production", HOST: "0.0.0.0" }],
+    ["development", { NODE_ENV: "development", HOST: "127.0.0.1" }],
+  ])("refuses an overlay boot in %s without the entry or its values, naming the entry", (_label, base) => {
+    // Arrange
+    const env: NodeJS.ProcessEnv = { ...process.env, ...base, PERIMETER_MODE: "overlay", ROLE: "api" };
+    for (const name of ["PERIMETER_SETTINGS", "PERIMETER_SETTINGS_QUOTAS", "SENTRY_DSN"]) delete env[name];
+
+    // Act & Assert
+    expect(() => validateWithoutEntry(env)).toThrow(/Invalid perimeter[\s\S]*implementation entry, which does not resolve/);
+  });
+});
+
 describe("requiredValues PERIMETER_SETTINGS", () => {
   // WHY: the overlay's rate-limit policy reads its limits from it, and every role constructs every class (ADR 0023, D4).
   const production = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...process.env, NODE_ENV: "production", SENTRY_DSN: "disabled", HOST: "0.0.0.0", ...env });

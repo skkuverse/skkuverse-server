@@ -488,7 +488,9 @@ describe("bootstrapHttpApp pipeline with PERIMETER_MODE=local-dev", () => {
   beforeAll(async () => {
     // WHY: bootstrapHttpApp reads config.perimeter.mode when it builds the app, as main.ts does.
     mode = jest.replaceProperty(config.perimeter, "mode", "local-dev");
-    app = await buildTestApp({ imports: [PipelineModule] });
+    const originTrust = new FakeOriginTrust();
+    originTrust.trusted.add("http://localhost:5173");
+    app = await buildTestApp({ imports: [PipelineModule], overrides: [{ provide: OriginTrust, useValue: originTrust }] });
   });
 
   afterAll(async () => {
@@ -515,6 +517,24 @@ describe("bootstrapHttpApp pipeline with PERIMETER_MODE=local-dev", () => {
     expect(forwarded.status).toBe(403);
     expect(forwarded.body).toEqual({ error: { code: "LOCAL_DEV_ONLY", message: "A local-development server answers requests from this machine only" } });
     expect(rebound.status).toBe(403);
+  });
+
+  // WHY: a page on any website can make the developer's browser send a simple POST to 127.0.0.1, and internal
+  // routes take no credential in local-dev.
+  it("refuses a cross-site simple POST and keeps a loopback origin's", async () => {
+    // Act
+    const crossSite = await request(app.getHttpServer())
+      .post("/pipeline")
+      .set("Origin", "https://evil.example")
+      .set("Sec-Fetch-Site", "cross-site")
+      .set("Content-Type", "text/plain")
+      .send("{}");
+    const loopback = await request(app.getHttpServer()).get("/pipeline").set("Origin", "http://localhost:5173");
+
+    // Assert
+    expect(crossSite.status).toBe(403);
+    expect(crossSite.body).toEqual({ error: { code: "LOCAL_DEV_ONLY", message: "A local-development server answers requests from this machine only" } });
+    expect(loopback.status).toBe(200);
   });
 });
 
