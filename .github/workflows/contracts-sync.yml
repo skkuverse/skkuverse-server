@@ -2,8 +2,8 @@ name: Contract sync
 
 # The freshness half of the contract system. `ci.yml` checks this repo's
 # vendored config against its own lock (offline, blocking); this checks the
-# lock against the producer's main and, when behind, prepares the update as a
-# ready-to-merge PR rather than a notification.
+# lock against the producers' main branches and, when behind, prepares the
+# update as a ready-to-merge PR rather than a notification.
 #
 # Why a PR and not an issue: an issue is a task someone must act on, and a
 # neglected one trains you to ignore the next. A PR is a completed proposal
@@ -12,70 +12,106 @@ name: Contract sync
 #
 # Fixed branch name, force-pushed, so repeated drift updates one PR instead
 # of accumulating a pile.
+#
+# WHY: the only workflow that holds a private secret. It runs on a schedule or
+# by hand, so always on the default branch and never for a pull request, and
+# its secrets live in the `contracts-sync` environment, which no other
+# workflow names and which deploys only from the default branch. The logs of
+# a public repository are public, so no step prints a private repository's
+# name: the umbrella's comes from a secret, which the log masks, and the
+# pull's own errors, which name the producers, stay in a file.
 on:
   schedule:
     - cron: '0 21 * * *'   # 06:00 KST
   workflow_dispatch:
 
-# Elevated only here. The repo default stays read, so no other workflow gains
-# write access.
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    environment: contracts-sync
+    permissions:
+      contents: write
+      pull-requests: write
     env:
       BASE: dev
       SYNC_BRANCH: contracts/sync
     steps:
+      # Fail closed before anything reaches a private repository: without the
+      # token, `pull` would fall back to anonymous reads and print the
+      # producers' names in its error.
+      - name: Require the environment's secrets
+        env:
+          UMBRELLA_DEPLOY_KEY: ${{ secrets.UMBRELLA_DEPLOY_KEY }}
+          UMBRELLA_REPOSITORY: ${{ secrets.UMBRELLA_REPOSITORY }}
+          FLEET_READ_TOKEN: ${{ secrets.FLEET_READ_TOKEN }}
+        run: |
+          missing=""
+          for name in UMBRELLA_DEPLOY_KEY UMBRELLA_REPOSITORY FLEET_READ_TOKEN; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::the contracts-sync environment does not set:$missing. Nothing was fetched."
+            exit 1
+          fi
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: dev
           fetch-depth: 0
 
       - name: Fetch contract tooling
-        # The umbrella repo is private; clone it with its read-only deploy key
-        # and GitHub's pinned host key.
+        # The umbrella repository owns the contracts and is private; clone it
+        # with its read-only deploy key and GitHub's pinned host key.
+        # UMBRELLA_REPOSITORY is its `owner/name`.
         env:
           UMBRELLA_DEPLOY_KEY: ${{ secrets.UMBRELLA_DEPLOY_KEY }}
+          UMBRELLA_REPOSITORY: ${{ secrets.UMBRELLA_REPOSITORY }}
         run: |
           key="$RUNNER_TEMP/umbrella_key"
           printf '%s\n' "$UMBRELLA_DEPLOY_KEY" > "$key"
           chmod 600 "$key"
           echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$RUNNER_TEMP/known_hosts"
           GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/known_hosts" \
-            git clone --depth 1 git@github.com:spencer0124/skkuverse.git "$RUNNER_TEMP/sv"
+            git clone --depth 1 "git@github.com:$UMBRELLA_REPOSITORY.git" "$RUNNER_TEMP/sv"
           rm -f "$key"
 
       - name: Pull upstream contract state
-        # `shell: bash` is load-bearing: the implicit shell is `bash -e {0}`,
-        # which has errexit but NO pipefail, so `pull | tee` would take tee's
-        # exit status and a failing pull would look successful. Naming bash
-        # explicitly gets `bash --noprofile --norc -eo pipefail {0}`.
-        shell: bash
-        # The producers are private repositories (umbrella ADR 0007), and this
-        # workflow's own GITHUB_TOKEN reads only this repo. FLEET_READ_TOKEN is
-        # the fleet's read-only token, synced from Doppler the CI config.
+        # The producers are private repositories, and this workflow's own
+        # GITHUB_TOKEN reads only this repo. FLEET_READ_TOKEN is a read-only
+        # token for them. The report names only contract ids and hashes; an
+        # error names the producers, so it stays in a file.
         env:
           FLEET_READ_TOKEN: ${{ secrets.FLEET_READ_TOKEN }}
         run: |
-          python3 "$RUNNER_TEMP/sv/exported/sync_contracts.py" pull --repo server --root . \
-            | tee "$RUNNER_TEMP/pull.txt"
+          if ! python3 "$RUNNER_TEMP/sv/exported/sync_contracts.py" pull --repo server --root . \
+              > "$RUNNER_TEMP/pull.txt" 2> "$RUNNER_TEMP/pull.err"; then
+            echo "::error::pull failed. Its error names private repositories, so it is not printed here: run the same pull in the umbrella to see it."
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/pull.txt"
+
+      # WHY: a pull request this workflow opens starts no other workflow (it
+      # uses GITHUB_TOKEN), so its CI does not run on its own; the sync checks
+      # the pulled state itself before it proposes it.
+      - name: Contract integrity of the pulled state
+        run: python3 .github/contract-tools/exported/sync_contracts.py check --repo server --root .
 
       # No drift means `pull` wrote nothing at all — it rewrites a lock only
-      # when a hash actually changed, so a clean fleet produces zero diffs.
+      # when a hash actually changed, so a clean fleet produces zero changes.
       # That property is what keeps this workflow silent on most days.
+      # `status --porcelain` rather than `diff`: a newly vendored file is
+      # untracked.
       - name: Stop if already in sync
         id: drift
         run: |
-          if git diff --quiet; then
+          if [ -z "$(git status --porcelain)" ]; then
             echo "in sync — nothing to propose"
             echo "drifted=false" >> "$GITHUB_OUTPUT"
           else
             echo "drifted=true" >> "$GITHUB_OUTPUT"
-            git --no-pager diff --stat
+            git status --short
           fi
 
       - name: Open or update the sync PR
@@ -87,17 +123,17 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$SYNC_BRANCH"
-          git commit -am "chore(contracts): sync vendored config from upstream SSOT"
+          git add -A
+          git commit -m "chore(contracts): sync vendored config from upstream SSOT"
           git push -f origin "$SYNC_BRANCH"
 
-          # The PR carries both the updated files and the updated lock, so its
-          # own integrity check is green — it is merge-ready, not a chore.
-          body="$(printf 'Upstream SSOT moved and this repo is behind. Opened automatically by `.github/workflows/contracts-sync.yml`.\n\nThe vendored files **and** `.contracts.lock.json` are both updated here, so the integrity check on this PR is green — review the diff and merge.\n\n```\n%s\n```\n\nContract definitions: https://github.com/spencer0124/skkuverse/blob/main/contracts/manifest.json\n' "$(cat "$RUNNER_TEMP/pull.txt")")"
+          body="$(printf 'Upstream SSOT moved and this repo is behind. Opened automatically by `.github/workflows/contracts-sync.yml`.\n\nThe vendored files **and** `.contracts.lock.json` are both updated here, and the sync job ran the contract integrity check on this branch before opening it. CI does not start on its own for a pull request this workflow opens: close and reopen it to run CI, then review the diff and merge.\n\n```\n%s\n```\n' "$(cat "$RUNNER_TEMP/pull.txt")")"
 
           # Open PRs only: `gh pr view <branch>` also matches a CLOSED PR, which then got edited instead.
           existing="$(gh pr list --head "$SYNC_BRANCH" --state open --json number -q '.[0].number')"
           if [ -n "$existing" ]; then
-            gh pr edit "$existing" --body "$body"
+            # QUIRK(gh): `gh pr edit` can exit 0 without saving the body; the REST call fails loudly.
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$existing" -f body="$body" > /dev/null
             echo "updated the existing sync PR #$existing"
           else
             gh pr create --base "$BASE" --head "$SYNC_BRANCH" \

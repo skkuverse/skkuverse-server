@@ -3,7 +3,7 @@ title: Notice Search Overview — Hybrid Retrieval, Per-Replica State
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -33,7 +33,7 @@ Retrieval runs on every request, cache hits included, because the cache key hold
 
 ### D3. A 24-second answer under nginx's 30 seconds
 
-(An operations detail is left out of the public history.)
+Retrieval gets `RETRIEVAL_MAX_TIME_MS` (query-time embedding included) and the ai call `AI_TIMEOUT_MS`, so the answer lands under 24 s. The app waits about 25 s with no retry, and nginx closes at `proxy_read_timeout 30s` (the host's api site, configured outside this repository): a server timeout rises only after those two.
 
 ## Consequences
 

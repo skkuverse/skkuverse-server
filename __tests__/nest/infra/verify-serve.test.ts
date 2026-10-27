@@ -1,7 +1,7 @@
 /**
  * `npm run verify:serve` builds the production topology with the perimeter overlay, as a deploy does (ADR 0023, D4):
- * it takes the overlay folder from PERIMETER_OVERLAY_DIR or the sibling companion checkout, refuses to start without
- * the overlay's entry there, and labels the image with the companion commit, marked dirty when that checkout has
+ * it takes the overlay folder only from PERIMETER_OVERLAY_DIR, refuses to start without it or without the overlay's
+ * entry there, and labels the image with the companion commit, marked dirty when that checkout has
  * changes. A stub `docker` on PATH records what compose would run.
  */
 import { execFileSync, spawnSync } from "node:child_process";
@@ -55,16 +55,15 @@ describe("npm run verify:serve", () => {
     expect([pkg.scripts["verify:serve"], pkg.scripts["verify:serve:down"]]).toEqual(["node scripts/verify-serve.js up", "node scripts/verify-serve.js down"]);
   });
 
-  it("takes the overlay from the sibling the private companion repository checkout when PERIMETER_OVERLAY_DIR is unset", () => {
-    // Arrange
-    const sibling = path.join(root, "..", "private-companion-repository", "server-overlay", "src");
-
+  it("refuses to start when PERIMETER_OVERLAY_DIR is unset, naming the variable, and runs no compose", () => {
     // Act
     const run = runVerifyServe(["up"], {});
 
     // Assert
-    // WHY: with the sibling checked out compose runs with it; without, the refusal names it.
-    expect(`${run.stderr}${run.docker ?? ""}`).toContain(sibling);
+    // WHY: no default folder, so a checkout beside some other overlay is never built by accident.
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("PERIMETER_OVERLAY_DIR is not set");
+    expect(run.docker).toBeNull();
   });
 
   it("refuses to start without the overlay entry, naming the folder, and runs no compose", () => {

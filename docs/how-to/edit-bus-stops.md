@@ -3,7 +3,7 @@ title: Edit Bus Stops
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -47,7 +47,7 @@ A push that changes a stop, a sequence or an alias reaches its page within a min
 | A stop's `id` | Lower-case words of `a-z` and `0-9` joined by single hyphens, unique, with at least one letter (a TOPIS pole's id is all digits) and never starting with `seoul-` (a pole's alias). An id on the wire never changes: clients hold it |
 | `name`, `detail`, a label or note | `ko` required, `en` and `zh` never blank when present |
 | `coords` | Inside South Korea; required for a stop the HSSC line or a sequence names or that has `arsIds` or `topisIds` (the app opens only a stop with coordinates, above), and for a stop with a `guide`. Only the push checks it: a stored revision without them still serves, with `coords: null` on the stop list |
-| `photo` | (A collector detail is left out of the public history.) |
+| `photo` | Every URL on `media.skkuverse.com` (upload first; the photos are rendered and uploaded with a tool kept privately); variants only for `ko`, `en` and `zh`, and only beside an original |
 | `panorama` | A 22-character NAVER panorama id, integer `pan` (−180 to 180), `tilt` (−90 to 90) and `fov` (25 to 80) |
 | `guide` | Subway exit places, and walks of at most 500 m that start or end at the stop as the sequences use it |
 | `subwayStationId` | A station slug the subway module serves |
@@ -121,7 +121,7 @@ Keep the `[하차전용]` (and `[미정차]`) markers in the names until the app
 
 ### Add an alias
 
-(An operations detail is left out of the public history.)
+Add one only for a pair confirmed on site to be one pole: two stops however close stay two pages until then (none is confirmed today).
 
 1. Pull `_dev` and add the pole's station id to the local stop's `topisIds`, keeping every other field of its entry. Prefer the station id: it is never reused and survives a rename, while ARS numbers collide; the ARS number in `arsIds` still works:
 
@@ -200,7 +200,7 @@ Then run the printed `npm run schedule -- --file /tmp/commute-schedule.before.js
 
 - `npm run data -- check bus-stops --prod` exits `0`, and after a length change `npm run schedule -- --file <timetable file> --check --prod` does too.
 - Within a minute, `/bus/config/<group>` answers the new body with a new ETag, and an untouched group keeps its ETag.
-- (An operations detail is left out of the public history.)
+- No `bus.stops.invalid` or `bus.eta.lane_strategy_unmatched` line in the production logs (Grafana Loki).
 
 ## Troubleshooting
 

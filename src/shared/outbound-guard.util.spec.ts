@@ -1,5 +1,5 @@
 /**
- * The attachment proxy's guarded request config (security fix): the caller's domain allowlist holds on every
+ * The attachment proxy's guarded request config (a security fix): the caller's domain allowlist holds on every
  * redirect hop, and the guarded agents and the redirect hook refuse loopback through axios and follow-redirects
  * against real loopback sockets.
  */

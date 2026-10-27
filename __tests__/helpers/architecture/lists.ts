@@ -1,7 +1,29 @@
 /**
- * (An operations detail is left out of the public history.)
+ * The lists a rule keeps beside it, and how each may change against the base
+ * branch (`list-growth`, architecture tests):
  *
+ *   - `allowlists/<rule>.json` and `ratchets/<rule>.json` only shrink. Each
+ *     entry the base did not have must have been added by commits of its own
+ *     (a merge does not count), and every commit that added it carries
+ *     `Architecture-Debt: <list path>` and changes a rule file that reads the
+ *     list (`listReaders`: an architecture test or helper, or
+ *     `eslint.config.js`, that names it): a new or stricter rule records the
+ *     debt that exists, nothing else does.
+ *   - `exemptions/<rule>.json` may gain an entry only when its reason cites a
+ *     decision that a heading in `docs/decisions/` declares and that
+ *     `EXEMPTION_DECISIONS` allows for that file. A size cap whose `max`
+ *     rises grows too: every commit that raises it carries
+ *     `Architecture-Debt: <size-caps path>`.
+ *   - `caps/<rule>.json` maps a key to the limit `eslint.config.js` applies
+ *     (`role-max-lines.json`: a role → its `max-lines`). A key may go and
+ *     a limit may fall; every commit that adds a key or raises a limit
+ *     carries `Architecture-Debt: <caps path>`.
  *
+ * The base is the merge base of HEAD and `ARCHITECTURE_BASE`, else
+ * `origin/$GITHUB_BASE_REF` on a pull request, else `origin/dev`. A pull
+ * request's CI (`.github/workflows/ci.yml`) compares with its base branch; a
+ * production deploy sets `ARCHITECTURE_BASE` to the commit the host runs now. CI checks out full history. A base that is not in the checkout fails when it was set
+ * explicitly or in CI, and is skipped locally otherwise.
  */
 import { execFileSync } from "child_process";
 import fs from "fs";

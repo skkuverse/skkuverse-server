@@ -1,5 +1,5 @@
 /**
- * The address policy inside the socket's own DNS lookup (security fix): a hostname connects only when every address
+ * The address policy inside the socket's own DNS lookup (a security fix): a hostname connects only when every address
  * it resolves to is public, so a rebinding answer or one private address among public ones is refused.
  */
 import { createGuardedLookup } from "./guarded-lookup.util";

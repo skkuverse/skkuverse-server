@@ -1,5 +1,5 @@
 {
-  "_about": "skkuverse-crawler's meals documents for 2026-10-14 (every cafeteria with a menu that day, both campuses), as its normalizer builds them from SKKU's menu pages fetched 2026-10-14 (MealDoc.fields, py/src/skkuverse_crawler/modules/meals/models.py) and handed over in a local path on 2026-10-17, before the crawler's first write to `meals`; untrimmed, `_updatedAt` absent because the sink adds it",
+  "_about": "skkuverse-crawler's meals documents for 2026-10-14 (every cafeteria with a menu that day, both campuses), as its normalizer builds them from SKKU's menu pages fetched 2026-10-14 (MealDoc.fields, py/src/skkuverse_crawler/modules/meals/models.py) and handed over by the crawler's developers on 2026-10-17, before the crawler's first write to `meals`; untrimmed, `_updatedAt` absent because the sink adds it",
   "documents": [
     {
       "cafeteriaId": "10201030",

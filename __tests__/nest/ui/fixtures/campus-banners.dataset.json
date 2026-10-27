@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the campus-banners dataset (skku_content.datasets, _id campus-banners): a copy of that revision as stored in skku_content and skku_content_dev on 2026-10-19, which production has served /ui/home/campus from since PR #291. The data tool pushed this data with _about removed. Nothing trimmed.",
+  "_about": "Revision 1 of the campus-banners dataset (skku_content.datasets, _id campus-banners): a copy of that revision as stored in skku_content and skku_content_dev on 2026-10-19, which production has served /ui/home/campus from since PR #291. The data tool pushed this data with _about removed. Nothing trimmed; one banner's Instagram handle is synthetic (@example_club_02) since 2026-10-27.",
   "type": "banner_carousel",
   "id": "campus_banners",
   "aspectRatio": 6,

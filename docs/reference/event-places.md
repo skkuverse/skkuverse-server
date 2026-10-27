@@ -3,7 +3,7 @@ title: Event Places — Storage, Authoring and Operations
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -287,14 +287,20 @@ survey used to be a CSV because a plot was flat; a place is not.
 
 ```bash
 # Validate and report. Writes nothing.
-NODE_ENV=production npm run eventmap:import -- --dry-run
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --dry-run
 
 # Import. Creates the activation if absent, DISABLED, and can never re-enable one.
-NODE_ENV=production npm run eventmap:import
+NODE_ENV=production npm run eventmap:import -- --file <sheet>
 
 # Remove places that have left the sheet.
-NODE_ENV=production npm run eventmap:import -- --delete-missing
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --delete-missing
 ```
+
+`--file` has no default. The committed `scripts/data/eskara-2026-places.json` carries placeholder
+Instagram handles (`example_club_NN`) and says so in its `_readme`, so with `NODE_ENV=production` the
+importer refuses it, and any sheet marked the same way, before it connects. Production imports the real
+sheet, which is kept outside this repository; the committed one serves `_dev`
+(`npm run eventmap:revive-dev`).
 
 Nothing is written if any place is rejected: a half-imported map is worse than none, because the
 missing booths are invisible and the ones that made it look authoritative.
@@ -317,8 +323,8 @@ logs a count, so the map still serves; but 62 skipped places with nothing drawn 
 leave production in.
 
 ```bash
-NODE_ENV=production npm run eventmap:import -- --dry-run       # lists them as orphans
-NODE_ENV=production npm run eventmap:import -- --delete-missing
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --dry-run       # lists them as orphans
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --delete-missing
 ```
 
 Then drop the two collections the snapshot tier left behind, which nothing reads and no index
@@ -394,7 +400,7 @@ the source IP, not a client TLS fault. Two causes, and they look identical:
    than the allowlisted one. Prefix the command:
 
    ```bash
-   NODE_OPTIONS=--dns-result-order=ipv4first node scripts/import-eventmap-places.js --dry-run
+   NODE_OPTIONS=--dns-result-order=ipv4first node scripts/import-eventmap-places.js --file <sheet> --dry-run
    ```
 
    This is a property of the network the script is run from, which is why it stays an environment

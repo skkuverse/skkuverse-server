@@ -3,7 +3,7 @@ title: Transit Route Planner
 type: plan
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-26
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -33,7 +33,7 @@ Verified against `src/` on 2026-10-25:
 
 ## PR sequence
 
-Every PR is test-first with `the test-first workflow` (ADR 0011, D9). (a) to (c) land on `dev` and wait there: `main` gets them together in (d), because they reshape the boards the installed app parses. From (e) on, each PR merges to `dev`, ships and is checked live before the next (pstack shipping).
+Every PR is test-first (ADR 0011, D9: the test is written from the behavior and fails on its assertion before the code). (a) to (c) land on `dev` and wait there: `main` gets them together in (d), because they reshape the boards the installed app parses. From (e) on, each PR merges to `dev`, ships and is checked live before the next (pstack shipping).
 
 | PR | Change | What it proves |
 | --- | --- | --- |

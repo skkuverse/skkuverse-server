@@ -3,7 +3,7 @@ title: 7800 and One Arrival Shape for Every Bus
 type: plan
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -211,7 +211,7 @@ Characterization first (ADR 0010, D12): `/bus/schedule/data/:serviceId/smart` an
 
 ## 8. PR sequence
 
-Each PR is test-first with `the test-first workflow` (ADR 0011, D9), merges to `dev`, ships, and is checked live before the next.
+Each PR is test-first (ADR 0011, D9: the test is written from the behavior and fails on its assertion before the code), merges to `dev`, ships, and is checked live before the next.
 
 | PR | Change | Tests first | On the wire |
 | --- | --- | --- | --- |
