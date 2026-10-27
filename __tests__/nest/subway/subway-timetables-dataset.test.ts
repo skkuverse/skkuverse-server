@@ -38,19 +38,29 @@ const SRC = path.join(__dirname, "../../../src");
 const NOW = new Date("2026-10-20T03:00:00.000Z");
 const AUTHOR = "alice@example.com";
 const DATASET = "subway-timetables";
+// EVIDENCE: storing all 18 tables (one upsert each) and reading them back through the part schema takes about 1 s
+// alone, the tool's and the repository's own work, and ran past Jest's 5 s default under an 8-worker run.
+const ROUND_TRIP_TIMEOUT_MS = 20_000;
 
 let mongod: TestMongod;
 let db: Db;
 let content: MongoDb;
 let repository: SubwayTimetableRepository;
+let checkedTables: CheckedPart[];
 
 /** The fixture's tables as the push checks them: parsed, keyed and summarized by the catalog entry. */
-function checkedFixture(): CheckedPart[] {
+function checkFixture(): CheckedPart[] {
   const catalog = loadCatalog((relativePath: string) => require(path.join(SRC, relativePath)));
   const files = subwayTimetableFixtureFiles().map(({ file, table }) => ({ file, data: table }));
   const checked = checkParts(catalog, DATASET, files, {}) as { issues: unknown[]; parts: CheckedPart[] };
   if (checked.issues.length > 0) throw new Error(`the fixture fails its push checks: ${JSON.stringify(checked.issues)}`);
   return checked.parts;
+}
+
+// EVIDENCE: checking the 18 tables took 230-330 ms of each test, and under an 8-worker run three of these tests
+// reached the 5 s timeout; so the checks run once and each test gets its own copy to change.
+function checkedFixture(): CheckedPart[] {
+  return structuredClone(checkedTables);
 }
 
 beforeAll(async () => {
@@ -62,6 +72,7 @@ beforeAll(async () => {
   const { SubwayTimetableRepository: Repository } = require("../../../src/subway/timetable/subway-timetable.repository") as RepositoryModule;
   const testingModule = await Test.createTestingModule({ providers: [Repository] }).compile();
   repository = testingModule.get(Repository);
+  checkedTables = checkFixture();
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
@@ -96,7 +107,7 @@ describe("the subway timetables stored by npm run data", () => {
     expect(read.missing).toEqual([]);
     expect(read.parts.map((part: { key: string; data: Timetable }) => [part.key, part.data])).toEqual(entries.map(({ key }) => [key, tablesByKey.get(key)]));
     expect(await content.collection("dataset_parts").countDocuments({ dataset: DATASET })).toBe(18);
-  });
+  }, ROUND_TRIP_TIMEOUT_MS);
 
   it("One line rebuilt: revision 2 changing the three 2호선 tables names the same parts as revision 1 for the other 15", async () => {
     // Arrange
@@ -117,7 +128,7 @@ describe("the subway timetables stored by npm run data", () => {
     const changed = [...after].filter(([key, partId]) => before.get(key) !== partId).map(([key]) => key);
     expect(changed).toEqual(["S1-2-holiday", "S1-2-saturday", "S1-2-weekday"]);
     expect(await content.collection("dataset_parts").countDocuments({ dataset: DATASET })).toBe(21);
-  });
+  }, ROUND_TRIP_TIMEOUT_MS);
 });
 
 describe("the subway timetables stored by npm run data, read by SubwayTimetableRepository", () => {
@@ -134,7 +145,7 @@ describe("the subway timetables stored by npm run data, read by SubwayTimetableR
     expect(manifest?.revision).toBe(1);
     expect(manifest?.data.parts.map((part) => part.key)).toEqual(checked.map((part) => part.key));
     expect(tables).toEqual(checked.map((part) => part.data));
-  });
+  }, ROUND_TRIP_TIMEOUT_MS);
 
   it("reads a stored part the schema refuses as null", async () => {
     // Arrange
