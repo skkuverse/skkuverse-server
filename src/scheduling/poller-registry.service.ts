@@ -204,7 +204,8 @@ export class PollerRegistryService
     if (!down) void this.pingHealthchecks();
   }
 
-  // (An operations detail is left out of the public history.)
+  // WHY: Sentry only emails; the Healthchecks.io check pages the maintainer when these pings stop. The URL is
+  // the check's credential, so neither it nor an error message that may quote it is logged.
   private async pingHealthchecks(): Promise<void> {
     const url = config.healthchecks.pollerPingUrl();
     if (!url) return;

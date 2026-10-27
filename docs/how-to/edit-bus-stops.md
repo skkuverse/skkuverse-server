@@ -3,7 +3,7 @@ title: Edit Bus Stops
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -200,7 +200,7 @@ Then run the printed `npm run schedule -- --file /tmp/commute-schedule.before.js
 
 - `npm run data -- check bus-stops --prod` exits `0`, and after a length change `npm run schedule -- --file <timetable file> --check --prod` does too.
 - Within a minute, `/bus/config/<group>` answers the new body with a new ETag, and an untouched group keeps its ETag.
-- (An operations detail is left out of the public history.)
+- No `bus.stops.invalid` or `bus.eta.lane_strategy_unmatched` line in the production logs (Grafana Loki).
 
 ## Troubleshooting
 

@@ -26,7 +26,7 @@ ADR 0011 (`docs/decisions/0011-test-strategy.md`) is the decision and its why; `
 ## Where a test lives
 
 - A unit test sits next to its source as `src/<path>/<name>.spec.ts`. Specs are type-checked by `npm run typecheck` (`tsconfig.json`) and left out of the build (a compiled spec in `dist/` fails it), of coverage and of the size caps.
-- (An operations detail is left out of the public history.)
+- Route tests and infrastructure tests (compose topology, config, `scripts/`) stay in `__tests__/nest/<module>/`.
 - `__tests__/helpers/` is shared infrastructure, never collected or counted in coverage. `__tests__/architecture/` holds the architecture rules.
 - Each role has one kind of test (ADR 0011 D1): `.rules` table-driven at each threshold (one below, at, one above); `.mapper` input → output with optional fields missing; `.schema` a captured document passes and a copy missing each `schema.shape` field fails; `.query` a structure pin, marked as such in its header; `.client` captured fixtures; `.service` over fakes; `.poller` registration and a rejecting failure; no spec for a controller or module.
 - Every `.service.ts` has its `.service.spec.ts`, unless it only delegates; then it is listed in `__tests__/architecture/exemptions/service-specs.json` with the reason (`service-specs`), and it keeps the delegation shape: no branch or loop in a method and at most two statements each, or it fails until it gets its spec.

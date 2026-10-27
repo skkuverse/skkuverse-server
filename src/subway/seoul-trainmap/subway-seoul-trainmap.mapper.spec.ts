@@ -2,7 +2,8 @@
  * The Seoul Metro train map page as the tracker takes it. What it guards:
  * every train `div` of the line's blocks (`<n>line_metro` and
  * `<n>line_korail`) is read from its `class` and `title` into a four-digit
- * train number, a station name, a status and a destination; a line block
+ * train number (a station `div`, whose class starts with a lowercase `t`, is
+ * none: every fixture keeps a few), a station name, a status and a destination; a line block
  * with no train in it is no train (line 4 at 05:16 KST on 2026-10-17, before
  * its first train), and a page with no block for the line or a train title of
  * another shape is a parse failure; each train at a covered station becomes a train event

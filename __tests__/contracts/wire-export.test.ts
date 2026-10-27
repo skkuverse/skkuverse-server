@@ -92,7 +92,8 @@ describe("drift check applies as specified", () => {
     expect(fs.readFileSync(path.join(dir, "fixtures/gone.z/case.json"), "utf8")).toBe('{ "_about": "kept" }\n');
   });
 
-  // (An operations detail is left out of the public history.)
+  // WHY: the produced contracts are public, so none is written from a checkout that holds the private perimeter
+  // overlay, which could add to them.
   it("refuses to write into a checkout whose src/private/ holds an overlay", () => {
     // Arrange
     const produced = path.join(dir, "contracts/produced");

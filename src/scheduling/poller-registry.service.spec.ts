@@ -458,7 +458,7 @@ describe("PollerRegistryService", () => {
     });
   });
 
-  // (An operations detail is left out of the public history.)
+  // The Healthchecks.io check pages the maintainer when the pings stop, which Sentry's email cannot.
   describe("Healthchecks.io heartbeat ping", () => {
     const PING_URL = "https://hc-ping.com/0f0e0d0c-test-ping-uuid";
     const HEARTBEAT_MS = 5 * 60_000;

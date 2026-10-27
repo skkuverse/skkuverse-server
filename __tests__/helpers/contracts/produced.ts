@@ -47,7 +47,9 @@ export const isEmptyDiff = (diff: ProducedDiff) =>
   diff.stale.length === 0 && diff.missing.length === 0 && diff.extra.length === 0;
 
 /**
- * (An operations detail is left out of the public history.)
+ * Writes the stale and missing files and deletes each extra `<id>.schema.json`; any other extra file stays.
+ * Refuses when the checkout holding `dir` (`<checkout>/contracts/produced`) has a `src/private/`: the produced
+ * contracts are public, and none is written from a tree that holds the private perimeter overlay.
  */
 export function writeProduced(dir: string, expected: ReadonlyMap<string, string>, diff: ProducedDiff): void {
   if (fs.existsSync(path.join(dir, "../../src/private"))) {
