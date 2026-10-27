@@ -1,5 +1,5 @@
 /**
- * The outbound URL policy (security fix): an http or https URL on the default port, without userinfo, whose host is
+ * The outbound URL policy (a security fix): an http or https URL on the default port, without userinfo, whose host is
  * no loopback, private or link-local address literal and, for an allowlist, one of the caller's domains or under one;
  * anything else is refused before any request is made.
  */
