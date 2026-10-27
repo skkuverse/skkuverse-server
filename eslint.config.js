@@ -704,7 +704,7 @@ module.exports = [
     rules: {
       "max-lines": ["error", { max: 337, skipBlankLines: true, skipComments: false }],
       "max-lines-per-function": ["error", { max: 37, skipBlankLines: true, skipComments: true }],
-      complexity: ["error", 11],
+      complexity: ["error", 9],
       "max-params": ["error", 4],
     },
   },

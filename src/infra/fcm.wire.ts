@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { linkActionType } from "../shared/link-action.wire";
 
-/** (An operations detail is left out of the public history.) */
+/** WHY: the notice request shape of the app's push function (Firebase, maintained outside this repository). */
 export const noticePushPayload = z.object({
   type: z.literal("notice"),
   noticeId: z.string(),
@@ -16,7 +16,7 @@ export const noticePushPayload = z.object({
   category: z.string().optional(),
 });
 
-/** (An operations detail is left out of the public history.) */
+/** WHY: the mini-app request shape of the app's push function (Firebase, maintained outside this repository); no `topics`. */
 export const miniAppPushPayload = z.object({
   type: z.literal("miniapp"),
   miniAppId: z.string(),
@@ -29,7 +29,8 @@ export const miniAppPushPayload = z.object({
   actionType: linkActionType.optional(),
   actionValue: z.string().optional(),
   /**
-   * (An operations detail is left out of the public history.)
+   * WHY: the push function copies a fixed list of keys into the device's data, and that list does not hold
+   * these two yet, so a device receives them only once the function names them.
    */
   chipId: z.string().optional(),
   placeId: z.string().optional(),

@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured (a push payload has no capture): the miniapp member of the union, as toPushPayload builds it; PushFunctionName02 in skkuverse-app/private-file reads it",
+  "_about": "Synthetic, never captured (a push payload has no capture): the miniapp member of the union, as toPushPayload builds it; the push function's MiniApp request shape reads it",
   "data": {
     "type": "miniapp",
     "miniAppId": "eskara-2026",
