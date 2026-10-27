@@ -254,7 +254,7 @@ describe("the public-workflow rules apply as specified", () => {
 
   it.each([
     ["an ssh clone URL", "git clone git@github.com:spencer0124/skkuverse.git"],
-    ["an https URL", "see https://github.com/spencer0124/private-operations-repository/blob/main/x.md"],
+    ["an https URL", "see https://github.com/spencer0124/example-private/blob/main/x.md"],
   ])("finds %s of a personal-account repository", (_case, text) => {
     // Act & Assert
     expect(namesPersonalRepository(text)).toBe(true);
