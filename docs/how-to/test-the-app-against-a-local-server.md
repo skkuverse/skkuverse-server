@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-26
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -13,7 +13,7 @@ audience: internal
 
 ## Overview
 
-A local server holds credentials that reach real people. The dev Doppler config points `FCM_FUNCTION_URL` at the Cloud Function production uses, and that function pushes by topic to every subscriber. So `NODE_ENV=development` (what `npm run dev` sets, and the default when `NODE_ENV` is unset) switches the outbound side effects off. The resolver is [`src/infra/runtime-switches.ts`](../../src/infra/runtime-switches.ts).
+A maintainer's local server holds credentials that reach real people. The maintainers' development `.env` points `FCM_FUNCTION_URL` at the Cloud Function production uses, and that function pushes by topic to every subscriber. So `NODE_ENV=development` (what `npm run dev` sets, and the default when `NODE_ENV` is unset) switches the outbound side effects off. The resolver is [`src/infra/runtime-switches.ts`](../../src/infra/runtime-switches.ts).
 
 | Env var | development | production | What "off" means |
 | --- | --- | --- | --- |
@@ -37,8 +37,8 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 
 ## Prerequisites
 
-- `.env` rendered with `npm run env:pull` (Doppler `backend/dev_server`).
-- A `skkuverse-app` checkout that builds natively (`npx expo run:ios` / `run:android`).
+- A `.env`. Write one with placeholder values as the [README's Quick start](../../README.md#quick-start) shows. Maintainers render theirs with `npm run env:pull` from the secret store instead.
+- A checkout of the app that builds natively (`npx expo run:ios` / `run:android`).
 
 ## Steps
 
@@ -50,7 +50,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 
    The `Server started (NestJS)` line shows the perimeter mode and the switches as resolved: `perimeter: "local-dev"`, `push: "suppressed"`, `cache: "off"`.
 
-2. In `skkuverse-app/apps/mobile/.env`, set `EXPO_PUBLIC_BASE_URL` for the device:
+2. In the app's `apps/mobile/.env`, set `EXPO_PUBLIC_BASE_URL` for the device:
 
    | Device | `EXPO_PUBLIC_BASE_URL` |
    | --- | --- |
@@ -60,11 +60,11 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 
    `npm run dev` sets `PERIMETER_MODE=local-dev` and `HOST=127.0.0.1`, so the server listens on loopback only, port `PORT` or 3000. The simulator and the emulator reach it; a phone on the Wi-Fi does not. `local-dev` refuses to start on any other address, and answers only a request whose `Host` is a loopback name, so the emulator's `10.0.2.2` alias gets a 403 ([ADR 0023](../decisions/0023-perimeter-ports.md)). Run `adb reverse` again after the emulator restarts. Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
 
-   A phone or a tunnel needs the `overlay` mode, the perimeter production runs. Its implementation is not in this repository ([ADR 0023](../decisions/0023-perimeter-ports.md)): a checkout without it refuses to start in `overlay` mode. With access to the private companion, run `npm run verify:serve`, which builds the production topology with the companion's overlay; never copy the overlay into a checkout you work in, because the public `npm test` would then run it with dummy settings. Without that access, use the simulator or the emulator.
+   A phone or a tunnel needs the `overlay` mode, the perimeter production runs, so it is for maintainers only. Its implementation is not in this repository ([ADR 0023](../decisions/0023-perimeter-ports.md)): a checkout without it refuses to start in `overlay` mode. With access to the private companion, run `npm run verify:serve`, which builds the production topology with the companion's overlay; never copy the overlay into a checkout you work in, because the public `npm test` would then run it with dummy settings. Without that access, use the simulator or the emulator.
 
-   The `overlay` mode reads its settings, the rate limits among them, from `PERIMETER_SETTINGS`, and the push quotas from `PERIMETER_SETTINGS_QUOTAS`, which `npm run env:pull` renders from the dev Doppler config. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
+   The `overlay` mode reads its settings, the rate limits among them, from `PERIMETER_SETTINGS`, and the push quotas from `PERIMETER_SETTINGS_QUOTAS`, which `npm run env:pull` renders from the maintainers' secret store. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
 
-3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing (`skkuverse-app/LESSONS.md`). Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
+3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing. Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
 
 4. Open a screen and check that the server's access log shows the request.
 
@@ -72,7 +72,7 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 
 ### Overriding a switch
 
-Set it on the command, like `USE_PROD_API`. These are per-run values: they are not in Doppler or `config/env.*.keys`, and a test fails if production's compose file or key lists set one.
+Set it on the command, like `USE_PROD_API`. These are per-run values: they are not in the secret store or `config/env.*.keys`, and a test fails if production's compose file or key lists set one.
 
 ```bash
 CACHE=on npm run dev             # check a TTL, a stale fallback or a Cache-Control value
@@ -84,7 +84,7 @@ A production override may only reduce outbound effects (`PUSH_DELIVERY=suppresse
 
 ## What still reaches production
 
-The switches cover what the server sends out. These are shared with production regardless:
+The switches cover what the server sends out. With the maintainers' development `.env`, these are shared with production regardless. With the README's placeholder `.env`, the server holds no production credential: only the Firebase project and the production web pages below still apply.
 
 - **Firebase.** There is one project, `skkubus-95723`. A dev build registers its FCM token in production Firestore (`devices/`), so the phone receives real production pushes. The local server verifies production ID tokens with the project id alone and holds no service-account key.
 - **Atlas.** The `_dev` databases live on the production cluster, which is billed by peak ops/s. Never load-test locally. `NODE_ENV=production` with the dev `.env` resolves production database names. To run the production image locally, use `npm run verify:serve`, which overrides them.
