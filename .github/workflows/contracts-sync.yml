@@ -127,6 +127,8 @@ jobs:
           git commit -m "chore(contracts): sync vendored config from upstream SSOT"
           git push -f origin "$SYNC_BRANCH"
 
+          # The backticks are Markdown code spans in the PR body, meant literally, not command substitutions.
+          # shellcheck disable=SC2016
           body="$(printf 'Upstream SSOT moved and this repo is behind. Opened automatically by `.github/workflows/contracts-sync.yml`.\n\nThe vendored files **and** `.contracts.lock.json` are both updated here, and the sync job ran the contract integrity check on this branch before opening it. CI does not start on its own for a pull request this workflow opens: close and reopen it to run CI, then review the diff and merge.\n\n```\n%s\n```\n' "$(cat "$RUNNER_TEMP/pull.txt")")"
 
           # Open PRs only: `gh pr view <branch>` also matches a CLOSED PR, which then got edited instead.
