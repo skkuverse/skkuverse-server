@@ -15,7 +15,7 @@
  * Usage:
  *   node scripts/import-eventmap-places.js [options]
  *
- *   --file <path>          default scripts/data/eskara-2026-places.json
+ *   --file <path>          the sheet; required (scripts/data/<layerSetId>-places.json)
  *   --layer-set-id <id>    default eskara-2026
  *   --dry-run              validate and report, write nothing
  *   --delete-missing       delete places absent from the sheet
@@ -23,6 +23,14 @@
  * Each `miniapp` action is checked against the mini app registry the server on
  * the same side serves: the `miniapps` dataset of the content database
  * (MONGO_CONTENT_DB_NAME, `_dev` unless NODE_ENV=production, as for eventmap).
+ *
+ * `--file` has no default, and with NODE_ENV=production a sheet that is not
+ * real is refused before anything connects: one whose `_readme` calls it
+ * synthetic, or that names an `example_club_` handle. The committed
+ * `scripts/data/eskara-2026-places.json` is such a sheet (its Instagram handles
+ * are placeholders for the public repository), so importing it into production
+ * would overwrite the real handles. Production imports the maintainer's real
+ * sheet, kept outside this repository.
  *
  * `--delete-missing` really deletes. There is no `lifecycle: "retired"` to fall
  * back on any more, and that is the point: a cancelled booth is removed from the
@@ -32,13 +40,11 @@
  */
 require("dotenv").config();
 const fs = require("fs");
-const path = require("path");
 const { MongoClient } = require("mongodb");
 
 const { parsePlacesFile } = require("./lib/map-places-file");
 const { ensureActivation, readMiniAppIds, resolveContentDbName, resolveDbName, upsertPlaces } = require("./lib/eventmap-db");
 
-const DEFAULT_FILE = path.join(__dirname, "data", "eskara-2026-places.json");
 const DEFAULT_LAYER_SET_ID = "eskara-2026";
 
 /**
@@ -57,7 +63,7 @@ function takeValue(argv, i, flag) {
 
 function parseArgs(argv) {
   const args = {
-    file: DEFAULT_FILE,
+    file: null,
     layerSetId: DEFAULT_LAYER_SET_ID,
     dryRun: false,
     deleteMissing: false,
@@ -70,9 +76,29 @@ function parseArgs(argv) {
     else if (arg === "--layer-set-id") args.layerSetId = takeValue(argv, ++i, "--layer-set-id");
     else throw new Error(`unknown argument: ${arg}`);
   }
-  if (!args.file) throw new Error("--file needs a value");
+  if (!args.file) throw new Error("--file is required: the sheet to import, such as scripts/data/<layerSetId>-places.json");
   if (!args.layerSetId) throw new Error("--layer-set-id needs a value");
   return args;
+}
+
+const SYNTHETIC_HANDLE = /example_club_/i;
+
+/**
+ * Why a sheet must not reach production, or null. A `_readme` that calls the
+ * sheet synthetic, or a placeholder handle anywhere in it, marks a sheet made
+ * for the public repository rather than one taken from the organisers.
+ */
+function productionRefusal(text) {
+  if (SYNTHETIC_HANDLE.test(text)) return "it names an example_club_ handle, a placeholder for a real one";
+  let readme;
+  try {
+    readme = JSON.parse(text)._readme;
+  } catch {
+    return null;
+  }
+  const lines = Array.isArray(readme) ? readme : [readme];
+  if (lines.some((line) => typeof line === "string" && /synthetic/i.test(line))) return "its _readme says it holds synthetic data";
+  return null;
 }
 
 /** How many places carry each number of opening windows. */
@@ -99,6 +125,11 @@ async function parseSheet(text, { layerSetId, contentDb }) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const text = fs.readFileSync(args.file, "utf8");
+  if (process.env.NODE_ENV === "production") {
+    const refusal = productionRefusal(text);
+    if (refusal) throw new Error(`refusing: ${args.file} is a synthetic sheet, not one for production: ${refusal}`);
+  }
 
   const mongoUrl = process.env.MONGO_URL;
   if (!mongoUrl) {
@@ -107,7 +138,6 @@ async function main() {
   }
   const dbName = resolveDbName();
   const contentDbName = resolveContentDbName();
-  const text = fs.readFileSync(args.file, "utf8");
 
   const client = new MongoClient(mongoUrl);
   await client.connect();
@@ -191,4 +221,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, parseSheet, windowHistogram };
+module.exports = { parseArgs, parseSheet, productionRefusal, windowHistogram };

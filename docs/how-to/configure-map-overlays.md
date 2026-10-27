@@ -3,7 +3,7 @@ title: Configure Map Overlays
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-23
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -104,7 +104,9 @@ A festival is three things, each written by its own tool, in this order:
    Repeat with `--prod` for production ([edit-runtime-data.md](edit-runtime-data.md)).
    A stored set no activation names is dormant: nothing reads it.
 2. **Its places**, in the eventmap database: `npm run eventmap:import` with
-   `--layer-set-id <layerSetId>`. The import also creates the festival's
+   `--file <sheet> --layer-set-id <layerSetId>`. A synthetic sheet, such as the
+   committed festival one, is refused for production
+   ([event-places.md §6.1](../reference/event-places.md#61-loading-content)). The import also creates the festival's
    activation, disabled.
 3. **Its window**: open the activation with
    `npm run eventmap -- open --layer-set-id <layerSetId>`, `--prod` for
