@@ -229,7 +229,7 @@ describe("the public-workflow rules apply as specified", () => {
 
   it.each([
     ["(An operations detail is left out of the public history.)", "git clone git@github.com:example/example.git"],
-    ["an https URL", "see the repository-outside-this-one repository"],
+    ["an https URL", "see the example-private repository"],
   ])("finds %s of a personal-account repository", (_case, text) => {
     // Act & Assert
     expect(namesPersonalRepository(text)).toBe(true);
