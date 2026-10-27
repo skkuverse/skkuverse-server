@@ -27,6 +27,7 @@ npm ci
 npm run typecheck
 npm run build
 python3 .github/contract-tools/exported/sync_contracts.py check --repo server --root .
+python3 .github/contract-tools/exported/lint_conventions.py --root . --only frontmatter --only structure
 npm test
 npm run lint
 npm run knip
@@ -35,7 +36,7 @@ npm run depcheck
 
 - Follow [CLAUDE.md](CLAUDE.md) and the architecture decision ([docs/decisions/0010-server-architecture.md](docs/decisions/0010-server-architecture.md)). The architecture tests in `__tests__/architecture/` and the ESLint rules enforce most of it.
 - Write the test first ([docs/decisions/0011-test-strategy.md](docs/decisions/0011-test-strategy.md)). Never weaken, skip or delete an existing test to get green.
-- Do not edit a vendored file listed in `.contracts.lock.json` by hand: its owner changes it, and a sync pull request brings it here.
+- Do not edit a vendored file listed in `.contracts.lock.json` by hand: its owner changes it, and the scheduled contract sync brings it here in a pull request. The vendored checker only checks; updating the lock needs the maintainers' private umbrella repository.
 - Write code, comments, docs and commit messages in English. Use conventional commit subjects, such as `fix(bus): …`.
 
 By contributing, you agree that your contribution is licensed under the [Apache License 2.0](LICENSE).

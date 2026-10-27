@@ -29,12 +29,36 @@ Third-party content in test fixtures
 
 Test fixtures (files under __tests__/ and contracts/produced/fixtures/) hold
 trimmed copies of third-party content, captured so that the tests run
-offline, among them:
+offline. By source:
 
-  - excerpts of SKKU notices (contracts/produced/fixtures/notices-*,
-    __tests__/nest/notices/fixtures/);
-  - captured responses of public transit APIs: Seoul's TOPIS bus API, the
-    Seoul subway API and Gyeonggi-do's GBIS bus API.
+  - Sungkyunkwan University (SKKU):
+      - notices: contracts/produced/fixtures/notices-*,
+        __tests__/nest/notices/fixtures/, and the place names taken from
+        notices in __tests__/nest/building/fixtures/place-labels.json;
+      - campus map buildings, spaces and facilities:
+        __tests__/nest/building/fixtures/skkumap-*.json;
+      - the academic calendar:
+        __tests__/nest/calendar/fixtures/academic-calendars.json;
+      - cafeteria menus:
+        __tests__/nest/meals/fixtures/crawler-meal-docs-2026-10-14.json;
+  - Seoul's TOPIS bus API: __tests__/nest/bus/fixtures/topis-*.json,
+    jongro-registry-routes.json, jongro-route-paths.json and
+    jongro02-origin-idling-sightings.json in the same folder, and
+    contracts/produced/fixtures/bus-realtime-group.realtimeGroup/jongro02.json;
+  - Gyeonggi-do's GBIS bus API:
+    __tests__/nest/bus/fixtures/gbis-location-7800.json;
+  - the Seoul subway API and Seoul open data:
+    __tests__/nest/subway/fixtures/realtime-*.json, seoul-station-info.json
+    and subway-timetables/ in the same folder;
+  - Seoul Metro's train map pages, cut to what the tests read:
+    __tests__/nest/subway/fixtures/trainmap-*.html;
+  - NAVER Directions: __tests__/nest/bus/fixtures/naver-directions-inja.json;
+  - this server's own production responses, which carry the data above:
+    the *.capture.json files under __tests__/ and the files under
+    contracts/produced/fixtures/.
+
+__tests__/nest/bus/fixtures/tmap-prediction-inja.json is synthetic and holds
+no TMAP data: TMAP's terms forbid keeping it longer than 24 hours.
 
 That content is not covered by the Apache License. It belongs to its
 authors and is included only to test this software.
