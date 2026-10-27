@@ -1,5 +1,8 @@
 /**
- * (A perimeter detail is left out of the public history.)
+ * Mini-app request-signing keys made in the test, in the format the private perimeter companion's key tool issues:
+ * the raw 32-byte Ed25519 public key as base64url without padding, and its key id, the first 16 lowercase hex
+ * characters of the key's SHA-256. And a signer written from the public spec (docs/reference/miniapps-api.md,
+ * "Signed calls"), not from the verifier, so a test signs what a mini app's backend would send.
  */
 import crypto from "node:crypto";
 

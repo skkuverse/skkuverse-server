@@ -5,8 +5,7 @@
  * without the overlay's entry refuses to boot, so `up` refuses to start without it.
  *
  * Usage:
- *   npm run verify:serve        # up: build and start, with the overlay from PERIMETER_OVERLAY_DIR or the sibling
- *                               #     companion checkout, ../private-companion-repository/server-overlay/src
+ *   PERIMETER_OVERLAY_DIR=<companion>/server-overlay/src npm run verify:serve   # up: build and start with the overlay
  *   npm run verify:serve:down   # down
  *
  * The image is labelled `local-<short companion commit>`, with `-dirty` when that checkout has changes.
@@ -18,7 +17,6 @@ const { execFileSync, spawnSync } = require("node:child_process");
 const ROOT = path.join(__dirname, "..");
 const COMPOSE = ["compose", "-f", "docker-compose.yml", "-f", "docker-compose.local-verify.yml"];
 const COMMANDS = { up: ["up", "-d", "--build"], down: ["down"] };
-const SIBLING_OVERLAY = path.join(ROOT, "..", "private-companion-repository", "server-overlay", "src");
 
 function fail(message) {
   console.error(`verify-serve: ${message}`);
@@ -39,7 +37,8 @@ function companionBuild(overlayDir) {
 }
 
 function overlayEnv() {
-  const overlayDir = path.resolve(process.env.PERIMETER_OVERLAY_DIR || SIBLING_OVERLAY);
+  if (!process.env.PERIMETER_OVERLAY_DIR) fail("PERIMETER_OVERLAY_DIR is not set: point it at the companion's server-overlay/src");
+  const overlayDir = path.resolve(process.env.PERIMETER_OVERLAY_DIR);
   if (!fs.existsSync(path.join(overlayDir, "perimeter.overlay.ts"))) {
     fail(`no perimeter.overlay.ts in ${overlayDir}: set PERIMETER_OVERLAY_DIR to the companion's server-overlay/src`);
   }
