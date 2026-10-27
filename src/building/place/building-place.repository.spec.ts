@@ -27,7 +27,7 @@ import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { BUILDING_CACHE_TTL_MS } from "../building.constants";
 import { BuildingPlaceRepository } from "./building-place.repository";
 
-const SPACE = { spaceCd: "33B101", buildNo: "133", campus: "hssc", floor: { ko: "지하1층", en: "B1" }, name: { ko: "계단강의실", en: "" } };
+const SPACE = { spaceCd: "33B101", buildNo: "133", campus: "hssc" };
 
 let clock = 1_000_000;
 let repository: BuildingPlaceRepository;
@@ -56,7 +56,7 @@ describe("BuildingPlaceRepository.listSpaces", () => {
     expect(find.mock.calls[0]).toEqual([
       { spaceCd: { $ne: null } },
       {
-        projection: { _id: 0, spaceCd: 1, buildNo: 1, campus: 1, floor: 1, name: 1, buildingName: 1 },
+        projection: { _id: 0, spaceCd: 1, buildNo: 1, campus: 1, buildingName: 1 },
         maxTimeMS: HOT_READ_MAX_TIME_MS,
       },
     ]);
@@ -65,7 +65,7 @@ describe("BuildingPlaceRepository.listSpaces", () => {
 
   it("leaves out and logs a space that does not parse, and keeps the rest", async () => {
     // Arrange
-    toArray.mockResolvedValue([SPACE, { ...SPACE, spaceCd: "33B102", campus: "seoul" }, { ...SPACE, spaceCd: "33B103", name: undefined }]);
+    toArray.mockResolvedValue([SPACE, { ...SPACE, spaceCd: "33B102", campus: "seoul" }, { ...SPACE, spaceCd: "33B103", buildNo: undefined }]);
 
     // Act
     const spaces = await repository.listSpaces();
@@ -73,7 +73,7 @@ describe("BuildingPlaceRepository.listSpaces", () => {
     // Assert
     expect(spaces).toEqual([SPACE]);
     expect(mockLogger.warn).toHaveBeenCalledWith(
-      { event: "building.spaces.invalid", count: 2, invalid: ["33B102: campus", "33B103: name"] },
+      { event: "building.spaces.invalid", count: 2, invalid: ["33B102: campus", "33B103: buildNo"] },
       expect.any(String),
     );
   });

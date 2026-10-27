@@ -14,7 +14,7 @@ import { placeSpace } from "./building-place.schema";
 
 const MAX_LOGGED_INVALID_SPACES = 10;
 
-const PLACE_SPACE_FIELDS = { _id: 0, spaceCd: 1, buildNo: 1, campus: 1, floor: 1, name: 1, buildingName: 1 } as const;
+const PLACE_SPACE_FIELDS = { _id: 0, spaceCd: 1, buildNo: 1, campus: 1, buildingName: 1 } as const;
 
 // WHY: the sort follows the spaces' unique index (spaceCd, buildNo, campus), which the writer creates, so the whole
 // read needs no in-memory sort.
