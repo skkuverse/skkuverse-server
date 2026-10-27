@@ -33,7 +33,7 @@
   },
   "src/bus/realtime/group/bus-realtime-group.wire.ts": {
     "max": 91,
-    "reason": "(An agent tooling note is left out of the public history.)"
+    "reason": "ADR 0010 D9, no domain seam: `realtimeGroup` is one response body, and its bus variants (`kind`, the `tracked` status union) and station arrivals are pieces of it, not flows; a `.wire` imports only zod, other wires and constants, and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the bus schema cannot move to a sub-module, and the CONTRACT, QUIRK and EVIDENCE comments the app relies on count toward the cap."
   },
   "src/bus/realtime/hssc-eta/bus-realtime-hssc-eta.rules.ts": {
     "max": 112,
