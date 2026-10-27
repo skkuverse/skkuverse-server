@@ -446,6 +446,20 @@ describe("claude.yml", () => {
     // Assert
     expect(lock).toEqual(expect.arrayContaining(["Read(.git/**)", "Bash(*--output*)", "Bash(*--no-index*)"]));
   });
+
+  // WHY: GitHub runs a review event on a fork's pull request without secrets, so the job could only fail there;
+  // on a fork's pull request a maintainer asks with a top-level comment (docs/cicd-and-branch-protection.md).
+  it("skips a review or a review comment on a fork's pull request", () => {
+    // Arrange
+    const gate = jobIf(jobBlocks(claude).get("mode") ?? "") ?? "";
+
+    // Act
+    const reviewDisjuncts = splitTop(unwrap(gate), "||").filter((d) => /github\.event_name == 'pull_request_review(?:_comment)?'/.test(d));
+
+    // Assert
+    expect(reviewDisjuncts).toHaveLength(2);
+    for (const disjunct of reviewDisjuncts) expect(conjuncts(disjunct)).toContain("!github.event.pull_request.head.repo.fork");
+  });
 });
 
 describe("contracts-sync.yml", () => {
