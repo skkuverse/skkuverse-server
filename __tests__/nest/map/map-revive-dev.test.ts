@@ -10,10 +10,11 @@
 const { planSteps } = require("../../../scripts/eventmap-revive-dev");
 
 describe("eventmap-revive-dev — planSteps", () => {
-  it("syncs the sheet into _dev, then opens a 240-minute dev window", () => {
+  it("syncs the committed sheet into _dev, naming it to the importer, then opens a 240-minute dev window", () => {
     // Act & Assert
+    // WHY: the importer has no default sheet, so a production run always names the one it writes.
     expect(planSteps([], {})).toEqual([
-      ["import-eventmap-places.js", "--delete-missing"],
+      ["import-eventmap-places.js", "--file", "scripts/data/eskara-2026-places.json", "--delete-missing"],
       ["eventmap-window.js", "open", "--minutes", "240"],
     ]);
   });

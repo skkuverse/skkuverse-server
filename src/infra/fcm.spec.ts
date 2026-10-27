@@ -1,7 +1,13 @@
 /**
- * (An operations detail is left out of the public history.)
+ * postToFcmFunction under each PUSH_DELIVERY value.
  *
+ * Suppressed is the development default, and the only thing between a local
+ * `npm run dev` and every real subscriber of a topic: the development config
+ * points at the Cloud Function production uses. So "suppressed" must mean the
+ * function is never called — not called with a flag, not called and ignored.
  *
+ * The guard holds only while postToFcmFunction is the one way out, so the last
+ * test fails if any other file in src/ reads the function URL or key.
  */
 import fs from "fs";
 import path from "path";

@@ -8,7 +8,8 @@
  *   npm run eventmap:revive-dev [-- --minutes <n>] [--file <path>] [--layer-set-id <id>]
  *
  *   --minutes <n>          length of the dev window. Default 240
- *   --file <path>          the sheet. Default: the importer's (scripts/data/eskara-2026-places.json)
+ *   --file <path>          the sheet. Default: the committed one (scripts/data/eskara-2026-places.json),
+ *                          whose synthetic handles the importer accepts only outside production
  *   --layer-set-id <id>    default: the importer's and the window script's (eskara-2026)
  *
  * It only ever writes `_dev`. NODE_ENV=production or `--prod` anywhere in the
@@ -35,6 +36,7 @@ const { spawnSync } = require("child_process");
 const path = require("path");
 
 const DEFAULT_MINUTES = "240";
+const DEFAULT_FILE = "scripts/data/eskara-2026-places.json";
 
 function takeValue(argv, i, flag) {
   const value = argv[i];
@@ -53,7 +55,7 @@ function planSteps(argv, env) {
     throw new Error("refusing: --prod. This script only writes the _dev databases.");
   }
   let minutes = DEFAULT_MINUTES;
-  let file = null;
+  let file = DEFAULT_FILE;
   let layerSetId = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -64,7 +66,7 @@ function planSteps(argv, env) {
   }
   const layerSet = layerSetId ? ["--layer-set-id", layerSetId] : [];
   return [
-    ["import-eventmap-places.js", ...(file ? ["--file", file] : []), ...layerSet, "--delete-missing"],
+    ["import-eventmap-places.js", "--file", file, ...layerSet, "--delete-missing"],
     // eventmap-window.js validates --minutes itself (it rejects 1e2, -5, …).
     ["eventmap-window.js", "open", "--minutes", minutes, ...layerSet],
   ];
