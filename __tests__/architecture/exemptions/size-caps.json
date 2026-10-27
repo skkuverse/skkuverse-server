@@ -7,10 +7,6 @@
     "max": 172,
     "reason": "ADR 0010 D9, no reachable seam: `toPlaceIndex` derives one index from the synced buildings and spaces and `place-lexicon.json` (places, room keys, prefixes, aliases, offices, patterns), which both the resolve and display flows read whole, and the alias pass needs the places and spaces it is built over; a sibling sub-module cannot hold a part, since siblings share no rules (sub-modules.test.ts) and a parent never imports a child."
   },
-  "src/building/place/resolve/building-place-resolve.rules.ts": {
-    "max": 273,
-    "reason": "ADR 0010 D9, no reachable seam: `resolvePlace` is one ordered method (off-campus markers, printed codes, building names, weak names, offices, the library board, online, campus only) whose steps read one `PlaceReading` and return early in that order, so the precedence is the decision; the room and alias lookups it calls are reached only from it, and a sibling sub-module cannot share rules with it (sub-modules.test.ts)."
-  },
   "src/bus/bus.wire.ts": {
     "max": 72,
     "reason": "ADR 0010 D9, no domain seam: `vehicle`, `vehiclePosition` and `operation` are the bus pieces of the one live shape that GET /bus/live/:groupId and the stop page both serve (ADR 0019), extending the shared call and vehicle of ADR 0022, and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the shapes the two routes share sit at the bus root beside the stop shapes /bus/config serves; each WHY a client reads to fall back on an open enum counts toward the cap."

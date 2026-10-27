@@ -23,7 +23,7 @@ Building serves SKKU's campus map, which skkuverse-crawler copies into MongoDB, 
 | `scripts/seed-connections.js` | — | Hand-written walkways between two floors | `connections`, read by `BuildingCatalogRepository` |
 | `scripts/import-campus-shapes.js` | — | Authored footprints, boundaries and paths | `campus_shapes`, parsed by `campusShapeDoc` in `BuildingRepository` |
 | `src/building/place/place-lexicon.json` | — | The place resolver's aliases, facility slugs, places skkumap lacks, room aliases, board tables and text patterns, reviewed as code | `placeLexicon`, parsed at import by `placeLexiconFile` |
-| skkuverse-crawler, a notice session's `where.places` (no caller yet) | — | One verbatim place string per entry, with the session's `campusHint` and the notice's `sourceId` | `BuildingPlaceResolveService.resolvePlaces` |
+| skkuverse-crawler, a notice session's stored place ids (no caller yet) | — | The pinned places the crawler resolved itself, as `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>` | `BuildingPlaceDisplayService.describePlaces` |
 
 buildInfo returns rooms that spaceList lacks, and the other way round, so the crawler merges both into `spaces`, and `sources` records which listed a room.
 
@@ -53,8 +53,7 @@ The brands live in `src/building/building.types.ts`; each is minted only by its 
 | campus shape (`CampusShapeDoc`) | A `campus_shapes` document: an authored footprint, boundary or path that `map` draws | `campusShapeDoc` | `geometryDoc` |
 | cafeteria list (`BuildingCafeteriaListService`) | Every cafeteria of a campus, in `conspaceCd` order, with the fields a listing serves (`ListedCafeteria`): the door `meals` lists cafeterias through (`cafeteria-list/`) | `BuildingCafeteriaListRepository.listCafeterias` | — |
 | catalog | Building's list-and-detail flow (`catalog/`): the list is the catalog, `:skkuId` one entry of it | `BuildingCatalogModule` | list, detail, core, read |
-| place mention (`PlaceMention`) | One place string a notice names, verbatim, with the session's campus hint (`hssc`, `nsc`, `both` or null; a hint only) and the notice's `source`, whose board may name a campus or a library | skkuverse-crawler's `where.places` | — |
-| resolved place (`ResolvedPlace`) | A pinned place (`PinnedPlace`: a `space`, a `building` or a `facility`) or `unresolved` with its reason (`online`, `offcampus`, `campusOnly`, `unknown`) and, when the text or the candidates share one, its campus | `resolvePlace` | — |
+| resolved place (`ResolvedPlace`) | A pinned place (`PinnedPlace`: a `space`, a `building` or a `facility`) or `unresolved` with its reason (`online`, `offcampus`, `campusOnly`, `unknown`) and its campus when it has one: what the primary-place picks read | — | — |
 | place id (`PlaceId`) | `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>`: the only form a pinned place is stored in; its name and code are derived at display | `toPlaceId` | — |
 | facility slug | The pinned id of a numberless place: a skkumap facility's by its `skkuId`, or a place skkumap lacks (`extraFacilities`), never derived from a name | `place-lexicon.json` | — |
 | place lexicon (`placeLexicon`) | The committed names and patterns the resolver decides by | `place-lexicon.json` | — |
@@ -77,7 +76,6 @@ flowchart LR
   fac -->|BuildingCafeteriaListService, cached| meals["meals: GET /meals/cafeterias"]
   lex["place-lexicon.json"] -->|placeLexicon| index["BuildingPlaceService<br/>toPlaceIndex"]
   bld & spc -->|BuildingRepository, BuildingPlaceRepository, cached| index
-  index -->|resolvePlace| resolve["BuildingPlaceResolveService"]
   index -->|toPlaceDisplay| display["BuildingPlaceDisplayService"]
   detail -->|building, floors, connections, cafeterias| sheet["app: BuildingDetailSheet"]
   search -->|buildings, spaces, counts| sscreen["app: SearchScreen"]
@@ -115,14 +113,14 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - `GET /building/:skkuId` answers `400` `INVALID_ID` for an id `isSkkuId` rejects, before any read, and `404` `NOT_FOUND` for a valid id with no building.
 - A `campus_shapes` document that fails `campusShapeDoc` is left out and logged (`building.campus_shapes.invalid`), and a failed reload serves the last good shapes for `CAMPUS_SHAPES_STALE_WINDOW_MS`. The buildings cache has no stale window, so a failed read reaches `map`.
 - The search ranks by the tier tables, in one `$facet` per collection so the counts describe the same predicate as the rows ([ADR 0006](../decisions/0006-building-search-relevance-ranking.md)).
-- A place string resolves deterministically, from the text: the campus hint and the board only choose among candidates the text produced, so neither moves a unique code or name. Candidates left on both campuses, in several buildings, or against the text's own campus are never guessed: they resolve `unresolved` `unknown`. A pinned place's name and code are derived from skkumap when shown (`toPlaceDisplay`), never stored, and show nothing once skkumap no longer holds it.
-- The lexicon is code, not a dataset ([ADR 0013, D2](../decisions/0013-runtime-data-in-mongodb.md)): the resolver decides by its names and patterns, a facility slug is an identity stored notices name, and the labelled strings in `building-place-resolve.rules.spec.ts` (no wrong building, recall kept) gate every change. A synced facility with no pinned slug, or an alias naming a place skkumap does not hold, is left out of the index and logged (`building.place.lexicon_gaps`).
-- The place index is rebuilt only when a cached read returns new data, so it is at most `BUILDING_CACHE_TTL_MS` late, and a failed read rejects rather than resolving every place `unknown`.
-- `BuildingService`, `BuildingCafeteriaListService`, `BuildingPlaceResolveService` and `BuildingPlaceDisplayService` are the doors other modules use; building's own flows inject the repositories ([ADR 0010, D1](../decisions/0010-server-architecture.md)).
+- A pinned place's name and code are derived from skkumap when shown (`toPlaceDisplay`), never stored, and show nothing once skkumap no longer holds it. Resolving a notice's place strings to pinned places is skkuverse-crawler's, not this server's.
+- The lexicon is code, not a dataset ([ADR 0013, D2](../decisions/0013-runtime-data-in-mongodb.md)): a facility slug is an identity stored notices name. A synced facility with no pinned slug, or an alias naming a place skkumap does not hold, is left out of the index and logged (`building.place.lexicon_gaps`).
+- The place index is rebuilt only when a cached read returns new data, so it is at most `BUILDING_CACHE_TTL_MS` late, and a failed read rejects rather than serving an empty index.
+- `BuildingService`, `BuildingCafeteriaListService` and `BuildingPlaceDisplayService` are the doors other modules use; building's own flows inject the repositories ([ADR 0010, D1](../decisions/0010-server-architecture.md)).
 
 ## Open questions
 
-- Place resolution has no caller yet: the notice flow that stores each session's resolved places waits on skkuverse-crawler's `where.places` field. The places skkumap lacks (`extraFacilities`) have no coordinates, so a map pin for one needs them first.
+- Place naming has no caller yet: the notice flow that names each session's stored place ids through `BuildingPlaceDisplayService` is not built. The places skkumap lacks (`extraFacilities`) have no coordinates, so a map pin for one needs them first.
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
 - A version stamp that api replicas check, so a crawler run reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
 - Why spaceList stamps a `conspaceCd` on some rooms and not on others. The detail serves it on each space, and nothing joins on it there.

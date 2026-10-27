@@ -33,8 +33,7 @@ offline. By source:
 
   - Sungkyunkwan University (SKKU):
       - notices: contracts/produced/fixtures/notices-*,
-        __tests__/nest/notices/fixtures/, and the place names taken from
-        notices in __tests__/nest/building/fixtures/place-labels.json;
+        __tests__/nest/notices/fixtures/;
       - campus map buildings, spaces and facilities:
         __tests__/nest/building/fixtures/skkumap-*.json;
       - the academic calendar:
