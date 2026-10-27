@@ -14,7 +14,7 @@ import { OVERLAY_ENTRY } from "../perimeter/perimeter-overlay.rules";
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), fatal: jest.fn() };
 jest.mock("./logger", () => mockLogger);
 
-const TOUCHED = ["NODE_ENV", "ROLE", "SEOUL_BUS_SERVICE_KEY", "PERIMETER_MODE", "HOST", "PERIMETER_OVERLAY_SHA"] as const;
+const TOUCHED = ["NODE_ENV", "ROLE", "SEOUL_BUS_SERVICE_KEY", "PERIMETER_MODE", "HOST", "PERIMETER_OVERLAY_SHA", "MONGO_URL"] as const;
 
 /** Requires a fresh config.ts with `env` over the test env, returns it, and restores the env after. */
 function loadConfigWith(env: Partial<Record<(typeof TOUCHED)[number], string | undefined>>): typeof import("./config") {
@@ -111,5 +111,22 @@ describe("loading config with an invalid perimeter mode or host", () => {
     // Act & Assert
     expect(() => loadConfigWith({ NODE_ENV: "test", ROLE: "api", HOST: undefined })).toThrow(/HOST is required where the server listens/);
     expect(() => loadConfigWith({ NODE_ENV: "test", ROLE: "poller", HOST: undefined })).not.toThrow();
+  });
+
+  // WHY: outside a test the first fatal line exits the process, so the line logged first is the only one a reader sees.
+  it("reports a missing overlay entry before a missing value", () => {
+    // Arrange
+    jest.doMock("../perimeter/perimeter-overlay.rules", () => ({
+      ...jest.requireActual("../perimeter/perimeter-overlay.rules"),
+      overlayResolveErrors: () => ["PERIMETER_MODE=overlay needs its implementation entry, which does not resolve (synthetic)"],
+    }));
+
+    try {
+      // Act & Assert
+      expect(() => loadConfigWith({ NODE_ENV: "test", PERIMETER_MODE: "overlay", MONGO_URL: undefined })).toThrow(/Invalid perimeter[\s\S]*does not resolve/);
+      expect(mockLogger.fatal.mock.calls.map(([fields]) => fields.event)).toEqual(["config.invalid_perimeter"]);
+    } finally {
+      jest.dontMock("../perimeter/perimeter-overlay.rules");
+    }
   });
 });

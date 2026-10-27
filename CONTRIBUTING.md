@@ -12,6 +12,8 @@ This server runs a live service with one maintainer, so we accept pull requests 
 
 Workflows on a pull request from a fork wait for a maintainer's approval before they run.
 
+A maintainer may ask Claude about a pull request with `@claude`. On a pull request from a fork, that works only in a top-level comment: GitHub runs a review or a review comment from a fork without the secret Claude needs.
+
 ## How changes flow
 
 - `dev` is the working branch. Every change reaches `dev`, by pull request or by a maintainer's commit.
