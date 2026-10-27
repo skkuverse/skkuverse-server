@@ -54,7 +54,7 @@ const config = {
   perimeter: {
     mode: process.env.PERIMETER_MODE as PerimeterMode,
     settings: perimeterSettingsOf(process.env),
-    // (An operations detail is left out of the public history.)
+    // WHY: the deploy builds the image with the overlay's commit; a build without the overlay is labelled `none`.
     overlayBuild: process.env.PERIMETER_OVERLAY_SHA || "none",
   },
 
@@ -241,7 +241,7 @@ const config = {
     release: process.env.GIT_SHA || undefined,
   },
 
-  // WHY: read per call, like role(): a test sets it per case. Only backend/prd_server holds it, so a laptop never pings.
+  // WHY: read per call, like role(): a test sets it per case. Only production's config sets it, so a laptop never pings.
   healthchecks: {
     pollerPingUrl(): string | undefined {
       return process.env.HEALTHCHECKS_POLLER_PING_URL || undefined;

@@ -9,7 +9,10 @@ import { commentBlocks, commentsOf, numberedKeys, vendoredSources, type SourceCo
 import { expectAllowlisted, ROOT } from "../helpers/architecture/ratchet";
 import { isGeneratedSource, isNonSpecSource, readSource, sourceFiles } from "../helpers/architecture/tree";
 
-/** The repos of CLAUDE.md "Ecosystem", and the in-repo consumers outside src/. */
+/**
+ * The public repos of CLAUDE.md "Ecosystem", and the in-repo consumers outside src/. A private repo is no
+ * CONTRACT target: this repository names no path in one, so a comment relying on one says WHY instead.
+ */
 export const CONTRACT_REPOS = [
   "skkuverse",
   "skkuverse-app",
@@ -18,7 +21,6 @@ export const CONTRACT_REPOS = [
   "skkuverse-web",
   "skkuverse-mini",
   "skkuverse-codepush",
-  "private-operations-repository",
   "scripts",
   "infra",
 ] as const;

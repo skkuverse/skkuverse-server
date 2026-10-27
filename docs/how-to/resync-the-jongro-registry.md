@@ -3,7 +3,7 @@ title: Resync the Jongro Registry
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-25
+last-updated: 2026-10-27
 audience: internal
 ---
 
@@ -24,7 +24,7 @@ An applied change logs `bus.jongro.registry_synced` (warn) with `fromVersion`, `
 
 ## Prerequisites
 
-- (An operations detail is left out of the public history.)
+- Read access to the production logs (Grafana Loki).
 - Write access to the production Atlas cluster with `mongosh`. The `_dev` databases share that cluster: check the database name before every write.
 - `SEOUL_BUS_SERVICE_KEY` (Doppler `backend/prd_server`, never printed) to ask TOPIS yourself.
 

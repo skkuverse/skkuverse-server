@@ -51,7 +51,9 @@ function sourceFiles(dir: string): string[] {
 
 const PRD = allowlist("config/env.prd.keys");
 const DEV = allowlist("config/env.dev.keys");
-// (An operations detail is left out of the public history.)
+// WHY: the deploy restarts the previous image against the newly rendered .env when a deploy fails health, so a
+// name that image requires stays listed for one release after the code stops reading it; the next release deletes
+// the entry, the name in both lists and the Doppler key.
 const KEPT_FOR_ROLLBACK: Readonly<Record<string, string>> = {};
 // Production adds SENTRY_DSN, and its overlay mode PERIMETER_SETTINGS, so its list is the longest.
 const REQUIRED = requiredValues({ NODE_ENV: "production", PERIMETER_MODE: "overlay" }).map((v) => v.env);
