@@ -17,7 +17,7 @@ function placeBuilding(skkuId: number, buildNo: string | null, campus: Campus, n
 }
 
 function placeSpace(spaceCd: string, buildNo: string, campus: Campus, buildingName = "건물"): PlaceSpace {
-  return { spaceCd: spaceCd as SpaceCd, buildNo: buildNo as BuildNo, campus, floor: text("1층"), name: text("강의실"), buildingName: text(buildingName) };
+  return { spaceCd: spaceCd as SpaceCd, buildNo: buildNo as BuildNo, campus, buildingName: text(buildingName) };
 }
 
 const EMPTY_LEXICON: PlaceLexicon = {

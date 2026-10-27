@@ -22,7 +22,5 @@ export const placeSpace = storedSpace.pick({
   spaceCd: true,
   buildNo: true,
   campus: true,
-  floor: true,
-  name: true,
   buildingName: true,
 }) satisfies z.ZodType<PlaceSpace>;

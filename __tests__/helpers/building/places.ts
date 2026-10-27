@@ -14,7 +14,7 @@ const FIXTURES = path.join(__dirname, "../../nest/building/fixtures");
 interface SkkumapPlacesFile {
   buildings: Array<[number, string | null, Campus, string]>;
   buildingNames: Record<string, string>;
-  spaces: Array<[string, string, Campus, string, string]>;
+  spaces: Array<[string, string, Campus]>;
 }
 
 const readFixture = <T>(file: string): T => JSON.parse(fs.readFileSync(path.join(FIXTURES, file), "utf8")) as T;
@@ -30,12 +30,10 @@ export function skkumapPlaces(): { buildings: PlaceBuilding[]; spaces: PlaceSpac
     campus,
     name: bilingual(name),
   }));
-  const spaces = file.spaces.map(([spaceCd, buildNo, campus, floor, name]) => ({
+  const spaces = file.spaces.map(([spaceCd, buildNo, campus]) => ({
     spaceCd: spaceCd as SpaceCd,
     buildNo: buildNo as BuildNo,
     campus,
-    floor: bilingual(floor),
-    name: bilingual(name),
     buildingName: bilingual(file.buildingNames[buildNo] ?? ""),
   }));
   return { buildings, spaces };
