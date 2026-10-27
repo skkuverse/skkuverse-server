@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured (a push payload has no capture): mirrors the payload toPushPayload builds and PushFunctionName02 in skkuverse-app/private-file reads, with a miniapp action",
+  "_about": "Synthetic, never captured (a push payload has no capture): mirrors the payload toPushPayload builds and the push function's MiniApp request shape reads, with a miniapp action",
   "data": {
     "type": "miniapp",
     "miniAppId": "eskara-2026",
