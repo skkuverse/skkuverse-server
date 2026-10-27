@@ -28,7 +28,7 @@ Accepted 2026-10-25. It supersedes, where they disagree, [transit-route-planner.
   - One call object serves both departure boards and itineraries (Transmodel `EstimatedCall`, OJP `CallAtStop`, MOTIS `StopTime`, OTP `StopCall`).
   - Legs split into a few structural kinds, with an open vehicle mode inside them (HERE `type` + `transport.mode`, OJP `TimedLeg` + `Service.Mode`).
   - Times are absolute, with scheduled and expected side by side and an explicit basis (SIRI Aimed/Expected; SIRI 2.1 warns that a missing prediction gets read both as "on time" and as "infinitely late").
-- (An agent tooling note is left out of the public history.)
+- `/bus/live`, the stop page and `/subway/...` are read only by app 3.6.2, the latest version. The owner ruled on 2026-10-25 that they may be reshaped: the server deploys and the app ships a matching OTA from the 3.6.2 hotfix branch at the same time, with no dual-serve. Every other wire stays additive-only.
 
 ## Decision
 
@@ -161,7 +161,7 @@ A stored field a new release adds is optional on read, because api replicas depl
 
 ## Consequences
 
-- (An agent tooling note is left out of the public history.)
+- The three boards change shape once, deployed with the app's OTA. A 3.6.2 bundle that has not applied the OTA degrades silently until it does: subway directions show no trains, and 막차 labels vanish. The owner accepted this and does not keep older bundles working.
 - Adding something later takes this much work:
   - A line of a polled source, or a stop area: data only (`journey-routes` or `bus-stops`).
   - A subway station or line: a code entry plus the topology and timetable data, the tracker stretch and the poller ceiling.

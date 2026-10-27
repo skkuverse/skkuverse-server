@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured (a push payload has no capture): the notice member of the union, as NoticesDispatcherService.buildPayload builds it; PushFunctionName03 in skkuverse-app/private-file reads it",
+  "_about": "Synthetic, never captured (a push payload has no capture): the notice member of the union, as NoticesDispatcherService.buildPayload builds it; the push function's Notice request shape reads it",
   "data": {
     "type": "notice",
     "noticeId": "6704f0c2a1b2c3d4e5f60718",

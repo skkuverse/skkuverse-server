@@ -1,10 +1,11 @@
 /**
- * (An operations detail is left out of the public history.)
+ * The topic mapping the push dispatch sends to: a source's fixed tab and the picker tabs that list it, under
+ * TOPIC_CAP, Firestore's `array-contains-any` limit that the push Cloud Function enforces.
  */
 import { buildTopics, TOPIC_CAP } from "../../../src/notices/notices.topics";
 
 describe("TOPIC_CAP", () => {
-  it("is 30 (at most the Cloud Function's PUSH_FUNCTION_NAME_01)", () => {
+  it("is 30, Firestore's array-contains-any limit", () => {
     // Assert
     expect(TOPIC_CAP).toBe(30);
   });

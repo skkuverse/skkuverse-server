@@ -235,7 +235,7 @@ Size and doc caps each PR must respect: `bus.wire.ts` (96), `bus-config.mapper.t
 | # | Question | Recommendation |
 | --- | --- | --- |
 | Q1 | 7800 as a fourth TOPIS route in the bus pipeline (this plan), or the planner plan's separate `journey/` poller | The bus pipeline: `/bus/live`, the stop page, directions, trajectories and the planner all from one poll, and no second TOPIS client |
-| Q2 | List 7800 on `/bus/config` now | (An agent tooling note is left out of the public history.) |
+| Q2 | List 7800 on `/bus/config` now | No. Installed bundles open a realtime card's `dataEndpoint`, the frozen route (D11); list it once the app's live-route screen is adopted, decided with the app side |
 | Q3 | Stop ids for poles with no ARS number | Local stops aliasing TOPIS station ids (`topisIds`); the two 성균관대학교 poles now, 성균관대역 only when a route uses it |
 | Q4 | 30 s, or 25 s like Jongno (arrivals 13,824 and positions ≤ 15,824 of 20,000: both fit) | 30 s for now, the 7800 owner's (bis) call; 25 s fits whenever it is wanted |
 | Q5 | Rename `jongro` code names (`realtime/jongro`, `JongroArrivalDoc`, …) to `topis` | Not in this sequence: a mechanical PR of its own after PR 4, stored key names unchanged |
