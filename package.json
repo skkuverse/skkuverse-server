@@ -13,6 +13,9 @@
       "runtimeDownload": false
     }
   },
+  "allowScripts": {
+    "mongodb-memory-server": true
+  },
   "scripts": {
     "start": "node dist/src/main.js",
     "prestart": "npm run build",
