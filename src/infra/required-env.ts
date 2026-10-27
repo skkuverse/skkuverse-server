@@ -4,7 +4,7 @@
  * Each name is also in config/env.*.keys (__tests__/nest/config/env-manifest.test.ts).
  */
 import { perimeterModeErrors } from "../perimeter/perimeter-mode.rules";
-import { perimeterOverlayErrors } from "../perimeter/perimeter-overlay.rules";
+import { overlayResolveErrors, perimeterOverlayErrors } from "../perimeter/perimeter-overlay.rules";
 import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
 
 export interface EnvMode {
@@ -175,6 +175,8 @@ function assertPerimeter(errors: readonly string[]): void {
 
 export function validateEnv(env: NodeJS.ProcessEnv = process.env): void {
   const { nodeEnv, isTest } = envMode(env);
+  // WHY: before the missing values: a checkout without the overlay also lacks the values only the overlay reads.
+  if (env.PERIMETER_MODE === "overlay") assertPerimeter(overlayResolveErrors());
   const modeErrors = perimeterModeErrors(env);
   const perimeter = modeErrors.length > 0 ? modeErrors : perimeterOverlayErrors(env);
   // WHY: a test sets its mode on purpose (jest.setup.ts), so a wrong one fails even where missing values pass.
