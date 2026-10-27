@@ -22,7 +22,7 @@ Building serves SKKU's campus map, which skkuverse-crawler copies into MongoDB, 
 | MongoDB | `mongo` | Storage, the GeoJSON indexes, and the aggregation the search runs | The five repositories, through `mongoCollection` |
 | `scripts/seed-connections.js` | — | Hand-written walkways between two floors | `connections`, read by `BuildingCatalogRepository` |
 | `scripts/import-campus-shapes.js` | — | Authored footprints, boundaries and paths | `campus_shapes`, parsed by `campusShapeDoc` in `BuildingRepository` |
-| `src/building/place/place-lexicon.json` | — | The place resolver's aliases, facility slugs, places skkumap lacks, room aliases, board tables and text patterns, reviewed as code | `placeLexicon`, parsed at import by `placeLexiconFile` |
+| `src/building/place/place-lexicon.json` | — | Facility slugs and the places skkumap lacks, reviewed as code | `placeLexicon`, parsed at import by `placeLexiconFile` |
 | skkuverse-crawler, a notice session's stored place ids (no caller yet) | — | The pinned places the crawler resolved itself, as `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>` | `BuildingPlaceDisplayService.describePlaces` |
 
 buildInfo returns rooms that spaceList lacks, and the other way round, so the crawler merges both into `spaces`, and `sources` records which listed a room.
@@ -56,8 +56,8 @@ The brands live in `src/building/building.types.ts`; each is minted only by its 
 | resolved place (`ResolvedPlace`) | A pinned place (`PinnedPlace`: a `space`, a `building` or a `facility`) or `unresolved` with its reason (`online`, `offcampus`, `campusOnly`, `unknown`) and its campus when it has one: what the primary-place picks read | — | — |
 | place id (`PlaceId`) | `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>`: the only form a pinned place is stored in; its name and code are derived at display | `toPlaceId` | — |
 | facility slug | The pinned id of a numberless place: a skkumap facility's by its `skkuId`, or a place skkumap lacks (`extraFacilities`), never derived from a name | `place-lexicon.json` | — |
-| place lexicon (`placeLexicon`) | The committed names and patterns the resolver decides by | `place-lexicon.json` | — |
-| place index (`PlaceIndex`) | Buildings, facilities, spaces, room keys, room-code prefixes, aliases and patterns, built from `buildings`, `spaces` and the lexicon | `toPlaceIndex` | — |
+| place lexicon (`placeLexicon`) | The committed facility slugs and the places skkumap lacks, which the place index is built with | `place-lexicon.json` | — |
+| place index (`PlaceIndex`) | The places by key and the spaces by room code, built from `buildings`, `spaces` and the lexicon | `toPlaceIndex` | — |
 | campus primary place (`CampusPrimaryPlace`) | The place a session shows on one campus (a space over a building over a facility, ties by list order) and the count of that campus's other pinned places | `pickPrimaryPlacesByCampus` | — |
 
 ## Structure
@@ -114,7 +114,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - A `campus_shapes` document that fails `campusShapeDoc` is left out and logged (`building.campus_shapes.invalid`), and a failed reload serves the last good shapes for `CAMPUS_SHAPES_STALE_WINDOW_MS`. The buildings cache has no stale window, so a failed read reaches `map`.
 - The search ranks by the tier tables, in one `$facet` per collection so the counts describe the same predicate as the rows ([ADR 0006](../decisions/0006-building-search-relevance-ranking.md)).
 - A pinned place's name and code are derived from skkumap when shown (`toPlaceDisplay`), never stored, and show nothing once skkumap no longer holds it. Resolving a notice's place strings to pinned places is skkuverse-crawler's, not this server's.
-- The lexicon is code, not a dataset ([ADR 0013, D2](../decisions/0013-runtime-data-in-mongodb.md)): a facility slug is an identity stored notices name. A synced facility with no pinned slug, or an alias naming a place skkumap does not hold, is left out of the index and logged (`building.place.lexicon_gaps`).
+- The lexicon is code, not a dataset ([ADR 0013, D2](../decisions/0013-runtime-data-in-mongodb.md)): a facility slug is an identity stored notices name. A synced facility with no pinned slug is left out of the index and logged (`building.place.lexicon_gaps`).
 - The place index is rebuilt only when a cached read returns new data, so it is at most `BUILDING_CACHE_TTL_MS` late, and a failed read rejects rather than serving an empty index.
 - `BuildingService`, `BuildingCafeteriaListService` and `BuildingPlaceDisplayService` are the doors other modules use; building's own flows inject the repositories ([ADR 0010, D1](../decisions/0010-server-architecture.md)).
 

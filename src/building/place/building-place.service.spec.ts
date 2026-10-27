@@ -1,10 +1,9 @@
 /**
- * BuildingPlaceService, the place index the resolve and display flows read,
- * over in-memory repositories: the index joins the synced buildings and
- * spaces with the committed lexicon, is rebuilt only when a read returns new
- * data, reports a facility with no pinned slug and a lexicon entry naming a
- * place skkumap does not hold, and a failed read rejects instead of serving
- * an empty index.
+ * BuildingPlaceService, the place index the display flow reads, over
+ * in-memory repositories: the index joins the synced buildings and spaces
+ * with the committed lexicon, is rebuilt only when a read returns new data,
+ * reports a facility with no pinned slug, and a failed read rejects instead
+ * of serving an empty index.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
@@ -81,7 +80,7 @@ describe("BuildingPlaceService.findPlaceIndex", () => {
     expect(rebuilt.spacesByCd.get("33B101")?.map((s) => s.campus)).toEqual(["hssc", "nsc"]);
   });
 
-  it("reports a facility with no pinned slug and an alias naming a building skkumap does not hold", async () => {
+  it("reports a facility with no pinned slug", async () => {
     // Arrange
     buildings.buildings = [...buildings.buildings, buildingDoc(99, null, "nsc", "새 광장")];
 
@@ -93,7 +92,6 @@ describe("BuildingPlaceService.findPlaceIndex", () => {
     const logged = logText(mockLogger.warn.mock.calls[0]);
     expect(logged).toContain("building.place.lexicon_gaps");
     expect(logged).toContain("99");
-    expect(logged).toContain("600주년");
   });
 
   it("rejects when a read fails", async () => {
