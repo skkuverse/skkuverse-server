@@ -17,7 +17,9 @@ for example:
   - the lists of department notice boards and their categories
     (src/notices/sources.json, src/notices/categories.json);
   - public transit timetables and station data from Seoul's open data
-    services (such as scripts/subway-timetable/).
+    services (such as scripts/subway-timetable/);
+  - festival places and hours, including public content of the student
+    council (scripts/data/).
 
 That data belongs to its sources and stays under their terms. Its presence
 here grants no license to it, and the Apache License does not apply to it.
@@ -25,8 +27,14 @@ here grants no license to it, and the Apache License does not apply to it.
 Third-party content in test fixtures
 ------------------------------------
 
-Test fixtures (files under __tests__/ and contracts/produced/fixtures/) may
-hold trimmed copies of third-party content, such as excerpts of university
-notices or responses from public APIs, captured so that the tests run
-offline. That content is not covered by the Apache License. It belongs to
-its authors and is included only to test this software.
+Test fixtures (files under __tests__/ and contracts/produced/fixtures/) hold
+trimmed copies of third-party content, captured so that the tests run
+offline, among them:
+
+  - excerpts of SKKU notices (contracts/produced/fixtures/notices-*,
+    __tests__/nest/notices/fixtures/);
+  - captured responses of public transit APIs: Seoul's TOPIS bus API, the
+    Seoul subway API and Gyeonggi-do's GBIS bus API.
+
+That content is not covered by the Apache License. It belongs to its
+authors and is included only to test this software.
