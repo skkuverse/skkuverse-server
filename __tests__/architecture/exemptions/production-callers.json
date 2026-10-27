@@ -1,5 +1,4 @@
 {
   "src/building/place/display/building-place-display.service.ts: BuildingPlaceDisplayService.describePlaces": "the door through which the notice place flow will name each stored place id, which waits on skkuverse-crawler storing `where.places`; public so other features can read building's places through its service only (ADR 0010 D2), and this entry fails once that flow calls it",
-  "src/building/place/resolve/building-place-resolve.service.ts: BuildingPlaceResolveService.resolvePlaces": "the door a notice poller will resolve each session's verbatim place strings through once the crawler's place field contract lands (docs/explanation/building-architecture.md); it reads the index through one cached repository read (ADR 0010 D2), and the entry must be deleted when that caller exists",
   "src/notices/dispatch/notices-dispatch.service.ts: NoticesDispatchService.dispatchGroup": "notices-dispatch.service.spec.ts pins one group's writes, its lease release when a write after the send fails, and its rejection paths by calling `dispatchGroup` directly, which a sweep reaches only through claims; making it private waits on that spec's rewrite over fakes (ADR 0011 D2)"
 }
