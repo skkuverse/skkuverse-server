@@ -20,12 +20,21 @@ function isLoopbackHost(host: string | undefined): boolean {
   return hostname === "localhost" || (hostname !== null && isLoopbackAddress(hostname));
 }
 
-// WHY: refuses what a tunnel, a proxy or a rebinding DNS name would bring to a local-dev server (ADR 0023, D2),
-// so its permissive perimeter answers this machine only.
+const WEB_ORIGIN = /^https?:\/\/(.*)$/;
+
+// WHY: a page on another site can make the developer's browser send a simple POST here, and local-dev internal
+// routes take no credential; such a request carries the page's Origin, or at least Sec-Fetch-Site: cross-site.
+function isCrossSite({ origin, "sec-fetch-site": fetchSite }: Request["headers"]): boolean {
+  if (origin === undefined) return fetchSite === "cross-site";
+  return !isLoopbackHost(WEB_ORIGIN.exec(origin)?.[1]);
+}
+
+// WHY: refuses what a tunnel, a proxy, a rebinding DNS name or another site's page would bring to a local-dev
+// server (ADR 0023, D2), so its permissive perimeter answers this machine only.
 @Injectable()
 export class LocalDevRequestMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
-    if (!isProxied(req.headers) && isLoopbackHost(req.headers.host)) {
+    if (!isProxied(req.headers) && isLoopbackHost(req.headers.host) && !isCrossSite(req.headers)) {
       next();
       return;
     }

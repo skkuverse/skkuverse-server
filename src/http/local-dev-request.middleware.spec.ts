@@ -66,3 +66,49 @@ describe("LocalDevRequestMiddleware.use", () => {
     expect(run({}).status).toBe(403);
   });
 });
+
+/**
+ * A page on another site can make the developer's browser send a simple request (a form POST) to a local-dev
+ * server, whose internal routes take no credential there. Such a request carries the page's Origin, or at least
+ * `Sec-Fetch-Site: cross-site`, so the filter refuses it; the simulator app, curl and a dev server on a loopback
+ * origin keep working.
+ */
+describe("LocalDevRequestMiddleware.use against cross-site requests", () => {
+  const host = "127.0.0.1:3000";
+
+  it.each([
+    ["no Origin (the native app, curl)", {}],
+    ["a localhost origin", { origin: "http://localhost:8081" }],
+    ["a 127.0.0.1 origin", { origin: "http://127.0.0.1:5173" }],
+    ["an IPv6 loopback origin", { origin: "http://[::1]:3000" }],
+    ["the server's own origin", { origin: "http://127.0.0.1:3000", "sec-fetch-site": "same-origin" }],
+    ["a cross-site fetch from a loopback dev server", { origin: "http://localhost:5173", "sec-fetch-site": "cross-site" }],
+    ["an address typed in the address bar", { "sec-fetch-site": "none" }],
+    ["a same-site request", { "sec-fetch-site": "same-site" }],
+  ])("passes %s", (_case, headers) => {
+    // Act
+    const outcome = run({ host, ...headers });
+
+    // Assert
+    expect(outcome).toEqual({ status: undefined, body: undefined, passed: true });
+  });
+
+  it.each([
+    ["a website's origin", { origin: "https://evil.example" }],
+    ["a first-party origin", { origin: "https://skkuverse.com" }],
+    ["an opaque origin", { origin: "null" }],
+    ["a LAN origin", { origin: "http://192.168.0.10:3000" }],
+    ["a loopback-looking name on another site", { origin: "http://localhost.evil.example" }],
+    ["a malformed origin", { origin: "not a url" }],
+    ["a cross-site request without an Origin", { "sec-fetch-site": "cross-site" }],
+    ["a website's origin that claims to be same-origin", { origin: "https://evil.example", "sec-fetch-site": "same-origin" }],
+  ])("refuses %s", (_case, headers) => {
+    // Act
+    const outcome = run({ host, ...headers });
+
+    // Assert
+    expect(outcome.passed).toBe(false);
+    expect(outcome.status).toBe(403);
+    expect(outcome.body).toEqual({ error: { code: "LOCAL_DEV_ONLY", message: "A local-development server answers requests from this machine only" } });
+  });
+});

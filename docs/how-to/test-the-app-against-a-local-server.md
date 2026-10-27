@@ -106,7 +106,7 @@ Sentry is off locally: the dev keys carry no `SENTRY_DSN`, and `npm run verify:s
 | Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the two refused combinations. |
 | Boot fails with `config.invalid_role` | `ROLE` is set to a value other than `api`, `poller` or `combined`. Leave it unset for a local run, which boots as `combined`. |
 | A local web page gets no `Access-Control-Allow-Origin` | Under `PERIMETER_MODE=local-dev`, only `http://localhost:*` and `http://127.0.0.1:*` are trusted, not LAN addresses. |
-| Every request answers 403 with `"code": "LOCAL_DEV_ONLY"` | `local-dev` answers only a request sent straight to a loopback name. A `Host` such as `10.0.2.2` or a LAN address is refused, and so is a request with a forwarding header (`Forwarded`, `X-Forwarded-*`, `X-Real-IP`, `Via`, `CF-Connecting-IP`) from a proxy or a tunnel. Use `localhost` (Android: `adb reverse tcp:3000 tcp:3000`), or the `overlay` mode for a phone or a tunnel. |
+| Every request answers 403 with `"code": "LOCAL_DEV_ONLY"` | `local-dev` answers only a request sent straight to a loopback name. A `Host` such as `10.0.2.2` or a LAN address is refused, and so is a request with a forwarding header (`Forwarded`, `X-Forwarded-*`, `X-Real-IP`, `Via`, `CF-Connecting-IP`) from a proxy or a tunnel, and one a page on another site sent (an `Origin` that is not `http://localhost:*` or `http://127.0.0.1:*`, or `Sec-Fetch-Site: cross-site`). Use `localhost` (Android: `adb reverse tcp:3000 tcp:3000`), or the `overlay` mode for a phone or a tunnel. |
 
 ## Related
 
