@@ -16,7 +16,9 @@
  *     src/infra/required-env.ts, so the two fail-loud layers cannot drift apart;
  *   - with every poller-scoped name gone, an api replica passes the check,
  *     boots every module and serves the bus, subway and map read routes from
- *     fakes (ADR 0012, D4), so no import, boot or read path needs a poller key.
+ *     fakes (ADR 0012, D4), so no import, boot or read path needs a poller key;
+ *   - README's Quick start .env, which an outsider writes by hand without the
+ *     secret store, names exactly what `npm run dev` requires and boots as written.
  *
  * Files are read with patterns rather than parsers: their shape is fixed and
  * the repo avoids the dependency.
@@ -25,7 +27,7 @@ import fs from "fs";
 import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { requiredValues } from "../../../src/infra/required-env";
+import { isRequiredIn, requiredValues, validateEnv } from "../../../src/infra/required-env";
 
 type BuildApiReplicaApp = typeof import("../../helpers/nest/api-replica-app")["buildApiReplicaApp"];
 
@@ -234,4 +236,39 @@ describe("an api replica without the pollers' keys", () => {
       expect(res.body.data).toBeDefined();
     },
   );
+});
+
+describe("README's Quick start .env", () => {
+  // WHY: development reads API_HSSC_NEW_DEV before the required API_HSSC_NEW_PROD (apiUrl() in
+  // src/infra/required-env.ts), so the README sets both and a reader sees which one development uses.
+  const OPTIONAL_IN_README = ["API_HSSC_NEW_DEV"];
+  const LOCAL_DEV_BOOT = { NODE_ENV: "development", PERIMETER_MODE: "local-dev", HOST: "127.0.0.1" };
+
+  function readmeEnv(): Record<string, string> {
+    const quickStart = read("README.md").split(/^## /m).find((section) => section.startsWith("Quick start"));
+    const block = quickStart?.match(/```dotenv\n([\s\S]*?)```/)?.[1] ?? "";
+    return Object.fromEntries([...block.matchAll(/^([A-Z][A-Z0-9_]*)=(.*)$/gm)].map((m) => [m[1]!, m[2]!]));
+  }
+
+  it("names exactly the values a local-dev development boot of the combined role requires, plus the allowed optional ones", () => {
+    // Arrange
+    const required = requiredValues(LOCAL_DEV_BOOT)
+      .filter((v) => isRequiredIn(v.scope, "combined"))
+      .map((v) => v.env);
+
+    // Act
+    const names = Object.keys(readmeEnv());
+
+    // Assert
+    expect(names.length).toBeGreaterThan(0);
+    expect([...names].sort()).toEqual([...new Set([...required, ...OPTIONAL_IN_README])].sort());
+  });
+
+  it("passes the boot check with only its values set", () => {
+    // Arrange
+    const env = { ...readmeEnv(), ...LOCAL_DEV_BOOT };
+
+    // Act & Assert
+    expect(() => validateEnv(env)).not.toThrow();
+  });
 });
