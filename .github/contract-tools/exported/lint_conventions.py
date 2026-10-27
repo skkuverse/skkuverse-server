@@ -257,7 +257,7 @@ def main(argv: list[str] | None = None) -> int:
     print()
     if total:
         print(f"  {total} finding(s)")
-        print(f"  Conventions: the skkuverse repository")
+        print("  Conventions: CLAUDE.md and docs/README.md in the skkuverse umbrella repository")
         print(f"  Declare a legitimate exception in {CONFIG_NAME}, not by weakening the rule.")
         return 1
     print("  all conventions satisfied")

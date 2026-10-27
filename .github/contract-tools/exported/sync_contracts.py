@@ -387,6 +387,19 @@ def now_iso() -> str:
 BUILD_ASSET_SCRIPT = "scripts/copy-build-assets.js"
 
 
+def pull_fix(repo: str) -> str:
+    """The `Fix:` line for a lock that `pull` rewrites.
+
+    `pull` needs the full manifest, which only the umbrella holds: a vendored
+    copy carries its repo's slice and stops at the first producer repo the
+    slice leaves out. So the fix names where `pull` runs.
+    """
+    return (
+        f"Fix:   in the umbrella, sync_contracts.py pull --repo {repo}; "
+        f"or merge the repo's contract sync pull request"
+    )
+
+
 def check_requirement(name: str, root: Path, path: str) -> str | None:
     """Return an error string, or None when satisfied."""
     if name == "server-build-asset":
@@ -433,7 +446,7 @@ def cmd_check_repo(manifest: dict[str, Any], repo: str, root: Path) -> int:
             print(f"  FAIL  {cid}")
             print("          In the lock but not in the manifest at all.")
             print("          Cause: the contract was renamed or retired.")
-            print(f"          Fix:   sync_contracts.py pull --repo {repo}")
+            print(f"          {pull_fix(repo)}")
         for cid in sorted(set(lock["contracts"]) & known):
             print(f"  ahead   {cid} — locked here, not active in the manifest yet")
         if not failures:
@@ -452,7 +465,7 @@ def cmd_check_repo(manifest: dict[str, Any], repo: str, root: Path) -> int:
             failures += 1
             print(f"  FAIL  {cid:<{width}}  {consumer['path']}")
             print(f"          No entry in {LOCK_NAME}.")
-            print(f"          Fix:   sync_contracts.py pull --repo {repo}")
+            print(f"          {pull_fix(repo)}")
             continue
 
         target = root / consumer["path"]
@@ -462,7 +475,7 @@ def cmd_check_repo(manifest: dict[str, Any], repo: str, root: Path) -> int:
             failures += 1
             print(f"  FAIL  {cid:<{width}}  {consumer['path']}")
             print("          Declared path does not exist in this repo.")
-            print("          Fix:   restore the file, or update contracts/manifest.json")
+            print("          Fix:   restore the file, or update contracts/manifest.json in the umbrella")
             continue
 
         if contract["kind"] == "constant":
@@ -477,7 +490,8 @@ def cmd_check_repo(manifest: dict[str, Any], repo: str, root: Path) -> int:
             if producer_value is None:
                 failures += 1
                 print(f"  FAIL  {cid:<{width}}  {consumer['symbol']}={value}")
-                print(f"          Lock has no producer value. Run pull --repo {repo}.")
+                print("          Lock has no producer value.")
+                print(f"          {pull_fix(repo)}")
             elif check_relation(relation, value, producer_value):
                 producer = contract["producer"]
                 commit = short(entry.get("producer", {}).get("commit"))
@@ -508,7 +522,7 @@ def cmd_check_repo(manifest: dict[str, Any], repo: str, root: Path) -> int:
                 print(f"          The vendored file does not match {LOCK_NAME}.")
                 print("          Cause: a hand edit, a partial copy, or a codegen")
                 print("                 copy that landed without a lock update.")
-                print(f"          Fix:   sync_contracts.py pull --repo {repo}")
+                print(f"          {pull_fix(repo)}")
 
         for requirement in consumer.get("requires", []):
             problem = check_requirement(requirement, root, consumer["path"])
@@ -530,7 +544,7 @@ def cmd_check_repo(manifest: dict[str, Any], repo: str, root: Path) -> int:
         print(f"  FAIL  {cid}")
         print("          In the lock but not in the manifest at all.")
         print("          Cause: the contract was renamed or retired.")
-        print(f"          Fix:   sync_contracts.py pull --repo {repo}")
+        print(f"          {pull_fix(repo)}")
 
     print()
     for cid in ahead:
@@ -1000,7 +1014,7 @@ def cmd_check_fleet(manifest: dict[str, Any], *, markdown: bool) -> int:
                 lines.append(
                     f"DRIFT  {cid}  {consumer['repo']} is behind\n"
                     f"         producer @ {short(producer_commit)}: {locked!r} -> {current!r}\n"
-                    f"         Fix: sync_contracts.py pull --repo {consumer['repo']}"
+                    f"         {pull_fix(consumer['repo'])}"
                 )
 
     if markdown:
