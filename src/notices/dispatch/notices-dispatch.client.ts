@@ -9,7 +9,8 @@ export class NoticesDispatchClient {
     return postToFcmFunction(this.toPushPayload(notice, topics));
   }
 
-  // (An operations detail is left out of the public history.)
+  // WHY: the Cloud Function relays these fields to the device, as its notice request shape names them;
+  // an empty category is left out, which it reads as the general channel (umbrella issue 78).
   private toPushPayload(notice: NoticeDoc, topics: string[]): NoticePushPayload {
     return {
       type: "notice",

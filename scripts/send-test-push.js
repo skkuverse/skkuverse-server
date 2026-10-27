@@ -1,10 +1,37 @@
 #!/usr/bin/env node
 /**
- * (A collector detail is left out of the public history.)
+ * Send, or by default only validate, one FCM message to one device token, with
+ * no key file and no env var. The runbook, with the project and the sender to
+ * pass, is kept in the private operations repository.
  *
+ * Usage:
+ *   node scripts/send-test-push.js --token <FCM registration token>
+ *     --project <Firebase project id> --impersonate <sa-email>
+ *     [--title T] [--body B] [--channel notice_general|miniapp_v2]
+ *     [--data '{"k":"v"}'] [--cred gcloud] [--send]
  *
+ *   --send         deliver for real. Without it the call is FCM's validate_only
+ *                  (messaging().send(message, true)): the message and token are
+ *                  checked and nothing reaches the device.
+ *   --cred         gcloud, the only source: a short-lived access token from
+ *                  `gcloud auth print-access-token --impersonate-service-account`,
+ *                  held in memory. Run `gcloud auth login` as the owner first.
+ *   --project      the Firebase project the device token belongs to. Required.
+ *   --impersonate  the service account to act as, one that holds only
+ *                  cloudmessaging.messages.create and has no key. Required.
+ *   --channel      the Android channel; the app creates notice_general and
+ *                  miniapp_v2.
+ *   --data         a JSON object of string values, sent as the data payload.
  *
+ * The message mirrors the alert the app's push function builds
+ * (Android high priority with a channel, APNs default sound and
+ * mutable-content) with no `data.type`, so a tap only opens the app.
  *
+ * Prints the mode, then only the message id or the error code and the first
+ * line of its message; when gcloud could not mint a token, its own first
+ * error line instead (not logged in, or no token-creator grant). Never the
+ * access token or the device token.
+ * Exit status: 0 sent or validated, 1 FCM or gcloud refused it, 2 bad arguments.
  */
 const { execFileSync } = require("node:child_process");
 const { parseArgs } = require("node:util");
