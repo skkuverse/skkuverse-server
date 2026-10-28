@@ -392,6 +392,18 @@ describe("toScreenBlocks, 이후 일정", () => {
       ["12/1(화)", "2026-12-01 행사"],
     ]);
   });
+
+  it("puts the verb before 예정 on a tentative date, as umbrella ADR 0009 D4 writes 11/12(목) 발표 예정", () => {
+    // Arrange
+    const tentative = { date: "2026-11-16", yearFilled: false, time: "", tentative: true, fuzzy: false, latest: "" };
+    const stored = record(WINDOW, (r) => r.times.push(sessionOn("tm_result", "2026-11-16", { kind: "result", verb: "발표", start: tentative })));
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored), only("laterSteps"));
+
+    // Assert
+    expect(block?.lines.map(({ text }) => text)).toEqual(["11/16(월) 발표 예정"]);
+  });
 });
 
 describe("toScreenBlocks, 바뀐 점", () => {
@@ -440,6 +452,39 @@ describe("toScreenBlocks, 문의", () => {
 
     // Act & Assert
     expect(toScreenBlocks(scopeOf(stored), only("contact"))).toEqual([]);
+  });
+});
+
+describe("toScreenBlocks, a sentence stated once for two things", () => {
+  it("shows a line once when two facts render the same text, sub and quote, and keeps lines that differ", () => {
+    // Arrange
+    const condition = (thing: string, quote: string) => ({
+      ev: evidenceOf(quote),
+      type: "gpa",
+      polarity: "include",
+      strength: "required",
+      thing,
+      scope: "",
+      restricts: true,
+      narrows: false,
+      appliesTo: [],
+      tag: "",
+      tagBy: "",
+    });
+    const benefit = (thing: string) => ({ ev: evidenceOf("등록금 전액"), thing, earnedBy: "selected", amount: null, isDraw: false, track: "", appliesTo: [], tag: "", tagBy: "" });
+    const stored = record(WINDOW, (r) => {
+      r.audience.conditions.push(condition(MAIN_THING, "평점 2.0 이상"), condition("th_other", "평점 2.0 이상"), condition("th_other", "학장 추천"));
+      r.benefits.push(benefit(MAIN_THING), benefit("th_other"));
+    });
+
+    // Act
+    const blocks = toScreenBlocks(scopeOf(stored), ["audience", "benefit"]);
+
+    // Assert
+    expect(blocks.map(({ label, lines }) => [label, lines.map(({ text }) => text)])).toEqual([
+      ["대상", ["평점 2.0 이상", "학장 추천"]],
+      ["혜택", ["등록금 전액"]],
+    ]);
   });
 });
 

@@ -447,13 +447,18 @@ function toCompactTitle({ facts }: RowSource, token: RowToken | null): string | 
 
 const toFullTitle = ({ facts, title }: RowSource): string => (facts.shortTitle.ok ? facts.shortTitle.text : title);
 
-const hasClock = (point: Point): boolean => dayOf(point) !== null && !point.fuzzy && !point.tentative && timeText(point) !== "";
+const isExactDay = (point: Point): boolean => dayOf(point) !== null && !point.fuzzy && !point.tentative;
 
-function toSameDayRange(item: RowItem, today: KstDay): string | null {
-  const { start, end, isOpenSeries } = item.days;
-  const isSameDay = start !== null && start === end && item.occurrences.length === 0 && !isOpenSeries;
-  if (item.kind === "window" || !isSameDay || !hasClock(item.start) || !hasClock(item.end)) return null;
-  return `${dayText(start, today)}${timeText(item.start)}~${timeText(item.end).trimStart()}`;
+const isExactSpan = ({ kind, days, occurrences, start, end }: RowItem): boolean =>
+  kind !== "window" && occurrences.length === 0 && !days.isOpenSeries && isExactDay(start) && isExactDay(end);
+
+// WHY: the detail lists every dated item, so a span keeps its first day, which line 2 drops for a deadline or a last day.
+function toSpanRange(item: RowItem, today: KstDay): string | null {
+  const { start, end } = item.days;
+  if (!isExactSpan(item) || start === null || end === null || end < start) return null;
+  const [from, to] = [timeText(item.start), timeText(item.end)];
+  if (start === end) return from && to ? `${dayText(start, today)}${from}~${to.trimStart()}` : null;
+  return `${dayText(start, today)}${from}~${dayText(end, today)}${to}`;
 }
 
 const kstDayOf = (date: Date | string): KstDay | null => (typeof date === "string" ? toKstDay(date) : kstDayAt(date.getTime()));
@@ -464,7 +469,7 @@ export function toRowReading(source: RowSource, now: Date): RowReading {
   const statusOf = (items: readonly RowItem[]): RowStatus => toDatedStatus({ ...scope, items });
   const toItemReading = (item: RowItem): ItemReading => {
     const status = statusOf([item]).kind;
-    const line = item.kind === "window" ? toWindowLine(item, status === "closed", today) : (toSameDayRange(item, today) ?? toDatedLine(item, today));
+    const line = item.kind === "window" ? toWindowLine(item, status === "closed", today) : (toSpanRange(item, today) ?? toDatedLine(item, today));
     return { item, status, line };
   };
   const onDay =

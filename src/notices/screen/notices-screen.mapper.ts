@@ -30,7 +30,7 @@ const BLOCK_LINES = {
 export function toScreenBlocks(scope: ScreenScope, order: readonly BlockKey[]): ScreenBlock[] {
   return order.flatMap((key) => {
     const { label, numbered, footerLink, maxLines } = BLOCK_SPECS[key];
-    const lines = BLOCK_LINES[key](scope);
+    const lines = toDistinctLines(BLOCK_LINES[key](scope));
     const shown = maxLines === null ? lines : lines.slice(0, maxLines);
     return lines.length > 0 ? [{ label, numbered, footerLink, lines: shown, foldedCount: lines.length - shown.length }] : [];
   });
@@ -102,6 +102,10 @@ function toPlaceSub({ where }: DatedItem, displayByPlaceId: ReadonlyMap<string, 
   });
   return names.length > 0 ? names.join(" · ") : (where.ev?.quote ?? null);
 }
+
+// WHY: umbrella ADR 0009 D10 shows each fact once; the record repeats a sentence it attaches to two things, with no tag.
+const toDistinctLines = (lines: readonly ScreenLine[]): ScreenLine[] =>
+  lines.filter((line, at) => lines.findIndex(({ text, sub, quote }) => text === line.text && sub === line.sub && quote === line.quote) === at);
 
 const toQuoteLine = (ev: Evidence, text: string): ScreenLine => ({ text, sub: null, fromPoster: isFromPoster(ev), actions: [], quote: ev.quote });
 

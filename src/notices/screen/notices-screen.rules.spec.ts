@@ -155,7 +155,7 @@ describe("toStatusLine", () => {
 
   it.each<[string, () => RawRecord, string, string | null]>([
     ["an event today", () => record(SESSION, (r) => { r.times[0].start.time = "18:00"; signUpClosedOn("2026-10-20", "사전신청")(r); }), "2026-10-29", "오늘 18시"],
-    ["an event under way", () => record(SESSION, (r) => { r.times[0].end.date = "2026-11-02"; signUpClosedOn("2026-10-20")(r); }), "2026-10-30", "진행 중 · 10/29(목)부터 11/2(월)까지"],
+    ["an event under way", () => record(SESSION, (r) => { r.times[0].end.date = "2026-11-02"; signUpClosedOn("2026-10-20")(r); }), "2026-10-30", "진행 중 · 10/29(목)~11/2(월)"],
     ["an event still ahead", () => record(SESSION, (r) => { r.times[0].start.time = "10:00"; signUpClosedOn("2026-10-20")(r); }), "2026-10-25", "10/29(목) 10시"],
     ["a weekly course closed in September on a day it meets", () => record(SERIES, signUpClosedOn("2026-09-07")), "2026-10-29", "오늘 16시 · 매주"],
   ])("says 마감됨 and the event part only when sign-up has closed and %s", (_label, stored, day, detail) => {
