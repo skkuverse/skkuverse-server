@@ -30,7 +30,7 @@ import { clusterKeyOf } from "../notices.rules";
 import { NoticesRowService } from "../row/notices-row.service";
 import type { NoticesListRepository } from "./notices-list.repository";
 import { decodeCursor } from "./notices-list.rules";
-import { CLUSTER_SCAN_FACTOR } from "./notices-list.constants";
+import { CLUSTER_SCAN_FACTOR, MAX_SCANS_PER_PAGE } from "./notices-list.constants";
 import { NoticesListService } from "./notices-list.service";
 import type { CursorPayload } from "./notices-list.types";
 import type { NoticeList } from "./notices-list.wire";
@@ -320,6 +320,32 @@ describe("NoticesListService.listNotices on several boards", () => {
     // Assert
     expect(page.notices.map((notice) => notice.articleNo)).toEqual([runLength + 2, 2]);
     expect(page.hasMore).toBe(true);
+  });
+
+  it("serves a shorter page that resumes after its last scanned row when a page runs out of scans", async () => {
+    // Arrange
+    const limit = 2;
+    const scannedPerPage = MAX_SCANS_PER_PAGE * CLUSTER_SCAN_FACTOR * (limit + 1);
+    const runLength = scannedPerPage + 2;
+    const repository = new FakeNoticesListRepository();
+    repository.docs = [
+      ...Array.from({ length: runLength }, (_, i) => doc(runLength + 10 - i, "2026-10-20", { sourceId: SCOPE[i % 2] ?? "skku-notice03", dupOf: anchor("A") })),
+      doc(2, "2026-10-19", { sourceId: "skku-notice03", dupOf: anchor("B") }),
+      doc(1, "2026-10-18", { sourceId: "skku-notice08" }),
+    ];
+    const lastScanned = repository.docs[scannedPerPage - 1]?._id.toHexString();
+    const service = serviceAt(repository);
+
+    // Act
+    const first = await service.listNotices(SCOPE, { limit, cursor: null });
+    const second = await service.listNotices(SCOPE, { limit, cursor: decodeCursor(first.nextCursor) });
+
+    // Assert
+    expect(first.notices.map((notice) => notice.articleNo)).toEqual([runLength + 10]);
+    expect(first.hasMore).toBe(true);
+    expect(decodeCursor(first.nextCursor).i).toBe(lastScanned);
+    expect(second.notices.map((notice) => notice.articleNo)).toEqual([2, 1]);
+    expect(second).toMatchObject({ hasMore: false, nextCursor: null });
   });
 
   it("serves every copy on a read of one source, named once or twice", async () => {

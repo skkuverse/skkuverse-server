@@ -27,11 +27,13 @@ export class NoticesListRepository implements OnModuleInit {
       .toArray();
   }
 
+  // QUIRK(atlas): a find's first batch holds 101 documents unless `batchSize` says more; past that each batch is a round trip.
   listScannedRows(scope: NoticeScope, query: NoticeListQuery, size: number): Promise<ScannedRow[]> {
     return this.notices()
       .find<ScannedRow>(toNoticeListFilter(scope, query, config.notices.serviceStartDate), {
         projection: SCAN_PROJECTION,
         maxTimeMS: HOT_READ_MAX_TIME_MS,
+        batchSize: size,
       })
       .sort(LIST_SORT)
       .hint(FORCE_INDEX)
