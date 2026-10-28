@@ -553,6 +553,95 @@ describe("GET /notices — paging across stored date shapes", () => {
   });
 });
 
+describe("GET /notices — the facts row on a list item", () => {
+  const ROW_CASE = path.join(__dirname, "fixtures/facts-rows/a_deadline_tomorrow_reads_as_one_while_the_window_is_open.json");
+  const RECORD = (JSON.parse(fs.readFileSync(ROW_CASE, "utf8")) as { record: { times: Array<{ start: { date: string }; end: { date: string } }> } }).record;
+
+  // The captured record's window ends 2026-10-26; shifted so that it ends the day after the fixed clock (2026-04-11 KST).
+  const factsEndingTomorrow = (): unknown => {
+    const facts = structuredClone(RECORD);
+    facts.times[0]!.start.date = "2026-04-05";
+    facts.times[0]!.end.date = "2026-04-12";
+    return facts;
+  };
+
+  const summaryFields = {
+    summaryAt: new Date("2026-04-10T06:00:00.000Z"),
+    summaryType: "action_required",
+    summaryOneLiner: "한 줄",
+    summaryPeriods: [{ label: "신청", startDate: "2026-04-05", startTime: null, endDate: "2026-04-12", endTime: "18:00" }],
+  };
+
+  const withFacts = (): NoticeDoc =>
+    rawDoc({
+      _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d201"),
+      articleNo: 201,
+      facts: factsEndingTomorrow(),
+      firstSeenAt: new Date("2026-04-11T01:00:00.000Z"),
+      ...summaryFields,
+    });
+  const withoutFacts = (): NoticeDoc => rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d202"), articleNo: 202, date: "2026-04-09", ...summaryFields });
+
+  it("serves `row` as finished Korean text next to a `summary` that is the one it was without facts", async () => {
+    // Arrange
+    listRepository.docs = [withFacts(), withoutFacts()];
+
+    // Act
+    const res = await request(httpServer).get("/notices/source/skku-main");
+    const [served, plain] = res.body.data.notices;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(served.row).toEqual({
+      token: { text: "내일 마감", tone: "urgent" },
+      title: "장학금",
+      when: "내일 마감",
+      urgent: true,
+      dateMark: null,
+      qualifier: null,
+      board: null,
+      dimmed: false,
+      day: "today",
+    });
+    expect(plain.row).toBeNull();
+    expect(served.summary).toEqual(plain.summary);
+    expect(served.summary).toEqual({
+      oneLiner: "한 줄",
+      type: "action_required",
+      startAt: { date: "2026-04-05", time: null },
+      endAt: { date: "2026-04-12", time: "18:00", label: "신청" },
+    });
+    expectWire(noticeList, res.body.data);
+  });
+
+  it("adds the board name on the multi-source list, and on it only", async () => {
+    // Arrange
+    listRepository.docs = [withFacts()];
+
+    // Act
+    const single = await request(httpServer).get("/notices/source/skku-main");
+    const multi = await request(httpServer).get("/notices?sourceIds=skku-main,cse-undergrad");
+
+    // Assert
+    expect(single.body.data.notices[0].row.board).toBeNull();
+    expect(multi.body.data.notices[0].row.board).toBe("학부통합(학사)");
+    expectWire(noticeList, multi.body.data);
+  });
+
+  it("serves the Korean row in every language", async () => {
+    // Arrange
+    listRepository.docs = [withFacts()];
+
+    // Act
+    const [ko, en, zh] = await Promise.all(["ko", "en", "zh"].map((lang) => request(httpServer).get("/notices/source/skku-main").set("Accept-Language", lang)));
+
+    // Assert
+    expect(en.body.data.notices[0].row).toEqual(ko.body.data.notices[0].row);
+    expect(zh.body.data.notices[0].row.when).toBe("내일 마감");
+    expect(en.body.meta.lang).toBe("en");
+  });
+});
+
 describe("GET /notices/:sourceId/:articleNo", () => {
   it("returns 400 INVALID_SOURCE_ID for unknown source", async () => {
     // Act

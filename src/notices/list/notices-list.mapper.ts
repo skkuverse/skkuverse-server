@@ -2,9 +2,10 @@ import type { SummaryPeriod } from "../notices.document";
 import { textOrNull } from "../notices.mapper";
 import type { NoticeListRow } from "./notices-list.document";
 import { normalizeSummaryType } from "../notices.rules";
-import { isV2Summary, selectEffectivePeriod, selectRoleBadge } from "./notices-list.rules";
-import type { CursorPayload, NoticePage } from "./notices-list.types";
-import type { NoticeListItem, NoticeSummaryBrief } from "./notices-list.wire";
+import type { FactsRow } from "../row/notices-row.types";
+import { isV2Summary, selectEffectivePeriod, selectRoleBadge, toListDay } from "./notices-list.rules";
+import type { CursorPayload, ItemRowOptions, NoticePage } from "./notices-list.types";
+import type { NoticeItemRow, NoticeListItem, NoticeSummaryBrief } from "./notices-list.wire";
 
 export function encodeCursor(cursor: CursorPayload): string {
   return Buffer.from(JSON.stringify({ d: cursor.d, c: cursor.c, i: cursor.i }), "utf8").toString("base64url");
@@ -41,7 +42,22 @@ export function toSummaryBrief(doc: NoticeListRow, now: Date): NoticeSummaryBrie
   return { oneLiner, type, ...toPeriodBrief(selected) };
 }
 
-export function toListItem(doc: NoticeListRow, now: Date): NoticeListItem {
+// CONTRACT(skkuverse-crawler): a copy stored before the sink recorded `firstSeenAt` has none; its anchor is the `_id` time (skkuverse-crawler/docs/notice-facts/design.md "Storage").
+export function toItemRow(row: FactsRow, doc: NoticeListRow, options: ItemRowOptions): NoticeItemRow {
+  return {
+    token: row.token,
+    title: row.title,
+    when: row.line2,
+    urgent: row.urgent,
+    dateMark: row.dateMark,
+    qualifier: row.qualifier,
+    board: options.boardNameById?.get(doc.sourceId) ?? null,
+    dimmed: row.dimmed,
+    day: toListDay(doc.firstSeenAt ?? doc._id.getTimestamp(), options.now),
+  };
+}
+
+export function toListItem(doc: NoticeListRow, now: Date, row: NoticeItemRow | null): NoticeListItem {
   return {
     id: doc._id.toHexString(),
     sourceId: doc.sourceId,
@@ -57,5 +73,6 @@ export function toListItem(doc: NoticeListRow, now: Date): NoticeListItem {
     hasAttachments: Array.isArray(doc.attachments) && doc.attachments.length > 0,
     isEdited: (doc.editCount || 0) > 0,
     summary: toSummaryBrief(doc, now),
+    row,
   };
 }
