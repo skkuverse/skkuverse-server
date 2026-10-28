@@ -1084,14 +1084,32 @@ describe("GET /notices/:sourceId/:articleNo — the screen", () => {
 
     // Act
     const served = await request(httpServer).get("/notices/skku-main/301");
-    const { screen, ...fields } = served.body.data;
+    const { screen, summary, ...fields } = served.body.data;
 
     // Assert
     expect(plain.body.data.screen).toBeNull();
     expect(screen).not.toBeNull();
-    expect(fields).toEqual({ ...plain.body.data, screen: undefined });
+    expect(fields).toEqual({ ...plain.body.data, screen: undefined, summary: undefined });
+    expect(summary).not.toBeNull();
     expectWire(noticeDetail, plain.body.data);
     expectWire(noticeDetail, served.body.data);
+  });
+
+  it("derives the summary a shipped app reads from the facts of a notice with none, and serves a stored one as it is", async () => {
+    // Arrange
+    const stored = { summaryAt: new Date("2026-04-10T04:00:00Z"), summaryOneLiner: "한 줄", summaryType: "event" };
+    detailRepository.docs = [detailDoc({ facts: facts() }), detailDoc({ facts: facts(), articleNo: 302, ...stored })];
+
+    // Act
+    const derived = await request(httpServer).get("/notices/skku-main/301");
+    const kept = await request(httpServer).get("/notices/skku-main/302");
+
+    // Assert
+    expect(derived.body.data.summary).toMatchObject({ text: null, type: "action_required", periods: [], model: null });
+    expect(derived.body.data.summary.oneLiner).toEqual(expect.any(String));
+    expect(kept.body.data.summary).toMatchObject({ oneLiner: "한 줄", type: "event" });
+    expectWire(noticeDetail, derived.body.data);
+    expectWire(noticeDetail, kept.body.data);
   });
 
   it("serves the blocks of an event in the ADR order with none empty, each filled from the record", async () => {
