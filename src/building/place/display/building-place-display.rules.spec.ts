@@ -3,15 +3,16 @@
  * of a pinned place, its `장소명 장소코드` pair derived from skkumap (never
  * stored), the session's primary place (a room over a building over a
  * facility, ties by list order, never an unpinned one), one primary per
- * campus with the count of the campus's other pinned places, and the building
- * a place stands in, by which a building's notices are found.
+ * campus with the count of the campus's other pinned places, the building
+ * a place stands in, by which a building's notices are found, and the stored
+ * id read back into the place it names (nothing for an id that is no place).
  */
 import { skkumapPlaces } from "../../../../__tests__/helpers/building/places";
 import type { BuildNo, Campus, SpaceCd } from "../../building.types";
 import { placeLexicon } from "../building-place.config";
 import { toPlaceIndex } from "../building-place.rules";
 import type { PinnedPlace, PlaceIndex, ResolvedPlace } from "../building-place.types";
-import { buildingOf, pickPrimaryPlace, pickPrimaryPlacesByCampus, toPlaceDisplay, toPlaceId } from "./building-place-display.rules";
+import { buildingOf, pickPrimaryPlace, pickPrimaryPlacesByCampus, toPlaceDisplay, toPlaceId, toStoredPlace } from "./building-place-display.rules";
 
 const space = (campus: Campus, spaceCd: string, buildNo: string): PinnedPlace => ({ kind: "space", campus, spaceCd: spaceCd as SpaceCd, buildNo: buildNo as BuildNo });
 const building = (campus: Campus, buildNo: string): PinnedPlace => ({ kind: "building", campus, buildNo: buildNo as BuildNo });
@@ -36,6 +37,44 @@ describe("toPlaceId", () => {
   });
 });
 
+describe("toStoredPlace", () => {
+  it.each([
+    ["space:hssc:33B101", { kind: "space", campus: "hssc", spaceCd: "33B101" }],
+    ["space:nsc:27301", { kind: "space", campus: "nsc", spaceCd: "27301" }],
+    ["building:nsc:286", { kind: "building", campus: "nsc", buildNo: "286" }],
+    ["building:hssc:133", { kind: "building", campus: "hssc", buildNo: "133" }],
+    ["facility:nsc:confucius-road", { kind: "facility", campus: "nsc", slug: "confucius-road" }],
+  ])("reads %s as the place it names", (placeId, place) => {
+    // Act & Assert
+    expect(toStoredPlace(placeId)).toEqual(place);
+  });
+
+  it.each([
+    [space("hssc", "33B101", "133"), { kind: "space", campus: "hssc", spaceCd: "33B101" }],
+    [building("nsc", "286"), building("nsc", "286")],
+    [facility("nsc", "confucius-road"), facility("nsc", "confucius-road")],
+  ])("reads the id that toPlaceId stores for %j", (place, expected) => {
+    // Act & Assert
+    expect(toStoredPlace(toPlaceId(place))).toEqual(expected);
+  });
+
+  it.each([
+    ["unresolved"],
+    [""],
+    ["space"],
+    ["space:hssc"],
+    ["space:hssc:"],
+    ["building:nsc:"],
+    ["facility:nsc:"],
+    ["space:mars:33B101"],
+    ["building::286"],
+    ["room:hssc:33B101"],
+  ])("reads %j as no place", (placeId) => {
+    // Act & Assert
+    expect(toStoredPlace(placeId)).toBeNull();
+  });
+});
+
 describe("toPlaceDisplay", () => {
   it.each([
     [space("hssc", "33B101", "133"), { name: "경영관", code: "33B101" }],
@@ -47,6 +86,16 @@ describe("toPlaceDisplay", () => {
   ])("shows %j as %j", (place, display) => {
     // Act & Assert
     expect(toPlaceDisplay(place, index)).toEqual(display);
+  });
+
+  it("names a stored space from its room code alone, on the campus the id states", () => {
+    // Arrange
+    const stored = toStoredPlace("space:hssc:33B101");
+    const otherCampus = toStoredPlace("space:nsc:33B101");
+
+    // Act & Assert
+    expect(stored && toPlaceDisplay(stored, index)).toEqual({ name: "경영관", code: "33B101" });
+    expect(otherCampus && toPlaceDisplay(otherCampus, index)).toEqual({ name: "화학관", code: "33B101" });
   });
 
   it.each([

@@ -3,7 +3,7 @@ title: Building Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-24
+last-updated: 2026-10-28
 audience: internal
 ---
 
@@ -23,7 +23,7 @@ Building serves SKKU's campus map, which skkuverse-crawler copies into MongoDB, 
 | `scripts/seed-connections.js` | — | Hand-written walkways between two floors | `connections`, read by `BuildingCatalogRepository` |
 | `scripts/import-campus-shapes.js` | — | Authored footprints, boundaries and paths | `campus_shapes`, parsed by `campusShapeDoc` in `BuildingRepository` |
 | `src/building/place/place-lexicon.json` | — | Facility slugs and the places skkumap lacks, reviewed as code | `placeLexicon`, parsed at import by `placeLexiconFile` |
-| skkuverse-crawler, a notice session's stored place ids (no caller yet) | — | The pinned places the crawler resolved itself, as `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>` | `BuildingPlaceDisplayService.describePlaces` |
+| skkuverse-crawler, a notice session's stored place ids (no caller yet) | — | The pinned places the crawler resolved itself, as `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>`, or `unresolved` | `BuildingPlaceDisplayService.describePlaces`, which takes the id strings and reads each through `toStoredPlace` |
 
 buildInfo returns rooms that spaceList lacks, and the other way round, so the crawler merges both into `spaces`, and `sources` records which listed a room.
 
@@ -55,6 +55,7 @@ The brands live in `src/building/building.types.ts`; each is minted only by its 
 | catalog | Building's list-and-detail flow (`catalog/`): the list is the catalog, `:skkuId` one entry of it | `BuildingCatalogModule` | list, detail, core, read |
 | resolved place (`ResolvedPlace`) | A pinned place (`PinnedPlace`: a `space`, a `building` or a `facility`) or `unresolved` with its reason (`online`, `offcampus`, `campusOnly`, `unknown`) and its campus when it has one: what the primary-place picks read | — | — |
 | place id (`PlaceId`) | `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>`: the only form a pinned place is stored in; its name and code are derived at display | `toPlaceId` | — |
+| stored place (`StoredPlace`) | What a stored place id names, read back by building: a room by its code and campus alone, a building by its number, a facility by its slug. It is a pinned place without the `buildNo` a room's id never carries | `toStoredPlace` | — |
 | facility slug | The pinned id of a numberless place: a skkumap facility's by its `skkuId`, or a place skkumap lacks (`extraFacilities`), never derived from a name | `place-lexicon.json` | — |
 | place lexicon (`placeLexicon`) | The committed facility slugs and the places skkumap lacks, which the place index is built with | `place-lexicon.json` | — |
 | place index (`PlaceIndex`) | The places by key and the spaces by room code, built from `buildings`, `spaces` and the lexicon | `toPlaceIndex` | — |
