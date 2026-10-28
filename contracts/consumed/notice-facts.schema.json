@@ -62,7 +62,7 @@
     },
     "factEvidence": {
       "type": "object",
-      "description": "Evidence of a fact that can become the row's qualifier (an audience condition or a benefit): `evidence` plus its optional table `label`.",
+      "description": "Evidence of a fact that can become the row's qualifier (an audience condition, a benefit, or the words that make a notice not for students): `evidence` plus its optional table `label` and its optional `compact`.",
       "properties": {
         "src": {
           "type": "string",
@@ -107,6 +107,12 @@
         "label": {
           "type": "string",
           "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
+        },
+        "compact": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 11,
+          "description": "Adr-015 decision 25: a short form of the quote for the list row's qualifier, at most 11 characters (Python len), every word a part of the quote, judged the same as the quote by a blind Haiku call. Absent when no such form exists, the fact was never offered, or its record predates compacts."
         }
       },
       "required": [
@@ -739,6 +745,12 @@
                         "null"
                       ],
                       "description": "Why it is unresolved: online, offcampus, campus_only, not_a_place, unknown_place, ambiguous. Null when resolved."
+                    },
+                    "compact": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 11,
+                      "description": "Adr-015 decision 25: a short form of `text` for the place qualifier, under the same rules as a quote's compact."
                     }
                   },
                   "required": [
@@ -1189,7 +1201,7 @@
           "description": "The words that limit who can act to non-students (codebook v3.3 forStudentsQuote), located; null when none. The row shows not-for-students only with it.",
           "anyOf": [
             {
-              "$ref": "#/$defs/evidence"
+              "$ref": "#/$defs/factEvidence"
             },
             {
               "type": "null"
@@ -1362,6 +1374,12 @@
           "label": {
             "type": "string",
             "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
+          },
+          "compact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 11,
+            "description": "Adr-015 decision 25: a short form of the quote for the list row's qualifier, at most 11 characters (Python len), every word a part of the quote, judged the same as the quote by a blind Haiku call. Absent when no such form exists, the fact was never offered, or its record predates compacts."
           },
           "start": {
             "type": "integer",
@@ -1785,6 +1803,34 @@
         "event",
         "read"
       ]
+    },
+    "compacts": {
+      "type": "object",
+      "description": "Adr-015 decision 25: present once the record's candidates went through the compact writer and the blind judge (the live extraction or `facts-compact`); absent before, and on a record with no candidate.",
+      "properties": {
+        "promptVersion": {
+          "type": "string",
+          "description": "skkuverse-ai PROMPT_VERSION of the writer."
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The writer's model, then the judge's when it ran."
+        },
+        "stored": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many compacts the record holds."
+        }
+      },
+      "required": [
+        "promptVersion",
+        "models",
+        "stored"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
