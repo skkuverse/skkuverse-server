@@ -19,6 +19,7 @@ import { goldenRecord } from "../../../__tests__/helpers/notices/facts-records";
 import { BuildingPlaceService } from "../../building/place/building-place.service";
 import { BuildingPlaceDisplayService } from "../../building/place/display/building-place-display.service";
 import { NoticesFactsService } from "../facts/notices-facts.service";
+import { NoticesLegacyService } from "../legacy/notices-legacy.service";
 import type { NoticeDoc } from "../notices.document";
 import { NoticesRowService } from "../row/notices-row.service";
 import { NoticesScreenService } from "../screen/notices-screen.service";
@@ -50,8 +51,9 @@ beforeEach(() => {
     asReal<ConstructorParameters<typeof BuildingPlaceService>[0]>(new FakeBuildingRepository()),
     asReal<ConstructorParameters<typeof BuildingPlaceService>[1]>(new FakeBuildingPlaceRepository()),
   );
-  const screens = new NoticesScreenService(new NoticesRowService(new NoticesFactsService(clock)), new BuildingPlaceDisplayService(placeService));
-  service = new NoticesDetailService(asReal<NoticesDetailRepository>(repository), screens, clock);
+  const rows = new NoticesRowService(new NoticesFactsService(clock));
+  const screens = new NoticesScreenService(rows, new BuildingPlaceDisplayService(placeService));
+  service = new NoticesDetailService(asReal<NoticesDetailRepository>(repository), screens, new NoticesLegacyService(rows), clock);
 });
 
 describe("NoticesDetailService.findNotice", () => {
@@ -89,7 +91,21 @@ describe("NoticesDetailService.findNotice", () => {
     // Assert
     expect(served?.screen).toMatchObject({ header: { firstSeen: "어제 처음 올라옴" }, status: { word: "접수 중", tone: "open", detail: "10/26(월) 마감" } });
     expect(later?.screen).toMatchObject({ header: { firstSeen: "10/21(수) 처음 올라옴" }, status: { word: "접수 중", tone: "soon", detail: "내일 마감" } });
-    expect({ ...served, id: null, articleNo: null, screen: null }).toEqual({ ...plain, id: null, articleNo: null, screen: null });
+    expect({ ...served, id: null, articleNo: null, screen: null, summary: null }).toEqual({ ...plain, id: null, articleNo: null, screen: null, summary: null });
+  });
+
+  it("derives the summary from the facts for a notice with none, and serves the stored one untouched", async () => {
+    // Arrange
+    const summaryFields = { summaryAt: new Date("2026-10-13T00:00:00Z"), summaryOneLiner: "한 줄", summaryType: "event" };
+    repository.docs = [doc({ articleNo: 1, facts: goldenRecord(WINDOW) }), doc({ articleNo: 2, facts: goldenRecord(WINDOW), ...summaryFields }), doc({ articleNo: 3 })];
+
+    // Act
+    const [derived, stored, none] = await Promise.all([1, 2, 3].map((articleNo) => service.findNotice("skku-notice02", articleNo)));
+
+    // Assert
+    expect(derived?.summary).toMatchObject({ text: null, oneLiner: "10/26(월) 마감", type: "action_required", periods: [], model: null });
+    expect(stored?.summary).toMatchObject({ oneLiner: "한 줄", type: "event", model: null });
+    expect(none?.summary).toBeNull();
   });
 
   it("names the date that moved against the notice's last stored extraction", async () => {
