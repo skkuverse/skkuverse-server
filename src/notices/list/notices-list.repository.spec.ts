@@ -7,7 +7,7 @@
 const toArray = jest.fn().mockResolvedValue([]);
 const limit = jest.fn(() => ({ toArray }));
 const hint = jest.fn(() => ({ limit, toArray }));
-const sort = jest.fn(() => ({ hint }));
+const sort = jest.fn(() => ({ hint, toArray }));
 const find = jest.fn((..._args: unknown[]) => ({ sort, hint }));
 const createIndex = jest.fn((..._args: unknown[]) => Promise.resolve("ok"));
 
@@ -89,6 +89,45 @@ describe("NoticesListRepository.listNotices projection for the row", () => {
     const options = find.mock.calls[0]?.[1] as { projection: Record<string, number> };
     expect(options.projection).toMatchObject({ facts: 1, factsHistory: 1, date: 1 });
     expect(Object.keys(options.projection).filter((key) => ["factsAt", "factsGate", "groupId", "firstSeenAt"].includes(key))).toEqual([]);
+  });
+});
+
+describe("NoticesListRepository.listScannedRows", () => {
+  it("reads the list's filter, sort and hint for `size` rows with only the fields that order a row, key its cluster and fill the cursor", async () => {
+    // Arrange
+    const cursor = { d: "2026-04-01", i: "66a1b2c3d4e5f6a7b8c9d0e1" };
+
+    // Act
+    await new NoticesListRepository().listScannedRows(["a", "b"], { limit: 5, cursor }, 30);
+
+    // Assert
+    expect(find.mock.calls[0]).toEqual([
+      {
+        sourceId: { $in: ["a", "b"] },
+        isDeleted: { $ne: true },
+        $and: [{ date: { $gte: START } }, { $or: [{ date: { $lt: "2026-04-01" } }, { date: "2026-04-01", _id: { $lt: new ObjectId(cursor.i) } }] }],
+      },
+      { projection: { _id: 1, dupOf: 1, date: 1, crawledAt: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+    ]);
+    expect(sort).toHaveBeenCalledWith({ date: -1, _id: -1 });
+    expect(hint).toHaveBeenCalledWith({ sourceId: 1, date: -1, _id: -1 });
+    expect(limit).toHaveBeenCalledWith(30);
+  });
+});
+
+describe("NoticesListRepository.listNoticesByIds", () => {
+  it("reads the given notices in list order with the list's projection", async () => {
+    // Arrange
+    const ids = [new ObjectId("66a1b2c3d4e5f6a7b8c9d002"), new ObjectId("66a1b2c3d4e5f6a7b8c9d001")];
+
+    // Act
+    await new NoticesListRepository().listNoticesByIds(ids);
+
+    // Assert
+    expect(find.mock.calls[0]).toEqual([{ _id: { $in: ids } }, { projection: LIST_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS }]);
+    expect(sort).toHaveBeenCalledWith({ date: -1, _id: -1 });
+    expect(hint).not.toHaveBeenCalled();
+    expect(limit).not.toHaveBeenCalled();
   });
 });
 

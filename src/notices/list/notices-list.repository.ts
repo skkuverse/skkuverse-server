@@ -1,11 +1,11 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type { Collection } from "mongodb";
+import type { Collection, ObjectId } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { NoticeDoc } from "../notices.document";
-import type { ClusterMember, NoticeListRow } from "./notices-list.document";
-import { CLUSTER_INDEX, CLUSTER_MEMBER_PROJECTION, FORCE_INDEX, LIST_PROJECTION, LIST_SORT, toClusterMemberFilter, toNoticeListFilter } from "./notices-list.query";
+import type { ClusterMember, NoticeListRow, ScannedRow } from "./notices-list.document";
+import { CLUSTER_INDEX, CLUSTER_MEMBER_PROJECTION, FORCE_INDEX, LIST_PROJECTION, LIST_SORT, SCAN_PROJECTION, toClusterMemberFilter, toNoticeListFilter } from "./notices-list.query";
 import type { ClusterLookup, NoticeListQuery, NoticeScope } from "./notices-list.types";
 
 @Injectable()
@@ -24,6 +24,25 @@ export class NoticesListRepository implements OnModuleInit {
       .sort(LIST_SORT)
       .hint(FORCE_INDEX)
       .limit(query.limit + 1)
+      .toArray();
+  }
+
+  listScannedRows(scope: NoticeScope, query: NoticeListQuery, size: number): Promise<ScannedRow[]> {
+    return this.notices()
+      .find<ScannedRow>(toNoticeListFilter(scope, query, config.notices.serviceStartDate), {
+        projection: SCAN_PROJECTION,
+        maxTimeMS: HOT_READ_MAX_TIME_MS,
+      })
+      .sort(LIST_SORT)
+      .hint(FORCE_INDEX)
+      .limit(size)
+      .toArray();
+  }
+
+  listNoticesByIds(ids: readonly ObjectId[]): Promise<NoticeListRow[]> {
+    return this.notices()
+      .find<NoticeListRow>({ _id: { $in: [...ids] } }, { projection: LIST_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS })
+      .sort(LIST_SORT)
       .toArray();
   }
 

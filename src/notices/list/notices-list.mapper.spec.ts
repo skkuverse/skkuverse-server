@@ -7,7 +7,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { NoticeDoc, SummaryDate } from "../notices.document";
-import { toSummaryBrief, encodeCursor, toItemRow, toListItem, toNoticePage, withDerivedBrief } from "./notices-list.mapper";
+import { toSummaryBrief, encodeCursor, toItemRow, toListItem, toNextPage, toNoticePage, withDerivedBrief } from "./notices-list.mapper";
 import type { FactsRow } from "../row/notices-row.types";
 import { decodeCursor } from "./notices-list.rules";
 
@@ -295,5 +295,23 @@ describe("toNoticePage", () => {
   it("has no cursor when the read held `limit` documents or fewer", () => {
     // Act & Assert
     expect(toNoticePage([doc(2), doc(1)], 2)).toEqual({ items: [doc(2), doc(1)], nextCursor: null, hasMore: false });
+  });
+});
+
+describe("toNextPage", () => {
+  const row = { _id: new ObjectId(OID), date: "2026-10-12", crawledAt: new Date(ISO) };
+
+  it("seeds the cursor from the row the next page starts after", () => {
+    // Act
+    const next = toNextPage(row);
+
+    // Assert
+    expect(next.hasMore).toBe(true);
+    expect(decodeCursor(next.nextCursor)).toEqual({ d: "2026-10-12", c: ISO, i: OID });
+  });
+
+  it("has no cursor and no next page without such a row", () => {
+    // Act & Assert
+    expect(toNextPage(undefined)).toEqual({ nextCursor: null, hasMore: false });
   });
 });

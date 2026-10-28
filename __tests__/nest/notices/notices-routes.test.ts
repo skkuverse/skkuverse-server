@@ -51,6 +51,7 @@ const detailRepository = new FakeNoticesDetailRepository();
 const buildingRepository = new FakeBuildingRepository();
 const placeRepository = new FakeBuildingPlaceRepository();
 let listNotices: jest.SpyInstance;
+let listScannedRows: jest.SpyInstance;
 
 function rawDoc(overrides: Record<string, unknown> = {}): NoticeDoc {
   return {
@@ -97,6 +98,7 @@ beforeEach(() => {
   listRepository.docs = [];
   detailRepository.docs = [];
   listNotices = jest.spyOn(listRepository, "listNotices");
+  listScannedRows = jest.spyOn(listRepository, "listScannedRows");
 });
 
 describe("GET /notices/tabs", () => {
@@ -926,9 +928,10 @@ describe("GET /notices — multi-source search query", () => {
     );
 
     // Assert
-    expect(listNotices).toHaveBeenCalledWith(
+    expect(listScannedRows).toHaveBeenCalledWith(
       ["skku-main", "cse-undergrad"],
       expect.objectContaining({ q: "공지" }),
+      expect.any(Number),
     );
   });
 
@@ -939,7 +942,7 @@ describe("GET /notices — multi-source search query", () => {
     );
 
     // Act
-    const callArgs = listNotices.mock.calls[0]![1];
+    const callArgs = listScannedRows.mock.calls[0]![1];
 
     // Assert
     expect(callArgs.q).toBeUndefined();
@@ -957,7 +960,7 @@ describe("GET /notices — multi-source search query", () => {
     );
 
     // Act
-    const callArgs = listNotices.mock.calls[0]![1];
+    const callArgs = listScannedRows.mock.calls[0]![1];
 
     // Assert
     expect(callArgs.q).toBe("장학금");

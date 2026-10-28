@@ -3,12 +3,14 @@
  * notices-list.repository.spec.ts and, over a real mongod, notices-characterization.routes.test.ts): the
  * scope's sources, not deleted, on or after the service start date, the type and the search text. The list read adds
  * the cursor, sorts newest first by (date, _id), reads one more than the limit and keeps only the fields of
- * LIST_PROJECTION. The member lookup keeps the notices at or before the lookup's cursor whose `dupOf` is one of its
+ * LIST_PROJECTION. The scan of several sources reads `size` rows the same way with SCAN_PROJECTION, and the read by
+ * ids serves those notices newest first with LIST_PROJECTION. The member lookup keeps the notices at or before the lookup's cursor whose `dupOf` is one of its
  * keys, and keeps only the fields of CLUSTER_MEMBER_PROJECTION.
  */
 import config from "../../../../src/infra/config";
-import type { ClusterMember, NoticeListRow } from "../../../../src/notices/list/notices-list.document";
-import { CLUSTER_MEMBER_PROJECTION, LIST_PROJECTION } from "../../../../src/notices/list/notices-list.query";
+import type { ObjectId } from "mongodb";
+import type { ClusterMember, NoticeListRow, ScannedRow } from "../../../../src/notices/list/notices-list.document";
+import { CLUSTER_MEMBER_PROJECTION, LIST_PROJECTION, SCAN_PROJECTION } from "../../../../src/notices/list/notices-list.query";
 import type { NoticesListRepository } from "../../../../src/notices/list/notices-list.repository";
 import type { ClusterLookup, NoticeListQuery, NoticeScope } from "../../../../src/notices/list/notices-list.types";
 import type { NoticeDoc } from "../../../../src/notices/notices.document";
@@ -34,6 +36,22 @@ export class FakeNoticesListRepository implements PublicOf<NoticesListRepository
       .filter((doc) => !query.cursor || this.isAfterCursor(doc, query.cursor.d, query.cursor.i))
       .sort(newestFirst)
       .slice(0, query.limit + 1)
+      .map((doc) => project<NoticeListRow>(doc, LIST_PROJECTION));
+  }
+
+  async listScannedRows(scope: NoticeScope, query: NoticeListQuery, size: number): Promise<ScannedRow[]> {
+    return this.inReadScope(scope, query)
+      .filter((doc) => !query.cursor || this.isAfterCursor(doc, query.cursor.d, query.cursor.i))
+      .sort(newestFirst)
+      .slice(0, size)
+      .map((doc) => project<ScannedRow>(doc, SCAN_PROJECTION));
+  }
+
+  async listNoticesByIds(ids: readonly ObjectId[]): Promise<NoticeListRow[]> {
+    const wanted = new Set(ids.map((id) => id.toHexString()));
+    return this.docs
+      .filter((doc) => wanted.has(doc._id.toHexString()))
+      .sort(newestFirst)
       .map((doc) => project<NoticeListRow>(doc, LIST_PROJECTION));
   }
 
