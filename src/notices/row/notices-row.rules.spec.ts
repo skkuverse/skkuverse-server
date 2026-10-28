@@ -562,6 +562,63 @@ describe("toFactsRow, the qualifier's fit on line 2 (ADR 0009 D3, D5)", () => {
   });
 });
 
+describe("toFactsRow, the table label before the qualifier's quote (codebook v3.11)", () => {
+  const evidence = (quote: string, label?: string) => ({ src: "body", quote, start: 0, end: quote.length, match: "exact", ...(label === undefined ? {} : { label }) });
+  const condition = (quote: string, label?: string, type = "degree") => ({ ev: evidence(quote, label), type, polarity: "include", strength: "required", thing: MAIN_THING, scope: "", restricts: true, narrows: true, appliesTo: [], tag: "", tagBy: "" });
+  const benefit = (quote: string, label?: string, isDraw = false) => ({ ev: evidence(quote, label), thing: MAIN_THING, earnedBy: isDraw ? "draw" : "selected", amount: null, isDraw, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const cost = (quote: string, label?: string) => ({ ...evidence(quote, label), thing: MAIN_THING, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const at = kstNoon("2026-10-22");
+  const rowOf = (edit: (record: any) => void) => toFactsRow(sourceOf(recordFrom(WINDOW, edit)), at);
+  const readingOf = (edit: (record: any) => void) => toRowReading(sourceOf(recordFrom(WINDOW, edit)), at);
+
+  // Line 2 reads the deadline line, 11 characters, and " · " joins it to the qualifier, so 12 characters fill the 26.
+  it.each<[string, (record: any) => void, string | null]>([
+    ["a condition's label that fits", (r) => r.audience.conditions.push(condition("석사과정만", "대상")), "대상 · 석사과정만"],
+    ["a condition's label that fills the budget exactly", (r) => r.audience.conditions.push(condition("석사과정만", "대상자격")), "대상자격 · 석사과정만"],
+    ["a condition's label one over the budget, which drops the whole qualifier", (r) => r.audience.conditions.push(condition("석사과정만", "대상 자격")), null],
+    ["the same condition with no label", (r) => r.audience.conditions.push(condition("석사과정만")), "석사과정만"],
+    ["the same condition with an empty label", (r) => r.audience.conditions.push(condition("석사과정만", "")), "석사과정만"],
+    ["a label the condition's quote already says", (r) => r.audience.conditions.push(condition("대상: 석사과정만", "대상")), "대상: 석사과정만"],
+    ["a cost of missing with a label that fits", (r) => r.costOfMissing.push(cost("졸업 불가", "미이수")), "미이수 · 졸업 불가"],
+    ["a cost of missing with a label that passes the budget", (r) => r.costOfMissing.push(cost("졸업 불가", "미이수 시")), null],
+    ["a benefit's label that fills the budget exactly", (r) => r.benefits.push(benefit("월 50만원", "장학금")), "장학금 · 월 50만원"],
+    ["a benefit's label one over the budget", (r) => r.benefits.push(benefit("월 50만원", "장학금액")), null],
+    ["a draw whose label and mark push it past the budget", (r) => r.benefits.push(benefit("커피 쿠폰", "경품", true)), null],
+    ["two conditions in one dimension, which a count states without their labels", (r) => r.audience.conditions.push(condition("경영학과", "전공", "major"), condition("경제학과", "전공", "major")), "조건 1개"],
+  ])("shows %s", (_title, edit, qualifier) => {
+    // Act & Assert
+    expect(rowOf(edit).qualifier).toBe(qualifier);
+  });
+
+  it.each<[string, (record: any) => void, string]>([
+    ["a condition", (r) => r.audience.conditions.push(condition("석사과정만", "지원 자격")), "지원 자격 · 석사과정만"],
+    ["a cost of missing", (r) => r.costOfMissing.push(cost("졸업 불가", "미이수 시")), "미이수 시 · 졸업 불가"],
+    ["a draw, its mark after the quote", (r) => r.benefits.push(benefit("커피 쿠폰", "경품", true)), "경품 · 커피 쿠폰 (추첨)"],
+    ["a draw whose label already says 추첨, with no second mark", (r) => r.benefits.push(benefit("커피 쿠폰", "추첨 경품", true)), "추첨 경품 · 커피 쿠폰"],
+    ["a label broken over two lines, as one", (r) => r.benefits.push(benefit("월 50만원", "장학금\n지급액")), "장학금 지급액 · 월 50만원"],
+  ])("leaves the unfitted qualifier of %s whole for the one-liner, label first", (_title, edit, fullQualifier) => {
+    // Act & Assert
+    expect(readingOf(edit).fullQualifier).toBe(fullQualifier);
+  });
+
+  it("serves a record without a label exactly as one with empty labels", () => {
+    // Arrange
+    const plain = (r: any) => {
+      r.audience.conditions.push(condition("석사과정만"));
+      r.benefits.push(benefit("월 50만원"));
+    };
+    const empty = (r: any) => {
+      r.audience.conditions.push(condition("석사과정만", ""));
+      r.benefits.push(benefit("월 50만원", ""));
+    };
+
+    // Act & Assert
+    expect(readingOf(empty).row).toEqual(readingOf(plain).row);
+    expect(readingOf(empty).fullQualifier).toBe(readingOf(plain).fullQualifier);
+    expect(readingOf(plain).fullQualifier).toBe("석사과정만");
+  });
+});
+
 describe("toFactsRow, a track's date", () => {
   const twoTracks = () =>
     recordFrom(WINDOW, (r) => {

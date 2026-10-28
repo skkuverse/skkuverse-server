@@ -1,6 +1,7 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
+import { toBenefitText, toQuoteText } from "../notices.mapper";
 import { CHANGE_WINDOW_DAYS, DIMMED_STATUSES, MAX_SERIES_LOOKAHEAD_DAYS, ROW_TOKENS, ROW_WORDS, WEEKDAY_CODES } from "./notices-row.constants";
 import type { DatedItem, DatedStatusKind, FactsRow, ItemDays, ItemReading, KstDay, RowItem, RowReading, RowSource, RowStatus, RowToken, StatedStatusKind, StoppedStatusKind } from "./notices-row.types";
 
@@ -426,7 +427,7 @@ function toQualifier({ facts, mainThing }: RowScope, shown: RowItem | null): str
   const [cost] = facts.costOfMissing.filter(isMine);
   const audience = toAudienceQualifier(facts, isMine);
   if (audience !== null) return audience;
-  if (cost) return cost.quote;
+  if (cost) return toQuoteText(cost);
   return toBenefitQualifier(facts.benefits.filter(isMine)) ?? toPlaceQualifier(shown);
 }
 
@@ -434,9 +435,7 @@ function toBenefitQualifier(benefits: NoticeFacts["benefits"]): string | null {
   const units = new Set(benefits.map(({ amount }) => (amount ? `${amount.unit}/${amount.per}` : null)));
   const isComparable = units.size === 1 && !units.has(null);
   const benefit = isNonEmpty(benefits) && isComparable ? firstMaxBy(benefits, ({ amount }) => [amount?.value ?? 0]) : benefits[0];
-  if (!benefit) return null;
-  const { quote } = benefit.ev;
-  return benefit.isDraw && !quote.includes(ROW_WORDS.draw) ? `${quote} (${ROW_WORDS.draw})` : quote;
+  return benefit ? toBenefitText(benefit) : null;
 }
 
 function toAudienceQualifier({ audience }: NoticeFacts, isMine: (fact: ScopedFact) => boolean): string | null {
@@ -444,7 +443,7 @@ function toAudienceQualifier({ audience }: NoticeFacts, isMine: (fact: ScopedFac
   const dimensionCount = new Set(restrictions.map(({ type }) => type)).size;
   if (audience.forStudents === "no" && audience.forStudentsEv !== null) return audience.forStudentsEv.quote;
   if (restrictions.length > 1) return ROW_WORDS.conditions.replace("{n}", String(dimensionCount));
-  return restrictions[0]?.ev.quote ?? null;
+  return restrictions[0] ? toQuoteText(restrictions[0].ev) : null;
 }
 
 function toPlaceQualifier(shown: RowItem | null): string | null {
