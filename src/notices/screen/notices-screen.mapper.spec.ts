@@ -586,6 +586,20 @@ describe("toScreenBlocks, the table label before a quote (codebook v3.11)", () =
     expect(textsOf(stored, "benefit")).toEqual(["장학금 · 월 50만원", "경품 · 커피 쿠폰 (추첨)", "추첨 경품 · 커피 쿠폰", "경품 · 상품권 추첨 지급", "[A형] 전액"]);
   });
 
+  it("leaves out a track's tag when the labelled text already names it, as the row does", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) =>
+      r.benefits.push(
+        benefit("필기시험 우대가점 부여", "우수인턴 혜택", false, { tag: "우수인턴" }),
+        benefit("증명사진 등록", "서류심사 합격자 (스캔등록)", false, { tag: "서류심사 합격자" }),
+        benefit("월 195만원", "보수", false, { tag: "A형" }),
+      ),
+    );
+
+    // Act & Assert
+    expect(textsOf(stored, "benefit")).toEqual(["우수인턴 혜택 · 필기시험 우대가점 부여", "서류심사 합격자 (스캔등록) · 증명사진 등록", "[A형] 보수 · 월 195만원"]);
+  });
+
   it("puts the label before what missing the call costs", () => {
     // Arrange
     const stored = record(WINDOW, (r) => r.costOfMissing.push(cost("기한 후 접수 불가", "미신청 시"), cost("휴학 처리")));
