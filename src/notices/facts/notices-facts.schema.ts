@@ -215,7 +215,7 @@ export const noticeFacts = z.object({
   shortTitle: z.object({ text: z.string(), ok: z.boolean(), compact: z.string(), compactOk: z.boolean() }),
   verify: verify.optional(),
   rowCheck: z.object({ deadline: agreement, event: agreement, read: z.record(z.string(), z.unknown()) }).optional(),
-  compacts: z.object({ promptVersion: z.string(), rejudgedFrom: z.string().optional(), models: z.array(z.string()), stored: z.number().int().min(0) }).optional(),
+  compacts: z.object({ promptVersion: z.string(), rejudgedFrom: z.string().optional(), restoredFrom: z.string().optional(), models: z.array(z.string()), stored: z.number().int().min(0) }).optional(),
 });
 
 export type NoticeFacts = z.output<typeof noticeFacts>;
