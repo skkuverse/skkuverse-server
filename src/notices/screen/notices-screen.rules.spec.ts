@@ -316,8 +316,8 @@ describe("toHeaderChange", () => {
   });
   const places = (...ids: string[]) => ids.map((id) => ({ text: "경영관 33101호", id, campus: "hssc", reason: null }));
   const named = new Map([
-    ["space:hssc:33B101", { name: "경영관", code: "33B101" }],
-    ["building:hssc:161", { name: "수선관", code: "61" }],
+    ["space:hssc:33B101", { name: "경영관", code: "33B101", mapTarget: null }],
+    ["building:hssc:161", { name: "수선관", code: "61", mapTarget: null }],
   ]);
   const NOW = kstNoon("2026-10-20");
 
@@ -427,12 +427,12 @@ describe("toPlaceIds and toDisplayByPlaceId", () => {
 
   it("pairs each id with the display building gave it, leaving out an id building could not name", () => {
     // Act
-    const displays = toDisplayByPlaceId(["space:hssc:33B101", "building:nsc:286", "building:hssc:161"], [{ name: "경영관", code: "33B101" }, null, { name: "수선관", code: "61" }]);
+    const displays = toDisplayByPlaceId(["space:hssc:33B101", "building:nsc:286", "building:hssc:161"], [{ name: "경영관", code: "33B101", mapTarget: null }, null, { name: "수선관", code: "61", mapTarget: null }]);
 
     // Assert
     expect([...displays]).toEqual([
-      ["space:hssc:33B101", { name: "경영관", code: "33B101" }],
-      ["building:hssc:161", { name: "수선관", code: "61" }],
+      ["space:hssc:33B101", { name: "경영관", code: "33B101", mapTarget: null }],
+      ["building:hssc:161", { name: "수선관", code: "61", mapTarget: null }],
     ]);
   });
 });

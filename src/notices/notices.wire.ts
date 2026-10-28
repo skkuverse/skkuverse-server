@@ -1,10 +1,14 @@
 import { z } from "zod";
 
-const screenAction = z.object({
-  kind: z.enum(["map", "call", "email", "link"]),
-  /** WHY: a stored place id for `map`, a phone number for `call`, an address for `email`, an http(s) URL for `link`. */
-  target: z.string(),
-});
+// CONTRACT(skkuverse-app): `map` opens the building sheet as a campus marker's `skku_building:<skkuId>` does
+// (skkuverse-app/packages/shared/src/utils/map-place-ref.rules.ts); `search` hands the words to the phone's map app.
+const screenAction = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("map"), target: z.string().regex(/^skku_building:[0-9]+$/), space: z.string().nullable() }),
+  z.object({ kind: z.literal("search"), target: z.string() }),
+  z.object({ kind: z.literal("call"), target: z.string() }),
+  z.object({ kind: z.literal("email"), target: z.string() }),
+  z.object({ kind: z.literal("link"), target: z.string() }),
+]);
 
 /** WHY: `quote` is the record's evidence sentence, which the app highlights in the original (umbrella ADR 0009 D16). */
 const screenLine = z.object({

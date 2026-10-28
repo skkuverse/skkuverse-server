@@ -1,7 +1,8 @@
 /**
  * The blocks and the original of the notice detail screen (umbrella ADR 0009 D13, D15, D16) from one RowReading and the
- * place names building gave: each block's lines, labels, numbering, fold and footer link, a place building cannot name
- * shown as the quote with no map action, a disputed fact left out, a track's tag before its text, a fact read from a
+ * place names building gave: each block's lines, labels, numbering, fold and footer link, a place building names opened
+ * on its building's sheet, a place off campus searched by its words, a place building cannot name or the campus map
+ * cannot open shown as the quote with no map action, a disputed fact left out, a track's tag before its text, a fact read from a
  * poster marked, and the poster count, attachment roles and link roles of the original.
  *
  * Records reach the mapper only through NoticesRowService.readNotice, which parses them through NoticesFactsService as in
@@ -14,6 +15,7 @@ import type { Clock } from "../../infra/clock";
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
 import { actionOf, contactOf, evidenceOf, goldenRecord, linkOf, type RawRecord } from "../../../__tests__/helpers/notices/facts-records";
+import type { SkkuId, SpaceCd } from "../../building/building.types";
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import { NoticesFactsService } from "../facts/notices-facts.service";
 import { NoticesRowService } from "../row/notices-row.service";
@@ -46,10 +48,12 @@ const sessionOn = (id: string, date: string, extra: RawRecord = {}): RawRecord =
   return { ...session, id, start: { ...session!.start, date }, ev: evidenceOf(`${date} 행사`), ...extra };
 };
 
-const place = (id: string, text = "경영관 33101호"): RawRecord => ({ text, id, campus: id === "unresolved" ? null : "hssc", reason: id === "unresolved" ? "unknown" : null });
+const place = (id: string, text = "경영관 33101호", reason = "unknown_place"): RawRecord => ({ text, id, campus: id === "unresolved" ? null : "hssc", reason: id === "unresolved" ? reason : null });
 const SHOWN = new Map<string, PlaceDisplay>([
-  ["space:hssc:33B101", { name: "경영관", code: "33B101" }],
-  ["facility:hssc:geumjandi-square", { name: "금잔디 광장" }],
+  ["space:hssc:33B101", { name: "경영관", code: "33B101", mapTarget: { skkuId: 12 as SkkuId, spaceCd: "33B101" as SpaceCd } }],
+  ["building:hssc:161", { name: "수선관", code: "61", mapTarget: { skkuId: 13 as SkkuId, spaceCd: null } }],
+  ["facility:hssc:geumjandi-square", { name: "금잔디 광장", mapTarget: { skkuId: 64 as SkkuId, spaceCd: null } }],
+  ["facility:hssc:myeongnyun-dormitory", { name: "명륜학사", mapTarget: null }],
 ]);
 
 const only = (key: BlockKey) => [key];
@@ -57,7 +61,7 @@ const only = (key: BlockKey) => [key];
 describe("toScreenBlocks, 언제·어디", () => {
   const withSession = (edit: (item: RawRecord) => void) => record(SESSION, (r) => edit(r.times[0]));
 
-  it("names a place building resolved by its name and code, with a map action to the stored id", () => {
+  it("names a room building resolved by its name and code, with a map action to its building's sheet and the room", () => {
     // Arrange
     const stored = withSession((item) => (item.where.places = [place("space:hssc:33B101")]));
 
@@ -71,7 +75,7 @@ describe("toScreenBlocks, 언제·어디", () => {
         numbered: false,
         footerLink: null,
         foldedCount: 0,
-        lines: [{ text: "10/29(목)", sub: "경영관 33B101", fromPoster: false, actions: [{ kind: "map", target: "space:hssc:33B101" }], quote: "2026년 10월 29일(목) 14시" }],
+        lines: [{ text: "10/29(목)", sub: "경영관 33B101", fromPoster: false, actions: [{ kind: "map", target: "skku_building:12", space: "33B101" }], quote: "2026년 10월 29일(목) 14시" }],
       },
     ]);
   });
@@ -87,9 +91,9 @@ describe("toScreenBlocks, 언제·어디", () => {
     expect(block?.lines).toMatchObject([{ sub: "서울캠 어딘가", actions: [] }]);
   });
 
-  it("names each place of a line, and maps only those building named", () => {
+  it("names each place of a line, and maps only those building named on a sheet", () => {
     // Arrange
-    const stored = withSession((item) => (item.where.places = [place("space:hssc:33B101"), place("unresolved", "서울캠 어딘가"), place("facility:hssc:geumjandi-square", "금잔디")]));
+    const stored = withSession((item) => (item.where.places = [place("space:hssc:33B101"), place("unresolved", "서울캠 어딘가"), place("facility:hssc:geumjandi-square", "금잔디"), place("building:hssc:161", "수선관")]));
 
     // Act
     const [block] = toScreenBlocks(scopeOf(stored, SHOWN), only("whenWhere"));
@@ -97,13 +101,39 @@ describe("toScreenBlocks, 언제·어디", () => {
     // Assert
     expect(block?.lines).toMatchObject([
       {
-        sub: "경영관 33B101 · 서울캠 어딘가 · 금잔디 광장",
+        sub: "경영관 33B101 · 서울캠 어딘가 · 금잔디 광장 · 수선관 61",
         actions: [
-          { kind: "map", target: "space:hssc:33B101" },
-          { kind: "map", target: "facility:hssc:geumjandi-square" },
+          { kind: "map", target: "skku_building:12", space: "33B101" },
+          { kind: "map", target: "skku_building:64", space: null },
+          { kind: "map", target: "skku_building:13", space: null },
         ],
       },
     ]);
+  });
+
+  it("names a place the campus map cannot open, with no map action", () => {
+    // Arrange
+    const stored = withSession((item) => (item.where.places = [place("facility:hssc:myeongnyun-dormitory", "명륜학사")]));
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored, SHOWN), only("whenWhere"));
+
+    // Assert
+    expect(block?.lines).toMatchObject([{ sub: "명륜학사", actions: [] }]);
+  });
+
+  it("searches a place off campus by its words in the phone's map app, and opens nothing for a place only unresolved", () => {
+    // Arrange
+    const stored = withSession((item) => {
+      item.where.mode = "offcampus";
+      item.where.places = [place("unresolved", "넥슨코리아 사옥", "offcampus"), place("unresolved", "성균관대 학군단", "ambiguous"), place("unresolved", "인사캠", "campus_only")];
+    });
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored, SHOWN), only("whenWhere"));
+
+    // Assert
+    expect(block?.lines).toMatchObject([{ sub: "넥슨코리아 사옥 · 성균관대 학군단 · 인사캠", actions: [{ kind: "search", target: "넥슨코리아 사옥" }] }]);
   });
 
   it.each<[string, (item: RawRecord) => void, string | null]>([

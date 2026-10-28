@@ -2,7 +2,7 @@ import type { PlaceDisplay } from "../../building/place/display/building-place-d
 import type { NoticeFacts } from "../facts/notices-facts.schema";
 import type { ItemReading } from "../row/notices-row.types";
 import { ATTACHMENT_ROLE_WORDS, BLOCK_SPECS, SCREEN_WORDS } from "./notices-screen.constants";
-import { isFromPoster, isStated, toActionTarget, toContactAction, toItemText, toPlaceText, toSessionOrder, withDraw, withTag } from "./notices-screen.rules";
+import { isFromPoster, isStated, toActionTarget, toContactAction, toItemText, toPlaceAction, toPlaceText, toSessionOrder, withDraw, withTag } from "./notices-screen.rules";
 import type { BlockKey, BlockLines, ScreenBlock, ScreenLine, ScreenOriginal, ScreenScope } from "./notices-screen.types";
 
 type DatedItem = NoticeFacts["times"][number];
@@ -87,11 +87,10 @@ function toContactLines({ reading }: ScreenScope): ScreenLine[] {
 
 function toItemLine(reading: ItemReading, { displayByPlaceId }: ScreenScope): ScreenLine {
   const { item } = reading;
-  const resolved = item.where.places.filter((place) => displayByPlaceId.has(place.id));
   return {
     ...toQuoteLine(item.ev, toItemText(reading)),
     sub: toPlaceSub(item, displayByPlaceId),
-    actions: resolved.map((place) => ({ kind: "map", target: place.id })),
+    actions: item.where.places.flatMap((place) => toPlaceAction(place, displayByPlaceId.get(place.id)) ?? []),
   };
 }
 

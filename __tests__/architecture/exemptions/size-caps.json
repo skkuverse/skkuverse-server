@@ -80,7 +80,7 @@
     "reason": "ADR 0010 D9, no domain seam: `RowReading` and `ItemReading` are built only from `FactsRow`, `RowStatus` and `RowItem` declared beside them in this file, a folder holds one types file, and a parent never imports a child, so the reading cannot move into a sub-module."
   },
   "src/notices/screen/notices-screen.rules.ts": {
-    "max": 174,
+    "max": 183,
     "reason": "ADR 0010 D9, no domain seam: the status line, the collapse, the action bar, the block order and the header change all decide over the one `RowReading` that `NoticesRowService.readNotice` returns, and a sibling meets it only through a service, which would put a Nest provider between pure decisions over one reading; the block lines are `notices-screen.mapper.ts`'s and the Korean words `notices-screen.constants.ts`'s."
   },
   "src/subway/estimate/subway-estimate.rules.ts": {

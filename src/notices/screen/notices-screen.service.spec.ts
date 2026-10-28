@@ -147,7 +147,7 @@ describe("NoticesScreenService.renderScreen", () => {
     const screen = await service.renderScreen(notice(stored, { category: "행사/세미나" }), OPEN_DAY);
 
     // Assert
-    expect(screen?.blocks).toMatchObject([{ label: "언제·어디", lines: [{ sub: "경영관 33B101 · 경영관 99999호 · 서울캠 어딘가", actions: [{ kind: "map", target: "space:hssc:33B101" }] }] }]);
+    expect(screen?.blocks).toMatchObject([{ label: "언제·어디", lines: [{ sub: "경영관 33B101 · 경영관 99999호 · 서울캠 어딘가", actions: [{ kind: "map", target: "skku_building:12", space: "33B101" }] }] }]);
     expect(screen?.blocks[0]?.lines[0]?.actions).toHaveLength(1);
   });
 
