@@ -59,6 +59,10 @@
     "max": 63,
     "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers, then the HSSC route layer and then the `tabs` each base layer states took it past the role cap."
   },
+  "src/notices/detail/notices-detail.wire.ts": {
+    "max": 60,
+    "reason": "ADR 0010 D9, no domain seam: `noticeDetail` is the one body the detail route serves, its screen part already split into `src/notices/notices.wire.ts`, and the other fields are the stored notice passed through (the summary's periods, details and edit history as the crawler and the ai stored them), so no part of it is a flow of its own."
+  },
   "src/notices/facts/notices-facts.schema.ts": {
     "max": 220,
     "reason": "ADR 0010 D9, no domain seam: `noticeFacts` mirrors the one versioned record the crawler writes and the server parses as a unit, each of its sections checked against the same vendored file by `__tests__/contracts/notice-facts.test.ts`, so a split would leave half a record in each sub-module, and a sibling never imports another sub-module's schema (sub-modules.test.ts); `factsSnapshot`, an earlier version of that record the crawler stores beside it, is read through the same `NoticesFactsService`."
