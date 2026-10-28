@@ -1,8 +1,9 @@
 /**
  * The blocks and the original of the notice detail screen (umbrella ADR 0009 D13, D15, D16) from one RowReading and the
- * place names building gave: each block's lines, labels, numbering, fold and footer link, a place building cannot name
- * shown as the quote with no map action, a disputed fact left out, a track's tag before its text, a fact read from a
- * poster marked, and the poster count, attachment roles and link roles of the original.
+ * place names building gave: each block's lines, labels, numbering, fold and footer link, a place building names opened
+ * on its building's sheet, a place off campus searched by its words, a place building cannot name or the campus map
+ * cannot open shown as the quote with no map action, a disputed fact left out, a track's tag before its text, a fact a track
+ * repeats shown once untagged, every line of a folded block sent, the source each line was quoted from, and the poster count, attachment roles and link roles of the original, with the URL that opens each.
  *
  * Records reach the mapper only through NoticesRowService.readNotice, which parses them through NoticesFactsService as in
  * production, from the golden cases of the crawler's row.py that notices-row.rules.spec.ts also reads. src/infra/logger.ts
@@ -14,6 +15,7 @@ import type { Clock } from "../../infra/clock";
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
 import { actionOf, contactOf, evidenceOf, goldenRecord, linkOf, type RawRecord } from "../../../__tests__/helpers/notices/facts-records";
+import type { SkkuId, SpaceCd } from "../../building/building.types";
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import { NoticesFactsService } from "../facts/notices-facts.service";
 import { NoticesRowService } from "../row/notices-row.service";
@@ -46,10 +48,12 @@ const sessionOn = (id: string, date: string, extra: RawRecord = {}): RawRecord =
   return { ...session, id, start: { ...session!.start, date }, ev: evidenceOf(`${date} 행사`), ...extra };
 };
 
-const place = (id: string, text = "경영관 33101호"): RawRecord => ({ text, id, campus: id === "unresolved" ? null : "hssc", reason: id === "unresolved" ? "unknown" : null });
+const place = (id: string, text = "경영관 33101호", reason = "unknown_place"): RawRecord => ({ text, id, campus: id === "unresolved" ? null : "hssc", reason: id === "unresolved" ? reason : null });
 const SHOWN = new Map<string, PlaceDisplay>([
-  ["space:hssc:33B101", { name: "경영관", code: "33B101" }],
-  ["facility:hssc:geumjandi-square", { name: "금잔디 광장" }],
+  ["space:hssc:33B101", { name: "경영관", code: "33B101", mapTarget: { skkuId: 12 as SkkuId, spaceCd: "33B101" as SpaceCd } }],
+  ["building:hssc:161", { name: "수선관", code: "61", mapTarget: { skkuId: 13 as SkkuId, spaceCd: null } }],
+  ["facility:hssc:geumjandi-square", { name: "금잔디 광장", mapTarget: { skkuId: 64 as SkkuId, spaceCd: null } }],
+  ["facility:hssc:myeongnyun-dormitory", { name: "명륜학사", mapTarget: null }],
 ]);
 
 const only = (key: BlockKey) => [key];
@@ -57,7 +61,7 @@ const only = (key: BlockKey) => [key];
 describe("toScreenBlocks, 언제·어디", () => {
   const withSession = (edit: (item: RawRecord) => void) => record(SESSION, (r) => edit(r.times[0]));
 
-  it("names a place building resolved by its name and code, with a map action to the stored id", () => {
+  it("names a room building resolved by its name and code, with a map action to its building's sheet and the room", () => {
     // Arrange
     const stored = withSession((item) => (item.where.places = [place("space:hssc:33B101")]));
 
@@ -71,7 +75,7 @@ describe("toScreenBlocks, 언제·어디", () => {
         numbered: false,
         footerLink: null,
         foldedCount: 0,
-        lines: [{ text: "10/29(목)", sub: "경영관 33B101", fromPoster: false, actions: [{ kind: "map", target: "space:hssc:33B101" }], quote: "2026년 10월 29일(목) 14시" }],
+        lines: [{ text: "10/29(목)", sub: "경영관 33B101", source: "body", actions: [{ kind: "map", target: "skku_building:12", space: "33B101" }], quote: "2026년 10월 29일(목) 14시" }],
       },
     ]);
   });
@@ -87,9 +91,9 @@ describe("toScreenBlocks, 언제·어디", () => {
     expect(block?.lines).toMatchObject([{ sub: "서울캠 어딘가", actions: [] }]);
   });
 
-  it("names each place of a line, and maps only those building named", () => {
+  it("names each place of a line, and maps only those building named on a sheet", () => {
     // Arrange
-    const stored = withSession((item) => (item.where.places = [place("space:hssc:33B101"), place("unresolved", "서울캠 어딘가"), place("facility:hssc:geumjandi-square", "금잔디")]));
+    const stored = withSession((item) => (item.where.places = [place("space:hssc:33B101"), place("unresolved", "서울캠 어딘가"), place("facility:hssc:geumjandi-square", "금잔디"), place("building:hssc:161", "수선관")]));
 
     // Act
     const [block] = toScreenBlocks(scopeOf(stored, SHOWN), only("whenWhere"));
@@ -97,13 +101,39 @@ describe("toScreenBlocks, 언제·어디", () => {
     // Assert
     expect(block?.lines).toMatchObject([
       {
-        sub: "경영관 33B101 · 서울캠 어딘가 · 금잔디 광장",
+        sub: "경영관 33B101 · 서울캠 어딘가 · 금잔디 광장 · 수선관 61",
         actions: [
-          { kind: "map", target: "space:hssc:33B101" },
-          { kind: "map", target: "facility:hssc:geumjandi-square" },
+          { kind: "map", target: "skku_building:12", space: "33B101" },
+          { kind: "map", target: "skku_building:64", space: null },
+          { kind: "map", target: "skku_building:13", space: null },
         ],
       },
     ]);
+  });
+
+  it("names a place the campus map cannot open, with no map action", () => {
+    // Arrange
+    const stored = withSession((item) => (item.where.places = [place("facility:hssc:myeongnyun-dormitory", "명륜학사")]));
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored, SHOWN), only("whenWhere"));
+
+    // Assert
+    expect(block?.lines).toMatchObject([{ sub: "명륜학사", actions: [] }]);
+  });
+
+  it("searches a place off campus by its words in the phone's map app, and opens nothing for a place only unresolved", () => {
+    // Arrange
+    const stored = withSession((item) => {
+      item.where.mode = "offcampus";
+      item.where.places = [place("unresolved", "넥슨코리아 사옥", "offcampus"), place("unresolved", "성균관대 학군단", "ambiguous"), place("unresolved", "인사캠", "campus_only")];
+    });
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored, SHOWN), only("whenWhere"));
+
+    // Assert
+    expect(block?.lines).toMatchObject([{ sub: "넥슨코리아 사옥 · 성균관대 학군단 · 인사캠", actions: [{ kind: "search", target: "넥슨코리아 사옥" }] }]);
   });
 
   it.each<[string, (item: RawRecord) => void, string | null]>([
@@ -137,18 +167,22 @@ describe("toScreenBlocks, 언제·어디", () => {
     expect(block?.lines[0]?.text).toBe(text);
   });
 
-  it("marks a line read from a poster", () => {
+  it.each([
+    ["poster:1", "poster"],
+    ["title", "title"],
+    ["body", "body"],
+  ])("says a line quoted from %s came from the %s, where the app finds its quote", (src, source) => {
     // Arrange
-    const stored = withSession((item) => (item.ev = evidenceOf("10월 29일 14시", "poster:1")));
+    const stored = withSession((item) => (item.ev = evidenceOf("10월 29일 14시", src)));
 
     // Act
     const [block] = toScreenBlocks(scopeOf(stored), only("whenWhere"));
 
     // Assert
-    expect(block?.lines).toMatchObject([{ fromPoster: true, quote: "10월 29일 14시" }]);
+    expect(block?.lines).toMatchObject([{ source, quote: "10월 29일 14시" }]);
   });
 
-  it("shows the next three by date and folds the rest into a count", () => {
+  it("sends every session by date and counts the ones after the next three as folded", () => {
     // Arrange
     const dates = ["2026-11-05", "2026-10-29", "2026-11-02", "2026-10-31", "2026-11-01"];
     const stored = record(SESSION, (r) => (r.times = dates.map((date, i) => sessionOn(`tm_s${i}`, date))));
@@ -157,7 +191,7 @@ describe("toScreenBlocks, 언제·어디", () => {
     const [block] = toScreenBlocks(scopeOf(stored), only("whenWhere"));
 
     // Assert
-    expect(block?.lines.map(({ text }) => text)).toEqual(["10/29(목)", "10/31(토)", "11/1(일)"]);
+    expect(block?.lines.map(({ text }) => text)).toEqual(["10/29(목)", "10/31(토)", "11/1(일)", "11/2(월)", "11/5(목)"]);
     expect(block?.foldedCount).toBe(2);
   });
 
@@ -170,7 +204,7 @@ describe("toScreenBlocks, 언제·어디", () => {
     const [block] = toScreenBlocks(scopeOf(stored), only("whenWhere"));
 
     // Assert
-    expect(block?.lines.map(({ text }) => text)).toEqual(["10/27(화)", "10/29(목)", "10/13(화)"]);
+    expect(block?.lines.map(({ text }) => text)).toEqual(["10/27(화)", "10/29(목)", "10/13(화)", "10/12(월)"]);
     expect(block?.foldedCount).toBe(1);
   });
 
@@ -275,12 +309,12 @@ describe("toScreenBlocks, 신청", () => {
         numbered: true,
         footerLink: null,
         foldedCount: 0,
-        lines: [{ text: "신청하기", sub: null, fromPoster: false, actions: [{ kind: "link", target: "https://forms.example.com/apply" }], quote: "신청하기" }],
+        lines: [{ text: "신청하기", sub: null, source: "body", actions: [{ kind: "link", target: "https://forms.example.com/apply" }], quote: "신청하기" }],
       },
     ]);
   });
 
-  it.each<[string, RawRecord, string | null, Array<{ kind: string; target: string }>]>([
+  it.each<[string, RawRecord, string | null, Array<Record<string, string | null>>]>([
     ["a system path copied as written", actionOf({ method: "system", target: "학사정보시스템 > 신청" }), "학사정보시스템 > 신청", []],
     ["a visit to an office as written", actionOf({ method: "visit", target: "학과 사무실 방문" }), "학과 사무실 방문", []],
     ["an attachment by its role label", actionOf({ method: "other", target: "A1" }), "지원서", []],
@@ -290,6 +324,8 @@ describe("toScreenBlocks, 신청", () => {
     ["a call to a number", actionOf({ method: "phone", target: "02-760-1234" }), null, [{ kind: "call", target: "02-760-1234" }]],
     ["a link by an id that names no link", actionOf({ target: "K9" }), null, []],
     ["a mailto link as an email", actionOf({ target: "K2" }), null, [{ kind: "email", target: "office@skku.edu" }]],
+    ["a mailto link's subject into the email", actionOf({ target: "K2" }), null, [{ kind: "email", target: "office@skku.edu", subject: "x" }]],
+    ["no subject for an email action whose subject the notice gives as a rule", actionOf({ method: "email", target: "a@skku.edu", subjectRule: evidenceOf("제목: 학번_이름") }), "제목: 학번_이름", [{ kind: "email", target: "a@skku.edu", subject: null }]],
   ])("reads %s", (_label, action, sub, actions) => {
     // Arrange
     const stored = withLinks((r) => {
@@ -486,6 +522,28 @@ describe("toScreenBlocks, a sentence stated once for two things", () => {
       ["혜택", ["등록금 전액"]],
     ]);
   });
+
+  it("shows a fact once, untagged, when a track repeats it in the same block, and keeps what only a track states", () => {
+    // Arrange
+    const benefit = (quote: string, thing: string, tag = "") => ({ ev: evidenceOf(quote), thing, earnedBy: "selected", amount: null, isDraw: false, track: "", appliesTo: [], tag, tagBy: tag ? "thing" : "" });
+    const stored = record(WINDOW, (r) => {
+      r.benefits.push(
+        benefit("수업료 면제", MAIN_THING),
+        benefit("수료증 발급", MAIN_THING),
+        benefit("시급 10,320원", "th_oa", "OA"),
+        benefit("수료증 발급", "th_oa", "OA"),
+        benefit("시급 10,320원", "th_ha", "HA"),
+        benefit("수료증 발급", "th_ha", "HA"),
+        benefit("야간 수당", "th_ha", "HA"),
+      );
+    });
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored), only("benefit"));
+
+    // Assert
+    expect(block?.lines.map(({ text }) => text)).toEqual(["수업료 면제", "수료증 발급", "[OA] 시급 10,320원", "[HA] 시급 10,320원", "[HA] 야간 수당"]);
+  });
 });
 
 describe("toScreenBlocks, the order", () => {
@@ -516,7 +574,7 @@ describe("toOriginal", () => {
     const facts = original((s) => s.posters.push({ n: 1, url: "https://x.example.com/1.png", transcript: "행사 안내" }, { n: 2, url: "https://x.example.com/2.png", transcript: "", unreadable: true }));
 
     // Act & Assert
-    expect(toOriginal(facts).posterCount).toBe(1);
+    expect(toOriginal(facts, []).posterCount).toBe(1);
   });
 
   it("names each attachment by its label, else by a word for its role", () => {
@@ -532,13 +590,50 @@ describe("toOriginal", () => {
     );
 
     // Act & Assert
-    expect(toOriginal(facts).attachments).toEqual([
-      { role: "지원서", name: "지원서_서식.hwp" },
-      { role: "안내문", name: "안내.pdf" },
-      { role: "목록", name: "명단.xlsx" },
-      { role: "포스터", name: "포스터.png" },
-      { role: "첨부 파일", name: "기타.zip" },
+    expect(toOriginal(facts, []).attachments).toEqual([
+      { role: "지원서", name: "지원서_서식.hwp", url: null },
+      { role: "안내문", name: "안내.pdf", url: null },
+      { role: "목록", name: "명단.xlsx", url: null },
+      { role: "포스터", name: "포스터.png", url: null },
+      { role: "첨부 파일", name: "기타.zip", url: null },
     ]);
+  });
+
+  it("opens each attachment by the URL of the file the notice lists at its id's position, else of the one file with its name", () => {
+    // Arrange
+    const facts = original((s) =>
+      s.attachments.push(
+        { id: "A1", name: "신청서.hwp", role: "form", label: "" },
+        { id: "A2", name: "안내.pdf", role: "guide", label: "" },
+        { id: "A3", name: "명단.xlsx", role: "list", label: "" },
+        { id: "A4", name: "삭제된 파일.pdf", role: "other", label: "" },
+      ),
+    );
+    const listed = [
+      { name: "신청서.hwp", url: "https://x.example.com/1" },
+      { name: "명단.xlsx", url: "https://x.example.com/2" },
+      { name: "안내.pdf", url: "https://x.example.com/3" },
+      { name: "신청서.hwp", url: "https://x.example.com/4" },
+    ];
+
+    // Act
+    const attachments = toOriginal(facts, listed).attachments;
+
+    // Assert
+    expect(attachments.map((attachment) => attachment.url)).toEqual(["https://x.example.com/1", "https://x.example.com/3", "https://x.example.com/2", null]);
+  });
+
+  it("opens no attachment whose name two other files share when its position names another file", () => {
+    // Arrange
+    const facts = original((s) => s.attachments.push({ id: "A1", name: "서식.hwp", role: "form", label: "" }));
+    const listed = [
+      { name: "안내.pdf", url: "https://x.example.com/1" },
+      { name: "서식.hwp", url: "https://x.example.com/2" },
+      { name: "서식.hwp", url: "https://x.example.com/3" },
+    ];
+
+    // Act & Assert
+    expect(toOriginal(facts, listed).attachments).toEqual([{ role: "신청서", name: "서식.hwp", url: null }]);
   });
 
   it("names each link by its anchor text, else the verb of the action that targets it, else QR for a poster's, else 링크", () => {
@@ -558,18 +653,18 @@ describe("toOriginal", () => {
     });
 
     // Act
-    const links = toOriginal(scopeOf(facts).reading.facts).links;
+    const links = toOriginal(scopeOf(facts).reading.facts, []).links;
 
     // Assert
     expect(links).toEqual([
-      { role: "신청 페이지", domain: "skku.edu" },
-      { role: "접수하기", domain: "forms.example.com" },
-      { role: "링크", domain: "forms.example.com" },
-      { role: "QR", domain: "qr.example.com" },
-      { role: "QR", domain: "qr.example.com" },
-      { role: "문의 메일", domain: "forms.example.com" },
-      { role: "문의하기", domain: "forms.example.com" },
-      { role: "링크", domain: "forms.example.com" },
+      { role: "신청 페이지", domain: "skku.edu", url: "https://www.skku.edu/apply" },
+      { role: "접수하기", domain: "forms.example.com", url: "https://forms.example.com/a" },
+      { role: "링크", domain: "forms.example.com", url: "https://forms.example.com/b" },
+      { role: "QR", domain: "qr.example.com", url: "https://qr.example.com/c" },
+      { role: "QR", domain: "qr.example.com", url: "https://qr.example.com/d" },
+      { role: "문의 메일", domain: "forms.example.com", url: "https://forms.example.com/e" },
+      { role: "문의하기", domain: "forms.example.com", url: "https://forms.example.com/f" },
+      { role: "링크", domain: "forms.example.com", url: "https://forms.example.com/g" },
     ]);
   });
 
@@ -578,11 +673,11 @@ describe("toOriginal", () => {
     const facts = original((s) => s.links.push(linkOf("K1", "mailto:office@skku.edu?subject=x", "메일 보내기"), linkOf("K2", "not a url", "열기"), linkOf("K3", "", "빈 주소")));
 
     // Act & Assert
-    expect(toOriginal(facts).links).toEqual([{ role: "메일 보내기", domain: "skku.edu" }]);
+    expect(toOriginal(facts, []).links).toEqual([{ role: "메일 보내기", domain: "skku.edu", url: "mailto:office@skku.edu?subject=x" }]);
   });
 
   it("is empty for a notice with no sources", () => {
     // Act & Assert
-    expect(toOriginal(original(() => undefined))).toEqual({ posterCount: 0, attachments: [], links: [] });
+    expect(toOriginal(original(() => undefined), [])).toEqual({ posterCount: 0, attachments: [], links: [] });
   });
 });

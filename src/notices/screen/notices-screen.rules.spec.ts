@@ -113,6 +113,12 @@ describe("toStatusLine", () => {
     ["중단 for a suspended call", () => record(WINDOW, (r) => r.statusStatements.push(statement("suspended"))), "2026-10-22", { word: "중단", tone: "stopped", detail: null }],
     ["일정이 바뀌었어요 for a postponed event, neutral", () => record(SESSION, (r) => r.statusStatements.push(statement("postponed"))), "2026-10-25", { word: "일정이 바뀌었어요", tone: "neutral", detail: "10/29(목)" }],
     ["취소됐어요 for a cancelled call", () => record(WINDOW, (r) => r.statusStatements.push(statement("cancelled"))), "2026-10-22", { word: "취소됐어요", tone: "closed", detail: null }],
+    [
+      "접수 중 with the next open track named, which the row's line 2 leaves out",
+      () => record(WINDOW, (r) => (r.times = [{ ...r.times[0], id: "tm_new", track: "신규등록" }, { ...r.times[0], id: "tm_again", track: "재등록", end: { ...r.times[0].end, date: "2026-10-30" } }])),
+      "2026-10-22",
+      { word: "접수 중", tone: "open", detail: "[신규등록] 10/26(월) 마감" },
+    ],
   ])("reads %s", (_label, stored, day, status) => {
     // Act & Assert
     expect(toStatusLine(readingAt(stored(), kstNoon(day)))).toEqual(status);
@@ -281,6 +287,18 @@ describe("toBarAction", () => {
     expect(bar && { kind: bar.kind, target: bar.target }).toEqual(expected);
   });
 
+  it.each<[string, (stored: RawRecord) => void, string | null]>([
+    ["the subject a mailto link writes", (r) => { r.sources.links.push(linkOf("K1", "mailto:office@skku.edu?subject=%EC%8B%A0%EC%B2%AD%20%EC%84%9C%EB%A5%98&cc=a@skku.edu")); r.actions.push(actionOf()); }, "신청 서류"],
+    ["no subject for a mailto link that writes none", (r) => { r.sources.links.push(linkOf("K1", "mailto:office@skku.edu?cc=a@skku.edu")); r.actions.push(actionOf()); }, null],
+    ["no subject for an email action whose subject the notice gives only as a rule", (r) => r.actions.push(actionOf({ method: "email", target: "prof@skku.edu", subjectRule: evidenceOf("메일 제목: 학과_이름_신청서") })), null],
+  ])("fills %s into the email the bar opens", (_label, edit, subject) => {
+    // Act
+    const bar = toBarAction(readingAt(withBar(edit), kstNoon("2026-10-22")));
+
+    // Assert
+    expect(bar).toMatchObject({ kind: "email", subject });
+  });
+
   it("shows no bar for a notice for staff, whatever it links to", () => {
     // Arrange
     const stored = withBar(oneLink, STAFF);
@@ -316,8 +334,8 @@ describe("toHeaderChange", () => {
   });
   const places = (...ids: string[]) => ids.map((id) => ({ text: "경영관 33101호", id, campus: "hssc", reason: null }));
   const named = new Map([
-    ["space:hssc:33B101", { name: "경영관", code: "33B101" }],
-    ["building:hssc:161", { name: "수선관", code: "61" }],
+    ["space:hssc:33B101", { name: "경영관", code: "33B101", mapTarget: null }],
+    ["building:hssc:161", { name: "수선관", code: "61", mapTarget: null }],
   ]);
   const NOW = kstNoon("2026-10-20");
 
@@ -427,12 +445,12 @@ describe("toPlaceIds and toDisplayByPlaceId", () => {
 
   it("pairs each id with the display building gave it, leaving out an id building could not name", () => {
     // Act
-    const displays = toDisplayByPlaceId(["space:hssc:33B101", "building:nsc:286", "building:hssc:161"], [{ name: "경영관", code: "33B101" }, null, { name: "수선관", code: "61" }]);
+    const displays = toDisplayByPlaceId(["space:hssc:33B101", "building:nsc:286", "building:hssc:161"], [{ name: "경영관", code: "33B101", mapTarget: null }, null, { name: "수선관", code: "61", mapTarget: null }]);
 
     // Assert
     expect([...displays]).toEqual([
-      ["space:hssc:33B101", { name: "경영관", code: "33B101" }],
-      ["building:hssc:161", { name: "수선관", code: "61" }],
+      ["space:hssc:33B101", { name: "경영관", code: "33B101", mapTarget: null }],
+      ["building:hssc:161", { name: "수선관", code: "61", mapTarget: null }],
     ]);
   });
 });

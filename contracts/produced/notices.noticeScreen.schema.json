@@ -98,30 +98,113 @@
                     "null"
                   ]
                 },
-                "fromPoster": {
-                  "type": "boolean"
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "body",
+                    "title",
+                    "poster"
+                  ]
                 },
                 "actions": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "map",
-                          "call",
-                          "email",
-                          "link"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "map"
+                          },
+                          "target": {
+                            "type": "string",
+                            "pattern": "^skku_building:[0-9]+$"
+                          },
+                          "space": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "space"
                         ]
                       },
-                      "target": {
-                        "type": "string"
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "search"
+                          },
+                          "target": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "call"
+                          },
+                          "target": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "email"
+                          },
+                          "target": {
+                            "type": "string"
+                          },
+                          "subject": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "subject"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "link"
+                          },
+                          "target": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target"
+                        ]
                       }
-                    },
-                    "required": [
-                      "kind",
-                      "target"
                     ]
                   }
                 },
@@ -132,7 +215,7 @@
               "required": [
                 "text",
                 "sub",
-                "fromPoster",
+                "source",
                 "actions",
                 "quote"
               ]
@@ -165,26 +248,54 @@
     "action": {
       "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "label": {
-              "type": "string"
-            },
-            "kind": {
-              "type": "string",
-              "enum": [
-                "link",
-                "email"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "link"
+                },
+                "target": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "label",
+                "kind",
+                "target"
               ]
             },
-            "target": {
-              "type": "string"
+            {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "email"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "kind",
+                "target",
+                "subject"
+              ]
             }
-          },
-          "required": [
-            "label",
-            "kind",
-            "target"
           ]
         },
         {
@@ -230,11 +341,18 @@
               },
               "name": {
                 "type": "string"
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
               "role",
-              "name"
+              "name",
+              "url"
             ]
           }
         },
@@ -248,11 +366,15 @@
               },
               "domain": {
                 "type": "string"
+              },
+              "url": {
+                "type": "string"
               }
             },
             "required": [
               "role",
-              "domain"
+              "domain",
+              "url"
             ]
           }
         }

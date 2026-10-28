@@ -30,7 +30,7 @@ export class NoticesScreenService {
       collapsed: toCollapse(reading),
       staffOnly: reading.isStaffOnly,
       posterOnly: isPosterOnly(reading.facts),
-      original: toOriginal(reading.facts),
+      original: toOriginal(reading.facts, notice.attachments ?? []),
     };
   }
 

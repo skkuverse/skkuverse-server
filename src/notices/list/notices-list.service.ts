@@ -22,7 +22,7 @@ export class NoticesListService {
   async listNotices(scope: NoticeScope, query: NoticeListQuery): Promise<NoticeList> {
     const page = toNoticePage(await this.repository.listNotices(scope, query), query.limit);
     const now = this.clock.now();
-    const options = { now, boardNameById: typeof scope === "string" ? null : this.boardNameById };
+    const options = { now, boardNameById: typeof scope === "string" || new Set(scope).size < 2 ? null : this.boardNameById };
     const notices = this.rows
       .renderRows(page.items, now)
       .map(({ notice, row }) => ({ notice, row, derived: this.legacy.deriveBrief(notice, now) }))
