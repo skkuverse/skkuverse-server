@@ -1,6 +1,6 @@
 import type { SummaryType } from "../notices.types";
 import type { DatedItem, RowItem, RowReading } from "../row/notices-row.types";
-import { DATELESS_STATUSES, ONE_LINER_SEPARATOR, SPOKEN_TONES } from "./notices-legacy.constants";
+import { CONDITION_COUNT_PATTERN, DATELESS_STATUSES, ONE_LINER_SEPARATOR, SPOKEN_TONES } from "./notices-legacy.constants";
 import type { DerivedBrief, DerivedBriefDate, DerivedBriefEnd } from "./notices-legacy.types";
 
 type Point = DatedItem["start"];
@@ -29,7 +29,8 @@ function toDates(shown: RowItem, type: SummaryType): Pick<DerivedBrief, "startAt
 
 function toOneLiner({ row }: RowReading): string | null {
   const word = row.token && SPOKEN_TONES.has(row.token.tone) ? row.token.text : "";
-  return [word, row.line2, row.qualifier ?? ""].filter((part) => part !== "").join(ONE_LINER_SEPARATOR) || null;
+  const qualifier = row.qualifier === null || CONDITION_COUNT_PATTERN.test(row.qualifier) ? "" : row.qualifier;
+  return [word, row.line2, qualifier].filter((part) => part !== "").join(ONE_LINER_SEPARATOR) || null;
 }
 
 // WHY: owner decision 2026-10-28: a rough one-liner for apps that still read `summary`: line 2 of the row, then its
