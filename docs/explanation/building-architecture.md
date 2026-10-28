@@ -23,7 +23,7 @@ Building serves SKKU's campus map, which skkuverse-crawler copies into MongoDB, 
 | `scripts/seed-connections.js` | — | Hand-written walkways between two floors | `connections`, read by `BuildingCatalogRepository` |
 | `scripts/import-campus-shapes.js` | — | Authored footprints, boundaries and paths | `campus_shapes`, parsed by `campusShapeDoc` in `BuildingRepository` |
 | `src/building/place/place-lexicon.json` | — | Facility slugs and the places skkumap lacks, reviewed as code | `placeLexicon`, parsed at import by `placeLexiconFile` |
-| skkuverse-crawler, a notice session's stored place ids (no caller yet) | — | The pinned places the crawler resolved itself, as `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>`, or `unresolved` | `BuildingPlaceDisplayService.describePlaces`, which takes the id strings and reads each through `toStoredPlace` |
+| skkuverse-crawler, a notice's stored place ids | — | The pinned places the crawler resolved itself, as `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>`, or `unresolved` | `BuildingPlaceDisplayService.describePlaces`, which takes the id strings and reads each through `toStoredPlace` |
 
 buildInfo returns rooms that spaceList lacks, and the other way round, so the crawler merges both into `spaces`, and `sources` records which listed a room.
 
@@ -121,7 +121,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 
 ## Open questions
 
-- Place naming has no caller yet: the notice flow that names each session's stored place ids through `BuildingPlaceDisplayService` is not built. The places skkumap lacks (`extraFacilities`) have no coordinates, so a map pin for one needs them first.
+- The places skkumap lacks (`extraFacilities`) have no coordinates, so a map pin for one needs them first. `NoticesScreenService` names each stored place id through `BuildingPlaceDisplayService` and gives each place it can name a `map` action, those included. Whether the app can open one of them is unverified.
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
 - A version stamp that api replicas check, so a crawler run reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
 - Why spaceList stamps a `conspaceCd` on some rooms and not on others. The detail serves it on each space, and nothing joins on it there.
