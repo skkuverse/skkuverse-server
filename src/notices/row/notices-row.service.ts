@@ -17,6 +17,6 @@ export class NoticesRowService {
 
   private toRowSource(notice: RowNotice): RowSource | null {
     const facts = this.facts.parseFacts(notice.facts, notice._id);
-    return facts && { facts, factsHistory: notice.factsHistory ?? [], title: notice.title };
+    return facts && { facts, factsHistory: this.facts.parseFactsHistory(notice.factsHistory, notice._id), title: notice.title };
   }
 }

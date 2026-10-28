@@ -47,4 +47,18 @@ describe("NoticesRowService.renderRows", () => {
     expect(rendered.map(({ notice: paired }) => paired)).toEqual(notices);
     expect(rendered.map(({ row }) => row?.line2 ?? null)).toEqual(["내일 마감", null, null]);
   });
+
+  it("renders the row of a notice whose stored history holds a snapshot the schema refuses, as if it were not there", () => {
+    // Arrange
+    const withoutTimes = { extractedAt: "2026-10-20T03:00:00Z", inputHash: "h1", status: ["closed"] };
+    const clean = notice(RECORD);
+    const corrupt = { ...notice(RECORD), factsHistory: [withoutTimes, "garbage", null] };
+
+    // Act
+    const [cleanRendered, corruptRendered] = [clean, corrupt].map((stored) => service.renderRows([stored], new Date("2026-10-25T03:00:00Z"))[0]);
+
+    // Assert
+    expect(corruptRendered?.row).toEqual(cleanRendered?.row);
+    expect(corruptRendered?.row?.token?.text).toBe("내일 마감");
+  });
 });
