@@ -46,7 +46,7 @@
         "repo": "crawler",
         "path": "py/generated/server-categories.json",
         "ref": "main",
-        "commit": "6b530348598d8c193997acb49b2e3f8a09062caa",
+        "commit": "72f415a94c05efba98723b1e368e4b18e8151831",
         "sha256": "36e26285167b79517800f6136a1fc729445e6a2795747c4bac7fcb92b7513ce2"
       },
       "syncedAt": "2026-08-04T10:48:30Z"
@@ -58,22 +58,22 @@
         "repo": "crawler",
         "path": "py/generated/server-exclude-reasons.json",
         "ref": "main",
-        "commit": "6b530348598d8c193997acb49b2e3f8a09062caa",
+        "commit": "72f415a94c05efba98723b1e368e4b18e8151831",
         "sha256": "33d092f8c2f0d13f585a6f24660f2fd0bde38893e3a35e6c72ef277f6ec14f8c"
       },
       "syncedAt": "2026-08-04T10:48:30Z"
     },
     "notices.facts": {
       "path": "contracts/consumed/notice-facts.schema.json",
-      "sha256": "26b6c18077fd0fc32f37a47766b5b488fad81e1fe4dd1967c6d5df747ea8f6a2",
+      "sha256": "c3657b5baf137755ec8fb828d2af1200fb3904543ce0d1c6f9347f24f40f12fe",
       "producer": {
         "repo": "crawler",
         "path": "docs/notice-facts/notice-facts.schema.json",
         "ref": "main",
-        "commit": "6b530348598d8c193997acb49b2e3f8a09062caa",
-        "sha256": "26b6c18077fd0fc32f37a47766b5b488fad81e1fe4dd1967c6d5df747ea8f6a2"
+        "commit": "72f415a94c05efba98723b1e368e4b18e8151831",
+        "sha256": "c3657b5baf137755ec8fb828d2af1200fb3904543ce0d1c6f9347f24f40f12fe"
       },
-      "syncedAt": "2026-10-28T19:04:21Z"
+      "syncedAt": "2026-10-28T23:16:05Z"
     },
     "notices.sources": {
       "path": "src/notices/sources.json",
@@ -82,7 +82,7 @@
         "repo": "crawler",
         "path": "py/generated/server-sources.json",
         "ref": "main",
-        "commit": "6b530348598d8c193997acb49b2e3f8a09062caa",
+        "commit": "72f415a94c05efba98723b1e368e4b18e8151831",
         "sha256": "c18defa82ae4615ce66e15bc80c2833c9804d1d7bed37a9afa5bbbcd7b49100d"
       },
       "syncedAt": "2026-10-16T05:00:32Z"
