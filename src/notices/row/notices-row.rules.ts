@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
-import { toBenefitText, toQuoteText } from "../notices.mapper";
+import { toBenefitText, toQuoteText } from "../notices.rules";
 import { CHANGE_WINDOW_DAYS, DIMMED_STATUSES, MAX_SERIES_LOOKAHEAD_DAYS, ROW_TOKENS, ROW_WORDS, WEEKDAY_CODES } from "./notices-row.constants";
 import type { DatedItem, DatedStatusKind, FactsRow, ItemDays, ItemReading, KstDay, RowItem, RowReading, RowSource, RowStatus, RowToken, StatedStatusKind, StoppedStatusKind } from "./notices-row.types";
 

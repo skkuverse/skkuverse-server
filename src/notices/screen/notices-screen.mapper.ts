@@ -1,7 +1,7 @@
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
 import type { NoticeAttachment } from "../notices.document";
-import { toBenefitText, toQuoteText } from "../notices.mapper";
+import { toBenefitText, toQuoteText } from "../notices.rules";
 import type { ItemReading } from "../row/notices-row.types";
 import { ATTACHMENT_ROLE_WORDS, BLOCK_SPECS, SCREEN_WORDS } from "./notices-screen.constants";
 import { isFromPoster, isStated, toActionTarget, toAttachmentUrl, toContactAction, toDistinctLines, toItemText, toLineSource, toPlaceAction, toPlaceText, toSessionOrder, withTag } from "./notices-screen.rules";
