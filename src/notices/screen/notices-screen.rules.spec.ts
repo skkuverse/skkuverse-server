@@ -75,6 +75,8 @@ describe("toBlockOrder", () => {
     ["an English category takes the event order", "Scholarship", EVENT],
     ["no category takes the event order", null, EVENT],
     ["a category the crawler did not store takes the event order", undefined, EVENT],
+    ["a category named like an object's own key takes the event order", "constructor", EVENT],
+    ["a category named __proto__ takes the event order", "__proto__", EVENT],
   ])("%s", (_label, category, order) => {
     // Act & Assert
     expect(toBlockOrder(category, reading)).toEqual(order);
