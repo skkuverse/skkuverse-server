@@ -609,11 +609,18 @@
                       },
                       "name": {
                         "type": "string"
+                      },
+                      "url": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       }
                     },
                     "required": [
                       "role",
-                      "name"
+                      "name",
+                      "url"
                     ]
                   }
                 },
@@ -627,11 +634,15 @@
                       },
                       "domain": {
                         "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
                       }
                     },
                     "required": [
                       "role",
-                      "domain"
+                      "domain",
+                      "url"
                     ]
                   }
                 }

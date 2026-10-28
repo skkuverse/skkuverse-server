@@ -40,8 +40,9 @@ export const noticeScreen = z.object({
   posterOnly: z.boolean(),
   original: z.object({
     posterCount: z.int().min(0),
-    attachments: z.array(z.object({ role: z.string(), name: z.string() })),
-    links: z.array(z.object({ role: z.string(), domain: z.string() })),
+    /** WHY: `url` is the one in the detail's `attachments`, null when that list no longer holds the file. */
+    attachments: z.array(z.object({ role: z.string(), name: z.string(), url: z.string().nullable() })),
+    links: z.array(z.object({ role: z.string(), domain: z.string(), url: z.string() })),
   }),
 });
 

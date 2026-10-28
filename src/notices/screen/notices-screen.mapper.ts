@@ -1,8 +1,9 @@
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
+import type { NoticeAttachment } from "../notices.document";
 import type { ItemReading } from "../row/notices-row.types";
 import { ATTACHMENT_ROLE_WORDS, BLOCK_SPECS, SCREEN_WORDS } from "./notices-screen.constants";
-import { isFromPoster, isStated, toActionTarget, toContactAction, toItemText, toPlaceAction, toPlaceText, toSessionOrder, withDraw, withTag } from "./notices-screen.rules";
+import { isFromPoster, isStated, toActionTarget, toAttachmentUrl, toContactAction, toItemText, toPlaceAction, toPlaceText, toSessionOrder, withDraw, withTag } from "./notices-screen.rules";
 import type { BlockKey, BlockLines, ScreenBlock, ScreenLine, ScreenOriginal, ScreenScope } from "./notices-screen.types";
 
 type DatedItem = NoticeFacts["times"][number];
@@ -110,14 +111,14 @@ const toQuoteLine = (ev: Evidence, text: string): ScreenLine => ({ text, sub: nu
 
 const toFormerly = (from: Evidence | null): string | null => (from ? SCREEN_WORDS.formerly.replace("{text}", from.quote) : null);
 
-export function toOriginal(facts: NoticeFacts): ScreenOriginal {
+export function toOriginal(facts: NoticeFacts, listed: readonly NoticeAttachment[]): ScreenOriginal {
   const { posters, attachments, links } = facts.sources;
   return {
     posterCount: posters.filter((poster) => poster.unreadable !== true).length,
-    attachments: attachments.map(({ name, role, label }) => ({ role: label || ATTACHMENT_ROLE_WORDS[role], name })),
+    attachments: attachments.map(({ id, name, role, label }) => ({ role: label || ATTACHMENT_ROLE_WORDS[role], name, url: toAttachmentUrl(id, name, listed) })),
     links: links.flatMap((link) => {
       const domain = toDomain(link.url);
-      return domain ? [{ role: toLinkRole(link, facts), domain }] : [];
+      return domain ? [{ role: toLinkRole(link, facts), domain, url: link.url }] : [];
     }),
   };
 }
