@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { FactsSnapshot } from "../notices.document";
 
 const tagBy = z.enum(["", "label", "section", "thing", "verifier"]);
 const span = {
@@ -217,3 +218,11 @@ export const noticeFacts = z.object({
 });
 
 export type NoticeFacts = z.output<typeof noticeFacts>;
+
+// CONTRACT(skkuverse-crawler): one earlier version, as `runner._snapshot` writes it (skkuverse-crawler/docs/notice-facts/design.md "Storage").
+export const factsSnapshot = z.object({
+  extractedAt: z.string(),
+  inputHash: z.string(),
+  times: z.array(z.object({ id: z.string(), kind: z.string(), start: z.string(), end: z.string(), places: z.array(z.string()) })),
+  status: z.array(z.string()),
+}) satisfies z.ZodType<FactsSnapshot>;

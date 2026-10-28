@@ -3,13 +3,15 @@ import type { ObjectId } from "mongodb";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../shared/log-throttle.util";
-import { issuePaths } from "../../shared/zod-list.util";
+import { issuePaths, parseEach } from "../../shared/zod-list.util";
+import type { FactsSnapshot } from "../notices.document";
 import { NOTICES_FACTS_LOG_INTERVAL_MS } from "./notices-facts.constants";
-import { noticeFacts, type NoticeFacts } from "./notices-facts.schema";
+import { factsSnapshot, noticeFacts, type NoticeFacts } from "./notices-facts.schema";
 
 @Injectable()
 export class NoticesFactsService {
   private readonly unparsedThrottle = createLogThrottle(NOTICES_FACTS_LOG_INTERVAL_MS, () => this.clock.now().getTime());
+  private readonly historyThrottle = createLogThrottle(NOTICES_FACTS_LOG_INTERVAL_MS, () => this.clock.now().getTime());
 
   constructor(private readonly clock: Clock) {}
 
@@ -25,6 +27,26 @@ export class NoticesFactsService {
       );
     }
     return null;
+  }
+
+  parseFactsHistory(stored: unknown, noticeId: ObjectId): FactsSnapshot[] {
+    if (stored === undefined || stored === null) return [];
+    if (!Array.isArray(stored)) {
+      this.logDroppedSnapshots(noticeId, ["(root): not a list"]);
+      return [];
+    }
+    const { valid, invalid } = parseEach(stored, factsSnapshot, (_snapshot, position) => String(position));
+    if (invalid.length > 0) this.logDroppedSnapshots(noticeId, invalid);
+    return valid;
+  }
+
+  private logDroppedSnapshots(noticeId: ObjectId, dropped: readonly string[]): void {
+    const ticket = this.historyThrottle.take(noticeId.toHexString());
+    if (!ticket) return;
+    logger.warn(
+      { event: "notices.facts.history_unparsed", noticeId: noticeId.toHexString(), dropped, ...ticket },
+      "Notice facts history entries left out: they do not match the snapshot schema",
+    );
   }
 
   private storedVersion(stored: unknown): number | string | undefined {

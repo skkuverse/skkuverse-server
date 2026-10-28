@@ -5,6 +5,10 @@
  * is present and fails the schema (a missing key, another `v`) reads as null too, and logs `notices.facts.unparsed`
  * with the notice id, at most once a minute per notice on the Clock so a bad record cannot flood the log.
  *
+ * parseFactsHistory is the same door for `factsHistory`: a snapshot that fails the schema is left out and the others
+ * are kept, so one corrupt entry cannot throw inside the change check, and it logs `notices.facts.history_unparsed`
+ * on its own throttle line.
+ *
  * src/infra/logger.ts is mocked.
  */
 import fs from "fs";
@@ -132,5 +136,105 @@ describe("NoticesFactsService.parseFacts", () => {
 
     // Assert
     expect(facts).toBeNull();
+  });
+});
+
+const snapshot = (extractedAt: string, inputHash: string): Record<string, unknown> => ({
+  extractedAt,
+  inputHash,
+  times: [{ id: "t1", kind: "window", start: "2026-10-30", end: "2026-11-02", places: ["P1"] }],
+  status: ["extended"],
+});
+
+describe("NoticesFactsService.parseFactsHistory", () => {
+  it("returns the stored snapshots as they are, in their stored order, and logs nothing", () => {
+    // Arrange
+    const service = serviceAt({ instant: START });
+    const stored = [snapshot("2026-10-20T03:00:00Z", "h1"), snapshot("2026-10-22T03:00:00Z", "h2")];
+
+    // Act
+    const history = service.parseFactsHistory(stored, NOTICE_ID);
+
+    // Assert
+    expect(history).toEqual(stored);
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a notice with no history field", undefined],
+    ["a notice whose history is null", null],
+    ["a notice whose history is empty", []],
+  ])("returns an empty history for %s, and logs nothing", (_label, stored) => {
+    // Arrange
+    const service = serviceAt({ instant: START });
+
+    // Act
+    const history = service.parseFactsHistory(stored, NOTICE_ID);
+
+    // Assert
+    expect(history).toEqual([]);
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+
+  it("drops a malformed snapshot, keeps the others in order, and logs the notice id with the dropped position", () => {
+    // Arrange
+    const service = serviceAt({ instant: START });
+    const withoutTimes = { ...snapshot("2026-10-21T03:00:00Z", "h2"), times: undefined };
+    const stored = [snapshot("2026-10-20T03:00:00Z", "h1"), withoutTimes, snapshot("2026-10-22T03:00:00Z", "h3")];
+
+    // Act
+    const history = service.parseFactsHistory(stored, NOTICE_ID);
+
+    // Assert
+    expect(history.map((entry) => entry.inputHash)).toEqual(["h1", "h3"]);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(mockLogger.warn.mock.calls[0]?.[0]).toMatchObject({
+      event: "notices.facts.history_unparsed",
+      noticeId: NOTICE_ID.toHexString(),
+      suppressed: 0,
+    });
+    expect(logText(mockLogger.warn.mock.calls[0])).toContain("1: times");
+  });
+
+  it.each([
+    ["a history that is not a list", { 0: snapshot("2026-10-20T03:00:00Z", "h1") }],
+    ["a history of values that are not objects", [null, 7, "x"]],
+    ["a snapshot whose times are not a list", [{ ...snapshot("2026-10-20T03:00:00Z", "h1"), times: "none" }]],
+    [
+      "a snapshot whose place list holds a number",
+      [{ ...snapshot("2026-10-20T03:00:00Z", "h1"), times: [{ id: "t", kind: "k", start: "", end: "", places: [1] }] }],
+    ],
+  ])("returns an empty history for %s, and never throws", (_label, stored) => {
+    // Arrange
+    const service = serviceAt({ instant: START });
+
+    // Act
+    const history = service.parseFactsHistory(stored, NOTICE_ID);
+
+    // Assert
+    expect(history).toEqual([]);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs one notice at most once an interval, as parseFacts does, on a line apart from the facts line", () => {
+    // Arrange
+    const clock = { instant: START };
+    const service = serviceAt(clock);
+    const bad = [null];
+
+    // Act
+    service.parseFactsHistory(bad, NOTICE_ID);
+    service.parseFactsHistory(bad, NOTICE_ID);
+    service.parseFacts({ v: 2 }, NOTICE_ID);
+    clock.instant = new Date(START.getTime() + NOTICES_FACTS_LOG_INTERVAL_MS);
+    service.parseFactsHistory(bad, NOTICE_ID);
+
+    // Assert
+    const logged = mockLogger.warn.mock.calls.map(([fields]) => fields as Record<string, unknown>);
+    expect(logged.map((fields) => [fields.event, fields.suppressed])).toEqual([
+      ["notices.facts.history_unparsed", 0],
+      ["notices.facts.unparsed", 0],
+      ["notices.facts.history_unparsed", 1],
+    ]);
   });
 });

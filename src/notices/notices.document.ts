@@ -124,6 +124,7 @@ export interface NoticeDoc {
   // CONTRACT(skkuverse-crawler): names a group at one moment only (skkuverse-crawler/docs/notice-facts/design.md "Storage"):
   // a body edit changes it, so nothing long-lived keys on it.
   groupId?: string | null;
-  // CONTRACT(skkuverse-crawler): up to five earlier versions of `facts`, oldest first (skkuverse-crawler/docs/notice-facts/design.md "Storage").
-  factsHistory?: FactsSnapshot[];
+  // CONTRACT(skkuverse-crawler): up to five earlier versions of `facts`, oldest first (skkuverse-crawler/docs/notice-facts/design.md "Storage");
+  // read them only through NoticesFactsService, which leaves out a snapshot that is not a `FactsSnapshot`.
+  factsHistory?: unknown;
 }
