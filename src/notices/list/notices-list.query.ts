@@ -10,6 +10,11 @@ import type { CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list
  */
 export const FORCE_INDEX = { sourceId: 1, date: -1, _id: -1 } as const;
 
+// EVIDENCE: the lookup checks its sources and `_id: { $nin }` on these keys, so it fetches no copy outside the read or
+// already scanned. On _dev's general tab, page 1 (2026-10-29), it fetched 2 documents (39 KB); on (dupOf, _id) it
+// fetched 102 (2.3 MB), mostly copies on skku-main and skku-notice02 to 07, which the read leaves out.
+export const CLUSTER_INDEX = { dupOf: 1, sourceId: 1, _id: 1 } as const;
+
 // WHY: a notice with facts and no summary has the type its row derives, which no stored field holds, so a read for a type
 // takes it too and the service keeps the ones whose derived type matches.
 const DERIVED_SUMMARY_FILTER: Document = { summaryAt: null, facts: { $type: "object" } };
