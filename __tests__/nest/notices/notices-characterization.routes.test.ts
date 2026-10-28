@@ -30,6 +30,7 @@ import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
 import { CLAIM_SORT, toClaimFilter } from "../../../src/notices/dispatch/notices-dispatch.query";
+import { CLUSTER_INDEX, CLUSTER_MEMBER_PROJECTION, toClusterMemberFilter, toNoticeListFilter } from "../../../src/notices/list/notices-list.query";
 import { InternalAuthorizer, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
@@ -395,6 +396,48 @@ describe("GET /notices?sourceIds= over real documents", () => {
     expect(articleNos(first)).toEqual([1, 2]);
     expect(articleNos(second)).toEqual([4, 5]);
     expect(second.body.data.hasMore).toBe(false);
+  });
+});
+
+describe("GET /notices?sourceIds= over copies the crawler linked", () => {
+  const linked = () => [
+    notice({ _id: oid(31), articleNo: 31, sourceId: "bio-undergrad", date: "2026-10-12", dupOf: oid(31), crawledAt: new Date("2026-10-12T01:00:00Z") }),
+    notice({ _id: oid(32), articleNo: 32, sourceId: "skku-notice02", date: "2026-10-11", dupOf: oid(31), crawledAt: new Date("2026-10-12T02:00:00Z") }),
+    notice({ _id: oid(33), articleNo: 33, sourceId: "bio-undergrad", date: "2026-10-10" }),
+    notice({ _id: oid(34), articleNo: 34, sourceId: "skku-notice02", date: "2026-10-09", dupOf: oid(34) }),
+    notice({ _id: oid(35), articleNo: 35, sourceId: "skku-notice06", date: "2026-10-12", dupOf: oid(31), crawledAt: new Date("2026-10-12T03:00:00Z") }),
+  ];
+
+  it("serves an article once, as its copy crawled last, and each other notice on its own page", async () => {
+    // Arrange
+    await notices.insertMany(linked());
+
+    // Act
+    const first = await list("?sourceIds=bio-undergrad,skku-notice02&limit=1");
+    const second = await list(`?sourceIds=bio-undergrad,skku-notice02&limit=1&cursor=${first.body.data.nextCursor}`);
+    const third = await list(`?sourceIds=bio-undergrad,skku-notice02&limit=1&cursor=${second.body.data.nextCursor}`);
+
+    // Assert
+    expect([first, second, third].map(articleNos)).toEqual([[32], [33], [34]]);
+    expect([first, second, third].map((res) => res.body.data.hasMore)).toEqual([true, true, false]);
+  });
+
+  it("looks up a batch's other copies on dupOf_1_sourceId_1__id_1 and fetches neither a copy the batch holds nor one outside the read", async () => {
+    // Arrange
+    await notices.insertMany(linked());
+    await indexNamed("dupOf_1_sourceId_1__id_1");
+    const lookup = { keys: [oid(31).toHexString()], scannedIds: [oid(31)] };
+    const scopeFilter = toNoticeListFilter(["bio-undergrad", "skku-notice02"], { limit: 1, cursor: null }, config.notices.serviceStartDate);
+    const filter = toClusterMemberFilter(scopeFilter, lookup);
+
+    // Act
+    const explained = await notices.find(filter, { projection: CLUSTER_MEMBER_PROJECTION }).hint(CLUSTER_INDEX).explain("executionStats");
+    const members = await notices.find(filter, { projection: CLUSTER_MEMBER_PROJECTION }).hint(CLUSTER_INDEX).toArray();
+
+    // Assert
+    expect(members.map((member) => member._id)).toEqual([oid(32)]);
+    expect(planStages(explained.queryPlanner.winningPlan).filter((stage) => stage.stage === "IXSCAN").map((stage) => stage.indexName)).toEqual(["dupOf_1_sourceId_1__id_1"]);
+    expect(explained.executionStats.totalDocsExamined).toBe(1);
   });
 });
 

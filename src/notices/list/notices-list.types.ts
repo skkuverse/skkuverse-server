@@ -1,3 +1,4 @@
+import type { ObjectId } from "mongodb";
 import type { NoticeListRow } from "./notices-list.document";
 import type { SummaryType } from "../notices.types";
 import type { LIST_DAYS } from "./notices-list.constants";
@@ -24,6 +25,11 @@ export interface NoticeListQuery {
   type?: SummaryType;
   cursor: CursorPayload | null;
   q?: string;
+}
+
+export interface ClusterLookup {
+  keys: readonly string[];
+  scannedIds: readonly ObjectId[];
 }
 
 export interface BriefDate {

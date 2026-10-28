@@ -3,12 +3,14 @@
  * runs, rendered through the v1 brief shape the app already reads), the v1 period pick and the cursor's
  * cross-release decoding (ADR 0007: a legacy {d, c, i} cursor in app memory during a deploy must still decode),
  * and the day group a list item sits under (toListDay: umbrella ADR 0009 D2, by the KST day of its posting date, a week
- * starting on Monday).
+ * starting on Monday). On a read of several boards, each article is one row (umbrella ADR 0009 D8): selectShownRows keeps
+ * a scanned row only when it is its cluster's shown copy, the copy crawled last, then the first in list order.
  */
 import type { SummaryDate } from "../notices.document";
 import { encodeCursor } from "./notices-list.mapper";
 import { NoticesListCursorError } from "./notices-list.error";
-import { decodeCursor, isV2Summary, selectEffectivePeriod, selectRoleBadge, toListDay } from "./notices-list.rules";
+import { ObjectId } from "mongodb";
+import { decodeCursor, hasSeveralSources, isV2Summary, selectEffectivePeriod, selectRoleBadge, selectShownRows, toListDay } from "./notices-list.rules";
 
 const NOW = new Date("2026-10-09T12:00:00+09:00");
 const OID = "66a1b2c3d4e5f6a7b8c9d0e1";
@@ -548,5 +550,101 @@ describe("toListDay", () => {
 
     // Assert
     expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+  });
+});
+
+describe("hasSeveralSources", () => {
+  it.each([
+    ["one source by path", "skku-notice03", false],
+    ["one source in a list", ["skku-notice03"], false],
+    ["one source named twice", ["skku-notice03", "skku-notice03"], false],
+    ["two sources", ["skku-notice03", "skku-notice08"], true],
+  ])("is %s: %s", (_case, scope, expected) => {
+    // Act & Assert
+    expect(hasSeveralSources(scope)).toBe(expected);
+  });
+});
+
+describe("selectShownRows", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+  const crawled = (hour: number) => new Date(`2026-10-20T${String(hour).padStart(2, "0")}:00:00Z`);
+  const copy = (n: number, postedDate: string, hour: number | null, dupOf?: number) => ({
+    _id: id(n),
+    date: postedDate,
+    ...(hour === null ? {} : { crawledAt: crawled(hour) }),
+    ...(dupOf === undefined ? {} : { dupOf: id(dupOf) }),
+  });
+  const ids = (rows: Array<{ _id: ObjectId }>) => rows.map((row) => row._id.toHexString());
+
+  it("keeps the copy crawled last and drops the others of its cluster", () => {
+    // Arrange
+    const batch = [copy(3, "2026-10-20", 1, 1), copy(2, "2026-10-19", 5, 1), copy(1, "2026-10-18", 2, 1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, []))).toEqual([id(2).toHexString()]);
+  });
+
+  it("breaks a crawl tie by list order: the later date, then the higher _id", () => {
+    // Arrange
+    const byDate = [copy(1, "2026-10-20", 4, 9), copy(2, "2026-10-19", 4, 9)];
+    const byId = [copy(4, "2026-10-19", 4, 8), copy(3, "2026-10-19", 4, 8)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(byDate, []))).toEqual([id(1).toHexString()]);
+    expect(ids(selectShownRows(byId, []))).toEqual([id(4).toHexString()]);
+  });
+
+  it("drops a row whose shown copy sorts before the cursor, as an earlier page served it", () => {
+    // Arrange
+    const batch = [copy(2, "2026-10-18", 1, 1)];
+    const members = [copy(1, "2026-10-20", 3, 1)];
+
+    // Act & Assert
+    expect(selectShownRows(batch, members)).toEqual([]);
+  });
+
+  it("drops a row whose shown copy sorts later, which is served when the scan reaches it", () => {
+    // Arrange
+    const batch = [copy(2, "2026-10-20", 1, 1)];
+    const members = [copy(1, "2026-10-02", 3, 1)];
+
+    // Act & Assert
+    expect(selectShownRows(batch, members)).toEqual([]);
+  });
+
+  it("keys a notice the crawler has not linked yet on its own _id", () => {
+    // Arrange
+    const batch = [copy(2, "2026-10-20", 1), copy(1, "2026-10-20", 3)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, []))).toEqual([id(2).toHexString(), id(1).toHexString()]);
+  });
+
+  it("collapses copies on one board too, since it compares copies and never their boards", () => {
+    // Arrange
+    const batch = [
+      { ...copy(2, "2026-10-20", 1, 1), sourceId: "skku-notice03" },
+      { ...copy(1, "2026-10-19", 2, 1), sourceId: "skku-notice03" },
+    ];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, []))).toEqual([id(1).toHexString()]);
+  });
+
+  it("counts a copy without a crawl time as crawled first", () => {
+    // Arrange
+    const batch = [copy(2, "2026-10-20", null, 1), copy(1, "2026-10-19", 0, 1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, []))).toEqual([id(1).toHexString()]);
+  });
+
+  it("keeps each cluster's shown copy, in batch order, when a member is also in the batch", () => {
+    // Arrange
+    const batch = [copy(5, "2026-10-20", 1, 5), copy(4, "2026-10-19", 2, 1), copy(3, "2026-10-18", 1, 3)];
+    const members = [copy(4, "2026-10-19", 2, 1), copy(1, "2026-10-01", 1, 1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, members))).toEqual([id(5).toHexString(), id(4).toHexString(), id(3).toHexString()]);
   });
 });

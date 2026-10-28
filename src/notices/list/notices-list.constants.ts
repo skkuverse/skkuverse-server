@@ -2,6 +2,10 @@ export const DEFAULT_LIMIT = 20;
 
 export const MAX_LIMIT = 50;
 
+// EVIDENCE: a scan of several boards reads this many rows per row the page needs, since copies drop out. On _dev
+// (2026-10-29) 56 to 65% of rows were shown copies, and all 53 pages of three picks filled from one scan.
+export const CLUSTER_SCAN_FACTOR = 2;
+
 export const TYPE_MESSAGE = "type must be one of: action_required, event, informational";
 
 export const CURSOR_MESSAGE = "cursor is malformed";

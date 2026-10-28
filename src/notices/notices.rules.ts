@@ -1,5 +1,6 @@
 import { AppError } from "../http/app.error";
 import { MAX_QUERY_CODEPOINTS, MAX_SOURCE_IDS, SUMMARY_TYPES } from "./notices.constants";
+import type { NoticeDoc } from "./notices.document";
 import type { CategoryConfig, CategoryPicker, ExcludeReasonMap, SourceConfig, SummaryType } from "./notices.types";
 
 export function isSummaryType(value: unknown): value is SummaryType {
@@ -8,6 +9,17 @@ export function isSummaryType(value: unknown): value is SummaryType {
 
 export function normalizeSummaryType(value: unknown): SummaryType {
   return isSummaryType(value) ? value : "informational";
+}
+
+/** SEE: docs/decisions/0005-notice-dispatch-content-group.md — the copies of one article share the crawler's `dupOf`. */
+export function clusterKeyOf(notice: Pick<NoticeDoc, "_id" | "dupOf">): string {
+  return (notice.dupOf ?? notice._id).toHexString();
+}
+
+export function groupByClusterKey<T extends Pick<NoticeDoc, "_id" | "dupOf">>(notices: readonly T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const notice of notices) groups.set(clusterKeyOf(notice), [...(groups.get(clusterKeyOf(notice)) ?? []), notice]);
+  return [...groups.values()];
 }
 
 // WHY: a code-point count, so 100 emoji pass like 100 letters, and a control character drops the search.
