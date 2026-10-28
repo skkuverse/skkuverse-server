@@ -138,3 +138,35 @@ describe("toDerivedBrief", () => {
     expect(brief.oneLiner).toBe("[신관 A,B동] 11/10(화) 10시 · 경영학과, 글로벌경영학과 재적생");
   });
 });
+
+describe("toDerivedBrief, the table label of codebook v3.11", () => {
+  const MAIN_THING = "th_441ff75112a0";
+  const labelledBrief = (label: string | undefined) => {
+    const stored = JSON.parse(fs.readFileSync(path.join(FIXTURES, "a_deadline_tomorrow_reads_as_one_while_the_window_is_open.json"), "utf8")) as { now: string; record: { benefits: unknown[] } };
+    const ev = { src: "body", quote: "월 50만원", start: 0, end: 6, match: "exact", ...(label === undefined ? {} : { label }) };
+    stored.record.benefits.push({ ev, thing: MAIN_THING, earnedBy: "selected", amount: null, isDraw: false, track: "", appliesTo: [], tag: "", tagBy: "" });
+    const now = new Date(stored.now);
+    const reading = new NoticesRowService(new NoticesFactsService({ now: () => now })).readNotice({ _id: new ObjectId(), title: "제목", facts: stored.record, factsHistory: [] }, now);
+    if (!reading) throw new Error("the test record does not parse");
+    return { brief: toDerivedBrief(reading), qualifier: reading.row.qualifier };
+  };
+
+  it("keeps the label before the full qualifier even where the row's 26 characters leave the qualifier out", () => {
+    // Act
+    const { brief, qualifier } = labelledBrief("장학금 지급 기준 금액");
+
+    // Assert
+    expect(qualifier).toBeNull();
+    expect(brief.oneLiner).toBe("내일 마감 · 장학금 지급 기준 금액 · 월 50만원");
+  });
+
+  it("reads a notice with no label as it did", () => {
+    // Act
+    const { brief, qualifier } = labelledBrief(undefined);
+
+    // Assert
+    expect(qualifier).toBe("월 50만원");
+    expect(brief.oneLiner).toBe("내일 마감 · 월 50만원");
+  });
+});
+

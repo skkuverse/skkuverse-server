@@ -1,9 +1,10 @@
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
 import type { NoticeAttachment } from "../notices.document";
+import { toBenefitText, toQuoteText } from "../notices.mapper";
 import type { ItemReading } from "../row/notices-row.types";
 import { ATTACHMENT_ROLE_WORDS, BLOCK_SPECS, SCREEN_WORDS } from "./notices-screen.constants";
-import { isFromPoster, isStated, toActionTarget, toAttachmentUrl, toContactAction, toDistinctLines, toItemText, toLineSource, toPlaceAction, toPlaceText, toSessionOrder, withDraw, withTag } from "./notices-screen.rules";
+import { isFromPoster, isStated, toActionTarget, toAttachmentUrl, toContactAction, toDistinctLines, toItemText, toLineSource, toPlaceAction, toPlaceText, toSessionOrder, withTag } from "./notices-screen.rules";
 import type { BlockKey, BlockLines, ScreenBlock, ScreenLine, ScreenOriginal, ScreenScope, TaggedLine } from "./notices-screen.types";
 
 type DatedItem = NoticeFacts["times"][number];
@@ -21,8 +22,8 @@ const BLOCK_LINES = {
   audience: toAudienceLines,
   apply: toApplyLines,
   commitment: toCommitmentLines,
-  benefit: ({ reading }) => reading.facts.benefits.filter(isStated).map((benefit) => toQuoteLine(benefit.ev, withDraw(benefit), benefit)),
-  costOfMissing: ({ reading }) => reading.facts.costOfMissing.filter(isStated).map((cost) => toQuoteLine(cost, cost.quote, cost)),
+  benefit: ({ reading }) => reading.facts.benefits.filter(isStated).map((benefit) => toQuoteLine(benefit.ev, toBenefitText(benefit), benefit)),
+  costOfMissing: ({ reading }) => reading.facts.costOfMissing.filter(isStated).map((cost) => toQuoteLine(cost, toQuoteText(cost), cost)),
   laterSteps: (scope) => scope.reading.items.filter(({ item }) => LATER_KINDS.has(item.kind)).map((reading) => toItemLine(reading, scope)),
   change: ({ reading }) => reading.facts.statedChanges.map((change) => ({ ...toQuoteLine(change.to, change.to.quote), sub: toFormerly(change.from) })),
   contact: toContactLines,
@@ -54,10 +55,10 @@ function toCommitmentLines(scope: ScreenScope): TaggedLine[] {
 function toAudienceLines({ reading }: ScreenScope): TaggedLine[] {
   const { conditions, allRequired, inAttachment, openToAll } = reading.facts.audience;
   const stated = conditions.filter(isStated);
-  const included = stated.filter(({ polarity }) => polarity !== "exclude").map((condition) => toQuoteLine(condition.ev, condition.ev.quote, condition));
+  const included = stated.filter(({ polarity }) => polarity !== "exclude").map((condition) => toQuoteLine(condition.ev, toQuoteText(condition.ev), condition));
   const excluded = stated
     .filter(({ polarity }) => polarity === "exclude")
-    .map((condition) => toQuoteLine(condition.ev, SCREEN_WORDS.excluded.replace("{text}", condition.ev.quote), condition));
+    .map((condition) => toQuoteLine(condition.ev, SCREEN_WORDS.excluded.replace("{text}", toQuoteText(condition.ev)), condition));
   const notes = [allRequired, inAttachment, openToAll].flatMap((ev) => (ev ? [toQuoteLine(ev, ev.quote)] : []));
   return [...included, ...excluded, ...notes];
 }
