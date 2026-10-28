@@ -61,6 +61,14 @@ export interface NoticeAttachment {
   referer?: string;
 }
 
+// CONTRACT(skkuverse-crawler): one earlier version of `facts`, kept for the change check (skkuverse-crawler/docs/notice-facts/design.md "Storage").
+export interface FactsSnapshot {
+  extractedAt: string;
+  inputHash: string;
+  times: Array<{ id: string; kind: string; start: string; end: string; places: string[] }>;
+  status: string[];
+}
+
 // CONTRACT(skkuverse-crawler): the crawler writes notices (skkuverse-crawler/docs/reference/schema/notices.md) and
 // skkuverse-ai its summary fields. Hot reads are typed, not parsed (ADR 0010 D2, exemptions/repository-reads.json);
 // notices-documents.routes.test.ts serves sampled prod documents through the list and detail reads instead.
@@ -105,4 +113,17 @@ export interface NoticeDoc {
   pushAttempts?: number;
   dispatchClaimedAt?: Date | null;
   pushError?: string | null;
+  // CONTRACT(skkuverse-crawler): the record of skkuverse-crawler/docs/notice-facts/notice-facts.schema.json, as stored: read it
+  // only through NoticesFactsService, which parses it. Absent until the crawler's facts stage has run.
+  facts?: unknown;
+  // CONTRACT(skkuverse-crawler): the push gate of skkuverse-crawler/docs/notice-facts/design.md "The live job": its job writes both once.
+  factsAt?: Date | null;
+  factsGate?: "ok" | "failed" | "timeout" | null;
+  // CONTRACT(skkuverse-crawler): written once per copy when it is first seen (skkuverse-crawler/docs/notice-facts/design.md "Storage"); an older copy may lack it.
+  firstSeenAt?: Date | null;
+  // CONTRACT(skkuverse-crawler): names a group at one moment only (skkuverse-crawler/docs/notice-facts/design.md "Storage"):
+  // a body edit changes it, so nothing long-lived keys on it.
+  groupId?: string | null;
+  // CONTRACT(skkuverse-crawler): up to five earlier versions of `facts`, oldest first (skkuverse-crawler/docs/notice-facts/design.md "Storage").
+  factsHistory?: FactsSnapshot[];
 }
