@@ -10,6 +10,8 @@ export interface CursorPayload {
 
 export type NoticeScope = string | readonly string[];
 
+export type ListDay = "today" | "yesterday" | "thisWeek" | "earlier";
+
 export interface NoticeListQuery {
   limit: number;
   type?: SummaryType;
