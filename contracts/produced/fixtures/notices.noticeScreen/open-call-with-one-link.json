@@ -1,8 +1,8 @@
 {
-  "_about": "Rendered by NoticesScreenService from the development `facts` record of skku-main notice 140223 (__tests__/nest/notices/fixtures/notice-facts.dev-records.json, read 2026-10-28) at 2026-10-28T03:00:00Z with firstSeenAt 2026-10-27 and no place names; never captured from a response, since the detail route did not serve a screen then.",
+  "_about": "The `screen` of GET /notices/skku-main/140223 served by the server at this commit over the _dev notices on 2026-10-28 (npm run verify:serve, Accept-Language ko); a public notice with an open call and one sign-up link, every e-mail address and phone number replaced with a synthetic one",
   "data": {
     "header": {
-      "firstSeen": "어제 처음 올라옴",
+      "firstSeen": "9/30(수) 처음 올라옴",
       "change": null
     },
     "status": {
@@ -11,28 +11,6 @@
       "detail": "11/1(일) 마감"
     },
     "blocks": [
-      {
-        "label": "언제·어디",
-        "numbered": false,
-        "footerLink": null,
-        "lines": [
-          {
-            "text": "12/5(토)까지",
-            "sub": "온라인 · 한양대학교 ERICA 캠퍼스",
-            "fromPoster": false,
-            "actions": [],
-            "quote": "2026.09.28(월) ~ 12.05(토)"
-          },
-          {
-            "text": "12/5(토)까지",
-            "sub": "온라인 · 한양대학교 ERICA 캠퍼스",
-            "fromPoster": false,
-            "actions": [],
-            "quote": "2026.11.02(월) ~ 12.05(토)"
-          }
-        ],
-        "foldedCount": 0
-      },
       {
         "label": "대상",
         "numbered": false,
@@ -114,6 +92,28 @@
               }
             ],
             "quote": "신청 및 운영 홈페이지 링크"
+          }
+        ],
+        "foldedCount": 0
+      },
+      {
+        "label": "언제·어디",
+        "numbered": false,
+        "footerLink": null,
+        "lines": [
+          {
+            "text": "9/28(월)~12/5(토)",
+            "sub": "온라인 · 한양대학교 ERICA 캠퍼스",
+            "fromPoster": false,
+            "actions": [],
+            "quote": "2026.09.28(월) ~ 12.05(토)"
+          },
+          {
+            "text": "11/2(월)~12/5(토)",
+            "sub": "온라인 · 한양대학교 ERICA 캠퍼스",
+            "fromPoster": false,
+            "actions": [],
+            "quote": "2026.11.02(월) ~ 12.05(토)"
           }
         ],
         "foldedCount": 0
