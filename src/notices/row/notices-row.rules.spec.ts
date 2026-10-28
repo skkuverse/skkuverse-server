@@ -208,17 +208,40 @@ describe("toFactsRow, the D3 token precedence", () => {
     expect(row).toMatchObject(fields);
   });
 
-  it("reads 오늘 for an event today whose sign-up has closed, with line 2 on the closed sign-up", () => {
+  const signUp = (r: any, start: string, end: string) =>
+    r.times.push({ ...recordFrom(WINDOW).times[0], id: "tm_signup", thing: MAIN_THING, start: { ...r.times[0].start, date: start }, end: { ...r.times[0].start, date: end } });
+
+  it("reads 마감, dimmed, not 오늘, for an event today whose sign-up window has closed (ADR 0009 D3, owner 2026-10-28)", () => {
     // Arrange
-    const record = recordFrom(SESSION, (r) =>
-      r.times.push({ ...recordFrom(WINDOW).times[0], id: "tm_signup", thing: MAIN_THING, start: { ...r.times[0].start, date: "2026-10-13" }, end: { ...r.times[0].start, date: "2026-10-20" } }),
-    );
+    const record = recordFrom(SESSION, (r) => signUp(r, "2026-10-13", "2026-10-20"));
 
     // Act
     const row = toFactsRow(sourceOf(record), kstNoon("2026-10-29"));
 
     // Assert
-    expect(row).toMatchObject({ token: { text: "오늘", tone: "today" }, urgent: false, status: "closed", line2: "10/20(화) 마감됨", itemId: "tm_signup" });
+    expect(row).toMatchObject({ token: { text: "마감", tone: "closed" }, urgent: false, dimmed: true, status: "closed", line2: "10/20(화) 마감됨", itemId: "tm_signup" });
+  });
+
+  it("reads 마감, not 오늘, for an event today whose call is stated full", () => {
+    // Arrange
+    const record = recordFrom(SESSION, (r) => r.statusStatements.push(statement("quotaFilled")));
+
+    // Act
+    const row = toFactsRow(sourceOf(record), kstNoon("2026-10-29"));
+
+    // Assert
+    expect(row).toMatchObject({ token: { text: "마감", tone: "closed" }, dimmed: true, status: "closed" });
+  });
+
+  it("keeps 오늘, not dimmed, for an event today whose sign-up window is still open", () => {
+    // Arrange
+    const record = recordFrom(SESSION, (r) => signUp(r, "2026-10-13", "2026-11-20"));
+
+    // Act
+    const row = toFactsRow(sourceOf(record), kstNoon("2026-10-29"));
+
+    // Assert
+    expect(row).toMatchObject({ token: { text: "오늘", tone: "today" }, dimmed: false, status: "open", itemId: "tm_signup" });
   });
 
   it("gives no deadline token to a window that has not opened, even one that opens and closes tomorrow", () => {
