@@ -89,16 +89,16 @@ describe("NoticesScreenService.renderScreen", () => {
       header: { firstSeen: "어제 처음 올라옴", change: null },
       status: { word: "접수 중", tone: "soon", detail: "내일 마감" },
       blocks: [
-        { label: "대상", numbered: false, footerLink: null, foldedCount: 0, lines: [{ text: "3학년 이상", sub: null, fromPoster: false, actions: [], quote: "3학년 이상" }] },
-        { label: "혜택", numbered: false, footerLink: null, foldedCount: 0, lines: [{ text: "월 50만원", sub: null, fromPoster: false, actions: [], quote: "월 50만원" }] },
-        { label: "신청", numbered: true, footerLink: null, foldedCount: 0, lines: [{ text: "신청하기", sub: null, fromPoster: false, actions: [{ kind: "link", target: "https://forms.example.com/apply" }], quote: "신청하기" }] },
-        { label: "문의", numbered: false, footerLink: null, foldedCount: 0, lines: [{ text: "학과 사무실 02-760-1234", sub: null, fromPoster: false, actions: [{ kind: "call", target: "02-760-1234" }], quote: "02-760-1234" }] },
+        { label: "대상", numbered: false, footerLink: null, foldedCount: 0, lines: [{ text: "3학년 이상", sub: null, source: "body", actions: [], quote: "3학년 이상" }] },
+        { label: "혜택", numbered: false, footerLink: null, foldedCount: 0, lines: [{ text: "월 50만원", sub: null, source: "body", actions: [], quote: "월 50만원" }] },
+        { label: "신청", numbered: true, footerLink: null, foldedCount: 0, lines: [{ text: "신청하기", sub: null, source: "body", actions: [{ kind: "link", target: "https://forms.example.com/apply" }], quote: "신청하기" }] },
+        { label: "문의", numbered: false, footerLink: null, foldedCount: 0, lines: [{ text: "학과 사무실 02-760-1234", sub: null, source: "body", actions: [{ kind: "call", target: "02-760-1234" }], quote: "02-760-1234" }] },
       ],
       action: { label: "신청하기", kind: "link", target: "https://forms.example.com/apply" },
       collapsed: null,
       staffOnly: false,
       posterOnly: false,
-      original: { posterCount: 0, attachments: [], links: [{ role: "신청하기", domain: "forms.example.com" }] },
+      original: { posterCount: 0, attachments: [], links: [{ role: "신청하기", domain: "forms.example.com", url: "https://forms.example.com/apply" }] },
     });
     expect(noticeScreen.safeParse(screen).success).toBe(true);
   });
@@ -147,8 +147,21 @@ describe("NoticesScreenService.renderScreen", () => {
     const screen = await service.renderScreen(notice(stored, { category: "행사/세미나" }), OPEN_DAY);
 
     // Assert
-    expect(screen?.blocks).toMatchObject([{ label: "언제·어디", lines: [{ sub: "경영관 33B101 · 경영관 99999호 · 서울캠 어딘가", actions: [{ kind: "map", target: "space:hssc:33B101" }] }] }]);
+    expect(screen?.blocks).toMatchObject([{ label: "언제·어디", lines: [{ sub: "경영관 33B101 · 경영관 99999호 · 서울캠 어딘가", actions: [{ kind: "map", target: "skku_building:12", space: "33B101" }] }] }]);
     expect(screen?.blocks[0]?.lines[0]?.actions).toHaveLength(1);
+  });
+
+  it("opens each attachment of the original by the URL of the file the notice lists, and none for a notice that lists no file", async () => {
+    // Arrange
+    const stored = record(SESSION, (r) => r.sources.attachments.push({ id: "A1", name: "신청서.hwp", role: "form", label: "" }));
+    const listed = notice(stored, { attachments: [{ name: "신청서.hwp", url: "https://www.skku.edu/files/1" }] });
+
+    // Act
+    const [withFile, withoutList] = await Promise.all([service.renderScreen(listed, OPEN_DAY), service.renderScreen(notice(stored), OPEN_DAY)]);
+
+    // Assert
+    expect(withFile?.original.attachments).toEqual([{ role: "신청서", name: "신청서.hwp", url: "https://www.skku.edu/files/1" }]);
+    expect(withoutList?.original.attachments).toEqual([{ role: "신청서", name: "신청서.hwp", url: null }]);
   });
 
   it("names the places of a change against the last extraction through building", async () => {

@@ -1,6 +1,8 @@
 /**
  * The list row of the umbrella repository's ADR 0009 (notice list rows, D3 to D9, as amended 2026-10-27 and 2026-10-28)
  * from a parsed facts record at a KST moment: its status token, title, line 2, qualifier, date mark, dimming and urgency.
+ * Line 1 falls back to the original title's whole words within 20 characters, a qualifier that would push line 2 past 26
+ * characters is left out whole, and line 2 drops a track's tag, which the line the detail's status names keeps.
  *
  * The crawler's row.py is the reference: every golden case it dumps (__tests__/nest/notices/fixtures/facts-rows/, refreshed
  * by scripts/sync-facts-row-fixtures.js) renders here as row.py rendered it, unless the ADR says otherwise. Each such case
@@ -27,6 +29,8 @@ import type { FactsRow, RowSource, RowTokenTone } from "./notices-row.types";
 
 const FIXTURES = path.join(__dirname, "../../../__tests__/nest/notices/fixtures/facts-rows");
 const ORIGINAL_TITLE = "2026학년도 2학기 장학금 신청 안내";
+// ADR 0009 D3: line 1 holds 20 characters and is never cut mid-word, so the 21-character original falls back to its whole words.
+const FITTED_ORIGINAL_TITLE = "2026학년도 2학기 장학금 신청…";
 const NOTICE_ID = new ObjectId("6a5ed9e520097db8672d2097");
 const FIXED_CLOCK: Clock = { now: () => new Date("2026-10-28T03:00:00Z") };
 const facts = new NoticesFactsService(FIXED_CLOCK);
@@ -75,8 +79,9 @@ function fromRowPy({ expected, record }: GoldenCase): FactsRow {
   const warned = expected.warnings.length > 0 ? "warning" : null;
   return {
     token: expected.token ? { text: expected.token, tone: ROW_PY_TONES[expected.token]! } : null,
-    title: expected.titleFallback && expected.title === shortTitle.text ? ORIGINAL_TITLE : expected.title,
+    title: expected.titleFallback && expected.title === shortTitle.text ? FITTED_ORIGINAL_TITLE : expected.title,
     line2: expected.line2,
+    trackedLine2: expected.line2,
     qualifier: expected.qual[0] === "none" ? null : expected.qual[1],
     dateMark: abstains ? "abstain" : warned,
     dimmed: ["closed", "ended", "cancelled"].includes(expected.status) || expected.qual[0] === "notForStudents",
@@ -94,24 +99,24 @@ const STOPPED = "ADR 0009 D4: line 2 opens with a date, and a slot with no date 
 const OVERRIDES: Record<string, { adr: string; row: Partial<FactsRow> }> = {
   "a_period_with_no_end_written_is_that_one_day__1.json": {
     adr: "ADR 0009 D3: 오늘 when the deadline or event is today; D4: an event today takes the token but not the colour; relative words in line 2",
-    row: { token: { text: "오늘", tone: "today" }, line2: "오늘" },
+    row: { token: { text: "오늘", tone: "today" }, line2: "오늘", trackedLine2: "오늘" },
   },
   "a_bounded_period_under_way_comes_before_what_takes_effect_after_it.json": {
     adr: "ADR 0009 D4: relative words (today, tomorrow) are computed when the list is shown",
-    row: { line2: "오늘까지 해제" },
+    row: { line2: "오늘까지 해제", trackedLine2: "오늘까지 해제" },
   },
-  "a_deadline_tomorrow_reads_as_one_while_the_window_is_open.json": { adr: TOMORROW_DEADLINE, row: { line2: "내일 마감" } },
-  "a_mistyped_years_window_yields_to_the_same_deadline_written_correctly.json": { adr: TOMORROW_DEADLINE, row: { line2: "내일 마감" } },
-  "the_place_qualifier_comes_from_the_item_the_row_shows__1.json": { adr: TOMORROW_DEADLINE, row: { line2: "내일 마감" } },
+  "a_deadline_tomorrow_reads_as_one_while_the_window_is_open.json": { adr: TOMORROW_DEADLINE, row: { line2: "내일 마감", trackedLine2: "내일 마감" } },
+  "a_mistyped_years_window_yields_to_the_same_deadline_written_correctly.json": { adr: TOMORROW_DEADLINE, row: { line2: "내일 마감", trackedLine2: "내일 마감" } },
+  "the_place_qualifier_comes_from_the_item_the_row_shows__1.json": { adr: TOMORROW_DEADLINE, row: { line2: "내일 마감", trackedLine2: "내일 마감" } },
   "an_office_deadline_does_not_open_the_row.json": {
     adr: "ADR 0009 D4: not open yet reads 내일 접수 시작 · 11/9(월) 마감",
-    row: { line2: "내일 접수 시작 · 11/13(금) 마감" },
+    row: { line2: "내일 접수 시작 · 11/13(금) 마감", trackedLine2: "내일 접수 시작 · 11/13(금) 마감" },
   },
-  "a_stopped_or_filled_notice_keeps_its_token_on_the_last_days__1.json": { adr: STOPPED, row: { line2: "" } },
-  "a_stopped_or_filled_notice_keeps_its_token_on_the_last_days__2.json": { adr: STOPPED, row: { line2: "" } },
-  "a_date_code_had_to_guess_is_shown_as_written_to_check.json": { adr: ABSTAINS, row: { line2: "날짜 원문 확인" } },
-  "a_date_the_check_dropped_is_shown_as_written_to_check.json": { adr: ABSTAINS, row: { line2: "날짜 원문 확인" } },
-  "a_row_abstains_when_its_only_deadline_was_dropped_by_the_date_check.json": { adr: ABSTAINS, row: { line2: "날짜 원문 확인" } },
+  "a_stopped_or_filled_notice_keeps_its_token_on_the_last_days__1.json": { adr: STOPPED, row: { line2: "", trackedLine2: "" } },
+  "a_stopped_or_filled_notice_keeps_its_token_on_the_last_days__2.json": { adr: STOPPED, row: { line2: "", trackedLine2: "" } },
+  "a_date_code_had_to_guess_is_shown_as_written_to_check.json": { adr: ABSTAINS, row: { line2: "날짜 원문 확인", trackedLine2: "날짜 원문 확인" } },
+  "a_date_the_check_dropped_is_shown_as_written_to_check.json": { adr: ABSTAINS, row: { line2: "날짜 원문 확인", trackedLine2: "날짜 원문 확인" } },
+  "a_row_abstains_when_its_only_deadline_was_dropped_by_the_date_check.json": { adr: ABSTAINS, row: { line2: "날짜 원문 확인", trackedLine2: "날짜 원문 확인" } },
 };
 
 /** Hand-edited golden cases whose record the schema refuses, so no production read could reach the rules with them. */
@@ -473,6 +478,107 @@ describe("toFactsRow, the D5 qualifier", () => {
 
     // Act & Assert
     expect(toFactsRow(sourceOf(record), kstNoon("2026-10-25"))).toMatchObject({ status: "nodate", line2: "", qualifier: null });
+  });
+});
+
+describe("toFactsRow, line 1 from the original title when the short title is unusable (ADR 0009 D3)", () => {
+  const condition = (quote: string) => ({ ev: { src: "body", quote, start: 0, end: quote.length, match: "exact" }, type: "year", polarity: "include", strength: "required", thing: MAIN_THING, scope: "", restricts: true, narrows: true, appliesTo: [], tag: "", tagBy: "" });
+  const unusable = (edit: (record: any) => void = () => undefined) =>
+    recordFrom(WINDOW, (r) => {
+      r.shortTitle.ok = false;
+      edit(r);
+    });
+
+  it.each<[string, string, string]>([
+    ["keeps a title of 20 characters, brackets and all", "[공지] 26 장학금 신청 안내 공고", "[공지] 26 장학금 신청 안내 공고"],
+    ["leaves out an office and a date in brackets, then keeps the whole words that fit", "[앵커사업단] 글로벌 창업경진대회 Soulmate Pioneers 참가팀 모집(~11/15, 총 상금 900만원)", "글로벌 창업경진대회 Soulmate…"],
+    ["leaves out a term and a note in brackets", "(2027년 1학기) CAMPUS Asia 중국파견 교환장학생 모집(_첨부파일 추가)", "CAMPUS Asia 중국파견…"],
+    ["keeps the words when every word is bracketed", "[공지사항] [중요] (필독) [학사] [대학원] 【안내】", "[공지사항] [중요] (필독)…"],
+    ["keeps one word longer than the line whole", "가나다라마바사아자차카타파하가나다라마바사아", "가나다라마바사아자차카타파하가나다라마바사아"],
+    ["writes a line break as a space", "장학금\n신청 안내", "장학금 신청 안내"],
+  ])("%s", (_label, title, expected) => {
+    // Arrange
+    const source = { ...sourceOf(unusable()), title };
+
+    // Act
+    const row = toFactsRow(source, kstNoon("2026-10-22"));
+
+    // Assert
+    expect(row.title).toBe(expected);
+    expect([...row.title].length <= 20 || !row.title.includes(" ")).toBe(true);
+  });
+
+  it("keeps a bracket that names the audience the notice restricts, as ADR 0009 D9 forbids dropping it", () => {
+    // Arrange
+    const source = { ...sourceOf(unusable((r) => r.audience.conditions.push(condition("현 5학년 학생")))), title: "[현 5학년] 2027년 아주대학교 병원심화실무실습 지원 안내 (~9/11)" };
+
+    // Act & Assert
+    expect(toFactsRow(source, kstNoon("2026-10-22")).title).toBe("[현 5학년] 2027년 아주대학교…");
+  });
+});
+
+describe("toFactsRow, the qualifier's fit on line 2 (ADR 0009 D3, D5)", () => {
+  const benefit = (quote: string, isDraw = false) => ({
+    ev: { src: "body", quote, start: 0, end: quote.length, match: "exact" },
+    thing: MAIN_THING,
+    earnedBy: isDraw ? "draw" : "selected",
+    amount: null,
+    isDraw,
+    track: "",
+    appliesTo: [],
+    tag: "",
+    tagBy: "",
+  });
+  const condition = (quote: string) => ({ ev: { src: "body", quote, start: 0, end: quote.length, match: "exact" }, type: "other", polarity: "include", strength: "required", thing: MAIN_THING, scope: "", restricts: true, narrows: true, appliesTo: [], tag: "", tagBy: "" });
+
+  // Line 2 reads the deadline line, 11 characters, here, and " · " joins it to the qualifier, so 12 characters fill the 26.
+  it.each<[string, string, string | null]>([
+    ["shows a qualifier one under the budget", "가나다라마바사아자차카", "가나다라마바사아자차카"],
+    ["shows a qualifier that fills the budget exactly", "가나다라마바사아자차카타", "가나다라마바사아자차카타"],
+    ["leaves out a qualifier one over the budget rather than cut it", "가나다라마바사아자차카타파", null],
+    ["writes a line break inside a qualifier as a space", "월\n50만원", "월 50만원"],
+    ["leaves out a draw that does not fit, its mark counted", "CU 모바일 상품권 1만원권\n100명 랜덤 증정 (추첨)", null],
+  ])("%s", (_label, quote, qualifier) => {
+    // Arrange
+    const record = recordFrom(WINDOW, (r) => r.benefits.push(benefit(quote)));
+
+    // Act
+    const row = toFactsRow(sourceOf(record), kstNoon("2026-10-22"));
+
+    // Assert
+    expect(row.line2).toBe("10/26(월) 마감");
+    expect(row.qualifier).toBe(qualifier);
+  });
+
+  it("leaves out a hard condition too long to show whole, and shows no lesser qualifier in its place", () => {
+    // Arrange
+    const record = recordFrom(WINDOW, (r) => {
+      r.audience.conditions.push(condition("공휴일 및 주말 포함하여 기간 내 모든 날짜 근무 가능할 경우만 지원할 것"));
+      r.benefits.push(benefit("월 50만원"));
+    });
+
+    // Act & Assert
+    expect(toFactsRow(sourceOf(record), kstNoon("2026-10-22")).qualifier).toBeNull();
+  });
+});
+
+describe("toFactsRow, a track's date", () => {
+  const twoTracks = () =>
+    recordFrom(WINDOW, (r) => {
+      const [window] = r.times;
+      r.times = [
+        { ...window, id: "tm_new", track: "신규등록" },
+        { ...window, id: "tm_again", track: "재등록", end: { ...window.end, date: "2026-10-30" } },
+      ];
+    });
+
+  it("leaves the track's tag out of the row's line 2 and keeps it on the line the detail's status names", () => {
+    // Act
+    const row = toFactsRow(sourceOf(twoTracks()), kstNoon("2026-10-22"));
+
+    // Assert
+    expect(row.line2).toBe("10/26(월) 마감");
+    expect(row.trackedLine2).toBe("[신규등록] 10/26(월) 마감");
   });
 });
 

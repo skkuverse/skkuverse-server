@@ -111,8 +111,8 @@ describe("toDerivedBrief", () => {
   it("leaves out a qualifier that only counts conditions, which says nothing outside the detail", () => {
     // Arrange
     const reading = readingOf("a_specific_session_wins_over_the_span_that_contains_it");
-    const dated: RowReading = { ...reading, row: { ...reading.row, token: null, qualifier: "조건 2개" } };
-    const dateless: RowReading = { ...dated, row: { ...dated.row, line2: "" } };
+    const dated: RowReading = { ...reading, row: { ...reading.row, token: null, qualifier: "조건 2개" }, fullQualifier: "조건 2개" };
+    const dateless: RowReading = { ...dated, row: { ...dated.row, line2: "", trackedLine2: "" } };
 
     // Act
     const [withDate, withoutDate] = [toDerivedBrief(dated), toDerivedBrief(dateless)];
@@ -120,5 +120,21 @@ describe("toDerivedBrief", () => {
     // Assert
     expect(withDate.oneLiner).toBe("11/5(목) 11시");
     expect(withoutDate.oneLiner).toBeNull();
+  });
+
+  it("keeps the track tag and a qualifier too long for the row, since a summary or push body has no 26-character line", () => {
+    // Arrange
+    const reading = readingOf("a_specific_session_wins_over_the_span_that_contains_it");
+    const tracked: RowReading = {
+      ...reading,
+      row: { ...reading.row, token: null, line2: "11/10(화) 10시", trackedLine2: "[신관 A,B동] 11/10(화) 10시", qualifier: null },
+      fullQualifier: "경영학과, 글로벌경영학과 재적생",
+    };
+
+    // Act
+    const brief = toDerivedBrief(tracked);
+
+    // Assert
+    expect(brief.oneLiner).toBe("[신관 A,B동] 11/10(화) 10시 · 경영학과, 글로벌경영학과 재적생");
   });
 });

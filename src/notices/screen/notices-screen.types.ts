@@ -6,7 +6,7 @@ import type { RowReading } from "../row/notices-row.types";
 import type { BLOCK_KEYS, LEADING_BLOCKS } from "./notices-screen.constants";
 
 // WHY: the fields of a stored notice the screen reads, all of which the detail's projection carries.
-export type ScreenNotice = Pick<NoticeDoc, "_id" | "title" | "category" | "facts" | "factsHistory" | "firstSeenAt">;
+export type ScreenNotice = Pick<NoticeDoc, "_id" | "title" | "category" | "facts" | "factsHistory" | "firstSeenAt" | "attachments">;
 
 export type BlockKey = (typeof BLOCK_KEYS)[number];
 
@@ -48,4 +48,7 @@ export interface StatusSpec {
   tone: ScreenStatus["tone"];
 }
 
-export type BlockLines = (scope: ScreenScope) => ScreenLine[];
+/** WHY: a line's text before its track's tag, which the block adds once it knows the line is not a repeat. */
+export type TaggedLine = ScreenLine & { tag: string };
+
+export type BlockLines = (scope: ScreenScope) => TaggedLine[];

@@ -170,7 +170,7 @@ describe("NoticesListService.listNotices", () => {
     expect(decodeCursor(page.nextCursor).i).toBe(doc(2, "")._id.toHexString());
   });
 
-  it("names the board on a multi-source read only, whatever the number of sources", async () => {
+  it("names the board only on a read of two or more sources, as umbrella ADR 0009 adds it for a tab of several boards", async () => {
     // Arrange
     const repository = new FakeNoticesListRepository();
     repository.docs = [doc(1, "2026-10-14", { facts: RECORD })];
@@ -180,11 +180,13 @@ describe("NoticesListService.listNotices", () => {
     const single = await service.listNotices("skku-notice02", { limit: 10, cursor: null });
     const multi = await service.listNotices(["skku-notice02", "health"], { limit: 10, cursor: null });
     const multiOfOne = await service.listNotices(["skku-notice02"], { limit: 10, cursor: null });
+    const oneTwice = await service.listNotices(["skku-notice02", "skku-notice02"], { limit: 10, cursor: null });
 
     // Assert
     expect(single.notices[0]?.row?.board).toBeNull();
     expect(multi.notices[0]?.row?.board).toBe("성균관대_통합(학사)");
-    expect(multiOfOne.notices[0]?.row?.board).toBe("성균관대_통합(학사)");
+    expect(multiOfOne.notices[0]?.row?.board).toBeNull();
+    expect(oneTwice.notices[0]?.row?.board).toBeNull();
   });
 
   it("renders every row and the day groups at the one instant the clock gave first, though it moves past KST midnight", async () => {

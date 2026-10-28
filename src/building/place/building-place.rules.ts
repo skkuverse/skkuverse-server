@@ -25,7 +25,7 @@ function toListedPlaces(buildings: readonly PlaceBuilding[], lexicon: PlaceLexic
   for (const { _id, buildNo, campus, name } of buildings) {
     const slug = buildNo ? null : (lexicon.facilitySlugs[String(_id)] ?? null);
     if (!buildNo && !slug) unpinned.push(_id);
-    else places.push({ key: buildNo ?? `${campus}:${slug}`, campus, name: name.ko, buildNo, slug });
+    else places.push({ key: buildNo ?? `${campus}:${slug}`, campus, name: name.ko, buildNo, slug, skkuId: _id });
   }
   return { places, unpinned };
 }
@@ -34,14 +34,14 @@ function toListedPlaces(buildings: readonly PlaceBuilding[], lexicon: PlaceLexic
 function toSpaceOnlyPlaces(spaces: readonly PlaceSpace[], knownKeys: ReadonlySet<string>): IndexedPlace[] {
   const places = new Map<string, IndexedPlace>();
   for (const { buildNo, campus, buildingName } of spaces) {
-    if (!knownKeys.has(buildNo) && !places.has(buildNo)) places.set(buildNo, { key: buildNo, campus, name: buildingName?.ko ?? buildNo, buildNo, slug: null });
+    if (!knownKeys.has(buildNo) && !places.has(buildNo)) places.set(buildNo, { key: buildNo, campus, name: buildingName?.ko ?? buildNo, buildNo, slug: null, skkuId: null });
   }
   return [...places.values()];
 }
 
 function toPlaces({ buildings, spaces }: PlaceSkkumap, lexicon: PlaceLexicon): { places: IndexedPlace[]; unpinned: SkkuId[] } {
   const { places, unpinned } = toListedPlaces(buildings, lexicon);
-  const extras = lexicon.extraFacilities.map(({ campus, slug, name }) => ({ key: `${campus}:${slug}`, campus, name: name.ko, buildNo: null, slug }));
+  const extras = lexicon.extraFacilities.map(({ campus, slug, name }) => ({ key: `${campus}:${slug}`, campus, name: name.ko, buildNo: null, slug, skkuId: null }));
   const listed = [...places, ...extras];
   return { places: [...listed, ...toSpaceOnlyPlaces(spaces, new Set(listed.map((p) => p.key)))], unpinned };
 }

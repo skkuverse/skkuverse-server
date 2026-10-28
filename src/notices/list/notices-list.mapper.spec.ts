@@ -196,6 +196,7 @@ describe("toItemRow", () => {
     token: { text: "내일 마감", tone: "urgent" },
     title: "장학금",
     line2: "10/10(토) 마감",
+    trackedLine2: "[1차] 10/10(토) 마감",
     qualifier: "조건 2개",
     dateMark: "warning",
     dimmed: false,

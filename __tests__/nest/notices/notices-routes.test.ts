@@ -638,6 +638,19 @@ describe("GET /notices — the facts row on a list item", () => {
     expectWire(noticeList, multi.body.data);
   });
 
+  it("names no board on a multi-source list of one source", async () => {
+    // Arrange
+    listRepository.docs = [withFacts()];
+
+    // Act
+    const res = await request(httpServer).get("/notices?sourceIds=skku-main");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.notices[0].row.board).toBeNull();
+    expectWire(noticeList, res.body.data);
+  });
+
   it("serves the Korean row in every language", async () => {
     // Arrange
     listRepository.docs = [withFacts()];
@@ -1148,7 +1161,7 @@ describe("GET /notices/:sourceId/:articleNo — the screen", () => {
     const [line] = res.body.data.screen?.blocks[0]?.lines ?? [];
 
     // Assert
-    expect(line).toMatchObject({ sub: "경영관 33B101 · 서울캠 어딘가", actions: [{ kind: "map", target: "space:hssc:33B101" }] });
+    expect(line).toMatchObject({ sub: "경영관 33B101 · 서울캠 어딘가", actions: [{ kind: "map", target: "skku_building:12", space: "33B101" }] });
     expect(line?.actions).toHaveLength(1);
     expectWire(noticeDetail, res.body.data);
   });

@@ -1,16 +1,22 @@
 import { z } from "zod";
 
-const screenAction = z.object({
-  kind: z.enum(["map", "call", "email", "link"]),
-  /** WHY: a stored place id for `map`, a phone number for `call`, an address for `email`, an http(s) URL for `link`. */
-  target: z.string(),
-});
+// CONTRACT(skkuverse-app): `map` opens the building sheet as a campus marker's `skku_building:<skkuId>` does
+// (skkuverse-app/packages/shared/src/utils/map-place-ref.rules.ts); `search` hands the words to the phone's map app.
+const screenAction = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("map"), target: z.string().regex(/^skku_building:[0-9]+$/), space: z.string().nullable() }),
+  z.object({ kind: z.literal("search"), target: z.string() }),
+  z.object({ kind: z.literal("call"), target: z.string() }),
+  /** WHY: `subject` is a subject the notice writes out to copy (a mailto link's), never a rule for writing one. */
+  z.object({ kind: z.literal("email"), target: z.string(), subject: z.string().nullable() }),
+  z.object({ kind: z.literal("link"), target: z.string() }),
+]);
 
 /** WHY: `quote` is the record's evidence sentence, which the app highlights in the original (umbrella ADR 0009 D16). */
 const screenLine = z.object({
   text: z.string(),
   sub: z.string().nullable(),
-  fromPoster: z.boolean(),
+  /** WHY: where `quote` was read: the body, the title, or a poster's stored transcription (umbrella ADR 0009 D15). */
+  source: z.enum(["body", "title", "poster"]),
   actions: z.array(screenAction),
   quote: z.string(),
 });
@@ -30,14 +36,20 @@ export const noticeScreen = z.object({
   header: z.object({ firstSeen: z.string(), change: headerChange.nullable() }),
   status: z.object({ word: z.string(), detail: z.string().nullable(), tone: z.enum(["open", "soon", "closed", "stopped", "neutral"]) }).nullable(),
   blocks: z.array(screenBlock),
-  action: z.object({ label: z.string(), kind: z.enum(["link", "email"]), target: z.string() }).nullable(),
+  action: z
+    .discriminatedUnion("kind", [
+      z.object({ label: z.string(), kind: z.literal("link"), target: z.string() }),
+      z.object({ label: z.string(), kind: z.literal("email"), target: z.string(), subject: z.string().nullable() }),
+    ])
+    .nullable(),
   collapsed: z.enum(["closed", "cancelled"]).nullable(),
   staffOnly: z.boolean(),
   posterOnly: z.boolean(),
   original: z.object({
     posterCount: z.int().min(0),
-    attachments: z.array(z.object({ role: z.string(), name: z.string() })),
-    links: z.array(z.object({ role: z.string(), domain: z.string() })),
+    /** WHY: `url` is the one in the detail's `attachments`, null when that list no longer holds the file. */
+    attachments: z.array(z.object({ role: z.string(), name: z.string(), url: z.string().nullable() })),
+    links: z.array(z.object({ role: z.string(), domain: z.string(), url: z.string() })),
   }),
 });
 

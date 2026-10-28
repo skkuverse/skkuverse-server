@@ -51,6 +51,8 @@ export interface FactsRow {
   token: RowToken | null;
   title: string;
   line2: string;
+  /** WHY: line 2 with the track's tag the row leaves out, for the detail's status line (umbrella ADR 0009 D12). */
+  trackedLine2: string;
   qualifier: string | null;
   dateMark: "warning" | "abstain" | null;
   dimmed: boolean;
@@ -72,6 +74,8 @@ export interface ItemReading {
 
 export interface RowReading extends RowSource {
   row: FactsRow;
+  /** WHY: the row's qualifier before line 2's 26-character fit, for a summary or push body, which has no row to fit. */
+  fullQualifier: string | null;
   eventStatus: RowStatus;
   isStaffOnly: boolean;
   items: readonly ItemReading[];

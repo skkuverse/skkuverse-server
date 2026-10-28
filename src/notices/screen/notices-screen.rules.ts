@@ -1,15 +1,16 @@
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
-import type { FactsSnapshot } from "../notices.document";
+import type { FactsSnapshot, NoticeAttachment } from "../notices.document";
 import type { ItemReading, RowReading } from "../row/notices-row.types";
 import { BLOCK_KEYS, LEADING_BLOCKS, NOTICE_TYPE_BY_CATEGORY, SCREEN_WORDS, STATUS_SPECS } from "./notices-screen.constants";
-import type { BarAction, BlockKey, Collapse, HeaderChange, ScreenAction, ScreenScope, ScreenStatus } from "./notices-screen.types";
+import type { BarAction, BlockKey, Collapse, HeaderChange, ScreenAction, ScreenLine, ScreenScope, ScreenStatus, TaggedLine } from "./notices-screen.types";
 
 type Action = NoticeFacts["actions"][number];
 type Contact = NoticeFacts["contacts"][number];
 type DatedItem = NoticeFacts["times"][number];
 type SnapshotItem = FactsSnapshot["times"][number];
 type RowKind = RowReading["row"]["status"];
+type StoredPlace = DatedItem["where"]["places"][number];
 
 const EVENT_ON_KINDS: ReadonlySet<string> = new Set(["today", "ongoing", "upcoming"]);
 const OPEN_WINDOW_KINDS: ReadonlySet<string> = new Set(["open", "ongoing"]);
@@ -25,6 +26,8 @@ const PHONE_NUMBER = /\d{2,4}-\d{3,4}-\d{4}/;
 const HTTP_URL = /^https?:\/\/\S+$/i;
 const MAILTO = /^mailto:/i;
 const TENTATIVE_TAIL = ` ${SCREEN_WORDS.tentative}`;
+const MAP_PLACE_KIND = "skku_building";
+const OFF_CAMPUS_REASON = "offcampus";
 
 export function toBlockOrder(category: string | null | undefined, reading: RowReading): BlockKey[] {
   if (reading.isStaffOnly) return [];
@@ -45,7 +48,7 @@ export function toStatusLine(reading: RowReading): ScreenStatus | null {
 function toStatusDetail(reading: RowReading, word: string): string {
   const { row } = reading;
   if (row.status === "closed" && isEventOn(reading)) return toEventOnDetail(reading);
-  return withoutWord(hasFirstCome(reading) ? joinParts(row.line2, SCREEN_WORDS.firstCome) : row.line2, word);
+  return withoutWord(hasFirstCome(reading) ? joinParts(row.trackedLine2, SCREEN_WORDS.firstCome) : row.trackedLine2, word);
 }
 
 // WHY: umbrella ADR 0009 D12 and its 2026-10-28 amendment: a closed sign-up whose event is still on reads closed, and the detail says the event part only.
@@ -84,9 +87,9 @@ export function toBarAction(reading: RowReading): BarAction | null {
   const open = reading.facts.actions.filter((action) => isStated(action) && isOpenNow(action, reading));
   const bars = open.flatMap((action): BarAction[] => {
     const target = toActionTarget(action, reading.facts);
-    return target?.kind === "link" || target?.kind === "email" ? [{ label: action.verb.quote, kind: target.kind, target: target.target }] : [];
+    return target?.kind === "link" || target?.kind === "email" ? [{ label: action.verb.quote, ...target }] : [];
   });
-  const distinct = bars.filter((bar, at) => bars.findIndex(({ kind, target }) => kind === bar.kind && target === bar.target) === at);
+  const distinct = bars.filter((bar, at) => bars.findIndex((other) => other.kind === bar.kind && other.target === bar.target) === at);
   return distinct.length === 1 ? (distinct[0] ?? null) : null;
 }
 
@@ -102,14 +105,32 @@ export function toActionTarget(action: Action, facts: NoticeFacts): ScreenAction
 }
 
 function toLinkTarget(url: string): ScreenAction | null {
-  if (MAILTO.test(url)) return toEmailTarget(url.replace(MAILTO, "").split("?")[0] ?? "");
-  return HTTP_URL.test(url) ? { kind: "link", target: url } : null;
+  if (!MAILTO.test(url)) return HTTP_URL.test(url) ? { kind: "link", target: url } : null;
+  const [address = "", query = ""] = url.replace(MAILTO, "").split("?");
+  return toEmailTarget(address, new URLSearchParams(query).get("subject") || null);
 }
 
 // WHY: a contact's value is its quote, words and all, so the target is the number or the address inside it (umbrella ADR 0009 D13: tap to call or email).
 export function toContactAction({ kind, value }: Contact): ScreenAction | null {
   const target = (kind === "phone" ? PHONE_NUMBER : ADDRESS_IN_TEXT).exec(value.quote)?.[0];
-  return target ? { kind: kind === "phone" ? "call" : "email", target } : null;
+  if (!target) return null;
+  return kind === "phone" ? { kind: "call", target } : { kind: "email", target, subject: null };
+}
+
+// CONTRACT(skkuverse-crawler): a place written off campus is stored unresolved with this reason
+// (skkuverse-crawler/py/src/skkuverse_crawler/plugins/facts/record.py); umbrella ADR 0009 opens it in the phone's map app.
+export function toPlaceAction({ text, reason }: StoredPlace, display: PlaceDisplay | undefined): ScreenAction | null {
+  if (display?.mapTarget) return { kind: "map", target: `${MAP_PLACE_KIND}:${display.mapTarget.skkuId}`, space: display.mapTarget.spaceCd };
+  return reason === OFF_CAMPUS_REASON && text !== "" ? { kind: "search", target: text } : null;
+}
+
+// CONTRACT(skkuverse-crawler): `A<n>` is the notice's n-th attachment when the facts were extracted
+// (skkuverse-crawler/py/src/skkuverse_crawler/plugins/facts/sources.py); a list changed since then is matched by a name no other file shares.
+export function toAttachmentUrl(id: string, name: string, listed: readonly NoticeAttachment[]): string | null {
+  const atPosition = listed[Number(id.slice(1)) - 1];
+  if (atPosition?.name === name) return atPosition.url;
+  const named = listed.filter((attachment) => attachment.name === name);
+  return named.length === 1 ? (named[0]?.url ?? null) : null;
 }
 
 const toCallTarget = (text: string): ScreenAction | null => {
@@ -117,7 +138,7 @@ const toCallTarget = (text: string): ScreenAction | null => {
   return number ? { kind: "call", target: number } : null;
 };
 
-const toEmailTarget = (address: string): ScreenAction | null => (ADDRESS.test(address) ? { kind: "email", target: address } : null);
+const toEmailTarget = (address: string, subject: string | null = null): ScreenAction | null => (ADDRESS.test(address) ? { kind: "email", target: address, subject } : null);
 
 export function toFirstSeen(firstSeenAt: Date, reading: RowReading): string {
   const day = reading.dayOffset(firstSeenAt) === -1 ? SCREEN_WORDS.yesterday : (reading.dayText(firstSeenAt) ?? "");
@@ -182,9 +203,22 @@ export function toSessionOrder(readings: readonly ItemReading[]): ItemReading[] 
 }
 
 export function toItemText({ item, line }: ItemReading): string {
-  if (item.dateWarnings.length > 0) return withTag(item, item.ev.quote);
+  if (item.dateWarnings.length > 0) return item.ev.quote;
   const isVerbShown = item.kind === "window" || item.verb === "" || line.includes(item.verb);
-  return withTag(item, isVerbShown ? line : withVerb(line, item.verb));
+  return isVerbShown ? line : withVerb(line, item.verb);
+}
+
+// WHY: umbrella ADR 0009 D10 shows each fact once: the record repeats a sentence it attaches to two things, and a fact
+// every track states shows once, untagged, as the notice's own.
+export function toDistinctLines(lines: readonly TaggedLine[]): TaggedLine[] {
+  const isSame = (left: TaggedLine, right: TaggedLine): boolean => left.text === right.text && left.sub === right.sub;
+  const isUntaggedElsewhere = (line: TaggedLine): boolean => line.tag !== "" && lines.some((other) => other.tag === "" && isSame(other, line));
+  return lines.filter((line, at) => !isUntaggedElsewhere(line) && lines.findIndex((other) => other.tag === line.tag && other.quote === line.quote && isSame(other, line)) === at);
+}
+
+export function toLineSource({ src }: { src: string }): ScreenLine["source"] {
+  if (isFromPoster({ src })) return "poster";
+  return src === "title" ? "title" : "body";
 }
 
 // WHY: umbrella ADR 0009 D4's example of a tentative date puts the verb before the tentative word, never after it.

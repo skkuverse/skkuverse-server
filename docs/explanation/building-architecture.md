@@ -56,6 +56,7 @@ The brands live in `src/building/building.types.ts`; each is minted only by its 
 | resolved place (`ResolvedPlace`) | A pinned place (`PinnedPlace`: a `space`, a `building` or a `facility`) or `unresolved` with its reason (`online`, `offcampus`, `campusOnly`, `unknown`) and its campus when it has one: what the primary-place picks read | — | — |
 | place id (`PlaceId`) | `space:<campus>:<spaceCd>`, `building:<campus>:<buildNo>` or `facility:<campus>:<slug>`: the only form a pinned place is stored in; its name and code are derived at display | `toPlaceId` | — |
 | stored place (`StoredPlace`) | What a stored place id names, read back by building: a room by its code and campus alone, a building by its number, a facility by its slug. It is a pinned place without the `buildNo` a room's id never carries | `toStoredPlace` | — |
+| map target (`PlaceMapTarget`) | The building sheet the campus map opens a pinned place on: the `skkuId` of its building or facility, and the room's `spaceCd` for a space. Null for a place no `buildings` document lists (a building only its spaces name, an `extraFacilities` place) | `toPlaceDisplay` | — |
 | facility slug | The pinned id of a numberless place: a skkumap facility's by its `skkuId`, or a place skkumap lacks (`extraFacilities`), never derived from a name | `place-lexicon.json` | — |
 | place lexicon (`placeLexicon`) | The committed facility slugs and the places skkumap lacks, which the place index is built with | `place-lexicon.json` | — |
 | place index (`PlaceIndex`) | The places by key and the spaces by room code, built from `buildings`, `spaces` and the lexicon | `toPlaceIndex` | — |
@@ -114,14 +115,14 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - `GET /building/:skkuId` answers `400` `INVALID_ID` for an id `isSkkuId` rejects, before any read, and `404` `NOT_FOUND` for a valid id with no building.
 - A `campus_shapes` document that fails `campusShapeDoc` is left out and logged (`building.campus_shapes.invalid`), and a failed reload serves the last good shapes for `CAMPUS_SHAPES_STALE_WINDOW_MS`. The buildings cache has no stale window, so a failed read reaches `map`.
 - The search ranks by the tier tables, in one `$facet` per collection so the counts describe the same predicate as the rows ([ADR 0006](../decisions/0006-building-search-relevance-ranking.md)).
-- A pinned place's name and code are derived from skkumap when shown (`toPlaceDisplay`), never stored, and show nothing once skkumap no longer holds it. Resolving a notice's place strings to pinned places is skkuverse-crawler's, not this server's.
+- A pinned place's name, code and map target are derived from skkumap when shown (`toPlaceDisplay`), never stored, and show nothing once skkumap no longer holds it. Resolving a notice's place strings to pinned places is skkuverse-crawler's, not this server's.
 - The lexicon is code, not a dataset ([ADR 0013, D2](../decisions/0013-runtime-data-in-mongodb.md)): a facility slug is an identity stored notices name. A synced facility with no pinned slug is left out of the index and logged (`building.place.lexicon_gaps`).
 - The place index is rebuilt only when a cached read returns new data, so it is at most `BUILDING_CACHE_TTL_MS` late, and a failed read rejects rather than serving an empty index.
 - `BuildingService`, `BuildingCafeteriaListService` and `BuildingPlaceDisplayService` are the doors other modules use; building's own flows inject the repositories ([ADR 0010, D1](../decisions/0010-server-architecture.md)).
 
 ## Open questions
 
-- The places skkumap lacks (`extraFacilities`) have no coordinates, so a map pin for one needs them first. `NoticesScreenService` names each stored place id through `BuildingPlaceDisplayService` and gives each place it can name a `map` action, those included. Whether the app can open one of them is unverified.
+- The places skkumap lacks (`extraFacilities`) and the buildings only their spaces name have no `buildings` document, so no `skkuId` for the campus map to open them by. `NoticesScreenService` gives them no `map` action until they have one.
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
 - A version stamp that api replicas check, so a crawler run reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
 - Why spaceList stamps a `conspaceCd` on some rooms and not on others. The detail serves it on each space, and nothing joins on it there.

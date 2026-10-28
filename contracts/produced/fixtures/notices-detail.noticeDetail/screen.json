@@ -61,7 +61,7 @@
             {
               "text": "광고업계 취업을 희망하는 누구나",
               "sub": null,
-              "fromPoster": false,
+              "source": "body",
               "actions": [],
               "quote": "광고업계 취업을 희망하는 누구나"
             }
@@ -76,7 +76,7 @@
             {
               "text": "사전신청",
               "sub": null,
-              "fromPoster": false,
+              "source": "body",
               "actions": [
                 {
                   "kind": "link",
@@ -96,7 +96,7 @@
             {
               "text": "11/6(금) 10시~18시 개최",
               "sub": "잠실 한국광고문화회관 2층",
-              "fromPoster": false,
+              "source": "body",
               "actions": [],
               "quote": "2026년 11월 6일(금) 10:00~18:00"
             }
@@ -118,7 +118,8 @@
         "links": [
           {
             "role": "사전신청",
-            "domain": "forms.gle"
+            "domain": "forms.gle",
+            "url": "https://forms.gle/WWPGKVxiUoXXLBBe6"
           }
         ]
       }

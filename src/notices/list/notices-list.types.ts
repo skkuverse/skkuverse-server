@@ -15,7 +15,7 @@ export type ListDay = (typeof LIST_DAYS)[number];
 
 export interface ItemRowOptions {
   now: Date;
-  /** WHY: set on a multi-source read only: a list of one board does not name it. */
+  /** WHY: set on a read of two or more sources only: a list of one board does not name it. */
   boardNameById: ReadonlyMap<string, string> | null;
 }
 
