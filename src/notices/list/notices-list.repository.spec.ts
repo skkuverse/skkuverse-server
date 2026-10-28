@@ -93,7 +93,7 @@ describe("NoticesListRepository.listNotices projection for the row", () => {
 });
 
 describe("NoticesListRepository.listScannedRows", () => {
-  it("reads the list's filter, sort and hint for `size` rows with only the fields that order a row, key its cluster and fill the cursor", async () => {
+  it("reads the list's filter, sort and hint for `size` rows in one batch, with only the fields that order a row, key its cluster and fill the cursor", async () => {
     // Arrange
     const cursor = { d: "2026-04-01", i: "66a1b2c3d4e5f6a7b8c9d0e1" };
 
@@ -107,7 +107,7 @@ describe("NoticesListRepository.listScannedRows", () => {
         isDeleted: { $ne: true },
         $and: [{ date: { $gte: START } }, { $or: [{ date: { $lt: "2026-04-01" } }, { date: "2026-04-01", _id: { $lt: new ObjectId(cursor.i) } }] }],
       },
-      { projection: { _id: 1, dupOf: 1, date: 1, crawledAt: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      { projection: { _id: 1, dupOf: 1, date: 1, crawledAt: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS, batchSize: 30 },
     ]);
     expect(sort).toHaveBeenCalledWith({ date: -1, _id: -1 });
     expect(hint).toHaveBeenCalledWith({ sourceId: 1, date: -1, _id: -1 });
