@@ -1,8 +1,8 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_the_main_things_dates_come_before_a_title_named_things` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/the_main_things_dates_come_before_a_title_named_things.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_the_main_things_dates_come_before_a_title_named_things` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/the_main_things_dates_come_before_a_title_named_things.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_the_main_things_dates_come_before_a_title_named_things",
   "expected": {
-    "item": "tm_ec382d13fc5b",
+    "item": "tm_481a5e616b56",
     "line2": "10/15(목) 마감됨",
     "qual": [
       "none",
@@ -134,7 +134,7 @@
           "start": 7
         },
         "granularity": "day",
-        "id": "tm_ec382d13fc5b",
+        "id": "tm_481a5e616b56",
         "instant": false,
         "kind": "window",
         "mod": "",

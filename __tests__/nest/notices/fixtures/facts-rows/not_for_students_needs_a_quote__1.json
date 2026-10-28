@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_not_for_students_needs_a_quote` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/not_for_students_needs_a_quote__1.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_not_for_students_needs_a_quote` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/not_for_students_needs_a_quote__1.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_not_for_students_needs_a_quote",
   "expected": {
     "item": "",

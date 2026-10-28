@@ -2,7 +2,7 @@
 title: <Title Case>
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: team@skkuverse.com
 last-updated: YYYY-MM-DD
 audience: public
 ---

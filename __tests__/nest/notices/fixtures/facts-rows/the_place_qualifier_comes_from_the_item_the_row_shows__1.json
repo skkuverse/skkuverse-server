@@ -1,8 +1,8 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_the_place_qualifier_comes_from_the_item_the_row_shows` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/the_place_qualifier_comes_from_the_item_the_row_shows__1.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_the_place_qualifier_comes_from_the_item_the_row_shows` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/the_place_qualifier_comes_from_the_item_the_row_shows__1.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_the_place_qualifier_comes_from_the_item_the_row_shows",
   "expected": {
-    "item": "tm_dfd2793b5200",
+    "item": "tm_80cfcb73b694",
     "line2": "10/26(월) 마감",
     "qual": [
       "none",
@@ -189,7 +189,7 @@
           "start": 40
         },
         "granularity": "day",
-        "id": "tm_dfd2793b5200",
+        "id": "tm_80cfcb73b694",
         "instant": false,
         "kind": "window",
         "mod": "",

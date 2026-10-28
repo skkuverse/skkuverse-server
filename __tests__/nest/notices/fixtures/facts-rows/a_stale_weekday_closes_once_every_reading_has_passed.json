@@ -1,8 +1,8 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_a_stale_weekday_closes_once_every_reading_has_passed` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_stale_weekday_closes_once_every_reading_has_passed.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_a_stale_weekday_closes_once_every_reading_has_passed` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_stale_weekday_closes_once_every_reading_has_passed.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_a_stale_weekday_closes_once_every_reading_has_passed",
   "expected": {
-    "item": "tm_53e311d4cba1",
+    "item": "tm_80cfcb73b694",
     "line2": "10/9(금) 마감됨",
     "qual": [
       "none",
@@ -116,7 +116,7 @@
           "start": 0
         },
         "granularity": "day",
-        "id": "tm_53e311d4cba1",
+        "id": "tm_80cfcb73b694",
         "instant": false,
         "kind": "window",
         "mod": "",

@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_an_item_held_in_several_places_shows_no_single_place` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/an_item_held_in_several_places_shows_no_single_place.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_an_item_held_in_several_places_shows_no_single_place` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/an_item_held_in_several_places_shows_no_single_place.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_an_item_held_in_several_places_shows_no_single_place",
   "expected": {
     "item": "tm_27bd6dc2ff5e",
