@@ -1,6 +1,6 @@
 import { ObjectId, type Document } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
-import type { ClusterMember, NoticeListRow } from "./notices-list.document";
+import type { ClusterMember, NoticeListRow, ScannedRow } from "./notices-list.document";
 import type { ClusterLookup, CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list.types";
 
 /**
@@ -53,6 +53,10 @@ export const LIST_PROJECTION = {
 } as const satisfies Record<keyof NoticeListRow, 1>;
 
 export const CLUSTER_MEMBER_PROJECTION = { _id: 1, dupOf: 1 } as const satisfies Record<keyof ClusterMember, 1>;
+
+// WHY: a scan of several sources reads only what orders a row and keys its cluster, and `crawledAt` for the cursor's
+// unread `c` (ADR 0007); the rows it serves are read again with LIST_PROJECTION.
+export const SCAN_PROJECTION = { _id: 1, dupOf: 1, date: 1, crawledAt: 1 } as const satisfies Record<keyof ScannedRow, 1>;
 
 // SEE: docs/decisions/0007-notice-ordering-key.md — after the cursor in (date desc, _id desc); `crawledAt` stays out.
 export function toCursorFilter(cursor: CursorPayload): Document {

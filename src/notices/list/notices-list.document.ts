@@ -9,3 +9,5 @@ export type NoticeListRow = Pick<
 >;
 
 export type ClusterMember = Pick<NoticeDoc, "_id" | "dupOf">;
+
+export type ScannedRow = Pick<NoticeDoc, "_id" | "dupOf" | "date" | "crawledAt">;
