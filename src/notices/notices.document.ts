@@ -105,7 +105,6 @@ export interface NoticeDoc {
   summaryApplication?: SummaryApplication | null;
   summaryDates?: SummaryDate[];
   isDeleted?: boolean | null;
-  // WHY: the dispatch gate, apart from summaryAt: the crawler sets it once the ai summary has landed.
   aiSummaryAt?: Date | null;
   // WHY: NoticesDispatchRepository is the only writer of the five push fields (dispatch/).
   pushedAt?: Date | null;
@@ -116,7 +115,8 @@ export interface NoticeDoc {
   // CONTRACT(skkuverse-crawler): the record of skkuverse-crawler/docs/notice-facts/notice-facts.schema.json, as stored: read it
   // only through NoticesFactsService, which parses it. Absent until the crawler's facts stage has run.
   facts?: unknown;
-  // CONTRACT(skkuverse-crawler): the push gate of skkuverse-crawler/docs/notice-facts/design.md "The live job": its job writes both once.
+  // CONTRACT(skkuverse-crawler): the push gate the dispatch claim reads (skkuverse-crawler/docs/notice-facts/design.md
+  // "Push gate contract (crawler ↔ server)"): only the live job writes both, once, so a backfill never makes a notice claimable.
   factsAt?: Date | null;
   factsGate?: "ok" | "failed" | "timeout" | null;
   // CONTRACT(skkuverse-crawler): written once per copy when it is first seen (skkuverse-crawler/docs/notice-facts/design.md "Storage"); an older copy may lack it.

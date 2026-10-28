@@ -29,6 +29,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
+import { CLAIM_SORT, toClaimFilter } from "../../../src/notices/dispatch/notices-dispatch.query";
 import { InternalAuthorizer, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
@@ -48,6 +49,7 @@ const FIXTURE = JSON.parse(
   fs.readFileSync(path.join(__dirname, "fixtures/notice-document.json"), "utf8"),
 ) as { document: Record<string, unknown> };
 const DATE_FIELDS = ["crawledAt", "aiSummaryAt", "summaryAt", "pushedAt"] as const;
+const EPOCH = new Date(0);
 
 /** A production-shaped notice; `undefined` in `overrides` removes the field. */
 function notice(overrides: Record<string, unknown> = {}): Document {
@@ -62,11 +64,13 @@ function notice(overrides: Record<string, unknown> = {}): Document {
   return doc;
 }
 
-/** As the crawler leaves a summarized notice: never claimed, so no push fields at all. */
+/** As the crawler leaves a notice its live facts job has gated: never claimed, so no push fields at all. */
 function unpushed(overrides: Record<string, unknown> = {}): Document {
   return notice({
     date: "2026-10-19",
     aiSummaryAt: new Date("2026-10-19T15:00:00Z"),
+    factsAt: new Date("2026-10-19T14:40:00Z"),
+    factsGate: "ok",
     pushedAt: undefined,
     pushAttempts: undefined,
     pushError: undefined,
@@ -555,9 +559,10 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
   });
 
   it.each([
-    ["no summary yet", { aiSummaryAt: undefined }],
-    ["a null summary time", { aiSummaryAt: null }],
+    ["no push gate yet, though summarized", { factsAt: undefined, factsGate: undefined }],
+    ["a null push gate time", { factsAt: null }],
     ["already pushed", { pushedAt: new Date("2026-10-19T16:00:00Z"), pushAttempts: 1 }],
+    ["pushedAt at the epoch, as the crawler's suppression stamps it", { pushedAt: EPOCH, pushAttempts: 0 }],
     ["five failed attempts", { pushAttempts: 5 }],
     ["soft-deleted", { isDeleted: true }],
     ["a date one KST day before the 14-day floor (the UTC floor would admit it)", { date: "2026-10-05" }],
@@ -582,6 +587,9 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
     ["a date in the future", { date: "2026-10-30" }],
     ["a lease taken one millisecond past claimLeaseMs", { dispatchClaimedAt: new Date(NOW.getTime() - 300_001) }],
     ["no isDeleted field", { isDeleted: undefined }],
+    ["a push gate and no ai summary", { aiSummaryAt: undefined, summaryAt: undefined, summary: undefined, summaryOneLiner: undefined }],
+    ["a push gate written on a timeout", { factsGate: "timeout" }],
+    ["a push gate written on the third failure", { factsGate: "failed" }],
   ])("claims and pushes a notice with %s", async (_case, overrides) => {
     // Arrange
     const doc = unpushed(overrides);
@@ -726,4 +734,29 @@ describe("the poller boot's dispatch index over a real mongod", () => {
     // Assert
     expect(index).toMatchObject({ key: { date: -1, _id: -1 }, partialFilterExpression: { pushedAt: null, factsAt: { $type: "date" } } });
   });
+
+  it("plans the claim on dispatch_pending_facts_idx, read in the claim's order with no sort stage", async () => {
+    // Arrange
+    await notices.insertMany([unpushed({ articleNo: 1 }), unpushed({ articleNo: 2, factsAt: undefined })]);
+    await indexNamed("dispatch_pending_facts_idx");
+    const window = { dateFloor: "2026-10-06", leaseExpiredBefore: new Date(NOW.getTime() - 300_000), maxAttempts: 5 };
+
+    // Act
+    const explained = await db.getClient().db(config.notices.dbName).command({
+      explain: { findAndModify: config.notices.collections.notices, query: toClaimFilter(window), sort: CLAIM_SORT, update: { $set: { dispatchClaimedAt: NOW } }, new: true },
+      verbosity: "queryPlanner",
+    });
+
+    // Assert
+    const stages = planStages(explained.queryPlanner.winningPlan);
+    expect(stages.filter((stage) => stage.stage === "IXSCAN").map((stage) => stage.indexName)).toEqual(["dispatch_pending_facts_idx"]);
+    expect(stages.map((stage) => stage.stage)).not.toContain("SORT");
+  });
 });
+
+function planStages(plan: unknown): Array<{ stage: string; indexName?: string }> {
+  if (plan === null || typeof plan !== "object") return [];
+  const node = plan as Record<string, unknown>;
+  const children = Object.values(node).flatMap((child) => (Array.isArray(child) ? child.flatMap(planStages) : planStages(child)));
+  return typeof node.stage === "string" ? [{ stage: node.stage, indexName: node.indexName as string | undefined }, ...children] : children;
+}
