@@ -3,7 +3,7 @@ import type { Collection, ObjectId } from "mongodb";
 import config from "../../infra/config";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { NoticeDoc } from "../notices.document";
-import { CLAIM_SORT, DISPATCH_PENDING_FACTS_INDEX, DISPATCH_PENDING_INDEX, toClaimFilter, toClaimUpdate, toPushedUpdate, toReleasedUpdate, toSkippedUpdate } from "./notices-dispatch.query";
+import { CLAIM_SORT, DISPATCH_PENDING_INDEX, toClaimFilter, toClaimUpdate, toPushedUpdate, toReleasedUpdate, toSkippedUpdate } from "./notices-dispatch.query";
 import type { ClaimWindow, PushedFields, ReleasedFields, SkippedFields } from "./notices-dispatch.types";
 
 // WHY: the only writer of the five push fields in `notices`, so moving them to a collection of their own later
@@ -35,7 +35,6 @@ export class NoticesDispatchRepository implements OnModuleInit {
   // 2026-09-13); the partial index holds only the claimable set.
   private async ensureIndexes(): Promise<void> {
     await this.notices().createIndex(DISPATCH_PENDING_INDEX.key, DISPATCH_PENDING_INDEX.options);
-    await this.notices().createIndex(DISPATCH_PENDING_FACTS_INDEX.key, DISPATCH_PENDING_FACTS_INDEX.options);
   }
 
   private notices(): Collection<NoticeDoc> {
