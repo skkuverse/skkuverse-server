@@ -3,8 +3,8 @@
  * notices-list.repository.spec.ts and, over a real mongod, notices-characterization.routes.test.ts): the
  * scope's sources, not deleted, on or after the service start date, the type and the search text. The list read adds
  * the cursor, sorts newest first by (date, _id), reads one more than the limit and keeps only the fields of
- * LIST_PROJECTION. The member lookup drops the cursor, keeps the notices whose `dupOf` is one of the lookup's keys
- * and that the batch did not scan, and keeps only the fields of CLUSTER_MEMBER_PROJECTION.
+ * LIST_PROJECTION. The member lookup keeps the notices at or before the lookup's cursor whose `dupOf` is one of its
+ * keys, and keeps only the fields of CLUSTER_MEMBER_PROJECTION.
  */
 import config from "../../../../src/infra/config";
 import type { ClusterMember, NoticeListRow } from "../../../../src/notices/list/notices-list.document";
@@ -38,9 +38,8 @@ export class FakeNoticesListRepository implements PublicOf<NoticesListRepository
   }
 
   async listClusterMembers(scope: NoticeScope, query: NoticeListQuery, lookup: ClusterLookup): Promise<ClusterMember[]> {
-    const scannedIds = new Set(lookup.scannedIds.map((id) => id.toHexString()));
     return this.inReadScope(scope, query)
-      .filter((doc) => doc.dupOf != null && lookup.keys.includes(doc.dupOf.toHexString()) && !scannedIds.has(doc._id.toHexString()))
+      .filter((doc) => doc.dupOf != null && lookup.keys.includes(doc.dupOf.toHexString()) && !this.isAfterCursor(doc, lookup.cursor.d, lookup.cursor.i))
       .map((doc) => project<ClusterMember>(doc, CLUSTER_MEMBER_PROJECTION));
   }
 

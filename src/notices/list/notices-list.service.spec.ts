@@ -7,8 +7,9 @@
  * name rides only on a multi-source read, and the whole page is rendered at the one instant the clock gave first.
  *
  * On a read of two or more sources, each article is one row across all its pages (umbrella ADR 0009 D8): the
- * service scans past the page and keeps a row only as its cluster's shown copy, which the fake's member lookup helps
- * decide. A read of one source serves every copy.
+ * service scans past the page and keeps a row only as its cluster's shown copy, the first in list order, and the
+ * fake's member lookup finds the copies an earlier page served. A crawl that moves `crawledAt` between two page
+ * reads changes no row. A read of one source serves every copy.
  *
  * src/infra/logger.ts is mocked: a refused record logs `notices.facts.unparsed`.
  */
@@ -25,9 +26,11 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { NoticesFactsService } from "../facts/notices-facts.service";
 import { NoticesLegacyService } from "../legacy/notices-legacy.service";
 import type { NoticeDoc } from "../notices.document";
+import { clusterKeyOf } from "../notices.rules";
 import { NoticesRowService } from "../row/notices-row.service";
 import type { NoticesListRepository } from "./notices-list.repository";
 import { decodeCursor } from "./notices-list.rules";
+import { CLUSTER_SCAN_FACTOR } from "./notices-list.constants";
 import { NoticesListService } from "./notices-list.service";
 import type { CursorPayload } from "./notices-list.types";
 import type { NoticeList } from "./notices-list.wire";
@@ -250,7 +253,7 @@ describe("NoticesListService.listNotices on several boards", () => {
     copy(1, "skku-notice08", "H", 7),
   ];
 
-  it.each([1, 2, 3])("serves each article once at limit %i, as its copy crawled last, in list order, page by page", async (limit) => {
+  it.each([1, 2, 3])("serves each article once at limit %i, as its first copy in list order, page by page", async (limit) => {
     // Arrange
     const repository = new FakeNoticesListRepository();
     repository.docs = copies();
@@ -265,14 +268,58 @@ describe("NoticesListService.listNotices on several boards", () => {
     }
 
     // Assert
-    // K: the copy crawled last (21) after four older ones; A: the later crawl (18) over the earlier row (20); B and E: a
-    // crawl tie goes to the first in list order (19, 14); C: a copy on a board outside the read (5) never counts; D: the
-    // later crawl (13); F: a deleted copy (4) never counts; G and H: the shown copy sits pages away (10 before 2, 1 after
-    // 9); I: two copies on one board; 6: not linked yet, alone.
-    expect(pages.flatMap((page) => page.notices.map((notice) => notice.articleNo))).toEqual([21, 19, 18, 17, 14, 13, 11, 10, 8, 6, 1]);
+    // K: the first of five copies (25), though 21 was crawled later; A and D: the earlier row (20, 15) over a later
+    // crawl (18, 13); B and E: the first row (19, 14); C: a copy on a board outside the read (5) never counts; F: a
+    // deleted copy (4) never counts; G and H: the hidden copy sits pages away (2 after 10, 1 after 9); I: two copies
+    // on one board; 6: not linked yet, alone.
+    expect(pages.flatMap((page) => page.notices.map((notice) => notice.articleNo))).toEqual([25, 20, 19, 17, 15, 14, 11, 10, 9, 8, 6]);
     expect(pages.every((page) => page.notices.length === limit || page === pages.at(-1))).toBe(true);
     expect(pages.map((page) => page.hasMore)).toEqual([...Array(pages.length - 1).fill(true), false]);
     expect(pages.slice(0, -1).map((page) => decodeCursor(page.nextCursor).i)).toEqual(pages.slice(0, -1).map((page) => page.notices.at(-1)?.id));
+  });
+
+  it.each([1, 2, 3])("serves each article once at limit %i while the crawler refreshes the copies between page reads", async (limit) => {
+    // Arrange
+    const repository = new FakeNoticesListRepository();
+    repository.docs = copies();
+    const service = serviceAt(repository);
+    const keyById = new Map(repository.docs.map((notice) => [notice._id.toHexString(), clusterKeyOf(notice)]));
+    const articleKeys = [...new Set(repository.docs.filter((notice) => SCOPE.includes(notice.sourceId) && !notice.isDeleted).map(clusterKeyOf))];
+    const servedKeys: string[] = [];
+
+    // Act
+    for (let cursor: CursorPayload | null = null, reads = 1; reads === 1 || cursor !== null; reads++) {
+      const page: NoticeList = await service.listNotices(SCOPE, { limit, cursor });
+      servedKeys.push(...page.notices.map((notice) => keyById.get(notice.id) ?? notice.id));
+      // A views refresh with no edit, as the crawler's flush makes it: every copy not on this page is crawled again.
+      const servedIds = new Set(page.notices.map((notice) => notice.id));
+      const refreshedAt = new Date(Date.UTC(2026, 9, 27, reads));
+      repository.docs = repository.docs.map((notice) => (servedIds.has(notice._id.toHexString()) ? notice : { ...notice, views: reads, crawledAt: refreshedAt }));
+      cursor = page.nextCursor === null || reads > 20 ? null : decodeCursor(page.nextCursor);
+    }
+
+    // Assert
+    expect([...servedKeys].sort()).toEqual([...articleKeys].sort());
+  });
+
+  it("serves an article once when its copies run past one scan of a page", async () => {
+    // Arrange
+    const limit = 2;
+    const runLength = CLUSTER_SCAN_FACTOR * (limit + 1) + 1;
+    const repository = new FakeNoticesListRepository();
+    repository.docs = [
+      ...Array.from({ length: runLength }, (_, i) => copy(runLength + 2 - i, SCOPE[i % 2] ?? "skku-notice03", "A", 1)),
+      copy(2, "skku-notice03", "B", 1),
+      copy(1, "skku-notice08", "C", 1),
+    ];
+    const service = serviceAt(repository);
+
+    // Act
+    const page = await service.listNotices(SCOPE, { limit, cursor: null });
+
+    // Assert
+    expect(page.notices.map((notice) => notice.articleNo)).toEqual([runLength + 2, 2]);
+    expect(page.hasMore).toBe(true);
   });
 
   it("serves every copy on a read of one source, named once or twice", async () => {

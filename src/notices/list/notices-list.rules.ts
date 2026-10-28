@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 import type { NoticeDoc, SummaryPeriod } from "../notices.document";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
-import { groupByClusterKey } from "../notices.rules";
+import { clusterKeyOf } from "../notices.rules";
 import type { SummaryType } from "../notices.types";
 import { OPEN_ENDED_DAYS, POSTING_DAY_LENGTH } from "./notices-list.constants";
 import { NoticesListCursorError } from "./notices-list.error";
@@ -232,16 +232,14 @@ export function hasSeveralSources(scope: NoticeScope): boolean {
   return typeof scope !== "string" && new Set(scope).size > 1;
 }
 
-const crawledTime = (copy: ClusterMember): number => copy.crawledAt?.getTime() ?? Number.NEGATIVE_INFINITY;
-
-const byCodeUnit = (left: string, right: string): number => Number(left > right) - Number(left < right);
-
-// WHY: the copy crawled last carries the latest edit; a tie goes to list order, so the pick never depends on read order.
-const isShownOver = (copy: ClusterMember, shown: ClusterMember): boolean =>
-  (crawledTime(copy) - crawledTime(shown) || byCodeUnit(copy.date, shown.date) || byCodeUnit(copy._id.toHexString(), shown._id.toHexString())) > 0;
-
-export function selectShownRows<T extends ClusterMember>(batch: readonly T[], members: readonly ClusterMember[]): T[] {
-  const shownCopies = groupByClusterKey([...batch, ...members]).map((copies) => copies.reduce((shown, copy) => (isShownOver(copy, shown) ? copy : shown)));
-  const shownIds = new Set(shownCopies.map((copy) => copy._id.toHexString()));
-  return batch.filter((row) => shownIds.has(row._id.toHexString()));
+// WHY: the shown copy is the first in list order, whose (date, _id) a crawl never moves; `crawledAt` moves on a views
+// refresh with no edit, so picking by it lost or repeated rows mid-scroll. The batch is in list order.
+export function selectShownRows<T extends ClusterMember>(batch: readonly T[], decidedKeys: ReadonlySet<string>): T[] {
+  const seenKeys = new Set(decidedKeys);
+  const shownRows: T[] = [];
+  for (const row of batch) {
+    if (!seenKeys.has(clusterKeyOf(row))) shownRows.push(row);
+    seenKeys.add(clusterKeyOf(row));
+  }
+  return shownRows;
 }

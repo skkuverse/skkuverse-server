@@ -568,83 +568,67 @@ describe("hasSeveralSources", () => {
 describe("selectShownRows", () => {
   const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
   const crawled = (hour: number) => new Date(`2026-10-20T${String(hour).padStart(2, "0")}:00:00Z`);
-  const copy = (n: number, postedDate: string, hour: number | null, dupOf?: number) => ({
-    _id: id(n),
-    date: postedDate,
-    ...(hour === null ? {} : { crawledAt: crawled(hour) }),
-    ...(dupOf === undefined ? {} : { dupOf: id(dupOf) }),
-  });
+  // A batch is in list order: date desc, then _id desc.
+  const copy = (n: number, dupOf?: number, hour = 1) => ({ _id: id(n), crawledAt: crawled(hour), ...(dupOf === undefined ? {} : { dupOf: id(dupOf) }) });
   const ids = (rows: Array<{ _id: ObjectId }>) => rows.map((row) => row._id.toHexString());
+  const keys = (...ns: number[]) => new Set(ns.map((n) => id(n).toHexString()));
 
-  it("keeps the copy crawled last and drops the others of its cluster", () => {
+  it("keeps the first copy in list order and drops the later copies of its cluster", () => {
     // Arrange
-    const batch = [copy(3, "2026-10-20", 1, 1), copy(2, "2026-10-19", 5, 1), copy(1, "2026-10-18", 2, 1)];
+    const batch = [copy(3, 1), copy(2, 1), copy(1, 1)];
 
     // Act & Assert
-    expect(ids(selectShownRows(batch, []))).toEqual([id(2).toHexString()]);
+    expect(ids(selectShownRows(batch, keys()))).toEqual([id(3).toHexString()]);
   });
 
-  it("breaks a crawl tie by list order: the later date, then the higher _id", () => {
+  it("keeps the first copy though a later copy was crawled after it", () => {
     // Arrange
-    const byDate = [copy(1, "2026-10-20", 4, 9), copy(2, "2026-10-19", 4, 9)];
-    const byId = [copy(4, "2026-10-19", 4, 8), copy(3, "2026-10-19", 4, 8)];
+    const batch = [copy(3, 1, 1), copy(2, 1, 9)];
 
     // Act & Assert
-    expect(ids(selectShownRows(byDate, []))).toEqual([id(1).toHexString()]);
-    expect(ids(selectShownRows(byId, []))).toEqual([id(4).toHexString()]);
+    expect(ids(selectShownRows(batch, keys()))).toEqual([id(3).toHexString()]);
   });
 
-  it("drops a row whose shown copy sorts before the cursor, as an earlier page served it", () => {
+  it("drops every row of a cluster that a decided key holds, as an earlier page or scan served it", () => {
     // Arrange
-    const batch = [copy(2, "2026-10-18", 1, 1)];
-    const members = [copy(1, "2026-10-20", 3, 1)];
+    const batch = [copy(3, 1), copy(2, 1)];
 
     // Act & Assert
-    expect(selectShownRows(batch, members)).toEqual([]);
+    expect(selectShownRows(batch, keys(1))).toEqual([]);
   });
 
-  it("drops a row whose shown copy sorts later, which is served when the scan reaches it", () => {
+  it("keeps a row whose cluster no decided key holds", () => {
     // Arrange
-    const batch = [copy(2, "2026-10-20", 1, 1)];
-    const members = [copy(1, "2026-10-02", 3, 1)];
+    const batch = [copy(2, 1)];
 
     // Act & Assert
-    expect(selectShownRows(batch, members)).toEqual([]);
+    expect(ids(selectShownRows(batch, keys(9)))).toEqual([id(2).toHexString()]);
+  });
+
+  it("keeps the first row of each cluster in batch order across interleaved clusters", () => {
+    // Arrange
+    const batch = [copy(6, 101), copy(5, 104), copy(4, 101), copy(3, 107), copy(2, 104), copy(1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, keys(107)))).toEqual([id(6), id(5), id(1)].map((oid) => oid.toHexString()));
   });
 
   it("keys a notice the crawler has not linked yet on its own _id", () => {
     // Arrange
-    const batch = [copy(2, "2026-10-20", 1), copy(1, "2026-10-20", 3)];
+    const batch = [copy(2), copy(1)];
 
     // Act & Assert
-    expect(ids(selectShownRows(batch, []))).toEqual([id(2).toHexString(), id(1).toHexString()]);
+    expect(ids(selectShownRows(batch, keys(1)))).toEqual([id(2).toHexString()]);
   });
 
   it("collapses copies on one board too, since it compares copies and never their boards", () => {
     // Arrange
     const batch = [
-      { ...copy(2, "2026-10-20", 1, 1), sourceId: "skku-notice03" },
-      { ...copy(1, "2026-10-19", 2, 1), sourceId: "skku-notice03" },
+      { ...copy(2, 1), sourceId: "skku-notice03" },
+      { ...copy(1, 1), sourceId: "skku-notice03" },
     ];
 
     // Act & Assert
-    expect(ids(selectShownRows(batch, []))).toEqual([id(1).toHexString()]);
-  });
-
-  it("counts a copy without a crawl time as crawled first", () => {
-    // Arrange
-    const batch = [copy(2, "2026-10-20", null, 1), copy(1, "2026-10-19", 0, 1)];
-
-    // Act & Assert
-    expect(ids(selectShownRows(batch, []))).toEqual([id(1).toHexString()]);
-  });
-
-  it("keeps each cluster's shown copy, in batch order, when a member is also in the batch", () => {
-    // Arrange
-    const batch = [copy(5, "2026-10-20", 1, 5), copy(4, "2026-10-19", 2, 1), copy(3, "2026-10-18", 1, 3)];
-    const members = [copy(4, "2026-10-19", 2, 1), copy(1, "2026-10-01", 1, 1)];
-
-    // Act & Assert
-    expect(ids(selectShownRows(batch, members))).toEqual([id(5).toHexString(), id(4).toHexString(), id(3).toHexString()]);
+    expect(ids(selectShownRows(batch, keys()))).toEqual([id(2).toHexString()]);
   });
 });
