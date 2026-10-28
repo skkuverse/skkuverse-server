@@ -48,3 +48,10 @@ export const DISPATCH_PENDING_INDEX = {
   key: { date: -1 },
   options: { name: "dispatch_pending_idx", partialFilterExpression: { pushedAt: null, aiSummaryAt: { $type: "date" } } },
 } as const;
+
+// WHY: ships one deploy ahead of the claim that reads it (ADR 0012, D3); keyed on CLAIM_SORT, so the claim walks
+// the index in order instead of sorting the partial set.
+export const DISPATCH_PENDING_FACTS_INDEX = {
+  key: { date: -1, _id: -1 },
+  options: { name: "dispatch_pending_facts_idx", partialFilterExpression: { pushedAt: null, factsAt: { $type: "date" } } },
+} as const;

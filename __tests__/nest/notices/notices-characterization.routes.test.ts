@@ -708,3 +708,22 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
     }
   }, APP_BOOT_TIMEOUT_MS);
 });
+
+describe("the poller boot's dispatch index over a real mongod", () => {
+  async function indexNamed(name: string): Promise<Document | undefined> {
+    for (let waited = 0; waited <= 5_000; waited += 20) {
+      const index = (await notices.indexes()).find((candidate) => candidate.name === name);
+      if (index) return index;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    return undefined;
+  }
+
+  it("holds dispatch_pending_facts_idx on (date, _id), partial on the unpushed notices the live facts job has gated", async () => {
+    // Act
+    const index = await indexNamed("dispatch_pending_facts_idx");
+
+    // Assert
+    expect(index).toMatchObject({ key: { date: -1, _id: -1 }, partialFilterExpression: { pushedAt: null, factsAt: { $type: "date" } } });
+  });
+});

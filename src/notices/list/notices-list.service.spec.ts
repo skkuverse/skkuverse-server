@@ -19,6 +19,7 @@ jest.mock("../../infra/logger", () => mockLogger);
 import { FakeNoticesListRepository } from "../../../__tests__/helpers/fakes/notices/notices-list.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { NoticesFactsService } from "../facts/notices-facts.service";
+import { NoticesLegacyService } from "../legacy/notices-legacy.service";
 import type { NoticeDoc } from "../notices.document";
 import { NoticesRowService } from "../row/notices-row.service";
 import type { NoticesListRepository } from "./notices-list.repository";
@@ -44,7 +45,7 @@ const doc = (n: number, date: string, extra: Partial<NoticeDoc> = {}): NoticeDoc
 
 function serviceAt(repository: FakeNoticesListRepository, listClock: Clock = clock): NoticesListService {
   const rows = new NoticesRowService(new NoticesFactsService(listClock));
-  return new NoticesListService(asReal<NoticesListRepository>(repository), listClock, rows);
+  return new NoticesListService(asReal<NoticesListRepository>(repository), listClock, rows, new NoticesLegacyService(rows));
 }
 
 beforeEach(() => {
@@ -109,6 +110,64 @@ describe("NoticesListService.listNotices", () => {
       startAt: null,
       endAt: { date: "2026-10-26", time: "18:00", label: "신청" },
     });
+  });
+
+  it("derives a rough summary from the row for a notice with facts and no summary, and leaves a notice without facts at null", async () => {
+    // Arrange
+    const repository = new FakeNoticesListRepository();
+    repository.docs = [doc(2, "2026-10-14", { facts: RECORD }), doc(1, "2026-10-13")];
+    const service = serviceAt(repository, { now: () => new Date("2026-10-25T03:00:00Z") });
+
+    // Act
+    const { notices } = await service.listNotices("skku-notice02", { limit: 10, cursor: null });
+
+    // Assert
+    expect(notices[0]?.summary).toMatchObject({ oneLiner: "내일 마감", type: "action_required", endAt: { date: "2026-10-26", time: null, label: null } });
+    expect(notices[1]?.summary).toBeNull();
+  });
+
+  it("files a derived notice under its derived type and keeps stored ones under theirs", async () => {
+    // Arrange
+    const repository = new FakeNoticesListRepository();
+    repository.docs = [doc(3, "2026-10-14", { facts: RECORD }), doc(2, "2026-10-13", { summaryAt: new Date("2026-10-13T00:00:00Z"), summaryType: "event", summaryOneLiner: "x" }), doc(1, "2026-10-12", { summaryAt: new Date("2026-10-13T00:00:00Z"), summaryType: "action_required", summaryOneLiner: "y" })];
+    const service = serviceAt(repository, { now: () => new Date("2026-10-25T03:00:00Z") });
+
+    // Act
+    const deadlines = await service.listNotices("skku-notice02", { limit: 10, cursor: null, type: "action_required" });
+    const events = await service.listNotices("skku-notice02", { limit: 10, cursor: null, type: "event" });
+
+    // Assert
+    expect(deadlines.notices.map((n) => n.articleNo)).toEqual([3, 1]);
+    expect(events.notices.map((n) => n.articleNo)).toEqual([2]);
+  });
+
+  it("leaves a notice whose facts the schema refuses out of a typed read", async () => {
+    // Arrange
+    const repository = new FakeNoticesListRepository();
+    repository.docs = [doc(1, "2026-10-14", { facts: { ...RECORD, v: 2 } })];
+    const service = serviceAt(repository);
+
+    // Act
+    const page = await service.listNotices("skku-notice02", { limit: 10, cursor: null, type: "informational" });
+
+    // Assert
+    expect(page.notices).toEqual([]);
+  });
+
+  it("keeps the cursor of the last notice read when the type filter drops the end of the page", async () => {
+    // Arrange
+    const stored = { summaryAt: new Date("2026-10-13T00:00:00Z"), summaryOneLiner: "x" };
+    const repository = new FakeNoticesListRepository();
+    repository.docs = [doc(3, "2026-10-14", { ...stored, summaryType: "event" }), doc(2, "2026-10-13", { facts: RECORD }), doc(1, "2026-10-12", { ...stored, summaryType: "event" })];
+    const service = serviceAt(repository, { now: () => new Date("2026-10-25T03:00:00Z") });
+
+    // Act
+    const page = await service.listNotices("skku-notice02", { limit: 2, cursor: null, type: "event" });
+
+    // Assert
+    expect(page.notices.map((n) => n.articleNo)).toEqual([3]);
+    expect(page.hasMore).toBe(true);
+    expect(decodeCursor(page.nextCursor).i).toBe(doc(2, "")._id.toHexString());
   });
 
   it("names the board on a multi-source read only, whatever the number of sources", async () => {
