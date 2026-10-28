@@ -59,6 +59,10 @@
     "max": 63,
     "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers, then the HSSC route layer and then the `tabs` each base layer states took it past the role cap."
   },
+  "src/notices/facts/notices-facts.schema.ts": {
+    "max": 215,
+    "reason": "ADR 0010 D9, no domain seam: `noticeFacts` mirrors the one versioned record the crawler writes and the server parses as a unit, each of its sections checked against the same vendored file by `__tests__/contracts/notice-facts.test.ts`, so a split would leave half a record in each sub-module, and a sibling never imports another sub-module's schema (sub-modules.test.ts)."
+  },
   "src/notices/list/notices-list.rules.ts": {
     "max": 182,
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."

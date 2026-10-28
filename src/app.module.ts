@@ -61,6 +61,7 @@ import { MapTransitModule } from "./map/transit/map-transit.module";
 import { MapEventModule } from "./map/event/map-event.module";
 import { MapEventDetailsModule } from "./map/event-details/map-event-details.module";
 import { NoticesModule } from "./notices/notices.module";
+import { NoticesFactsModule } from "./notices/facts/notices-facts.module";
 import { NoticesTabsModule } from "./notices/tabs/notices-tabs.module";
 import { NoticesListModule } from "./notices/list/notices-list.module";
 import { NoticesOverviewModule } from "./notices/overview/notices-overview.module";
@@ -167,6 +168,7 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     MapEventModule,
     MapEventDetailsModule,
     NoticesModule,
+    NoticesFactsModule,
     NoticesTabsModule,
     NoticesListModule,
     NoticesOverviewModule,
