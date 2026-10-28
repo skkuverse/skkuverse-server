@@ -27,14 +27,14 @@ function toDates(shown: RowItem, type: SummaryType): Pick<DerivedBrief, "startAt
   return startAt && endAt && startAt.date !== endAt.date ? { startAt, endAt } : { startAt: null, endAt: null };
 }
 
-function toOneLiner({ row }: RowReading): string | null {
+function toOneLiner({ row, fullQualifier }: RowReading): string | null {
   const word = row.token && SPOKEN_TONES.has(row.token.tone) ? row.token.text : "";
-  const qualifier = row.qualifier === null || CONDITION_COUNT_PATTERN.test(row.qualifier) ? "" : row.qualifier;
-  return [word, row.line2, qualifier].filter((part) => part !== "").join(ONE_LINER_SEPARATOR) || null;
+  const qualifier = fullQualifier === null || CONDITION_COUNT_PATTERN.test(fullQualifier) ? "" : fullQualifier;
+  return [word, row.trackedLine2, qualifier].filter((part) => part !== "").join(ONE_LINER_SEPARATOR) || null;
 }
 
-// WHY: owner decision 2026-10-28: a rough one-liner for apps that still read `summary`: line 2 of the row, then its
-// qualifier. `endAt` is the shown window's end; the type is action_required for a window, event for a session.
+// WHY: owner decision 2026-10-28: a rough one-liner for apps that still read `summary`: line 2 of the row with its track,
+// then its qualifier unfitted, since neither a summary nor a push body has the row's 26 characters. `endAt` is the shown window's end; the type is action_required for a window, event for a session.
 export function toDerivedBrief(reading: RowReading): DerivedBrief {
   const { row } = reading;
   const shown = reading.items.find(({ item }) => item.id === row.itemId)?.item ?? null;

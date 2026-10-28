@@ -74,6 +74,8 @@ export interface ItemReading {
 
 export interface RowReading extends RowSource {
   row: FactsRow;
+  /** WHY: the row's qualifier before line 2's 26-character fit, for a summary or push body, which has no row to fit. */
+  fullQualifier: string | null;
   eventStatus: RowStatus;
   isStaffOnly: boolean;
   items: readonly ItemReading[];
