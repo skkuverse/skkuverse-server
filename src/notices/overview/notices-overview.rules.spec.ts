@@ -2,14 +2,14 @@
  * Cache key: what makes two requests share an overview.
  * Candidate selection: cross-posted copies count
  * once, the best-ranked copy represents them, and at most 6 notices reach the ai.
- * The dedup key (skkuverse-server#75) decides which candidates are copies of one article. Both directions matter:
- * failing to merge spends a candidate slot on a copy, and merging too eagerly drops a real notice from the answer.
- * Hence "exact match only, no fuzz".
+ * The cluster key, the crawler's `dupOf` or the notice's own _id, decides which candidates are copies of one
+ * article, as it does for the list and the push. Both directions matter: failing to merge spends a candidate slot on
+ * a copy, and merging too eagerly drops a real notice from the answer.
  */
 import { ObjectId } from "mongodb";
 import { candidate } from "../../../__tests__/helpers/overview-fixtures";
 import { OVERVIEW_CANDIDATE_LIMIT } from "./notices-overview.constants";
-import { dedupKeyOf, groupByDedupKey, kstDate, normalizeQuery, overviewCacheKey, selectCandidates } from "./notices-overview.rules";
+import { dedupKeyOf, kstDate, normalizeQuery, overviewCacheKey, selectCandidates } from "./notices-overview.rules";
 
 type OverviewCacheKeyInput = Parameters<typeof overviewCacheKey>[0];
 
@@ -101,18 +101,28 @@ describe("overviewCacheKey", () => {
 });
 
 describe("selectCandidates", () => {
-  it("collapses cross-posted copies to the highest-ranked one", () => {
+  it("collapses the copies the crawler linked to the highest-ranked one", () => {
     // Arrange
-    const first = candidate({ sourceId: "skku-main", title: "same", contentHash: "h" });
-    const copyA = candidate({ sourceId: "skku-notice02", title: "same", contentHash: "h" });
+    const anchor = new ObjectId();
+    const first = candidate({ _id: anchor, sourceId: "skku-main", title: "same", contentHash: "h", dupOf: anchor });
+    const copyA = candidate({ sourceId: "skku-notice02", title: "same", contentHash: "h", dupOf: anchor });
     const other = candidate();
-    const copyB = candidate({ sourceId: "skku-notice03", title: " same ", contentHash: "h" });
+    const copyB = candidate({ sourceId: "skku-notice03", title: " same ", contentHash: "h", dupOf: anchor });
 
     // Act
     const picked = selectCandidates([first, copyA, other, copyB]);
 
     // Assert
     expect(picked).toEqual([first, other]);
+  });
+
+  it("collapses copies on the crawler's link alone, whichever copy ranks first", () => {
+    // Arrange
+    const anchor = new ObjectId();
+    const ranked = [candidate({ title: "edited", dupOf: anchor }), candidate({ dupOf: anchor }), candidate({ _id: anchor, dupOf: anchor })];
+
+    // Act & Assert
+    expect(selectCandidates(ranked)).toEqual([ranked[0]]);
   });
 
   it("keeps the top 6 distinct notices in rank order", () => {
@@ -127,12 +137,12 @@ describe("selectCandidates", () => {
     expect(picked).toEqual(ranked.slice(0, 6));
   });
 
-  it("never merges a notice that has no content hash", () => {
+  it("never merges notices the crawler has not linked, even with the same title and hash", () => {
     // Arrange
-    const a = candidate({ title: "same", contentHash: null });
+    const a = candidate({ title: "same", contentHash: "h" });
 
     // Act
-    const b = candidate({ title: "same", contentHash: null });
+    const b = candidate({ title: "same", contentHash: "h" });
 
     // Assert
     expect(selectCandidates([a, b])).toEqual([a, b]);
@@ -231,63 +241,5 @@ describe("dedupKeyOf", () => {
     // Assert
     expect(typeof dedupKeyOf(null)).toBe("string");
     expect(typeof dedupKeyOf(undefined)).toBe("string");
-  });
-});
-
-describe("groupByDedupKey", () => {
-  it("collapses an 8-way cross-post into one group", () => {
-    // Arrange
-    // skku-main + skku-notice02..08 — the family reported in the issue.
-    const sources = [
-      "skku-main",
-      "skku-notice02",
-      "skku-notice03",
-      "skku-notice04",
-      "skku-notice05",
-      "skku-notice06",
-      "skku-notice07",
-      "skku-notice08",
-    ];
-
-    // Act
-    const groups = groupByDedupKey(sources.map((sourceId) => doc({ sourceId })));
-
-    // Assert
-    expect(groups).toHaveLength(1);
-    expect(groups[0]).toHaveLength(8);
-  });
-
-  it("keeps genuinely different articles in separate groups", () => {
-    // Act
-    const groups = groupByDedupKey([
-      doc({ title: "공지 A" }),
-      doc({ title: "공지 A" }),
-      doc({ title: "공지 B" }),
-    ]);
-
-    // Assert
-    expect(groups).toHaveLength(2);
-    expect(groups.map((g) => g.length).sort()).toEqual([1, 2]);
-  });
-
-  it("preserves first-seen order between and within groups", () => {
-    // Arrange
-    // Determinism matters: the dispatcher picks a representative per group and
-    // sweeps should be reproducible.
-    const first = doc({ title: "A", sourceId: "s1" });
-    const second = doc({ title: "B", sourceId: "s2" });
-    const third = doc({ title: "A", sourceId: "s3" });
-
-    // Act
-    const groups = groupByDedupKey([first, second, third]);
-
-    // Assert
-    expect(groups[0]!.map((d) => d.sourceId)).toEqual(["s1", "s3"]);
-    expect(groups[1]!.map((d) => d.sourceId)).toEqual(["s2"]);
-  });
-
-  it("returns no groups for an empty batch", () => {
-    // Act & Assert
-    expect(groupByDedupKey([])).toEqual([]);
   });
 });
