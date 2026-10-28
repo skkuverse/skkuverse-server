@@ -100,3 +100,16 @@ describe("NoticesListRepository.onModuleInit", () => {
     expect(mockLogger.info).toHaveBeenCalledWith({ event: "notices.indexes.ensured" }, "Indexes ensured");
   });
 });
+
+describe("NoticesListRepository.onModuleInit, the cluster index", () => {
+  it("ensures the index on (dupOf, sourceId, _id) that finds a cluster's other copies in the read's sources", async () => {
+    // Act
+    await new NoticesListRepository().onModuleInit();
+
+    // Assert
+    expect(createIndex).toHaveBeenCalledWith({ dupOf: 1, sourceId: 1, _id: 1 });
+    // toHaveBeenCalledWith ignores key order, and `dupOf` anywhere but first would make the lookup scan every notice.
+    const clusterIndexKey = createIndex.mock.calls.find(([key]) => Object.hasOwn(key as object, "dupOf"))![0];
+    expect(Object.keys(clusterIndexKey as object)).toEqual(["dupOf", "sourceId", "_id"]);
+  });
+});

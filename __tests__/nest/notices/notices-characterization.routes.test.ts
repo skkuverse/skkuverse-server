@@ -718,15 +718,6 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
 });
 
 describe("the poller boot's dispatch index over a real mongod", () => {
-  async function indexNamed(name: string): Promise<Document | undefined> {
-    for (let waited = 0; waited <= 5_000; waited += 20) {
-      const index = (await notices.indexes()).find((candidate) => candidate.name === name);
-      if (index) return index;
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-    return undefined;
-  }
-
   it("holds dispatch_pending_facts_idx on (date, _id), partial on the unpushed notices the live facts job has gated", async () => {
     // Act
     const index = await indexNamed("dispatch_pending_facts_idx");
@@ -753,6 +744,26 @@ describe("the poller boot's dispatch index over a real mongod", () => {
     expect(stages.map((stage) => stage.stage)).not.toContain("SORT");
   });
 });
+
+describe("the poller boot's list indexes over a real mongod", () => {
+  it("holds the cluster index on (dupOf, sourceId, _id)", async () => {
+    // Act
+    const index = await indexNamed("dupOf_1_sourceId_1__id_1");
+
+    // Assert
+    expect(index?.key).toEqual({ dupOf: 1, sourceId: 1, _id: 1 });
+  });
+});
+
+/** The poller ensures its indexes in the background after its boot returns, so a test waits for the one it reads. */
+async function indexNamed(name: string): Promise<Document | undefined> {
+  for (let waited = 0; waited <= 5_000; waited += 20) {
+    const index = (await notices.indexes()).find((candidate) => candidate.name === name);
+    if (index) return index;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return undefined;
+}
 
 function planStages(plan: unknown): Array<{ stage: string; indexName?: string }> {
   if (plan === null || typeof plan !== "object") return [];
