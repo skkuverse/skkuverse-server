@@ -3,7 +3,7 @@
  * read of limit + 1, and the cursor encoding (ADR 0007: `c` is still emitted, so a rollback can decode it).
  *
  * The item's `row` is the facts row the row service rendered, under the wire names of the app's SketchRow
- * (line 2 is `when`), with the day group of its first-seen instant and, on a multi-source read, the board name.
+ * (line 2 is `when`), with the day group of its posting date and, on a multi-source read, the board name.
  */
 import { ObjectId } from "mongodb";
 import type { NoticeDoc, SummaryDate } from "../notices.document";
@@ -173,7 +173,7 @@ describe("toItemRow", () => {
     sourceId: "skku-notice02",
     articleNo: 140577,
     title: "제목",
-    date: "2026-10-14",
+    date: "2026-10-09",
     crawledAt: new Date(ISO),
     sourceUrl: "https://www.skku.edu/x",
   };
@@ -189,13 +189,12 @@ describe("toItemRow", () => {
     itemId: "tm_1",
   };
   const boardNameById = new Map([["skku-notice02", "성균관대_통합(학사)"]]);
-  const FIRST_SEEN = new Date("2026-10-09T01:00:00+09:00");
   const single = { now: NOW, boardNameById: null };
   const multi = { now: NOW, boardNameById };
 
   it("serves the facts row under the sketch's names: line 2 is `when`, and the status and item id stay out", () => {
     // Act
-    const row = toItemRow(factsRow, { ...doc, firstSeenAt: FIRST_SEEN }, single);
+    const row = toItemRow(factsRow, doc, single);
 
     // Assert
     expect(row).toEqual({
@@ -216,7 +215,7 @@ describe("toItemRow", () => {
     const plain: FactsRow = { ...factsRow, token: null, qualifier: null, dateMark: null, urgent: false };
 
     // Act
-    const row = toItemRow(plain, { ...doc, firstSeenAt: FIRST_SEEN }, single);
+    const row = toItemRow(plain, doc, single);
 
     // Assert
     expect(row).toMatchObject({ token: null, qualifier: null, dateMark: null, urgent: false });
@@ -231,19 +230,16 @@ describe("toItemRow", () => {
     expect(rows.map((row) => row.board)).toEqual([null, "성균관대_통합(학사)", null]);
   });
 
-  it("groups by `firstSeenAt`, and by the time of the ObjectId when the copy has none", () => {
+  it("groups by the posting date, whatever the ObjectId's time says", () => {
     // Arrange
-    const yesterday = ObjectId.createFromTime(Date.parse("2026-10-08T12:00:00+09:00") / 1000);
+    const insertedLongAgo = ObjectId.createFromTime(Date.parse("2026-03-01T12:00:00+09:00") / 1000);
+    const posted = (postedDate: string) => ({ ...doc, _id: insertedLongAgo, date: postedDate });
 
     // Act
-    const days = [
-      toItemRow(factsRow, { ...doc, _id: yesterday, firstSeenAt: FIRST_SEEN }, single),
-      toItemRow(factsRow, { ...doc, _id: yesterday }, single),
-      toItemRow(factsRow, doc, single),
-    ].map((row) => row.day);
+    const days = [posted("2026-10-09"), posted("2026-10-08"), posted("2026-10-06 18:30"), posted("2026-10-01")].map((posting) => toItemRow(factsRow, posting, single).day);
 
     // Assert
-    expect(days).toEqual(["today", "yesterday", "earlier"]);
+    expect(days).toEqual(["today", "yesterday", "thisWeek", "earlier"]);
   });
 });
 

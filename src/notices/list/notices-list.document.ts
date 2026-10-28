@@ -5,5 +5,5 @@ export type NoticeListRow = Pick<
   | "_id" | "sourceId" | "articleNo" | "title" | "category" | "author" | "department" | "date" | "views" | "sourceUrl"
   | "attachments" | "contentHash" | "editCount" | "crawledAt" | "summary" | "summaryOneLiner" | "summaryType"
   | "summaryPeriods" | "summaryAt" | "summaryVersion" | "summaryApplication" | "summaryDates"
-  | "facts" | "factsHistory" | "firstSeenAt"
+  | "facts" | "factsHistory"
 >;

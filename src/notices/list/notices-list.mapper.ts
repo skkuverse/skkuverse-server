@@ -42,7 +42,6 @@ export function toSummaryBrief(doc: NoticeListRow, now: Date): NoticeSummaryBrie
   return { oneLiner, type, ...toPeriodBrief(selected) };
 }
 
-// CONTRACT(skkuverse-crawler): a copy stored before the sink recorded `firstSeenAt` has none; its anchor is the `_id` time (skkuverse-crawler/docs/notice-facts/design.md "Storage").
 export function toItemRow(row: FactsRow, doc: NoticeListRow, options: ItemRowOptions): NoticeItemRow {
   return {
     token: row.token,
@@ -53,7 +52,7 @@ export function toItemRow(row: FactsRow, doc: NoticeListRow, options: ItemRowOpt
     qualifier: row.qualifier,
     board: options.boardNameById?.get(doc.sourceId) ?? null,
     dimmed: row.dimmed,
-    day: toListDay(doc.firstSeenAt ?? doc._id.getTimestamp(), options.now),
+    day: toListDay(doc.date, options.now),
   };
 }
 

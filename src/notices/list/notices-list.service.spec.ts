@@ -133,7 +133,7 @@ describe("NoticesListService.listNotices", () => {
     const instants = [new Date("2026-10-25T14:59:59Z"), new Date("2026-10-25T15:00:01Z")];
     const readClock: Clock = { now: jest.fn(() => instants.shift() ?? new Date("2026-10-25T15:00:01Z")) };
     const repository = new FakeNoticesListRepository();
-    repository.docs = [doc(1, "2026-10-14", { facts: RECORD, firstSeenAt: new Date("2026-10-25T14:00:00Z") })];
+    repository.docs = [doc(1, "2026-10-25", { facts: RECORD })];
     const service = serviceAt(repository, readClock);
 
     // Act

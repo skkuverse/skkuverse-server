@@ -2,7 +2,7 @@
  * The list's decisions: the v2 list badge (selectRoleBadge: application windows → due → happens → closed →
  * runs, rendered through the v1 brief shape the app already reads), the v1 period pick and the cursor's
  * cross-release decoding (ADR 0007: a legacy {d, c, i} cursor in app memory during a deploy must still decode),
- * and the day group a list item sits under (toListDay: umbrella ADR 0009 D2, by the KST day it was first seen, a week
+ * and the day group a list item sits under (toListDay: umbrella ADR 0009 D2, by the KST day of its posting date, a week
  * starting on Monday).
  */
 import type { SummaryDate } from "../notices.document";
@@ -486,48 +486,67 @@ describe("toListDay", () => {
   const WEDNESDAY = new Date("2026-10-28T06:00:00Z");
 
   it.each([
-    ["the first instant of today, KST midnight", "2026-10-27T15:00:00.000Z", "today"],
-    ["the last millisecond before today", "2026-10-27T14:59:59.999Z", "yesterday"],
-    ["the first instant of yesterday", "2026-10-26T15:00:00.000Z", "yesterday"],
-    ["the last millisecond before yesterday, on Monday", "2026-10-26T14:59:59.999Z", "thisWeek"],
-    ["the first instant of the week, Monday midnight KST", "2026-10-25T15:00:00.000Z", "thisWeek"],
-    ["the last millisecond before the week, Sunday night", "2026-10-25T14:59:59.999Z", "earlier"],
-    ["a notice from months ago", "2026-03-02T00:00:00.000Z", "earlier"],
-  ])("on a Wednesday, puts %s under %s", (_label, firstSeenAt, day) => {
+    ["today's posting date", "2026-10-28", "today"],
+    ["yesterday's posting date", "2026-10-27", "yesterday"],
+    ["Monday of this week, two days back", "2026-10-26", "thisWeek"],
+    ["the Sunday before the week", "2026-10-25", "earlier"],
+    ["a notice from months ago", "2026-03-02", "earlier"],
+    ["today's date with the minute a pre-2026-08-06 board stores", "2026-10-28 09:30", "today"],
+    ["yesterday's date with its minute", "2026-10-27 23:59", "yesterday"],
+  ])("on a Wednesday, puts %s under %s", (_label, postedDate, day) => {
     // Act & Assert
-    expect(toListDay(new Date(firstSeenAt), WEDNESDAY)).toBe(day);
+    expect(toListDay(postedDate, WEDNESDAY)).toBe(day);
   });
 
-  it("reads the KST day, never the UTC one: 01:00 KST today is still the 27th in UTC", () => {
-    // Act & Assert
-    expect(toListDay(new Date("2026-10-27T16:00:00.000Z"), WEDNESDAY)).toBe("today");
-    expect(toListDay(new Date("2026-10-26T16:00:00.000Z"), WEDNESDAY)).toBe("yesterday");
-  });
-
-  it("turns over at KST midnight: the same instant is today until 23:59:59.999 and yesterday from 00:00", () => {
+  it("reads the KST day of now, never the UTC one: 01:00 KST on the 28th is still the 27th in UTC", () => {
     // Arrange
-    const firstSeenAt = new Date("2026-10-27T14:59:59.999Z");
+    const now = new Date("2026-10-27T16:00:00.000Z");
 
     // Act & Assert
-    expect(toListDay(firstSeenAt, new Date("2026-10-27T14:59:59.999Z"))).toBe("today");
-    expect(toListDay(firstSeenAt, new Date("2026-10-27T15:00:00.000Z"))).toBe("yesterday");
+    expect(toListDay("2026-10-28", now)).toBe("today");
+    expect(toListDay("2026-10-27", now)).toBe("yesterday");
+    expect(toListDay("2026-10-26", now)).toBe("thisWeek");
+  });
+
+  it("turns over at KST midnight: the same posting date is today until 23:59:59.999 and yesterday from 00:00", () => {
+    // Act & Assert
+    expect(toListDay("2026-10-27", new Date("2026-10-27T14:59:59.999Z"))).toBe("today");
+    expect(toListDay("2026-10-27", new Date("2026-10-27T15:00:00.000Z"))).toBe("yesterday");
   });
 
   it.each([
-    ["Monday", "2026-10-26T03:00:00Z", [["2026-10-26T01:00:00Z", "today"], ["2026-10-25T05:00:00Z", "yesterday"], ["2026-10-24T05:00:00Z", "earlier"]]],
-    ["Tuesday", "2026-10-27T03:00:00Z", [["2026-10-27T01:00:00Z", "today"], ["2026-10-26T05:00:00Z", "yesterday"], ["2026-10-25T05:00:00Z", "earlier"]]],
-    ["Wednesday", "2026-10-28T03:00:00Z", [["2026-10-27T05:00:00Z", "yesterday"], ["2026-10-26T05:00:00Z", "thisWeek"], ["2026-10-25T05:00:00Z", "earlier"]]],
-    ["Sunday", "2026-11-01T03:00:00Z", [["2026-11-01T01:00:00Z", "today"], ["2026-10-31T05:00:00Z", "yesterday"], ["2026-10-30T05:00:00Z", "thisWeek"], ["2026-10-26T05:00:00Z", "thisWeek"], ["2026-10-25T05:00:00Z", "earlier"]]],
+    ["Monday", "2026-10-26T03:00:00Z", [["2026-10-26", "today"], ["2026-10-25", "yesterday"], ["2026-10-24", "earlier"]]],
+    ["Tuesday", "2026-10-27T03:00:00Z", [["2026-10-27", "today"], ["2026-10-26", "yesterday"], ["2026-10-25", "earlier"]]],
+    ["Wednesday", "2026-10-28T03:00:00Z", [["2026-10-27", "yesterday"], ["2026-10-26", "thisWeek"], ["2026-10-25", "earlier"]]],
+    ["Sunday", "2026-11-01T03:00:00Z", [["2026-11-01", "today"], ["2026-10-31", "yesterday"], ["2026-10-30", "thisWeek"], ["2026-10-26", "thisWeek"], ["2026-10-25", "earlier"]]],
   ])("on a %s, the week starts on Monday, so the this-week group is empty on Monday and Tuesday", (_weekday, now, cases) => {
     // Act
-    const days = (cases as string[][]).map(([firstSeenAt]) => toListDay(new Date(firstSeenAt!), new Date(now)));
+    const days = (cases as string[][]).map(([postedDate]) => toListDay(postedDate!, new Date(now)));
 
     // Assert
     expect(days).toEqual((cases as string[][]).map(([, day]) => day));
   });
 
-  it("keeps a notice first seen after now (clock skew between the crawler and this server) under today", () => {
+  it("keeps a posting date after today (a board that dates a notice ahead) under today", () => {
     // Act & Assert
-    expect(toListDay(new Date("2026-10-28T06:05:00.000Z"), WEDNESDAY)).toBe("today");
+    expect(toListDay("2026-10-29", WEDNESDAY)).toBe("today");
+  });
+
+  it("puts a date that is no calendar day under earlier, so one bad document never fails the page", () => {
+    // Act & Assert
+    expect(toListDay("2026-13-45", WEDNESDAY)).toBe("earlier");
+    expect(toListDay("", WEDNESDAY)).toBe("earlier");
+  });
+
+  it("is monotone down a list ordered by posting date, so a day group never reappears", () => {
+    // Arrange
+    const dates = ["2026-10-28", "2026-10-28", "2026-10-27", "2026-10-26", "2026-10-26", "2026-10-25", "2026-08-01"];
+    const rank = { today: 0, yesterday: 1, thisWeek: 2, earlier: 3 };
+
+    // Act
+    const ranks = dates.map((postedDate) => rank[toListDay(postedDate, WEDNESDAY)]);
+
+    // Assert
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
   });
 });
