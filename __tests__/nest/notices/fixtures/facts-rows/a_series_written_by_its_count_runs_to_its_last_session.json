@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_a_series_written_by_its_count_runs_to_its_last_session` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_series_written_by_its_count_runs_to_its_last_session.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_a_series_written_by_its_count_runs_to_its_last_session` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_series_written_by_its_count_runs_to_its_last_session.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_a_series_written_by_its_count_runs_to_its_last_session",
   "expected": {
     "item": "tm_7b05851311c4",

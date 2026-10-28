@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_an_instant_opening_still_to_come_reads_as_its_moment` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/an_instant_opening_still_to_come_reads_as_its_moment.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_an_instant_opening_still_to_come_reads_as_its_moment` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/an_instant_opening_still_to_come_reads_as_its_moment.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_an_instant_opening_still_to_come_reads_as_its_moment",
   "expected": {
     "item": "tm_7c3cebadbe90",

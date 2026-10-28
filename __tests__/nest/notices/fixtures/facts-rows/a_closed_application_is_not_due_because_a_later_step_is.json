@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_a_closed_application_is_not_due_because_a_later_step_is` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_closed_application_is_not_due_because_a_later_step_is.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_a_closed_application_is_not_due_because_a_later_step_is` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_closed_application_is_not_due_because_a_later_step_is.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_a_closed_application_is_not_due_because_a_later_step_is",
   "expected": {
     "item": "tm_a94f62c40784",
@@ -176,7 +176,7 @@
           "start": 47
         },
         "granularity": "day",
-        "id": "tm_dfd2793b5200",
+        "id": "tm_80cfcb73b694",
         "instant": false,
         "kind": "window",
         "mod": "",

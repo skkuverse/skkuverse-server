@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic: the crawler's golden row case `test_a_closed_application_closes_the_row_though_a_report_is_due_later` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_closed_application_closes_the_row_though_a_report_is_due_later.json, commit 9a2dc20, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
+  "_about": "Synthetic: the crawler's golden row case `test_a_closed_application_closes_the_row_though_a_report_is_due_later` (skkuverse-crawler py/tests/plugins/facts/fixtures/rows/a_closed_application_closes_the_row_though_a_report_is_due_later.json, commit 0c25041, captured 2026-10-28), a hand-written test notice built by its record.build, with row.py's own output as `expected`. No user data.",
   "case": "test_a_closed_application_closes_the_row_though_a_report_is_due_later",
   "expected": {
     "item": "tm_91c28557e648",
@@ -176,7 +176,7 @@
           "start": 41
         },
         "granularity": "day",
-        "id": "tm_4f0b6d5a00df",
+        "id": "tm_80cfcb73b694",
         "instant": false,
         "kind": "window",
         "mod": "",

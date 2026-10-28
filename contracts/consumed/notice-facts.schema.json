@@ -458,7 +458,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Stable id, unique within the notice: hash of (thing id, kind, normalised track, start date or else end date or else the normalised quote), so a window keeps its id when its deadline moves. Items that share that hash also hash their end date, start and end times and normalised quote; any still alike take -2, -3, … in source order."
+            "description": "Stable id, unique within the notice: hash of (thing id, kind, normalised track, and the start date, or a fixed mark when the item has only an end date, or else the normalised quote), so a window keeps its id when its deadline moves. Items with only an end date that share that hash take -2, -3, … in source order. Other items that share it also hash their end date, start and end times and normalised quote; any still alike take -2, -3, … in source order."
           },
           "thing": {
             "type": "string",
