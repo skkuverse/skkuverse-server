@@ -48,7 +48,7 @@ export function toStatusLine(reading: RowReading): ScreenStatus | null {
 function toStatusDetail(reading: RowReading, word: string): string {
   const { row } = reading;
   if (row.status === "closed" && isEventOn(reading)) return toEventOnDetail(reading);
-  return withoutWord(hasFirstCome(reading) ? joinParts(row.line2, SCREEN_WORDS.firstCome) : row.line2, word);
+  return withoutWord(hasFirstCome(reading) ? joinParts(row.trackedLine2, SCREEN_WORDS.firstCome) : row.trackedLine2, word);
 }
 
 // WHY: umbrella ADR 0009 D12 and its 2026-10-28 amendment: a closed sign-up whose event is still on reads closed, and the detail says the event part only.

@@ -72,11 +72,11 @@
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it, with `toListDay`, the one KST day group a served item sits under; none is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
   },
   "src/notices/row/notices-row.rules.ts": {
-    "max": 424,
+    "max": 460,
     "reason": "ADR 0010 D9, no domain seam: `toFactsRows` turns a page of parsed facts into the list rows of umbrella ADR 0009, and its token table (`TOKEN_PRECEDENCE`), line 2, the abstention and the qualifier's place all read the one `RowStatus` that `toRowStatus` picks from the same row items and their KST days, so no step stands alone; a sibling sub-module meets the row only through a service (sub-modules.test.ts), which would put a Nest provider between pure steps of one computation, and a parent never imports a child, so the status cannot become a parent without a door no production code calls. The Korean words live in notices-row.constants.ts. `toRowReading` reads one notice for the detail screen over the same private scope, status and date text, so it closes over them and no other flow imports them."
   },
   "src/notices/row/notices-row.types.ts": {
-    "max": 64,
+    "max": 66,
     "reason": "ADR 0010 D9, no domain seam: `RowReading` and `ItemReading` are built only from `FactsRow`, `RowStatus` and `RowItem` declared beside them in this file, a folder holds one types file, and a parent never imports a child, so the reading cannot move into a sub-module."
   },
   "src/notices/screen/notices-screen.rules.ts": {

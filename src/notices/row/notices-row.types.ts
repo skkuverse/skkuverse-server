@@ -51,6 +51,8 @@ export interface FactsRow {
   token: RowToken | null;
   title: string;
   line2: string;
+  /** WHY: line 2 with the track's tag the row leaves out, for the detail's status line (umbrella ADR 0009 D12). */
+  trackedLine2: string;
   qualifier: string | null;
   dateMark: "warning" | "abstain" | null;
   dimmed: boolean;
