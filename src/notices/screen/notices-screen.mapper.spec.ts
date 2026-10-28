@@ -2,8 +2,8 @@
  * The blocks and the original of the notice detail screen (umbrella ADR 0009 D13, D15, D16) from one RowReading and the
  * place names building gave: each block's lines, labels, numbering, fold and footer link, a place building names opened
  * on its building's sheet, a place off campus searched by its words, a place building cannot name or the campus map
- * cannot open shown as the quote with no map action, a disputed fact left out, a track's tag before its text, a fact read from a
- * poster marked, and the poster count, attachment roles and link roles of the original, with the URL that opens each.
+ * cannot open shown as the quote with no map action, a disputed fact left out, a track's tag before its text, a fact a track
+ * repeats shown once untagged, every line of a folded block sent, the source each line was quoted from, and the poster count, attachment roles and link roles of the original, with the URL that opens each.
  *
  * Records reach the mapper only through NoticesRowService.readNotice, which parses them through NoticesFactsService as in
  * production, from the golden cases of the crawler's row.py that notices-row.rules.spec.ts also reads. src/infra/logger.ts
@@ -75,7 +75,7 @@ describe("toScreenBlocks, 언제·어디", () => {
         numbered: false,
         footerLink: null,
         foldedCount: 0,
-        lines: [{ text: "10/29(목)", sub: "경영관 33B101", fromPoster: false, actions: [{ kind: "map", target: "skku_building:12", space: "33B101" }], quote: "2026년 10월 29일(목) 14시" }],
+        lines: [{ text: "10/29(목)", sub: "경영관 33B101", source: "body", actions: [{ kind: "map", target: "skku_building:12", space: "33B101" }], quote: "2026년 10월 29일(목) 14시" }],
       },
     ]);
   });
@@ -167,18 +167,22 @@ describe("toScreenBlocks, 언제·어디", () => {
     expect(block?.lines[0]?.text).toBe(text);
   });
 
-  it("marks a line read from a poster", () => {
+  it.each([
+    ["poster:1", "poster"],
+    ["title", "title"],
+    ["body", "body"],
+  ])("says a line quoted from %s came from the %s, where the app finds its quote", (src, source) => {
     // Arrange
-    const stored = withSession((item) => (item.ev = evidenceOf("10월 29일 14시", "poster:1")));
+    const stored = withSession((item) => (item.ev = evidenceOf("10월 29일 14시", src)));
 
     // Act
     const [block] = toScreenBlocks(scopeOf(stored), only("whenWhere"));
 
     // Assert
-    expect(block?.lines).toMatchObject([{ fromPoster: true, quote: "10월 29일 14시" }]);
+    expect(block?.lines).toMatchObject([{ source, quote: "10월 29일 14시" }]);
   });
 
-  it("shows the next three by date and folds the rest into a count", () => {
+  it("sends every session by date and counts the ones after the next three as folded", () => {
     // Arrange
     const dates = ["2026-11-05", "2026-10-29", "2026-11-02", "2026-10-31", "2026-11-01"];
     const stored = record(SESSION, (r) => (r.times = dates.map((date, i) => sessionOn(`tm_s${i}`, date))));
@@ -187,7 +191,7 @@ describe("toScreenBlocks, 언제·어디", () => {
     const [block] = toScreenBlocks(scopeOf(stored), only("whenWhere"));
 
     // Assert
-    expect(block?.lines.map(({ text }) => text)).toEqual(["10/29(목)", "10/31(토)", "11/1(일)"]);
+    expect(block?.lines.map(({ text }) => text)).toEqual(["10/29(목)", "10/31(토)", "11/1(일)", "11/2(월)", "11/5(목)"]);
     expect(block?.foldedCount).toBe(2);
   });
 
@@ -200,7 +204,7 @@ describe("toScreenBlocks, 언제·어디", () => {
     const [block] = toScreenBlocks(scopeOf(stored), only("whenWhere"));
 
     // Assert
-    expect(block?.lines.map(({ text }) => text)).toEqual(["10/27(화)", "10/29(목)", "10/13(화)"]);
+    expect(block?.lines.map(({ text }) => text)).toEqual(["10/27(화)", "10/29(목)", "10/13(화)", "10/12(월)"]);
     expect(block?.foldedCount).toBe(1);
   });
 
@@ -305,7 +309,7 @@ describe("toScreenBlocks, 신청", () => {
         numbered: true,
         footerLink: null,
         foldedCount: 0,
-        lines: [{ text: "신청하기", sub: null, fromPoster: false, actions: [{ kind: "link", target: "https://forms.example.com/apply" }], quote: "신청하기" }],
+        lines: [{ text: "신청하기", sub: null, source: "body", actions: [{ kind: "link", target: "https://forms.example.com/apply" }], quote: "신청하기" }],
       },
     ]);
   });
@@ -517,6 +521,28 @@ describe("toScreenBlocks, a sentence stated once for two things", () => {
       ["대상", ["평점 2.0 이상", "학장 추천"]],
       ["혜택", ["등록금 전액"]],
     ]);
+  });
+
+  it("shows a fact once, untagged, when a track repeats it in the same block, and keeps what only a track states", () => {
+    // Arrange
+    const benefit = (quote: string, thing: string, tag = "") => ({ ev: evidenceOf(quote), thing, earnedBy: "selected", amount: null, isDraw: false, track: "", appliesTo: [], tag, tagBy: tag ? "thing" : "" });
+    const stored = record(WINDOW, (r) => {
+      r.benefits.push(
+        benefit("수업료 면제", MAIN_THING),
+        benefit("수료증 발급", MAIN_THING),
+        benefit("시급 10,320원", "th_oa", "OA"),
+        benefit("수료증 발급", "th_oa", "OA"),
+        benefit("시급 10,320원", "th_ha", "HA"),
+        benefit("수료증 발급", "th_ha", "HA"),
+        benefit("야간 수당", "th_ha", "HA"),
+      );
+    });
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored), only("benefit"));
+
+    // Assert
+    expect(block?.lines.map(({ text }) => text)).toEqual(["수업료 면제", "수료증 발급", "[OA] 시급 10,320원", "[HA] 시급 10,320원", "[HA] 야간 수당"]);
   });
 });
 

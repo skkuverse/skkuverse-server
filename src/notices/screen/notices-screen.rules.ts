@@ -3,7 +3,7 @@ import type { NoticeFacts } from "../facts/notices-facts.schema";
 import type { FactsSnapshot, NoticeAttachment } from "../notices.document";
 import type { ItemReading, RowReading } from "../row/notices-row.types";
 import { BLOCK_KEYS, LEADING_BLOCKS, NOTICE_TYPE_BY_CATEGORY, SCREEN_WORDS, STATUS_SPECS } from "./notices-screen.constants";
-import type { BarAction, BlockKey, Collapse, HeaderChange, ScreenAction, ScreenScope, ScreenStatus } from "./notices-screen.types";
+import type { BarAction, BlockKey, Collapse, HeaderChange, ScreenAction, ScreenLine, ScreenScope, ScreenStatus, TaggedLine } from "./notices-screen.types";
 
 type Action = NoticeFacts["actions"][number];
 type Contact = NoticeFacts["contacts"][number];
@@ -203,9 +203,22 @@ export function toSessionOrder(readings: readonly ItemReading[]): ItemReading[] 
 }
 
 export function toItemText({ item, line }: ItemReading): string {
-  if (item.dateWarnings.length > 0) return withTag(item, item.ev.quote);
+  if (item.dateWarnings.length > 0) return item.ev.quote;
   const isVerbShown = item.kind === "window" || item.verb === "" || line.includes(item.verb);
-  return withTag(item, isVerbShown ? line : withVerb(line, item.verb));
+  return isVerbShown ? line : withVerb(line, item.verb);
+}
+
+// WHY: umbrella ADR 0009 D10 shows each fact once: the record repeats a sentence it attaches to two things, and a fact
+// every track states shows once, untagged, as the notice's own.
+export function toDistinctLines(lines: readonly TaggedLine[]): TaggedLine[] {
+  const isSame = (left: TaggedLine, right: TaggedLine): boolean => left.text === right.text && left.sub === right.sub;
+  const isUntaggedElsewhere = (line: TaggedLine): boolean => line.tag !== "" && lines.some((other) => other.tag === "" && isSame(other, line));
+  return lines.filter((line, at) => !isUntaggedElsewhere(line) && lines.findIndex((other) => other.tag === line.tag && other.quote === line.quote && isSame(other, line)) === at);
+}
+
+export function toLineSource({ src }: { src: string }): ScreenLine["source"] {
+  if (isFromPoster({ src })) return "poster";
+  return src === "title" ? "title" : "body";
 }
 
 // WHY: umbrella ADR 0009 D4's example of a tentative date puts the verb before the tentative word, never after it.
