@@ -408,7 +408,7 @@ describe("GET /notices?sourceIds= over copies the crawler linked", () => {
     notice({ _id: oid(35), articleNo: 35, sourceId: "skku-notice06", date: "2026-10-12", dupOf: oid(31), crawledAt: new Date("2026-10-12T03:00:00Z") }),
   ];
 
-  it("serves an article once, as its copy crawled last, and each other notice on its own page", async () => {
+  it("serves an article once, as its first copy in list order, and each other notice on its own page", async () => {
     // Arrange
     await notices.insertMany(linked());
 
@@ -418,15 +418,15 @@ describe("GET /notices?sourceIds= over copies the crawler linked", () => {
     const third = await list(`?sourceIds=bio-undergrad,skku-notice02&limit=1&cursor=${second.body.data.nextCursor}`);
 
     // Assert
-    expect([first, second, third].map(articleNos)).toEqual([[32], [33], [34]]);
+    expect([first, second, third].map(articleNos)).toEqual([[31], [33], [34]]);
     expect([first, second, third].map((res) => res.body.data.hasMore)).toEqual([true, true, false]);
   });
 
-  it("looks up a batch's other copies on dupOf_1_sourceId_1__id_1 and fetches neither a copy the batch holds nor one outside the read", async () => {
+  it("looks up a batch's earlier copies on dupOf_1_sourceId_1__id_1 and returns neither a copy after the cursor nor one outside the read", async () => {
     // Arrange
     await notices.insertMany(linked());
     await indexNamed("dupOf_1_sourceId_1__id_1");
-    const lookup = { keys: [oid(31).toHexString()], scannedIds: [oid(31)] };
+    const lookup = { keys: [oid(31).toHexString()], cursor: { d: "2026-10-12", i: oid(31).toHexString() } };
     const scopeFilter = toNoticeListFilter(["bio-undergrad", "skku-notice02"], { limit: 1, cursor: null }, config.notices.serviceStartDate);
     const filter = toClusterMemberFilter(scopeFilter, lookup);
 
@@ -435,9 +435,9 @@ describe("GET /notices?sourceIds= over copies the crawler linked", () => {
     const members = await notices.find(filter, { projection: CLUSTER_MEMBER_PROJECTION }).hint(CLUSTER_INDEX).toArray();
 
     // Assert
-    expect(members.map((member) => member._id)).toEqual([oid(32)]);
+    expect(members.map((member) => member._id)).toEqual([oid(31)]);
     expect(planStages(explained.queryPlanner.winningPlan).filter((stage) => stage.stage === "IXSCAN").map((stage) => stage.indexName)).toEqual(["dupOf_1_sourceId_1__id_1"]);
-    expect(explained.executionStats.totalDocsExamined).toBe(1);
+    expect(explained.executionStats.totalDocsExamined).toBe(2);
   });
 });
 

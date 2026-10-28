@@ -8,4 +8,4 @@ export type NoticeListRow = Pick<
   | "facts" | "factsHistory" | "dupOf"
 >;
 
-export type ClusterMember = Pick<NoticeDoc, "_id" | "dupOf" | "date"> & Partial<Pick<NoticeDoc, "crawledAt">>;
+export type ClusterMember = Pick<NoticeDoc, "_id" | "dupOf">;

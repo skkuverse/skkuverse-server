@@ -93,14 +93,13 @@ describe("NoticesListRepository.listNotices projection for the row", () => {
 });
 
 describe("NoticesListRepository.listClusterMembers", () => {
-  it("reads the other copies of the batch's undecided clusters in the read's scope, with no cursor, hinted to the cluster index", async () => {
+  it("reads the copies of the batch's undecided clusters in the read's scope at or before the cursor, hinted to the cluster index", async () => {
     // Arrange
     const cursor = { d: "2026-04-01", i: "66a1b2c3d4e5f6a7b8c9d0e1" };
     const key = "66a1b2c3d4e5f6a7b8c9d001";
-    const scannedIds = [new ObjectId("66a1b2c3d4e5f6a7b8c9d002"), new ObjectId("66a1b2c3d4e5f6a7b8c9d003")];
 
     // Act
-    await new NoticesListRepository().listClusterMembers(["a", "b"], { limit: 5, type: "event", cursor, q: "x" }, { keys: [key], scannedIds });
+    await new NoticesListRepository().listClusterMembers(["a", "b"], { limit: 5, type: "event", cursor, q: "x" }, { keys: [key], cursor });
 
     // Assert
     expect(find.mock.calls[0]).toEqual([
@@ -118,11 +117,11 @@ describe("NoticesListRepository.listClusterMembers", () => {
               { "facts.shortTitle.compact": { $regex: "x", $options: "i" } },
             ],
           },
+          { $or: [{ date: { $gt: "2026-04-01" } }, { date: "2026-04-01", _id: { $gte: new ObjectId(cursor.i) } }] },
         ],
         dupOf: { $in: [new ObjectId(key)] },
-        _id: { $nin: scannedIds },
       },
-      { projection: { _id: 1, dupOf: 1, crawledAt: 1, date: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      { projection: { _id: 1, dupOf: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     ]);
     expect(hint).toHaveBeenCalledWith({ dupOf: 1, sourceId: 1, _id: 1 });
     expect(sort).not.toHaveBeenCalled();

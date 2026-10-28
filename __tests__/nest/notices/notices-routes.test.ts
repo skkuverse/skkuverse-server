@@ -666,7 +666,8 @@ describe("GET /notices — the facts row on a list item", () => {
 });
 
 describe("GET /notices — one row per article on several boards", () => {
-  // Three copies of one article on skku-notice03 and skku-notice08: the one on skku-notice08 was crawled last, so it is served.
+  // Three copies of one article on skku-notice03 and skku-notice08: the first in list order is served, though the one on
+  // skku-notice08 was crawled last.
   const ANCHOR = new ObjectId("66a1b2c3d4e5f6a7b8c9d300");
   const copies = (): NoticeDoc[] => [
     rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d305"), articleNo: 305, sourceId: "skku-notice03", date: "2026-04-10", dupOf: ANCHOR }),
@@ -676,7 +677,7 @@ describe("GET /notices — one row per article on several boards", () => {
     rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d301"), articleNo: 301, sourceId: "skku-notice03", date: "2026-04-06", dupOf: ANCHOR }),
   ];
 
-  it("serves the copy crawled last at its own place in the list, and the article on no other page", async () => {
+  it("serves the first copy in list order at its own place in the list, and the article on no other page", async () => {
     // Arrange
     listRepository.docs = copies();
 
@@ -686,8 +687,8 @@ describe("GET /notices — one row per article on several boards", () => {
 
     // Assert
     expect([first.status, second.status]).toEqual([200, 200]);
-    expect(first.body.data.notices.map((n: { articleNo: number }) => n.articleNo)).toEqual([304, 303]);
-    expect(first.body.data.notices[1]).toMatchObject({ sourceId: "skku-notice08", articleNo: 303 });
+    expect(first.body.data.notices.map((n: { articleNo: number }) => n.articleNo)).toEqual([305, 304]);
+    expect(first.body.data.notices[0]).toMatchObject({ sourceId: "skku-notice03", articleNo: 305 });
     expect(first.body.data.hasMore).toBe(true);
     expect(second.body.data.notices.map((n: { articleNo: number }) => n.articleNo)).toEqual([302]);
     expect(second.body.data).toMatchObject({ hasMore: false, nextCursor: null });

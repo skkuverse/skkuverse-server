@@ -5,7 +5,7 @@ import { noticesConfig } from "../notices.config";
 import { clusterKeyOf } from "../notices.rules";
 import { NoticesRowService } from "../row/notices-row.service";
 import { CLUSTER_SCAN_FACTOR } from "./notices-list.constants";
-import type { ClusterMember, NoticeListRow } from "./notices-list.document";
+import type { NoticeListRow } from "./notices-list.document";
 import { toItemRow, toListItem, toNoticePage, withDerivedBrief } from "./notices-list.mapper";
 import { NoticesListRepository } from "./notices-list.repository";
 import { hasSeveralSources, selectShownRows } from "./notices-list.rules";
@@ -37,18 +37,18 @@ export class NoticesListService {
   }
 
   // WHY: copies drop out of a scan, so it reads past the page until `limit + 1` rows are shown; the next scan starts
-  // after the last row scanned, and a cluster decided in an earlier scan is not looked up again.
+  // after the last row scanned, and only a cluster no earlier scan held is looked up before the cursor.
   private async listShownRows(scope: NoticeScope, query: NoticeListQuery): Promise<NoticeListRow[]> {
     const shownRows: NoticeListRow[] = [];
-    const members: ClusterMember[] = [];
+    const decidedKeys = new Set<string>();
     const scan = { ...query, limit: CLUSTER_SCAN_FACTOR * (query.limit + 1) - 1 };
     for (let cursor = query.cursor; ; ) {
       const batch = await this.repository.listNotices(scope, { ...scan, cursor });
-      const decidedKeys = new Set(members.map(clusterKeyOf));
       const keys = [...new Set(batch.map(clusterKeyOf))].filter((key) => !decidedKeys.has(key));
-      const lookup = { keys, scannedIds: batch.map((row) => row._id) };
-      members.push(...batch, ...(keys.length === 0 ? [] : await this.repository.listClusterMembers(scope, query, lookup)));
-      shownRows.push(...selectShownRows(batch, members));
+      const servedCopies = query.cursor && keys.length > 0 ? await this.repository.listClusterMembers(scope, query, { keys, cursor: query.cursor }) : [];
+      for (const copy of servedCopies) decidedKeys.add(clusterKeyOf(copy));
+      shownRows.push(...selectShownRows(batch, decidedKeys));
+      for (const row of batch) decidedKeys.add(clusterKeyOf(row));
       const last = batch.at(-1);
       if (!last || shownRows.length > query.limit || batch.length <= scan.limit) return shownRows;
       cursor = { d: last.date, i: last._id.toHexString() };

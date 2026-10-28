@@ -27,7 +27,7 @@ export class NoticesListRepository implements OnModuleInit {
       .toArray();
   }
 
-  // WHY: the list read's scope with no cursor: a copy before the cursor decides that an earlier page served its article.
+  // WHY: the list read's scope up to the cursor: a copy there means an earlier page served its article.
   listClusterMembers(scope: NoticeScope, query: NoticeListQuery, lookup: ClusterLookup): Promise<ClusterMember[]> {
     const scopeFilter = toNoticeListFilter(scope, { ...query, cursor: null }, config.notices.serviceStartDate);
     return this.notices()
