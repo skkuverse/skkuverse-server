@@ -2,6 +2,7 @@ import type { SummaryPeriod } from "../notices.document";
 import { textOrNull } from "../notices.mapper";
 import type { NoticeListRow } from "./notices-list.document";
 import { normalizeSummaryType } from "../notices.rules";
+import type { DerivedBrief } from "../legacy/notices-legacy.types";
 import type { FactsRow } from "../row/notices-row.types";
 import { isV2Summary, selectEffectivePeriod, selectRoleBadge, toListDay } from "./notices-list.rules";
 import type { CursorPayload, ItemRowOptions, NoticePage } from "./notices-list.types";
@@ -74,4 +75,9 @@ export function toListItem(doc: NoticeListRow, now: Date, row: NoticeItemRow | n
     summary: toSummaryBrief(doc, now),
     row,
   };
+}
+
+// WHY: a stored summary wins; the derived brief fills only the item that has none.
+export function withDerivedBrief(item: NoticeListItem, derived: DerivedBrief | null): NoticeListItem {
+  return item.summary ? item : { ...item, summary: derived };
 }
