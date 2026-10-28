@@ -1,6 +1,6 @@
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
-import type { FactsSnapshot } from "../notices.document";
+import type { FactsSnapshot, NoticeAttachment } from "../notices.document";
 import type { ItemReading, RowReading } from "../row/notices-row.types";
 import { BLOCK_KEYS, LEADING_BLOCKS, NOTICE_TYPE_BY_CATEGORY, SCREEN_WORDS, STATUS_SPECS } from "./notices-screen.constants";
 import type { BarAction, BlockKey, Collapse, HeaderChange, ScreenAction, ScreenScope, ScreenStatus } from "./notices-screen.types";
@@ -120,6 +120,15 @@ export function toContactAction({ kind, value }: Contact): ScreenAction | null {
 export function toPlaceAction({ text, reason }: StoredPlace, display: PlaceDisplay | undefined): ScreenAction | null {
   if (display?.mapTarget) return { kind: "map", target: `${MAP_PLACE_KIND}:${display.mapTarget.skkuId}`, space: display.mapTarget.spaceCd };
   return reason === OFF_CAMPUS_REASON && text !== "" ? { kind: "search", target: text } : null;
+}
+
+// CONTRACT(skkuverse-crawler): `A<n>` is the notice's n-th attachment when the facts were extracted
+// (skkuverse-crawler/py/src/skkuverse_crawler/plugins/facts/sources.py); a list changed since then is matched by a name no other file shares.
+export function toAttachmentUrl(id: string, name: string, listed: readonly NoticeAttachment[]): string | null {
+  const atPosition = listed[Number(id.slice(1)) - 1];
+  if (atPosition?.name === name) return atPosition.url;
+  const named = listed.filter((attachment) => attachment.name === name);
+  return named.length === 1 ? (named[0]?.url ?? null) : null;
 }
 
 const toCallTarget = (text: string): ScreenAction | null => {

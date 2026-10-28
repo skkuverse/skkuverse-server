@@ -3,7 +3,7 @@
  * place names building gave: each block's lines, labels, numbering, fold and footer link, a place building names opened
  * on its building's sheet, a place off campus searched by its words, a place building cannot name or the campus map
  * cannot open shown as the quote with no map action, a disputed fact left out, a track's tag before its text, a fact read from a
- * poster marked, and the poster count, attachment roles and link roles of the original.
+ * poster marked, and the poster count, attachment roles and link roles of the original, with the URL that opens each.
  *
  * Records reach the mapper only through NoticesRowService.readNotice, which parses them through NoticesFactsService as in
  * production, from the golden cases of the crawler's row.py that notices-row.rules.spec.ts also reads. src/infra/logger.ts
@@ -546,7 +546,7 @@ describe("toOriginal", () => {
     const facts = original((s) => s.posters.push({ n: 1, url: "https://x.example.com/1.png", transcript: "행사 안내" }, { n: 2, url: "https://x.example.com/2.png", transcript: "", unreadable: true }));
 
     // Act & Assert
-    expect(toOriginal(facts).posterCount).toBe(1);
+    expect(toOriginal(facts, []).posterCount).toBe(1);
   });
 
   it("names each attachment by its label, else by a word for its role", () => {
@@ -562,13 +562,50 @@ describe("toOriginal", () => {
     );
 
     // Act & Assert
-    expect(toOriginal(facts).attachments).toEqual([
-      { role: "지원서", name: "지원서_서식.hwp" },
-      { role: "안내문", name: "안내.pdf" },
-      { role: "목록", name: "명단.xlsx" },
-      { role: "포스터", name: "포스터.png" },
-      { role: "첨부 파일", name: "기타.zip" },
+    expect(toOriginal(facts, []).attachments).toEqual([
+      { role: "지원서", name: "지원서_서식.hwp", url: null },
+      { role: "안내문", name: "안내.pdf", url: null },
+      { role: "목록", name: "명단.xlsx", url: null },
+      { role: "포스터", name: "포스터.png", url: null },
+      { role: "첨부 파일", name: "기타.zip", url: null },
     ]);
+  });
+
+  it("opens each attachment by the URL of the file the notice lists at its id's position, else of the one file with its name", () => {
+    // Arrange
+    const facts = original((s) =>
+      s.attachments.push(
+        { id: "A1", name: "신청서.hwp", role: "form", label: "" },
+        { id: "A2", name: "안내.pdf", role: "guide", label: "" },
+        { id: "A3", name: "명단.xlsx", role: "list", label: "" },
+        { id: "A4", name: "삭제된 파일.pdf", role: "other", label: "" },
+      ),
+    );
+    const listed = [
+      { name: "신청서.hwp", url: "https://x.example.com/1" },
+      { name: "명단.xlsx", url: "https://x.example.com/2" },
+      { name: "안내.pdf", url: "https://x.example.com/3" },
+      { name: "신청서.hwp", url: "https://x.example.com/4" },
+    ];
+
+    // Act
+    const attachments = toOriginal(facts, listed).attachments;
+
+    // Assert
+    expect(attachments.map((attachment) => attachment.url)).toEqual(["https://x.example.com/1", "https://x.example.com/3", "https://x.example.com/2", null]);
+  });
+
+  it("opens no attachment whose name two other files share when its position names another file", () => {
+    // Arrange
+    const facts = original((s) => s.attachments.push({ id: "A1", name: "서식.hwp", role: "form", label: "" }));
+    const listed = [
+      { name: "안내.pdf", url: "https://x.example.com/1" },
+      { name: "서식.hwp", url: "https://x.example.com/2" },
+      { name: "서식.hwp", url: "https://x.example.com/3" },
+    ];
+
+    // Act & Assert
+    expect(toOriginal(facts, listed).attachments).toEqual([{ role: "신청서", name: "서식.hwp", url: null }]);
   });
 
   it("names each link by its anchor text, else the verb of the action that targets it, else QR for a poster's, else 링크", () => {
@@ -588,18 +625,18 @@ describe("toOriginal", () => {
     });
 
     // Act
-    const links = toOriginal(scopeOf(facts).reading.facts).links;
+    const links = toOriginal(scopeOf(facts).reading.facts, []).links;
 
     // Assert
     expect(links).toEqual([
-      { role: "신청 페이지", domain: "skku.edu" },
-      { role: "접수하기", domain: "forms.example.com" },
-      { role: "링크", domain: "forms.example.com" },
-      { role: "QR", domain: "qr.example.com" },
-      { role: "QR", domain: "qr.example.com" },
-      { role: "문의 메일", domain: "forms.example.com" },
-      { role: "문의하기", domain: "forms.example.com" },
-      { role: "링크", domain: "forms.example.com" },
+      { role: "신청 페이지", domain: "skku.edu", url: "https://www.skku.edu/apply" },
+      { role: "접수하기", domain: "forms.example.com", url: "https://forms.example.com/a" },
+      { role: "링크", domain: "forms.example.com", url: "https://forms.example.com/b" },
+      { role: "QR", domain: "qr.example.com", url: "https://qr.example.com/c" },
+      { role: "QR", domain: "qr.example.com", url: "https://qr.example.com/d" },
+      { role: "문의 메일", domain: "forms.example.com", url: "https://forms.example.com/e" },
+      { role: "문의하기", domain: "forms.example.com", url: "https://forms.example.com/f" },
+      { role: "링크", domain: "forms.example.com", url: "https://forms.example.com/g" },
     ]);
   });
 
@@ -608,11 +645,11 @@ describe("toOriginal", () => {
     const facts = original((s) => s.links.push(linkOf("K1", "mailto:office@skku.edu?subject=x", "메일 보내기"), linkOf("K2", "not a url", "열기"), linkOf("K3", "", "빈 주소")));
 
     // Act & Assert
-    expect(toOriginal(facts).links).toEqual([{ role: "메일 보내기", domain: "skku.edu" }]);
+    expect(toOriginal(facts, []).links).toEqual([{ role: "메일 보내기", domain: "skku.edu", url: "mailto:office@skku.edu?subject=x" }]);
   });
 
   it("is empty for a notice with no sources", () => {
     // Act & Assert
-    expect(toOriginal(original(() => undefined))).toEqual({ posterCount: 0, attachments: [], links: [] });
+    expect(toOriginal(original(() => undefined), [])).toEqual({ posterCount: 0, attachments: [], links: [] });
   });
 });

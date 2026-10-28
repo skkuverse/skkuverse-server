@@ -6,7 +6,7 @@ import type { RowReading } from "../row/notices-row.types";
 import type { BLOCK_KEYS, LEADING_BLOCKS } from "./notices-screen.constants";
 
 // WHY: the fields of a stored notice the screen reads, all of which the detail's projection carries.
-export type ScreenNotice = Pick<NoticeDoc, "_id" | "title" | "category" | "facts" | "factsHistory" | "firstSeenAt">;
+export type ScreenNotice = Pick<NoticeDoc, "_id" | "title" | "category" | "facts" | "factsHistory" | "firstSeenAt" | "attachments">;
 
 export type BlockKey = (typeof BLOCK_KEYS)[number];
 
