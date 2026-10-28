@@ -177,18 +177,20 @@ describe("the notice facts mirror reads the compact of the crawler's ADR 015 dec
     expect(nodeAt(mirror, keys)?.type).toBe("string");
   });
 
-  it("has the optional compacts mark with the same three keys, in the vendored schema and in the mirror", () => {
+  it("has the optional compacts mark with the same four keys, in the vendored schema and in the mirror", () => {
     // Arrange
     const [vendoredShape, mirror] = [shapeOf(vendored), mirrorShape()];
     const [upstreamMark, mirrorMark] = [vendoredShape.properties.compacts, mirror.properties.compacts];
 
     // Act & Assert
     expect(upstreamMark?.type).toBe("object");
-    expect(Object.keys(upstreamMark?.properties ?? {}).sort()).toEqual(["models", "promptVersion", "stored"]);
+    expect(Object.keys(upstreamMark?.properties ?? {}).sort()).toEqual(["models", "promptVersion", "rejudgedFrom", "stored"]);
     expect(mirrorMark?.type).toBe("object");
-    expect(Object.keys(mirrorMark?.properties ?? {}).sort()).toEqual(["models", "promptVersion", "stored"]);
+    expect(Object.keys(mirrorMark?.properties ?? {}).sort()).toEqual(["models", "promptVersion", "rejudgedFrom", "stored"]);
     expect(vendoredShape.required).not.toContain("compacts");
     expect(mirror.required).not.toContain("compacts");
+    expect(upstreamMark?.required ?? []).not.toContain("rejudgedFrom");
+    expect(mirrorMark?.required ?? []).not.toContain("rejudgedFrom");
   });
 });
 

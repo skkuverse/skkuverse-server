@@ -270,6 +270,19 @@ describe("noticeFacts, the compact of the crawler's ADR 015 decision 25", () => 
     expect(parsed.data?.compacts).toEqual(mark);
   });
 
+  it("keeps the version a re-judged compacts mark had before, and reads a mark never re-judged without it", () => {
+    // Arrange
+    const rejudged = { promptVersion: "compact-2", rejudgedFrom: "compact-1", models: ["writer", "judge"], stored: 2 };
+
+    // Act
+    const parsed = noticeFacts.safeParse(withValueAt(datedRecord(), ["compacts"], rejudged));
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.compacts).toEqual(rejudged);
+    expect(noticeFacts.safeParse(withValueAt(datedRecord(), ["compacts"], { ...rejudged, rejudgedFrom: 1 })).success).toBe(false);
+  });
+
   it("refuses a compacts mark that is missing its count", () => {
     // Arrange
     const facts = withValueAt(datedRecord(), ["compacts"], { promptVersion: "compact-1", models: ["writer"] });
