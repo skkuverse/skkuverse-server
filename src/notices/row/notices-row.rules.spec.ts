@@ -531,7 +531,7 @@ describe("toFactsRow, the qualifier's fit on line 2 (ADR 0009 D3, D5)", () => {
   });
   const condition = (quote: string) => ({ ev: { src: "body", quote, start: 0, end: quote.length, match: "exact" }, type: "other", polarity: "include", strength: "required", thing: MAIN_THING, scope: "", restricts: true, narrows: true, appliesTo: [], tag: "", tagBy: "" });
 
-  // Line 2 reads "10/26(월) 마감" (11 characters) here, and " · " joins it to the qualifier, so 12 characters fill the 26.
+  // Line 2 reads the deadline line, 11 characters, here, and " · " joins it to the qualifier, so 12 characters fill the 26.
   it.each<[string, string, string | null]>([
     ["shows a qualifier one under the budget", "가나다라마바사아자차카", "가나다라마바사아자차카"],
     ["shows a qualifier that fills the budget exactly", "가나다라마바사아자차카타", "가나다라마바사아자차카타"],
