@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SUMMARY_TYPES } from "../notices.constants";
+import { noticeScreen } from "../notices.wire";
 
 /** QUIRK(skkuverse-ai): the AI's periods, passed through as stored; any field may be absent or null. */
 const summaryPeriod = z.object({
@@ -58,6 +59,8 @@ export const noticeDetail = z.object({
   crawledAt: z.iso.datetime(),
   editInfo: z.object({ count: z.number().optional(), history: z.array(noticeEdit) }).nullable(),
   summary: noticeSummaryFull.nullable(),
+  // WHY: null when the notice has no facts or facts the schema refuses, as the list's `row` is.
+  screen: noticeScreen.nullable(),
 });
 
 export type NoticeSummaryFull = z.input<typeof noticeSummaryFull>;

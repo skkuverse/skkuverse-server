@@ -1,0 +1,277 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "header": {
+      "type": "object",
+      "properties": {
+        "firstSeen": {
+          "type": "string"
+        },
+        "change": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "what": {
+                  "type": "string"
+                },
+                "before": {
+                  "type": "string"
+                },
+                "after": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "what",
+                "before",
+                "after"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "firstSeen",
+        "change"
+      ]
+    },
+    "status": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "word": {
+              "type": "string"
+            },
+            "detail": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tone": {
+              "type": "string",
+              "enum": [
+                "open",
+                "soon",
+                "closed",
+                "stopped",
+                "neutral"
+              ]
+            }
+          },
+          "required": [
+            "word",
+            "detail",
+            "tone"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "sub": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "fromPoster": {
+                  "type": "boolean"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "map",
+                          "call",
+                          "email",
+                          "link"
+                        ]
+                      },
+                      "target": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "target"
+                    ]
+                  }
+                },
+                "quote": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text",
+                "sub",
+                "fromPoster",
+                "actions",
+                "quote"
+              ]
+            }
+          },
+          "numbered": {
+            "type": "boolean"
+          },
+          "foldedCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "footerLink": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "label",
+          "lines",
+          "numbered",
+          "foldedCount",
+          "footerLink"
+        ]
+      }
+    },
+    "action": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "link",
+                "email"
+              ]
+            },
+            "target": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "label",
+            "kind",
+            "target"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "collapsed": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "closed",
+            "cancelled"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "staffOnly": {
+      "type": "boolean"
+    },
+    "posterOnly": {
+      "type": "boolean"
+    },
+    "original": {
+      "type": "object",
+      "properties": {
+        "posterCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "role",
+              "name"
+            ]
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "string"
+              },
+              "domain": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "role",
+              "domain"
+            ]
+          }
+        }
+      },
+      "required": [
+        "posterCount",
+        "attachments",
+        "links"
+      ]
+    }
+  },
+  "required": [
+    "header",
+    "status",
+    "blocks",
+    "action",
+    "collapsed",
+    "staffOnly",
+    "posterOnly",
+    "original"
+  ]
+}

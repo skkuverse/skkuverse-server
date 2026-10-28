@@ -13,6 +13,8 @@ import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { BSON } from "mongodb";
 import request from "supertest";
+import { BuildingRepository } from "../../../src/building/building.repository";
+import { BuildingPlaceRepository } from "../../../src/building/place/building-place.repository";
 import { Clock } from "../../../src/infra/clock";
 import { NoticesDetailModule } from "../../../src/notices/detail/notices-detail.module";
 import { NoticesDetailRepository } from "../../../src/notices/detail/notices-detail.repository";
@@ -25,6 +27,8 @@ import { NoticesModule } from "../../../src/notices/notices.module";
 import { RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { expectWire } from "../../helpers/contracts/expect-wire";
+import { FakeBuildingPlaceRepository } from "../../helpers/fakes/building/building-place.repository.fake";
+import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeNoticesDetailRepository } from "../../helpers/fakes/notices/notices-detail.repository.fake";
 import { FakeNoticesListRepository } from "../../helpers/fakes/notices/notices-list.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -45,6 +49,8 @@ beforeAll(async () => {
       { provide: RequestAuthenticator, useValue: new FakeRequestAuthenticator() },
       { provide: NoticesListRepository, useValue: listRepository },
       { provide: NoticesDetailRepository, useValue: detailRepository },
+      { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
+      { provide: BuildingPlaceRepository, useValue: new FakeBuildingPlaceRepository() },
       { provide: Clock, useValue: fakeClock },
     ],
     role: "api",
