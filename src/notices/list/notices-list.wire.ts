@@ -21,7 +21,7 @@ const noticeItemRow = z.object({
   urgent: z.boolean(),
   dateMark: z.enum(["warning", "abstain"]).nullable(),
   qualifier: z.string().nullable(),
-  /** WHY: only a multi-source list names the board; a list of one board already says which. */
+  /** WHY: only a list of two or more boards names the board; a list of one board already says which. */
   board: z.string().nullable(),
   dimmed: z.boolean(),
   day: z.enum(LIST_DAYS),
