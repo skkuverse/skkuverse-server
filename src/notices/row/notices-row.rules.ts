@@ -44,7 +44,7 @@ const SERIES_WORDS: Readonly<Record<string, string>> = { DAILY: ROW_WORDS.daily,
 const TOKEN_PRECEDENCE: ReadonlyArray<readonly [RowToken, (token: TokenFacts) => boolean]> = [
   [ROW_TOKENS.cancelled, (token) => token.status.kind === "cancelled"],
   [ROW_TOKENS.deadlineToday, (token) => token.deadlineInDays === 0],
-  [ROW_TOKENS.eventToday, (token) => token.hasEventToday],
+  [ROW_TOKENS.eventToday, (token) => token.hasEventToday && token.status.kind !== "closed"],
   [ROW_TOKENS.deadlineTomorrow, (token) => token.deadlineInDays === 1],
   [ROW_TOKENS.closed, (token) => token.status.kind === "closed"],
   [ROW_TOKENS.suspended, (token) => token.status.kind === "suspended"],
@@ -296,8 +296,8 @@ function toDeadlineInDays(status: RowStatus, today: KstDay): number | null {
   return end - today;
 }
 
-// WHY: a cancelled, suspended or postponed main thing does not happen today; a closed sign-up keeps its event, which
-// the umbrella's ADR 0009 D12 says is still on.
+// WHY: a cancelled, suspended or postponed main thing does not happen today; a closed sign-up keeps its event, but the
+// token table gives it the closed token, not the event-today one (umbrella ADR 0009 D3).
 function hasEventToday({ items, today }: RowScope, status: RowStatus): boolean {
   if (status.basis === "statement" && status.kind !== "closed") return false;
   return items.some((item) => EVENT_KINDS.has(item.kind) && isDated(item) && item.days.spanEnd >= today && nextStartOf(item, today) === today);
