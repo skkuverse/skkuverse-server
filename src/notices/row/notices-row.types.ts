@@ -63,3 +63,18 @@ export interface RenderedNotice<T extends RowNotice> {
   notice: T;
   row: FactsRow | null;
 }
+
+export interface ItemReading {
+  item: RowItem;
+  line: string;
+  status: RowStatus["kind"];
+}
+
+export interface RowReading extends RowSource {
+  row: FactsRow;
+  eventStatus: RowStatus;
+  isStaffOnly: boolean;
+  items: readonly ItemReading[];
+  dayOffset(date: Date | string): number | null;
+  dayText(date: Date | string): string | null;
+}

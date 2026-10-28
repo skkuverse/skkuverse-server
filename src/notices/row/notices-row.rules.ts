@@ -2,7 +2,7 @@ import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
 import { CHANGE_WINDOW_DAYS, DIMMED_STATUSES, MAX_SERIES_LOOKAHEAD_DAYS, ROW_TOKENS, ROW_WORDS, WEEKDAY_CODES } from "./notices-row.constants";
-import type { DatedItem, DatedStatusKind, FactsRow, ItemDays, KstDay, RowItem, RowSource, RowStatus, RowToken, StatedStatusKind, StoppedStatusKind } from "./notices-row.types";
+import type { DatedItem, DatedStatusKind, FactsRow, ItemDays, ItemReading, KstDay, RowItem, RowReading, RowSource, RowStatus, RowToken, StatedStatusKind, StoppedStatusKind } from "./notices-row.types";
 
 type Point = DatedItem["start"];
 type SortKey = ReadonlyArray<number | string | boolean>;
@@ -446,3 +446,40 @@ function toCompactTitle({ facts }: RowSource, token: RowToken | null): string | 
 }
 
 const toFullTitle = ({ facts, title }: RowSource): string => (facts.shortTitle.ok ? facts.shortTitle.text : title);
+
+const hasClock = (point: Point): boolean => dayOf(point) !== null && !point.fuzzy && !point.tentative && timeText(point) !== "";
+
+function toSameDayRange(item: RowItem, today: KstDay): string | null {
+  const { start, end, isOpenSeries } = item.days;
+  const isSameDay = start !== null && start === end && item.occurrences.length === 0 && !isOpenSeries;
+  if (item.kind === "window" || !isSameDay || !hasClock(item.start) || !hasClock(item.end)) return null;
+  return `${dayText(start, today)}${timeText(item.start)}~${timeText(item.end).trimStart()}`;
+}
+
+const kstDayOf = (date: Date | string): KstDay | null => (typeof date === "string" ? toKstDay(date) : kstDayAt(date.getTime()));
+
+export function toRowReading(source: RowSource, now: Date): RowReading {
+  const scope = toRowScope(source.facts, now);
+  const { today } = scope;
+  const statusOf = (items: readonly RowItem[]): RowStatus => toDatedStatus({ ...scope, items });
+  const toItemReading = (item: RowItem): ItemReading => {
+    const status = statusOf([item]).kind;
+    const line = item.kind === "window" ? toWindowLine(item, status === "closed", today) : (toSameDayRange(item, today) ?? toDatedLine(item, today));
+    return { item, status, line };
+  };
+  const onDay =
+    <T>(read: (day: KstDay) => T) =>
+    (date: Date | string): T | null => {
+      const day = kstDayOf(date);
+      return day === null ? null : read(day);
+    };
+  return {
+    ...source,
+    row: toFactsRow(source, now),
+    eventStatus: statusOf(scope.items.filter((item) => item.kind !== "window")),
+    isStaffOnly: isStaffOnly(source.facts),
+    items: scope.times.map(toItemReading),
+    dayOffset: onDay((day) => day - today),
+    dayText: onDay((day) => dayText(day, today)),
+  };
+}
