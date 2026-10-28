@@ -7,6 +7,9 @@
  * sits in OVERRIDES with the ADR line it follows. The cases after the golden run cover what no golden case reaches: every
  * D3 token, the D4 line kinds the port changes, the dim rules, and the KST midnight.
  *
+ * toRowReading reads one notice for the detail screen from the same private rules: the row, the main event's status once
+ * the sign-up windows are set aside, each dated item's line and status in record order, and the KST day words.
+ *
  * Records reach the rules only through NoticesFactsService.parseFacts, as in production. src/infra/logger.ts is mocked.
  */
 import fs from "fs";
@@ -19,7 +22,7 @@ jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error
 import type { NoticeFacts } from "../facts/notices-facts.schema";
 import { NoticesFactsService } from "../facts/notices-facts.service";
 import type { FactsSnapshot } from "../notices.document";
-import { toFactsRow, toFactsRows } from "./notices-row.rules";
+import { toFactsRow, toFactsRows, toRowReading } from "./notices-row.rules";
 import type { FactsRow, RowSource, RowTokenTone } from "./notices-row.types";
 
 const FIXTURES = path.join(__dirname, "../../../__tests__/nest/notices/fixtures/facts-rows");
@@ -530,5 +533,193 @@ describe("toFactsRows", () => {
 
     // Assert
     expect(rows.map((row) => [row?.token, row?.title])).toEqual([[null, "장학금"]]);
+  });
+});
+
+describe("toRowReading, the row and the main event", () => {
+  const closedSignUp = (edit: (record: any) => void = () => undefined) =>
+    recordFrom(SESSION, (r) => {
+      r.times.push({ ...recordFrom(WINDOW).times[0], id: "tm_signup", thing: MAIN_THING, start: { ...r.times[0].start, date: "2026-10-13" }, end: { ...r.times[0].start, date: "2026-10-20" } });
+      edit(r);
+    });
+
+  it("carries the source and the row exactly as toFactsRow renders it at the same moment", () => {
+    // Arrange
+    const history: FactsSnapshot[] = [{ extractedAt: "2026-10-20T00:00:00+00:00", inputHash: "h1", times: [], status: [] }];
+    const source = sourceOf(recordFrom(WINDOW), history);
+
+    // Act
+    const reading = toRowReading(source, kstNoon("2026-10-25"));
+
+    // Assert
+    expect(reading.row).toEqual(toFactsRow(source, kstNoon("2026-10-25")));
+    expect(reading.row).toMatchObject({ token: { text: "내일 마감" }, status: "open" });
+    expect(reading).toMatchObject({ facts: source.facts, factsHistory: history, title: ORIGINAL_TITLE });
+  });
+
+  it.each<[string, string, (record: any) => void, string]>([
+    ["reads the event as today when it is on its day and the sign-up has closed", "2026-10-29", () => undefined, "today"],
+    ["reads the event as upcoming when it is days away and the sign-up has closed", "2026-10-25", () => undefined, "upcoming"],
+    ["reads the event as ongoing when it spans days and the sign-up has closed", "2026-10-30", (r) => (r.times[0].end.date = "2026-10-31"), "ongoing"],
+  ])("%s, while the row reads the sign-up as closed", (_label, day, edit, eventKind) => {
+    // Arrange
+    const source = sourceOf(closedSignUp(edit));
+
+    // Act
+    const reading = toRowReading(source, kstNoon(day));
+
+    // Assert
+    expect(reading.row.status).toBe("closed");
+    expect(reading.eventStatus).toMatchObject({ basis: "dates", kind: eventKind });
+    expect(reading.eventStatus).toHaveProperty("item", reading.items[0]?.item);
+  });
+
+  it.each<[string, () => NoticeFacts, string]>([
+    ["a sign-up window and nothing else", () => recordFrom(WINDOW), "2026-10-25"],
+    ["a notice that states no date", () => recordFrom(STAFF), "2026-10-25"],
+  ])("reads no event for %s", (_label, record, day) => {
+    // Act
+    const reading = toRowReading(sourceOf(record()), kstNoon(day));
+
+    // Assert
+    expect(reading.eventStatus).toEqual({ basis: "none", kind: "nodate" });
+  });
+
+  it.each<[string, boolean, () => NoticeFacts]>([
+    ["a notice for staff, with the words that say so", true, () => recordFrom(STAFF)],
+    ["a notice the model called staff-only with no quote", false, () => recordFrom(STAFF, (r) => (r.audience.forStudentsEv = null))],
+    ["a notice for students", false, () => recordFrom(WINDOW)],
+  ])("reads %s as staff only: %s", (_label, isStaffOnly, record) => {
+    // Act
+    const reading = toRowReading(sourceOf(record()), kstNoon("2026-10-25"));
+
+    // Assert
+    expect(reading.isStaffOnly).toBe(isStaffOnly);
+  });
+});
+
+describe("toRowReading, each dated item", () => {
+  const sessionAt = (start: Record<string, unknown>, end: Record<string, unknown>) =>
+    recordFrom(SESSION, (r) => {
+      Object.assign(r.times[0].start, start);
+      Object.assign(r.times[0].end, end);
+    });
+
+  it("lists the items in record order, each with the row's line and its own status", () => {
+    // Arrange
+    const record = recordFrom(SESSION, (r) => {
+      r.times.unshift({ ...recordFrom(WINDOW).times[0], id: "tm_signup", thing: MAIN_THING, end: { ...r.times[0].start, date: "2026-10-25" } });
+      r.times.push({ ...r.times[1], id: "tm_past", start: { ...r.times[1].start, date: "2026-10-12" } });
+    });
+
+    // Act
+    const reading = toRowReading(sourceOf(record), kstNoon("2026-10-26"));
+
+    // Assert
+    expect(reading.items.map(({ item }) => item.id)).toEqual(record.times.map(({ id }) => id));
+    expect(reading.items.map(({ line, status }) => [line, status])).toEqual([
+      ["10/25(일) 마감됨", "closed"],
+      ["10/29(목)", "upcoming"],
+      ["10/12(월)", "ended"],
+    ]);
+  });
+
+  it("keeps two windows that share one id as two items with their own lines", () => {
+    // Arrange
+    const record = recordFrom(WINDOW, (r) => {
+      r.times[0].end.time = "18:00";
+      r.times.push({ ...r.times[0], end: { ...r.times[0].end, time: "24:00" } });
+    });
+
+    // Act
+    const reading = toRowReading(sourceOf(record), kstNoon("2026-10-22"));
+
+    // Assert
+    expect(reading.items.map(({ item }) => item.id)).toEqual(["tm_4ebf5287efb8", "tm_4ebf5287efb8"]);
+    expect(reading.items.map(({ line }) => line)).toEqual(["10/26(월) 18시 마감", "10/26(월) 마감"]);
+  });
+
+  it.each<[string, string, string]>([
+    ["a window open now", "open", "2026-10-25"],
+    ["a window that has not opened", "notYetOpen", "2026-10-18"],
+    ["a window past its deadline", "closed", "2026-10-27"],
+  ])("reads %s as %s", (_label, status, day) => {
+    // Act
+    const reading = toRowReading(sourceOf(recordFrom(WINDOW)), kstNoon(day));
+
+    // Assert
+    expect(reading.items.map((itemReading) => itemReading.status)).toEqual([status]);
+  });
+
+  it.each<[string, string]>([
+    ["2026-10-29", "today"],
+    ["2026-10-28", "upcoming"],
+    ["2026-10-30", "ended"],
+  ])("reads a session on 10/29 as seen on %s as %s", (day, status) => {
+    // Act
+    const reading = toRowReading(sourceOf(recordFrom(SESSION)), kstNoon(day));
+
+    // Assert
+    expect(reading.items.map((itemReading) => itemReading.status)).toEqual([status]);
+  });
+
+  it.each<[string, () => NoticeFacts, string, string]>([
+    ["a session in one day with a start and an end time", () => sessionAt({ time: "18:00" }, { date: "2026-10-29", time: "19:30" }), "2026-10-25", "10/29(목) 18시~19시 30분"],
+    ["the same session on its day, with the day word", () => sessionAt({ time: "18:00" }, { date: "2026-10-29", time: "19:00" }), "2026-10-29", "오늘 18시~19시"],
+    ["the same session the day before, with the day word", () => sessionAt({ time: "18:00" }, { date: "2026-10-29", time: "19:00" }), "2026-10-28", "내일 18시~19시"],
+    ["a session with no end time", () => sessionAt({ time: "18:00" }, { date: "2026-10-29" }), "2026-10-25", "10/29(목) 18시"],
+    ["a session whose end is the end of the day", () => sessionAt({ time: "18:00" }, { date: "2026-10-29", time: "23:59" }), "2026-10-25", "10/29(목) 18시"],
+    ["a session with no start time", () => sessionAt({}, { date: "2026-10-29", time: "19:00" }), "2026-10-25", "10/29(목)"],
+    ["a session that ends the next day", () => sessionAt({ time: "18:00" }, { date: "2026-10-30", time: "09:00" }), "2026-10-25", "10/29(목)부터 10/30(금)까지"],
+    ["a tentative session", () => sessionAt({ time: "18:00", tentative: true }, { date: "2026-10-29", time: "19:00" }), "2026-10-25", "10/29(목) 18시 예정"],
+  ])("reads %s", (_label, record, day, line) => {
+    // Act
+    const reading = toRowReading(sourceOf(record()), kstNoon(day));
+
+    // Assert
+    expect(reading.items.map((itemReading) => itemReading.line)).toEqual([line]);
+  });
+
+  it("gives a window the row's line, never a range, even with a start and an end time on one day", () => {
+    // Arrange
+    const record = recordFrom(WINDOW, (r) => {
+      Object.assign(r.times[0].start, { date: "2026-10-26", time: "09:00" });
+      Object.assign(r.times[0].end, { time: "17:00" });
+    });
+
+    // Act
+    const reading = toRowReading(sourceOf(record), kstNoon("2026-10-25"));
+
+    // Assert
+    expect(reading.items.map(({ line }) => line)).toEqual(["내일 접수 시작 · 내일 17시 마감"]);
+  });
+});
+
+describe("toRowReading, the KST day words", () => {
+  const NOW = new Date("2026-10-19T16:30:00Z");
+  const reading = () => toRowReading(sourceOf(recordFrom(WINDOW)), NOW);
+
+  it.each<[string, Date | string, number | null]>([
+    ["the KST day, not the UTC one", "2026-10-20", 0],
+    ["yesterday in KST, which is today in UTC", "2026-10-19", -1],
+    ["tomorrow", "2026-10-21", 1],
+    ["a week on", "2026-10-27", 7],
+    ["a Date at 23:59 KST on the 19th", new Date("2026-10-19T14:59:00Z"), -1],
+    ["a Date at 00:00 KST on the 20th", new Date("2026-10-19T15:00:00Z"), 0],
+    ["a day the calendar cannot hold", "2026-02-31", null],
+  ])("counts the days from today to %s", (_label, date, offset) => {
+    // Act & Assert
+    expect(reading().dayOffset(date)).toBe(offset);
+  });
+
+  it.each<[string, string, string | null]>([
+    ["today", "2026-10-20", "오늘"],
+    ["tomorrow", "2026-10-21", "내일"],
+    ["yesterday, as a date, since the row has no word for it", "2026-10-19", "10/19(월)"],
+    ["a later day", "2026-10-23", "10/23(금)"],
+    ["a day the calendar cannot hold", "2026-02-31", null],
+  ])("writes %s as the row writes it", (_label, date, text) => {
+    // Act & Assert
+    expect(reading().dayText(date)).toBe(text);
   });
 });

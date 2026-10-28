@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { NoticesFactsService } from "../facts/notices-facts.service";
-import { toFactsRows } from "./notices-row.rules";
-import type { RenderedNotice, RowNotice, RowSource } from "./notices-row.types";
+import { toFactsRows, toRowReading } from "./notices-row.rules";
+import type { RenderedNotice, RowNotice, RowReading, RowSource } from "./notices-row.types";
 
 @Injectable()
 export class NoticesRowService {
@@ -13,6 +13,11 @@ export class NoticesRowService {
       now,
     );
     return notices.map((notice, i) => ({ notice, row: rows[i] ?? null }));
+  }
+
+  readNotice(notice: RowNotice, now: Date): RowReading | null {
+    const source = this.toRowSource(notice);
+    return source && toRowReading(source, now);
   }
 
   private toRowSource(notice: RowNotice): RowSource | null {
