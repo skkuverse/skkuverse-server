@@ -869,3 +869,42 @@ describe("NoticesDispatchService.sweepPending over the claim-aware fake", () => 
     expect(repository.notices.find((stored) => stored._id.equals(id(1)))?.pushedAt).toBeNull();
   });
 });
+
+describe("NoticesDispatchService.sweepPending over copies the crawler linked", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+  // Each notice carries the `dupOf` the crawler writes for it: the earliest copy with its trimmed title and contentHash,
+  // its own `_id` when it has no hash, and none at all while the crawler has not linked it yet.
+  const linked = (n: number, sourceId: string, title: string, contentHash: string | null, dupOf: ObjectId | undefined) =>
+    makeNotice({ _id: id(n), sourceId, articleNo: 500 + n, date: "2026-05-24", title, contentHash, ...(dupOf ? { dupOf } : {}) });
+
+  it("sends one push per article: the copies across boards and a padded title merge, the rest push alone", async () => {
+    // Arrange
+    const repository = new FakeNoticesDispatchRepository();
+    const pushClient = new FakeNoticesDispatchClient();
+    repository.notices = [
+      linked(1, "skku-main", "수강신청 안내", "hash-a", id(1)),
+      linked(2, "skku-notice02", "수강신청 안내", "hash-a", id(1)),
+      linked(3, "skku-notice06", "  수강신청 안내 ", "hash-a", id(1)),
+      linked(4, "skku-notice07", "수강신청 안내", null, id(4)),
+      linked(5, "skku-notice03", "새 공지", "hash-c", undefined),
+      linked(6, "skku-notice04", "채용 안내", "hash-d", id(6)),
+      linked(7, "skku-notice05", "모집 안내", "hash-e", id(7)),
+    ];
+    const sweeper = new NoticesDispatchService(asReal<NoticesDispatchRepository>(repository), asReal<NoticesDispatchClient>(pushClient), clock);
+
+    // Act
+    const summary = await sweeper.sweepPending("test");
+
+    // Assert
+    expect(summary).toMatchObject({ processed: 7, sent: 7, failed: 0, cfCalls: 5, dedupedDocs: 2 });
+    const pushes = pushClient.pushes.map((push) => ({ id: push.notice._id.toHexString(), topics: [...push.topics].sort() }));
+    expect(pushes.sort((a, b) => a.id.localeCompare(b.id))).toEqual([
+      { id: id(2).toHexString(), topics: ["category:academic", "category:scholarship"] },
+      { id: id(4).toHexString(), topics: ["category:event"] },
+      { id: id(5).toHexString(), topics: ["general:skku-notice03"] },
+      { id: id(6).toHexString(), topics: ["category:career"] },
+      { id: id(7).toHexString(), topics: ["category:recruitment"] },
+    ]);
+    expect(repository.notices.every((stored) => stored.pushedAt instanceof Date)).toBe(true);
+  });
+});
