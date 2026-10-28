@@ -538,13 +538,18 @@ describe("NoticesDispatchService.sweepPending — cross-post grouping", () => {
     );
   }
 
+  // As the crawler links copies (adr-015 decision 24): each points at the earliest copy's `_id`, which need not be
+  // claimed in this sweep, and a copy without a contentHash points at itself.
+  const EARLIEST_COPY = new ObjectId();
+
   function sibling(sourceId: string, extra: Partial<NoticeDoc> = {}) {
-    return makeNotice({
+    const notice = makeNotice({
       sourceId,
       title: "[교직] 성인지교육 이수 안내",
       contentHash: HASH,
       ...extra,
     } as Partial<NoticeDoc>);
+    return { ...notice, dupOf: notice.contentHash ? EARLIEST_COPY : notice._id };
   }
 
   it("sends ONE push for a 3-way cross-post and resolves every member", async () => {

@@ -1,10 +1,11 @@
 /**
  * Dispatch decisions over the push fields: the claim window (a KST day floor, the lease cutoff, the attempt
- * cap), the field values of a push, a skip and a release, and the group's representative. Its Mongo form is
+ * cap), the field values of a push, a skip and a release, the cluster key that groups a sweep's copies, and the
+ * group's representative. Its Mongo form is
  * notices-dispatch.query.ts, pinned by the repository spec.
  */
 import { ObjectId } from "mongodb";
-import { selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields, toSkippedFields } from "./notices-dispatch.rules";
+import { clusterKeyOf, groupByClusterKey, selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields, toSkippedFields } from "./notices-dispatch.rules";
 
 const POLICY = { maxAgeDays: 14, claimLeaseMs: 10 * 60_000, maxAttempts: 5 };
 
@@ -62,5 +63,38 @@ describe("selectRepresentative", () => {
   it("refuses an empty group rather than sending a push for nobody", () => {
     // Act & Assert
     expect(() => selectRepresentative([], () => true)).toThrow("a push group has no members");
+  });
+});
+
+describe("clusterKeyOf", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+
+  it.each([
+    ["the crawler's dupOf", { _id: id(2), dupOf: id(1) }, id(1)],
+    ["its own _id when the crawler has not linked it yet", { _id: id(2) }, id(2)],
+    ["its own _id when dupOf is null", { _id: id(2), dupOf: null }, id(2)],
+  ])("keys a notice on %s", (_case, notice, anchor) => {
+    // Act & Assert
+    expect(clusterKeyOf(notice)).toBe(anchor.toHexString());
+  });
+});
+
+describe("groupByClusterKey", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+
+  it("groups the notices whose key is equal, each group in the order given, the groups in order of their first notice", () => {
+    // Arrange
+    const notices = [{ _id: id(3), dupOf: id(1) }, { _id: id(4), dupOf: id(4) }, { _id: id(1), dupOf: id(1) }, { _id: id(5) }];
+
+    // Act
+    const groups = groupByClusterKey(notices);
+
+    // Assert
+    expect(groups.map((group) => group.map((notice) => notice._id))).toEqual([[id(3), id(1)], [id(4)], [id(5)]]);
+  });
+
+  it("forms no group from no notices", () => {
+    // Act & Assert
+    expect(groupByClusterKey([])).toEqual([]);
   });
 });

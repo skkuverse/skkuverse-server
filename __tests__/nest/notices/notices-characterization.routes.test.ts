@@ -606,7 +606,7 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
 
   it("merges a cross-posted article into one push to the union of its topics, linking the lowest board with a topic", async () => {
     // Arrange
-    const shared = { title: "2026학년도 2학기 수강신청 안내", contentHash: "aaaa", articleNo: 136023 };
+    const shared = { title: "2026학년도 2학기 수강신청 안내", contentHash: "aaaa", articleNo: 136023, dupOf: oid(11) };
     await notices.insertMany([
       unpushed({ _id: oid(11), sourceId: "skku-main", ...shared }),
       unpushed({ _id: oid(12), sourceId: "skku-notice03", ...shared }),
