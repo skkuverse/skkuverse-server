@@ -48,7 +48,7 @@ const internalAuthorizer = new FakeInternalAuthorizer();
 // WHY: 01:30 KST on 2026-10-20, so the 14-day age gate's floor is the KST day 2026-10-06.
 const fakeClock: Clock = { now: () => new Date("2026-10-19T16:30:00Z") };
 
-function summarized(overrides: Partial<NoticeDoc> = {}): NoticeDoc {
+function gated(overrides: Partial<NoticeDoc> = {}): NoticeDoc {
   return {
     _id: new ObjectId(),
     sourceId: "skku-notice02",
@@ -59,6 +59,8 @@ function summarized(overrides: Partial<NoticeDoc> = {}): NoticeDoc {
     sourceUrl: "https://www.skku.edu/x",
     contentHash: "hash-1",
     aiSummaryAt: new Date("2026-10-19T15:05:00Z"),
+    factsAt: new Date("2026-10-19T15:10:00Z"),
+    factsGate: "ok",
     ...overrides,
   };
 }
@@ -145,7 +147,7 @@ describe("POST /internal/notices/dispatch-pending", () => {
 
   it("sweeps the claimable notices and answers with the sweep's summary", async () => {
     // Arrange
-    const notice = summarized();
+    const notice = gated();
     repository.notices = [notice];
 
     // Act
@@ -165,11 +167,11 @@ describe("POST /internal/notices/dispatch-pending", () => {
   it("leaves a notice outside the claim window alone: older than the KST floor, pushed, or exhausted", async () => {
     // Arrange
     repository.notices = [
-      summarized({ date: "2026-10-05" }),
-      summarized({ pushedAt: new Date("2026-10-19T16:00:00Z") }),
-      summarized({ pushAttempts: 5 }),
-      summarized({ dispatchClaimedAt: new Date("2026-10-19T16:29:00Z") }),
-      summarized({ date: "2026-10-06" }),
+      gated({ date: "2026-10-05" }),
+      gated({ pushedAt: new Date("2026-10-19T16:00:00Z") }),
+      gated({ pushAttempts: 5 }),
+      gated({ dispatchClaimedAt: new Date("2026-10-19T16:29:00Z") }),
+      gated({ date: "2026-10-06" }),
     ];
 
     // Act
@@ -183,9 +185,24 @@ describe("POST /internal/notices/dispatch-pending", () => {
     expect(client.pushes.map((push) => push.notice.date)).toEqual(["2026-10-06"]);
   });
 
+  it("claims on the live facts job's push gate, not on the ai summary time", async () => {
+    // Arrange
+    repository.notices = [gated({ date: "2026-10-18", factsAt: undefined, factsGate: undefined }), gated({ date: "2026-10-17", aiSummaryAt: undefined })];
+
+    // Act
+    const res = await request(httpServer)
+      .post("/internal/notices/dispatch-pending")
+      .set("X-Internal-Token", config.notices.dispatch.internalToken as string)
+      .send({});
+
+    // Assert
+    expect(res.body.data).toMatchObject({ processed: 1, sent: 1 });
+    expect(client.pushes.map((push) => push.notice.date)).toEqual(["2026-10-17"]);
+  });
+
   it("answers a failed push as failed and releases its lease", async () => {
     // Arrange
-    repository.notices = [summarized()];
+    repository.notices = [gated()];
     client.error = new Error("sendNotification 500");
 
     // Act
@@ -202,7 +219,7 @@ describe("POST /internal/notices/dispatch-pending", () => {
 
   it("records a notice whose board has no push topic as skipped, without a push or an attempt, and never claims it again", async () => {
     // Arrange
-    repository.notices = [summarized({ sourceId: "skku-main" })];
+    repository.notices = [gated({ sourceId: "skku-main" })];
     const ping = () =>
       request(httpServer).post("/internal/notices/dispatch-pending").set("X-Internal-Token", config.notices.dispatch.internalToken as string).send({});
 
@@ -251,9 +268,9 @@ describe("POST /internal/notices/dispatch-pending bodies", () => {
     // Arrange
     const ping = () =>
       request(httpServer).post("/internal/notices/dispatch-pending").set("X-Internal-Token", config.notices.dispatch.internalToken as string).send({});
-    repository.notices = [summarized(), summarized({ sourceId: "skku-main", articleNo: 1, title: "다른 공지", contentHash: "hash-2" })];
+    repository.notices = [gated(), gated({ sourceId: "skku-main", articleNo: 1, title: "다른 공지", contentHash: "hash-2" })];
     const mixed = await ping();
-    repository.notices = [summarized()];
+    repository.notices = [gated()];
     client.error = new Error("sendNotification 500");
     const failed = await ping();
     client.error = null;
@@ -264,7 +281,7 @@ describe("POST /internal/notices/dispatch-pending bodies", () => {
       openGate = () => resolve({ sent: 1, failed: 0, cleanedUp: 0 });
     });
     client.response = gate as unknown as FcmResponse;
-    repository.notices = [summarized()];
+    repository.notices = [gated()];
     client.pushes = [];
     const held = ping().then((res) => res);
     while (client.pushes.length === 0) await new Promise((resolve) => setImmediate(resolve));

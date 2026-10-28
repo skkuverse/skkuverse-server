@@ -78,6 +78,8 @@ function makeNotice(extra: Partial<NoticeDoc> = {}): NoticeDoc {
     summaryOneLiner: "한 줄 요약",
     category: "academic",
     aiSummaryAt: new Date("2026-05-04T01:00:00Z"),
+    factsAt: new Date("2026-05-04T00:40:00Z"),
+    factsGate: "ok",
     pushedAt: null,
     pushAttempts: 0,
     pushError: null,
@@ -299,9 +301,11 @@ describe("NoticesDispatchService.sweepPending", () => {
 
     // Assert
     expect(filter.pushedAt).toBeNull();
-    // partial-index-friendly form matching dispatch_pending_idx's
-    // partialFilterExpression so the planner uses the partial index.
-    expect(filter.aiSummaryAt).toEqual({ $type: "date" });
+    // The push gate is the crawler's factsAt (ADR 0024), in the form of
+    // dispatch_pending_facts_idx's partialFilterExpression so the planner
+    // uses the partial index.
+    expect(filter.factsAt).toEqual({ $type: "date" });
+    expect(filter.aiSummaryAt).toBeUndefined();
     // Age gate is the notice's own publication date (immutable), not any
     // crawl timestamp — a crawl stamp the crawler rewrites cannot answer
     // "is this notice recent?". See ADR 0008.

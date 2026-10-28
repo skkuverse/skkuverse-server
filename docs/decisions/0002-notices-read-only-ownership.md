@@ -21,7 +21,7 @@ audience: internal
 
 - **skkuverse-crawler** owns the documents, their content fields and the unique index. The canonical field and index definitions are the crawler's [schema/notices.md](https://github.com/spencer0124/skkuverse-crawler/blob/main/docs/reference/schema/notices.md); server docs never copy them.
 - **skkuverse-ai** owns the `summary*` fields, written with `$set`.
-- **The server** writes no content field. It owns its read index (`FORCE_INDEX` in `src/notices/list/notices-list.query.ts`, [ADR 0007](0007-notice-ordering-key.md)), `dispatch_pending_idx`, and the push bookkeeping fields only `NoticesDispatchRepository` writes ([ADR 0003](0003-fcm-dispatch-cloud-function-claim-lease.md)).
+- **The server** writes no content field. It owns its read index (`FORCE_INDEX` in `src/notices/list/notices-list.query.ts`, [ADR 0007](0007-notice-ordering-key.md)), the dispatch partial index (`DISPATCH_PENDING_INDEX` in `src/notices/dispatch/notices-dispatch.query.ts`), and the push bookkeeping fields only `NoticesDispatchRepository` writes ([ADR 0003](0003-fcm-dispatch-cloud-function-claim-lease.md)).
 - **Sanitizing is the crawler's.** It stores sanitized GFM as `cleanMarkdown`, and the server only passes it through as `contentMarkdown`. HTML and plain-text bodies are never served, so the server has no XSS surface of its own; the app's Markdown renderer sanitizes what it renders.
 
 ## Consequences
