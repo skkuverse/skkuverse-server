@@ -3,7 +3,7 @@ title: A Cross-posted Notice Is Pushed Once per Sweep, by Content Group
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-27
+last-updated: 2026-10-29
 audience: internal
 ---
 
@@ -25,6 +25,7 @@ SKKU's CMS shows one article on several boards. The crawler's `(articleNo, sourc
 - **Within one sweep, documents with the same trimmed `title` and `contentHash` form a group, and the group gets one call with the union of its topics** (`dedupKeyOf`, `dispatchGroup`). Content-based, so a new cross-post family needs no code.
 - **Exact match only.** No fuzzy matching; a document without a hash is a group of one. Swallowing a real notice by a false merge is worse than a duplicate push.
 - **Claim the batch, then group.** Claiming and sending one at a time sends a copy before its siblings are seen. `sweepBatchCap` still counts documents, not groups.
+- Amended 2026-10-29: the in-sweep key is the crawler's `dupOf` (`clusterKeyOf`), the `_id` of the earliest copy that shares the trimmed `title` and `contentHash` (skkuverse-crawler `docs/decisions/adr-015-notice-facts.md`, decision 24). It is the same partition as `dedupKeyOf`, kept by the crawler on every notice. The crawler writes it before the push gate, so a claimed copy always has it. A notice without it is a group of one. Copies in different sweeps still push separately, and the release before still reads the title and hash, so the server rolls back alone.
 - **`TOPIC_CAP` 30, never above the Cloud Function's own topic limit** (`src/notices/notices.topics.ts`). 30 is Firestore's `array-contains-any` limit. A merged 16-way group unions 16 topics; capping at the old 10 would silently drop six departments' subscribers. Raise the Cloud Function first: a payload over its limit gets a 400 and fails permanently after the retries.
 
 Rejected:
