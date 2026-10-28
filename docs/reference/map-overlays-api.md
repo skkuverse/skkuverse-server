@@ -1614,5 +1614,5 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 
 - [event-places.md](event-places.md) — the festival's storage, authoring and ops tiers
 - [ADR 0004 — event map layer ownership](https://github.com/spencer0124/skkuverse/blob/main/docs/decisions/0004-event-map-layer-ownership.md)
-- [skkuverse-app `docs/eventmap-rendering.md`](https://github.com/spencer0124/skkuverse-app/blob/main/docs/eventmap-rendering.md) — the client side
+- [skkuverse-app `docs/explanation/shared-map.md`](https://github.com/skkuverse/skkuverse-app/blob/main/docs/explanation/shared-map.md) — the client side
 - [docs/README.md](../README.md) — writing rules
