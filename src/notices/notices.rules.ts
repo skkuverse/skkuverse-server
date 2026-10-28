@@ -1,5 +1,5 @@
 import { AppError } from "../http/app.error";
-import { MAX_QUERY_CODEPOINTS, MAX_SOURCE_IDS, SUMMARY_TYPES } from "./notices.constants";
+import { DRAW_MARK, MAX_QUERY_CODEPOINTS, MAX_SOURCE_IDS, QUOTE_LABEL_JOINER, SUMMARY_TYPES } from "./notices.constants";
 import type { NoticeDoc } from "./notices.document";
 import type { CategoryConfig, CategoryPicker, ExcludeReasonMap, SourceConfig, SummaryType } from "./notices.types";
 
@@ -75,4 +75,19 @@ export function excludeReasonProblems(sources: readonly SourceConfig[], reasons:
   return sources
     .filter((s) => s.excludeReason !== null && !(s.excludeReason in reasons))
     .map((s) => `sources.json: "${s.id}" has excludeReason "${s.excludeReason}" with no entry in exclude-reasons.json`);
+}
+
+const squashed = (text: string): string => text.replace(/\s/g, "");
+
+// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/notice-facts/notice-facts.schema.json, codebook v3.11: a table
+// `label` plus its `quote` states the fact, which the row and the screen show as "label · quote".
+export function toQuoteText({ quote, label }: { quote: string; label?: string | undefined }): string {
+  const words = (label ?? "").replace(/\s+/g, " ").trim();
+  return squashed(quote).includes(squashed(words)) ? quote : `${words}${QUOTE_LABEL_JOINER}${quote}`;
+}
+
+// WHY: umbrella ADR 0009 D5 and D13: a draw is always marked as one, unless its text already says so.
+export function toBenefitText({ isDraw, ev }: { isDraw: boolean; ev: { quote: string; label?: string | undefined } }): string {
+  const shown = toQuoteText(ev);
+  return isDraw && !shown.includes(DRAW_MARK) ? `${shown} (${DRAW_MARK})` : shown;
 }
