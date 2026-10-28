@@ -1,0 +1,161 @@
+{
+  "_about": "Rendered by NoticesScreenService from the development `facts` record of skku-main notice 140223 (__tests__/nest/notices/fixtures/notice-facts.dev-records.json, read 2026-10-28) at 2026-10-28T03:00:00Z with firstSeenAt 2026-10-27 and no place names; never captured from a response, since the detail route did not serve a screen then.",
+  "data": {
+    "header": {
+      "firstSeen": "어제 처음 올라옴",
+      "change": null
+    },
+    "status": {
+      "word": "접수 중",
+      "tone": "open",
+      "detail": "11/1(일) 마감"
+    },
+    "blocks": [
+      {
+        "label": "언제·어디",
+        "numbered": false,
+        "footerLink": null,
+        "lines": [
+          {
+            "text": "12/5(토)까지",
+            "sub": "온라인 · 한양대학교 ERICA 캠퍼스",
+            "fromPoster": false,
+            "actions": [],
+            "quote": "2026.09.28(월) ~ 12.05(토)"
+          },
+          {
+            "text": "12/5(토)까지",
+            "sub": "온라인 · 한양대학교 ERICA 캠퍼스",
+            "fromPoster": false,
+            "actions": [],
+            "quote": "2026.11.02(월) ~ 12.05(토)"
+          }
+        ],
+        "foldedCount": 0
+      },
+      {
+        "label": "대상",
+        "numbered": false,
+        "footerLink": null,
+        "lines": [
+          {
+            "text": "전국 대학생(예비 창업)팀",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [],
+            "quote": "전국 대학생(예비 창업)팀"
+          },
+          {
+            "text": "휴학생 참여 가능, 단 상금 지급 불가",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [],
+            "quote": "휴학생 참여 가능, 단 상금 지급 불가"
+          }
+        ],
+        "foldedCount": 0
+      },
+      {
+        "label": "혜택",
+        "numbered": false,
+        "footerLink": null,
+        "lines": [
+          {
+            "text": "한양대학교 총장상",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [],
+            "quote": "한양대학교 총장상"
+          },
+          {
+            "text": "대상 1개팀 (200만원)",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [],
+            "quote": "대상 1개팀 (200만원)"
+          },
+          {
+            "text": "최우수상 1개팀 (150만원)",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [],
+            "quote": "최우수상 1개팀 (150만원)"
+          },
+          {
+            "text": "우수상 1개팀 (100만원)",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [],
+            "quote": "우수상 1개팀 (100만원)"
+          },
+          {
+            "text": "장려상 3개팀 (50만원)",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [],
+            "quote": "장려상 3개팀 (50만원)"
+          }
+        ],
+        "foldedCount": 0
+      },
+      {
+        "label": "신청",
+        "numbered": true,
+        "footerLink": null,
+        "lines": [
+          {
+            "text": "신청 및 운영 홈페이지 링크",
+            "sub": null,
+            "fromPoster": false,
+            "actions": [
+              {
+                "kind": "link",
+                "target": "https://histarter.wixsite.com/2026ericasw"
+              }
+            ],
+            "quote": "신청 및 운영 홈페이지 링크"
+          }
+        ],
+        "foldedCount": 0
+      },
+      {
+        "label": "문의",
+        "numbered": false,
+        "footerLink": null,
+        "lines": [
+          {
+            "text": "한양대학교ERICA SW중심대학사업단 contact@example.com",
+            "sub": "문의",
+            "fromPoster": false,
+            "actions": [
+              {
+                "kind": "email",
+                "target": "contact@example.com"
+              }
+            ],
+            "quote": "contact@example.com"
+          }
+        ],
+        "foldedCount": 0
+      }
+    ],
+    "action": {
+      "label": "신청 및 운영 홈페이지 링크",
+      "kind": "link",
+      "target": "https://histarter.wixsite.com/2026ericasw"
+    },
+    "collapsed": null,
+    "staffOnly": false,
+    "posterOnly": false,
+    "original": {
+      "posterCount": 0,
+      "attachments": [],
+      "links": [
+        {
+          "role": "신청 및 운영 홈페이지 링크",
+          "domain": "histarter.wixsite.com"
+        }
+      ]
+    }
+  }
+}
