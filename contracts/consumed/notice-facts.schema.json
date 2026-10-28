@@ -106,7 +106,7 @@
         },
         "label": {
           "type": "string",
-          "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
+          "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim; parts joined by \" · \". The model writes it before the value as \"label :: value\" and code splits it. Code keeps it only when every part is on the value's own row, or in the value's own column of a row above it in the same table (a poster table is a run of lines with cells joined by \" | \"; a body table is read from cleanHtml with rowspans and colspans expanded); otherwise the label is dropped and the fact kept. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11."
         },
         "compact": {
           "type": "string",
@@ -1373,7 +1373,7 @@
           },
           "label": {
             "type": "string",
-            "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
+            "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim; parts joined by \" · \". The model writes it before the value as \"label :: value\" and code splits it. Code keeps it only when every part is on the value's own row, or in the value's own column of a row above it in the same table (a poster table is a run of lines with cells joined by \" | \"; a body table is read from cleanHtml with rowspans and colspans expanded); otherwise the label is dropped and the fact kept. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11."
           },
           "compact": {
             "type": "string",
@@ -1739,7 +1739,8 @@
                 "description": "c<N>, b<N>, k<N> for a condition, benefit or cost; a<N> or p<N> for an action or a placed dated item sent to the scope check (v3.10); or empty."
               },
               "field": {
-                "type": "string"
+                "type": "string",
+                "description": "The label in dispute: isCondition, polarity, scope, narrows or thing; forStudents; scope for a channel; or states (v3.11: the verifier read a table fact's label and quote as half a fact, `header`, or as the values of several rows, `several`)."
               },
               "extractor": {},
               "verifier": {},

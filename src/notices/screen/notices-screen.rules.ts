@@ -231,8 +231,10 @@ export const isFromPoster = ({ src }: { src: string }): boolean => src.startsWit
 
 export const isPosterOnly = ({ times }: NoticeFacts): boolean => times.length > 0 && times.every((item) => isFromPoster(item.ev));
 
-// WHY: umbrella ADR 0009 D13: a track's fact shows its tag first, as the row writes `[tag] text`.
-export const withTag = ({ tag }: { tag?: string }, text: string): string => (tag ? `[${tag}] ${text}` : text);
+// WHY: umbrella ADR 0009 D13: a track's fact shows its tag first, as the row writes `[tag] text`, and like the row
+// leaves it out when the text (a table label) already names it.
+export const withTag = ({ tag }: { tag?: string }, text: string): string =>
+  tag && !text.replaceAll(" ", "").includes(tag.replaceAll(" ", "")) ? `[${tag}] ${text}` : text;
 
 export const toPlaceText = ({ name, code }: PlaceDisplay): string => (code ? `${name} ${code}` : name);
 
