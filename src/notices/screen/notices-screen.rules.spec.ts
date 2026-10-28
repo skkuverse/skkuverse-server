@@ -113,6 +113,12 @@ describe("toStatusLine", () => {
     ["중단 for a suspended call", () => record(WINDOW, (r) => r.statusStatements.push(statement("suspended"))), "2026-10-22", { word: "중단", tone: "stopped", detail: null }],
     ["일정이 바뀌었어요 for a postponed event, neutral", () => record(SESSION, (r) => r.statusStatements.push(statement("postponed"))), "2026-10-25", { word: "일정이 바뀌었어요", tone: "neutral", detail: "10/29(목)" }],
     ["취소됐어요 for a cancelled call", () => record(WINDOW, (r) => r.statusStatements.push(statement("cancelled"))), "2026-10-22", { word: "취소됐어요", tone: "closed", detail: null }],
+    [
+      "접수 중 with the next open track named, which the row's line 2 leaves out",
+      () => record(WINDOW, (r) => (r.times = [{ ...r.times[0], id: "tm_new", track: "신규등록" }, { ...r.times[0], id: "tm_again", track: "재등록", end: { ...r.times[0].end, date: "2026-10-30" } }])),
+      "2026-10-22",
+      { word: "접수 중", tone: "open", detail: "[신규등록] 10/26(월) 마감" },
+    ],
   ])("reads %s", (_label, stored, day, status) => {
     // Act & Assert
     expect(toStatusLine(readingAt(stored(), kstNoon(day)))).toEqual(status);

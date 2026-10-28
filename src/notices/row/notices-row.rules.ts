@@ -32,6 +32,11 @@ interface TokenFacts {
 }
 
 const MS_PER_DAY = 86_400_000;
+const LINE1_MAX_CHARS = 20;
+const LINE2_MAX_CHARS = 26;
+const QUALIFIER_JOINER = " · ";
+const ELLIPSIS = "…";
+const BRACKET_GROUP = /\[([^\]]*)\]|\(([^)]*)\)|【([^】]*)】|（([^）]*)）/g;
 const DATED_KINDS: ReadonlySet<string> = new Set(["session", "period", "effective"]);
 const EVENT_KINDS: ReadonlySet<string> = new Set(["session", "period"]);
 const OPEN_STATUSES: ReadonlySet<string> = new Set(["open", "extended", "ongoing"]);
@@ -67,11 +72,12 @@ export function toFactsRow(source: RowSource, now: Date): FactsRow {
   const isAbstained = status.basis !== "statement" && isAbstaining(scope, status);
   const token = isAbstained ? null : toRowToken(scope, status, isChangedRecently(source, scope.today));
   const rowStatus = isAbstained ? "abstain" : status.kind;
+  const date = toRowDate({ scope, status, isAbstained });
   return {
     token,
     title: toCompactTitle(source, token) ?? toFullTitle(source),
-    ...toRowDate({ scope, status, isAbstained }),
-    qualifier: toQualifier(scope, shown),
+    ...date,
+    qualifier: toFittedQualifier(date.line2, toQualifier(scope, shown)),
     dimmed: DIMMED_STATUSES.has(rowStatus) || isStaffOnly(source.facts),
     urgent: token?.tone === "urgent",
     status: rowStatus,
@@ -79,11 +85,11 @@ export function toFactsRow(source: RowSource, now: Date): FactsRow {
   };
 }
 
-function toRowDate({ scope, status, isAbstained }: { scope: RowScope; status: RowStatus; isAbstained: boolean }): Pick<FactsRow, "line2" | "dateMark"> {
-  if (isAbstained) return { line2: ROW_WORDS.checkOriginal, dateMark: "abstain" };
+function toRowDate({ scope, status, isAbstained }: { scope: RowScope; status: RowStatus; isAbstained: boolean }): Pick<FactsRow, "line2" | "trackedLine2" | "dateMark"> {
+  if (isAbstained) return { line2: ROW_WORDS.checkOriginal, trackedLine2: ROW_WORDS.checkOriginal, dateMark: "abstain" };
   const shown = shownOf(status);
-  const line2 = withRowTag(scope, status.basis === "dates" ? status.item : null, toLine2(scope, status));
-  return { line2, dateMark: shown && isFlagged(shown) ? "warning" : null };
+  const tags = toRowTags(scope, status.basis === "dates" ? status.item : null, toLine2(scope, status));
+  return { ...tags, dateMark: shown && isFlagged(shown) ? "warning" : null };
 }
 
 const shownOf = (status: RowStatus): RowItem | null => ("item" in status ? status.item : null);
@@ -395,15 +401,21 @@ function toLine2({ today }: RowScope, status: RowStatus): string {
   return status.basis === "dates" && item.kind === "window" ? toWindowLine(item, status.kind === "closed", today) : toDatedLine(item, today);
 }
 
-function withRowTag({ facts, times, rowThings }: RowScope, shown: RowItem | null, line2: string): string {
-  if (shown === null) return line2;
+// WHY: owner, 2026-10-28: the row's line 2 names the thing a date belongs to but not the track, which the detail's status
+// line still names (umbrella ADR 0009 D12).
+function toRowTags({ facts, times, rowThings }: RowScope, shown: RowItem | null, line2: string): Pick<FactsRow, "line2" | "trackedLine2"> {
+  if (shown === null) return { line2, trackedLine2: line2 };
   const labels = new Set(times.filter((item) => item.thing === shown.thing && item.kind === shown.kind && item.track).map((item) => item.track));
   const dayOfItem = ({ days }: RowItem): number | null => days.latestEnd ?? days.start;
   const isShared = times.some((item) => item.id !== shown.id && item.kind === "window" && dayOfItem(item) === dayOfItem(shown));
   const thing = rowThings.has(shown.thing) ? undefined : facts.things.find(({ id }) => id === shown.thing);
-  const parts = [thing ? thing.short || thing.name.quote : "", labels.size > 1 && !isShared ? shown.track : ""];
-  const squashed = line2.replaceAll(" ", "");
-  const tag = parts.filter((part) => part && !squashed.includes(part.replaceAll(" ", ""))).join(" · ");
+  const thingPart = thing ? thing.short || thing.name.quote : "";
+  return { line2: withRowTag(line2, [thingPart]), trackedLine2: withRowTag(line2, [thingPart, labels.size > 1 && !isShared ? shown.track : ""]) };
+}
+
+function withRowTag(line2: string, parts: readonly string[]): string {
+  const squashedLine = line2.replaceAll(" ", "");
+  const tag = parts.filter((part) => part && !squashedLine.includes(part.replaceAll(" ", ""))).join(" · ");
   return tag ? `[${tag}] ${line2}` : line2;
 }
 
@@ -445,7 +457,36 @@ function toCompactTitle({ facts }: RowSource, token: RowToken | null): string | 
   return token && facts.shortTitle.compact && facts.shortTitle.compactOk ? facts.shortTitle.compact : null;
 }
 
-const toFullTitle = ({ facts, title }: RowSource): string => (facts.shortTitle.ok ? facts.shortTitle.text : title);
+const toFullTitle = ({ facts, title }: RowSource): string => (facts.shortTitle.ok ? facts.shortTitle.text : toLine1(title, facts));
+
+// WHY: umbrella ADR 0009 D3: line 1 leaves out bracketed offices and dates and is never cut mid-word; a bracket that names
+// a restricted audience stays (D9).
+function toLine1(title: string, { audience }: NoticeFacts): string {
+  const whole = squeezed(title);
+  if ([...whole].length <= LINE1_MAX_CHARS) return whole;
+  const audiences = audience.conditions.filter((condition) => condition.restricts).map((condition) => squashed(condition.ev.quote));
+  const isAudience = (inner: string): boolean => squashed(inner) !== "" && audiences.some((quote) => quote.includes(squashed(inner)) || squashed(inner).includes(quote));
+  const unbracketed = squeezed(whole.replace(BRACKET_GROUP, (group: string, ...inners: unknown[]) => (isAudience(inners.find((inner) => typeof inner === "string") ?? "") ? group : " ")));
+  return toWholeWords(unbracketed || whole, LINE1_MAX_CHARS);
+}
+
+function toWholeWords(text: string, maxChars: number): string {
+  const words = text.split(" ");
+  const fits = (count: number): boolean => [...words.slice(0, count).join(" ")].length <= maxChars - ELLIPSIS.length;
+  const count = [...text].length <= maxChars ? words.length : Math.max(words.findIndex((_word, at) => !fits(at + 1)), 1);
+  return count < words.length ? `${words.slice(0, count).join(" ")}${ELLIPSIS}` : text;
+}
+
+// WHY: umbrella ADR 0009 D3 and D5: line 2 holds 26 characters, and a qualifier that would pass them is left out whole, so
+// a hard condition never shows in part; the app joins the two with " · ".
+function toFittedQualifier(line2: string, qualifier: string | null): string | null {
+  const text = qualifier === null ? "" : squeezed(qualifier);
+  const line = line2 === "" ? text : `${line2}${QUALIFIER_JOINER}${text}`;
+  return text !== "" && [...line].length <= LINE2_MAX_CHARS ? text : null;
+}
+
+const squeezed = (text: string): string => text.replace(/\s+/g, " ").trim();
+const squashed = (text: string): string => text.replace(/\s/g, "");
 
 const isExactDay = (point: Point): boolean => dayOf(point) !== null && !point.fuzzy && !point.tentative;
 
