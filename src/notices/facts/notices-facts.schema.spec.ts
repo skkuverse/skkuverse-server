@@ -6,7 +6,8 @@
  * writer builds today (fixtures/notice-facts.writer-record.json, with `anchorDay` and `dateInput`) parse and come out
  * equal to what was stored, so the mirror drops no key a record carries. A copy missing any required top-level key
  * or any key of a nested item does not parse, and neither does another `v`. A key the mirror does not know is
- * stripped, never refused, because the crawler adds optional keys without a version bump.
+ * stripped, never refused, because the crawler adds optional keys without a version bump. The table `label` of
+ * codebook v3.11 is one the mirror knows, on a condition's quote, a benefit's quote and a cost of missing.
  */
 import fs from "fs";
 import path from "path";
@@ -141,5 +142,56 @@ describe("noticeFacts", () => {
 
     // Act & Assert
     expect(noticeFacts.safeParse(facts).success).toBe(false);
+  });
+});
+
+describe("noticeFacts, the table label of codebook v3.11", () => {
+  const recordWith = (hasFact: (facts: Record<string, any>) => boolean): Record<string, any> => {
+    const found = RECORDS.find((r) => hasFact(r.facts));
+    if (!found) throw new Error("no captured record has the fact");
+    return copyOf(found.facts);
+  };
+  const withCondition = () => recordWith((f) => f.audience.conditions.length > 0);
+  const withBenefit = () => recordWith((f) => f.benefits.length > 0);
+  const withCost = () => recordWith((f) => f.costOfMissing.length > 0);
+
+  it.each<[string, () => Record<string, any>, string[]]>([
+    ["a condition's quote", withCondition, ["audience", "conditions", "0", "ev", "label"]],
+    ["a benefit's quote", withBenefit, ["benefits", "0", "ev", "label"]],
+    ["a cost of missing", withCost, ["costOfMissing", "0", "label"]],
+  ])("keeps the label of %s", (_label, record, keys) => {
+    // Arrange
+    const facts = withValueAt(record(), keys, "지원 자격");
+
+    // Act
+    const parsed = noticeFacts.safeParse(facts);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual(facts);
+  });
+
+  it.each<[string, () => Record<string, any>, string[]]>([
+    ["a condition's quote", withCondition, ["audience", "conditions", "0", "ev", "label"]],
+    ["a benefit's quote", withBenefit, ["benefits", "0", "ev", "label"]],
+    ["a cost of missing", withCost, ["costOfMissing", "0", "label"]],
+  ])("refuses a label of %s that is not text", (_label, record, keys) => {
+    // Arrange
+    const facts = withValueAt(record(), keys, 3);
+
+    // Act & Assert
+    expect(noticeFacts.safeParse(facts).success).toBe(false);
+  });
+
+  it("reads a record written before v3.11, which has no label, as it always did", () => {
+    // Arrange
+    const facts = withCondition();
+
+    // Act
+    const parsed = noticeFacts.safeParse(facts);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.audience.conditions[0]?.ev).not.toHaveProperty("label");
   });
 });

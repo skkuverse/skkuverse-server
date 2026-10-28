@@ -115,6 +115,33 @@ describe("the notice facts mirror", () => {
   });
 });
 
+describe("the notice facts mirror reads the table label of codebook v3.11", () => {
+  const LABEL_PATHS: Array<[string, string[]]> = [
+    ["a condition's quote", ["audience", "conditions", "[]", "ev", "label"]],
+    ["a benefit's quote", ["benefits", "[]", "ev", "label"]],
+    ["a cost of missing", ["costOfMissing", "[]", "label"]],
+  ];
+
+  /** The node at a path of property names, `[]` stepping into an array's items. */
+  const nodeAt = (shape: Shape, keys: string[]): Shape | undefined =>
+    keys.reduce<Shape | undefined>((node, key) => (key === "[]" ? node?.items : node?.properties[key]), shape);
+
+  it.each(LABEL_PATHS)("has an optional text label on %s, in the vendored schema and in the mirror", (_what, keys) => {
+    // Arrange
+    const [vendoredShape, mirror] = [shapeOf(vendored), mirrorShape()];
+    const parent = keys.slice(0, -1);
+
+    // Act
+    const [upstreamLabel, mirrorLabel] = [nodeAt(vendoredShape, keys), nodeAt(mirror, keys)];
+
+    // Assert
+    expect(upstreamLabel?.type).toBe("string");
+    expect(mirrorLabel?.type).toBe("string");
+    expect(nodeAt(vendoredShape, parent)?.required).not.toContain("label");
+    expect(nodeAt(mirror, parent)?.required).not.toContain("label");
+  });
+});
+
 describe("shape comparison applies as specified", () => {
   const VENDORED = {
     $defs: { ev: { type: "object", properties: { quote: { type: "string" } }, required: ["quote"] } },

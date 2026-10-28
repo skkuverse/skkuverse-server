@@ -10,6 +10,7 @@ const span = {
   match: z.enum(["exact", "ws"]),
 };
 const evidence = z.object({ ...span, tag: z.string().optional(), tagBy: tagBy.optional() });
+const factEvidence = evidence.extend({ label: z.string().optional() });
 const maybeEvidence = evidence.nullable();
 const tagged = { tag: z.string(), tagBy };
 const tracked = { track: z.string(), appliesTo: z.array(z.string()), ...tagged };
@@ -99,7 +100,7 @@ const statusStatement = z.object({
 const statedChange = z.object({ what: z.enum(["date", "place", "eligibility", "benefit", "other"]), from: maybeEvidence, to: evidence });
 
 const condition = z.object({
-  ev: evidence,
+  ev: factEvidence,
   type: z.enum(["degree", "year", "enrollment", "major", "gpa", "language", "nationality", "income", "age", "sex", "campus", "other"]),
   polarity: z.enum(["include", "exclude", "also"]),
   strength: z.enum(["required", "preferred"]),
@@ -122,7 +123,7 @@ const audience = z.object({
 });
 
 const benefit = z.object({
-  ev: evidence,
+  ev: factEvidence,
   thing: z.string(),
   earnedBy: z.enum(["attend", "complete", "selected", "win", "draw", "other"]),
   amount: z
@@ -140,6 +141,7 @@ const benefit = z.object({
 });
 const consequence = z.object({
   ...span,
+  label: z.string().optional(),
   thing: z.string(),
   disputed: z.literal(true).optional(),
   unattached: z.literal(true).optional(),

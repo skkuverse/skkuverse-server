@@ -60,6 +60,64 @@
       ],
       "additionalProperties": false
     },
+    "factEvidence": {
+      "type": "object",
+      "description": "Evidence of a fact that can become the row's qualifier (an audience condition or a benefit): `evidence` plus its optional table `label`.",
+      "properties": {
+        "src": {
+          "type": "string",
+          "description": "body | title | poster:N (N = 1-based image index)",
+          "pattern": "^(body|title|poster:\\d+)$"
+        },
+        "quote": {
+          "type": "string",
+          "description": "Verbatim span, as extracted."
+        },
+        "start": {
+          "type": "integer",
+          "description": "Character offset of the quote in the source text (contentText, the title or the poster transcription), located by code."
+        },
+        "end": {
+          "type": "integer",
+          "description": "End offset (exclusive)."
+        },
+        "match": {
+          "type": "string",
+          "description": "How the quote was located. Facts whose quote is not found are not stored.",
+          "enum": [
+            "exact",
+            "ws"
+          ]
+        },
+        "tag": {
+          "type": "string",
+          "description": "The label shown before the fact in a shared block (tracks.py), \"\" when it applies to the whole notice."
+        },
+        "tagBy": {
+          "type": "string",
+          "enum": [
+            "",
+            "label",
+            "section",
+            "thing",
+            "verifier"
+          ],
+          "description": "Which rule set the tag: the fact's own label, a declared track section, its thing's name, or the verifier's scope check (v3.10)."
+        },
+        "label": {
+          "type": "string",
+          "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
+        }
+      },
+      "required": [
+        "src",
+        "quote",
+        "start",
+        "end",
+        "match"
+      ],
+      "additionalProperties": false
+    },
     "dateParts": {
       "type": "object",
       "description": "One point of a dated item as the model wrote it (codebook v3.6). Unresolved: an unwritten part is X, a post-relative day is \"post\". A key the model did not write is absent.",
@@ -992,7 +1050,7 @@
             "description": "A condition.",
             "properties": {
               "ev": {
-                "$ref": "#/$defs/evidence"
+                "$ref": "#/$defs/factEvidence"
               },
               "type": {
                 "type": "string",
@@ -1157,7 +1215,7 @@
         "description": "A benefit.",
         "properties": {
           "ev": {
-            "$ref": "#/$defs/evidence"
+            "$ref": "#/$defs/factEvidence"
           },
           "thing": {
             "type": "string",
@@ -1300,6 +1358,10 @@
           "quote": {
             "type": "string",
             "description": "Verbatim span, as extracted."
+          },
+          "label": {
+            "type": "string",
+            "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
           },
           "start": {
             "type": "integer",
