@@ -12,16 +12,16 @@ export function encodeCursor(cursor: CursorPayload): string {
   return Buffer.from(JSON.stringify({ d: cursor.d, c: cursor.c, i: cursor.i }), "utf8").toString("base64url");
 }
 
+export function toNextPage(after: Pick<NoticeListRow, "_id" | "date" | "crawledAt"> | undefined): Omit<NoticePage, "items"> {
+  if (!after) return { nextCursor: null, hasMore: false };
+  return { nextCursor: encodeCursor({ d: after.date, c: new Date(after.crawledAt).toISOString(), i: after._id.toHexString() }), hasMore: true };
+}
+
 // WHY: a read of `limit + 1`: the extra document only says a next page exists, and the cursor is the last served row.
 export function toNoticePage(docs: NoticeListRow[], limit: number): NoticePage {
   const hasMore = docs.length > limit;
   const items = hasMore ? docs.slice(0, limit) : docs;
-  const last = items[items.length - 1];
-  const nextCursor =
-    hasMore && last
-      ? encodeCursor({ d: last.date, c: new Date(last.crawledAt).toISOString(), i: last._id.toHexString() })
-      : null;
-  return { items, nextCursor, hasMore };
+  return { items, ...toNextPage(hasMore ? items.at(-1) : undefined) };
 }
 
 function toPeriodBrief(period: SummaryPeriod | null): Pick<NoticeSummaryBrief, "startAt" | "endAt"> {

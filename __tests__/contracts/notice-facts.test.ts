@@ -13,7 +13,8 @@
  *   - the JSON type is the same.
  *
  * A key only the vendored schema has is not a difference: the mirror strips it (an optional key the crawler adds
- * without a version bump), and a required one is already caught by the first line.
+ * without a version bump), and a required one is already caught by the first line. So the optional keys the row and
+ * the screen read, the table `label` and the `compact`, are pinned by path below, with the `compacts` mark.
  */
 import fs from "fs";
 import path from "path";
@@ -112,6 +113,86 @@ describe("the notice facts mirror", () => {
     expect(shape.required).toContain("things");
     expect(shape.properties.things?.items?.properties.name?.required).toEqual(["end", "match", "quote", "src", "start"]);
     expect(shape.properties.times?.items?.properties.start?.required).toContain("latest");
+  });
+});
+
+/** The node at a path of property names, `[]` stepping into an array's items. */
+const nodeAt = (shape: Shape, keys: string[]): Shape | undefined =>
+  keys.reduce<Shape | undefined>((node, key) => (key === "[]" ? node?.items : node?.properties[key]), shape);
+
+describe("the notice facts mirror reads the table label of codebook v3.11", () => {
+  const LABEL_PATHS: Array<[string, string[]]> = [
+    ["a condition's quote", ["audience", "conditions", "[]", "ev", "label"]],
+    ["a benefit's quote", ["benefits", "[]", "ev", "label"]],
+    ["a cost of missing", ["costOfMissing", "[]", "label"]],
+  ];
+
+  it.each(LABEL_PATHS)("has an optional text label on %s, in the vendored schema and in the mirror", (_what, keys) => {
+    // Arrange
+    const [vendoredShape, mirror] = [shapeOf(vendored), mirrorShape()];
+    const parent = keys.slice(0, -1);
+
+    // Act
+    const [upstreamLabel, mirrorLabel] = [nodeAt(vendoredShape, keys), nodeAt(mirror, keys)];
+
+    // Assert
+    expect(upstreamLabel?.type).toBe("string");
+    expect(mirrorLabel?.type).toBe("string");
+    expect(nodeAt(vendoredShape, parent)?.required).not.toContain("label");
+    expect(nodeAt(mirror, parent)?.required).not.toContain("label");
+  });
+});
+
+describe("the notice facts mirror reads the compact of the crawler's ADR 015 decision 25", () => {
+  const COMPACT_PATHS: Array<[string, string[]]> = [
+    ["a condition's quote", ["audience", "conditions", "[]", "ev", "compact"]],
+    ["a benefit's quote", ["benefits", "[]", "ev", "compact"]],
+    ["a cost of missing", ["costOfMissing", "[]", "compact"]],
+    ["the words that make a notice not for students", ["audience", "forStudentsEv", "compact"]],
+    ["a place's text", ["times", "[]", "where", "places", "[]", "compact"]],
+  ];
+
+  it.each(COMPACT_PATHS)("has an optional text compact on %s, in the vendored schema and in the mirror", (_what, keys) => {
+    // Arrange
+    const [vendoredShape, mirror] = [shapeOf(vendored), mirrorShape()];
+    const parent = keys.slice(0, -1);
+
+    // Act
+    const [upstreamCompact, mirrorCompact] = [nodeAt(vendoredShape, keys), nodeAt(mirror, keys)];
+
+    // Assert
+    expect(upstreamCompact?.type).toBe("string");
+    expect(mirrorCompact?.type).toBe("string");
+    expect(nodeAt(vendoredShape, parent)?.required).not.toContain("compact");
+    expect(nodeAt(mirror, parent)?.required).not.toContain("compact");
+  });
+
+  it("has an optional text label on the words that make a notice not for students, which now share a condition's evidence", () => {
+    // Arrange
+    const keys = ["audience", "forStudentsEv", "label"];
+    const [vendoredShape, mirror] = [shapeOf(vendored), mirrorShape()];
+
+    // Act & Assert
+    expect(nodeAt(vendoredShape, keys)?.type).toBe("string");
+    expect(nodeAt(mirror, keys)?.type).toBe("string");
+  });
+
+  it("has the optional compacts mark with the same five keys, in the vendored schema and in the mirror", () => {
+    // Arrange
+    const [vendoredShape, mirror] = [shapeOf(vendored), mirrorShape()];
+    const [upstreamMark, mirrorMark] = [vendoredShape.properties.compacts, mirror.properties.compacts];
+
+    // Act & Assert
+    expect(upstreamMark?.type).toBe("object");
+    expect(Object.keys(upstreamMark?.properties ?? {}).sort()).toEqual(["models", "promptVersion", "rejudgedFrom", "restoredFrom", "stored"]);
+    expect(mirrorMark?.type).toBe("object");
+    expect(Object.keys(mirrorMark?.properties ?? {}).sort()).toEqual(["models", "promptVersion", "rejudgedFrom", "restoredFrom", "stored"]);
+    expect(vendoredShape.required).not.toContain("compacts");
+    expect(mirror.required).not.toContain("compacts");
+    expect(upstreamMark?.required ?? []).not.toContain("rejudgedFrom");
+    expect(mirrorMark?.required ?? []).not.toContain("rejudgedFrom");
+    expect(upstreamMark?.required ?? []).not.toContain("restoredFrom");
+    expect(mirrorMark?.required ?? []).not.toContain("restoredFrom");
   });
 });
 

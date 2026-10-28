@@ -10,6 +10,8 @@
  * src/infra/logger.ts is mocked: a refused record logs `notices.facts.unparsed`, and a place read building fails
  * logs `notices.screen.places_unavailable` while the screen shows each place's quote.
  */
+import fs from "fs";
+import path from "path";
 import { ObjectId } from "mongodb";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
@@ -38,6 +40,8 @@ const MAIN_THING = "th_441ff75112a0";
 const OPEN_DAY = new Date("2026-10-25T03:00:00Z");
 
 const text = (ko: string) => ({ ko, en: "" });
+
+const PROD_NOTICE_FILE = path.join(__dirname, "../../../__tests__/nest/notices/fixtures/notice-facts.prod-skku-main-140921.json");
 
 let buildings: FakeBuildingRepository;
 let service: NoticesScreenService;
@@ -249,5 +253,38 @@ describe("NoticesScreenService.renderScreen", () => {
     expect(records).toHaveLength(40);
     expect(screens.filter((screen) => screen === null)).toEqual([]);
     expect(screens.map((screen) => noticeScreen.safeParse(screen).success)).toEqual(records.map(() => true));
+  });
+
+  it("lists the 15 dated lines of production notice skku-main/140921 by start day, the next three first, the ended one last, and folds the other 12", async () => {
+    // Arrange
+    const stored = JSON.parse(fs.readFileSync(PROD_NOTICE_FILE, "utf8")) as { notice: { category: string; title: string }; facts: unknown };
+    const KST_TWENTY_NINTH_NOON = new Date("2026-10-29T03:00:00Z");
+
+    // Act
+    const screen = await service.renderScreen(notice(stored.facts, { title: stored.notice.title, category: stored.notice.category }), KST_TWENTY_NINTH_NOON);
+
+    // Assert
+    const [block] = screen?.blocks ?? [];
+    expect(block?.label).toBe("언제·어디");
+    expect(block?.lines.map(({ quote }) => quote)).toEqual([
+      "2026.11.3 - 12.18",
+      "11.3–8",
+      "2026.11.4 (수) 15:00~",
+      "11.10–15",
+      "11.13",
+      "11.14–15",
+      "11.15 영상학과",
+      "11.17–19",
+      "11.18–19",
+      "11.25–30",
+      "12.2–7",
+      "12.9–13",
+      "12.17",
+      "12.18 의상학과",
+      "9.29–10.3",
+    ]);
+    expect(block?.lines.slice(0, 3).map((line) => line.text)).toEqual(["11/3(화)~12/18(금) 기간", "[디자인학과] 11/3(화)~11/8(일) 졸업전시회", "11/4(수) 15시 개막식"]);
+    expect(block?.lines.at(-1)?.text).toBe("[디자인학과] 9/29(화)~10/3(토) 석사학위 청구전");
+    expect(block?.foldedCount).toBe(12);
   });
 });

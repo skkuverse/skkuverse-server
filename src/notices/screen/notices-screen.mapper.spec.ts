@@ -546,6 +546,119 @@ describe("toScreenBlocks, a sentence stated once for two things", () => {
   });
 });
 
+describe("toScreenBlocks, the table label before a quote (codebook v3.11)", () => {
+  const labelled = (quote: string, label?: string): RawRecord => ({ ...evidenceOf(quote), ...(label === undefined ? {} : { label }) });
+  const condition = (quote: string, polarity: string, label?: string, extra: RawRecord = {}): RawRecord => ({
+    ev: labelled(quote, label),
+    type: "major",
+    polarity,
+    strength: "required",
+    thing: MAIN_THING,
+    scope: "",
+    restricts: true,
+    narrows: true,
+    appliesTo: [],
+    tag: "",
+    tagBy: "",
+    ...extra,
+  });
+  const benefit = (quote: string, label?: string, isDraw = false, extra: RawRecord = {}): RawRecord => ({ ev: labelled(quote, label), thing: MAIN_THING, earnedBy: "selected", amount: null, isDraw, track: "", appliesTo: [], tag: "", tagBy: "", ...extra });
+  const cost = (quote: string, label?: string): RawRecord => ({ ...labelled(quote, label), thing: MAIN_THING, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const textsOf = (stored: RawRecord, key: BlockKey): string[] => toScreenBlocks(scopeOf(stored), only(key)).flatMap(({ lines }) => lines.map(({ text }) => text));
+
+  it("puts the label before a condition, an exclusion and a track's condition, and keeps the original's words as the line's quote", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) => r.audience.conditions.push(condition("3학년 이상", "include", "대상 학년"), condition("편입생", "exclude", "제외 대상"), condition("경영학과", "include", "지원 자격", { tag: "인사캠" }), condition("휴학생", "also")));
+
+    // Act
+    const [block] = toScreenBlocks(scopeOf(stored), only("audience"));
+
+    // Assert
+    expect(block?.lines.map(({ text }) => text)).toEqual(["대상 학년 · 3학년 이상", "[인사캠] 지원 자격 · 경영학과", "휴학생", "제외: 제외 대상 · 편입생"]);
+    expect(block?.lines.map(({ quote }) => quote)).toEqual(["3학년 이상", "경영학과", "휴학생", "편입생"]);
+  });
+
+  it("puts the label before a benefit, and marks a draw after the labelled text unless the label already says it", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) => r.benefits.push(benefit("월 50만원", "장학금"), benefit("커피 쿠폰", "경품", true), benefit("커피 쿠폰", "추첨 경품", true), benefit("상품권 추첨 지급", "경품", true), benefit("전액", undefined, false, { tag: "A형" })));
+
+    // Act & Assert
+    expect(textsOf(stored, "benefit")).toEqual(["장학금 · 월 50만원", "경품 · 커피 쿠폰 (추첨)", "추첨 경품 · 커피 쿠폰", "경품 · 상품권 추첨 지급", "[A형] 전액"]);
+  });
+
+  it("puts the label before what missing the call costs", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) => r.costOfMissing.push(cost("기한 후 접수 불가", "미신청 시"), cost("휴학 처리")));
+
+    // Act & Assert
+    expect(textsOf(stored, "costOfMissing")).toEqual(["미신청 시 · 기한 후 접수 불가", "휴학 처리"]);
+  });
+
+  it("shows a quote alone when its label is empty or the quote already says it", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) => {
+      r.audience.conditions.push(condition("재학생", "include", ""), condition("학년: 3학년 이상", "include", "학년"));
+      r.costOfMissing.push(cost("휴학 처리", "  "));
+    });
+
+    // Act & Assert
+    expect(textsOf(stored, "audience")).toEqual(["재학생", "학년: 3학년 이상"]);
+    expect(textsOf(stored, "costOfMissing")).toEqual(["휴학 처리"]);
+  });
+
+  it("keeps two conditions that quote the same words under different labels, and shows a repeat of one label once", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) =>
+      r.audience.conditions.push(
+        condition("2.0 이상", "include", "평점"),
+        condition("2.0 이상", "include", "어학 점수"),
+        condition("2.0 이상", "include", "평점", { thing: "th_other" }),
+        condition("평점 2.0 이상", "include", "평점"),
+        condition("평점 2.0 이상", "include", "평점", { thing: "th_other" }),
+      ),
+    );
+
+    // Act & Assert
+    expect(textsOf(stored, "audience")).toEqual(["평점 · 2.0 이상", "어학 점수 · 2.0 이상", "평점 2.0 이상"]);
+  });
+
+  it("shows a line once when a label the quote already says makes two conditions read the same", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) => r.audience.conditions.push(condition("평점 2.0 이상", "include", "평점"), condition("평점 2.0 이상", "include", "2.0")));
+
+    // Act & Assert
+    expect(textsOf(stored, "audience")).toEqual(["평점 2.0 이상"]);
+  });
+});
+
+describe("toScreenBlocks, the crawler's compact, which only the list row may show", () => {
+  const worded = (quote: string, label: string, compact: string): RawRecord => ({ ...evidenceOf(quote), label, compact });
+  const condition = (polarity: string, ev: RawRecord): RawRecord => ({ ev, type: "major", polarity, strength: "required", thing: MAIN_THING, scope: "", restricts: true, narrows: true, appliesTo: [], tag: "", tagBy: "" });
+  const benefit = (ev: RawRecord, isDraw = false): RawRecord => ({ ev, thing: MAIN_THING, earnedBy: "selected", amount: null, isDraw, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const cost = (ev: RawRecord): RawRecord => ({ ...ev, thing: MAIN_THING, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const blocksOf = (stored: RawRecord, key: BlockKey) => toScreenBlocks(scopeOf(stored), only(key)).flatMap(({ lines }) => lines.map(({ text, quote }) => ({ text, quote })));
+
+  it("shows the whole text, label first, of a condition, an exclusion, a benefit, a draw and a cost, whatever compact each has", () => {
+    // Arrange
+    const stored = record(WINDOW, (r) => {
+      r.audience.conditions.push(condition("include", worded("석사과정 재학생만 신청 가능", "대상", "석사과정만")), condition("exclude", worded("편입생은 신청할 수 없음", "제외 대상", "편입생")));
+      r.benefits.push(benefit(worded("월 50만원 지급 및 기숙사비 전액 면제", "장학금", "월 50만원")), benefit(worded("커피 쿠폰 100명 랜덤 증정 이벤트", "경품", "커피 쿠폰"), true));
+      r.costOfMissing.push(cost(worded("기한 후 접수 불가", "미신청 시", "접수 불가")));
+    });
+
+    // Act & Assert
+    expect(blocksOf(stored, "audience")).toEqual([
+      { text: "대상 · 석사과정 재학생만 신청 가능", quote: "석사과정 재학생만 신청 가능" },
+      { text: "제외: 제외 대상 · 편입생은 신청할 수 없음", quote: "편입생은 신청할 수 없음" },
+    ]);
+    expect(blocksOf(stored, "benefit")).toEqual([
+      { text: "장학금 · 월 50만원 지급 및 기숙사비 전액 면제", quote: "월 50만원 지급 및 기숙사비 전액 면제" },
+      { text: "경품 · 커피 쿠폰 100명 랜덤 증정 이벤트 (추첨)", quote: "커피 쿠폰 100명 랜덤 증정 이벤트" },
+    ]);
+    expect(blocksOf(stored, "costOfMissing")).toEqual([{ text: "미신청 시 · 기한 후 접수 불가", quote: "기한 후 접수 불가" }]);
+  });
+});
+
 describe("toScreenBlocks, the order", () => {
   it("builds the blocks in the order given and leaves out each one the notice does not fill", () => {
     // Arrange

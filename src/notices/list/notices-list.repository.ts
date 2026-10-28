@@ -1,12 +1,12 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type { Collection } from "mongodb";
+import type { Collection, ObjectId } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { NoticeDoc } from "../notices.document";
-import type { NoticeListRow } from "./notices-list.document";
-import { CLUSTER_INDEX, FORCE_INDEX, LIST_PROJECTION, LIST_SORT, toNoticeListFilter } from "./notices-list.query";
-import type { NoticeListQuery, NoticeScope } from "./notices-list.types";
+import type { ClusterMember, NoticeListRow, ScannedRow } from "./notices-list.document";
+import { CLUSTER_INDEX, CLUSTER_MEMBER_PROJECTION, FORCE_INDEX, LIST_PROJECTION, LIST_SORT, SCAN_PROJECTION, toClusterMemberFilter, toNoticeListFilter } from "./notices-list.query";
+import type { ClusterLookup, NoticeListQuery, NoticeScope } from "./notices-list.types";
 
 @Injectable()
 export class NoticesListRepository implements OnModuleInit {
@@ -24,6 +24,39 @@ export class NoticesListRepository implements OnModuleInit {
       .sort(LIST_SORT)
       .hint(FORCE_INDEX)
       .limit(query.limit + 1)
+      .toArray();
+  }
+
+  // QUIRK(atlas): a find's first batch holds 101 documents unless `batchSize` says more; past that each batch is a round trip.
+  listScannedRows(scope: NoticeScope, query: NoticeListQuery, size: number): Promise<ScannedRow[]> {
+    return this.notices()
+      .find<ScannedRow>(toNoticeListFilter(scope, query, config.notices.serviceStartDate), {
+        projection: SCAN_PROJECTION,
+        maxTimeMS: HOT_READ_MAX_TIME_MS,
+        batchSize: size,
+      })
+      .sort(LIST_SORT)
+      .hint(FORCE_INDEX)
+      .limit(size)
+      .toArray();
+  }
+
+  listNoticesByIds(ids: readonly ObjectId[]): Promise<NoticeListRow[]> {
+    return this.notices()
+      .find<NoticeListRow>({ _id: { $in: [...ids] } }, { projection: LIST_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS })
+      .sort(LIST_SORT)
+      .toArray();
+  }
+
+  // WHY: the list read's scope up to the cursor: a copy there means an earlier page served its article.
+  listClusterMembers(scope: NoticeScope, query: NoticeListQuery, lookup: ClusterLookup): Promise<ClusterMember[]> {
+    const scopeFilter = toNoticeListFilter(scope, { ...query, cursor: null }, config.notices.serviceStartDate);
+    return this.notices()
+      .find<ClusterMember>(toClusterMemberFilter(scopeFilter, lookup), {
+        projection: CLUSTER_MEMBER_PROJECTION,
+        maxTimeMS: HOT_READ_MAX_TIME_MS,
+      })
+      .hint(CLUSTER_INDEX)
       .toArray();
   }
 

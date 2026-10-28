@@ -10,6 +10,7 @@ const span = {
   match: z.enum(["exact", "ws"]),
 };
 const evidence = z.object({ ...span, tag: z.string().optional(), tagBy: tagBy.optional() });
+const factEvidence = evidence.extend({ label: z.string().optional(), compact: z.string().optional() });
 const maybeEvidence = evidence.nullable();
 const tagged = { tag: z.string(), tagBy };
 const tracked = { track: z.string(), appliesTo: z.array(z.string()), ...tagged };
@@ -53,7 +54,7 @@ const dateInput = z.object({
   mod: z.string().optional(),
   tentative: z.boolean().optional(),
 });
-const place = z.object({ text: z.string(), id: z.string(), campus: z.enum(["hssc", "nsc"]).nullable(), reason: z.string().nullable() });
+const place = z.object({ text: z.string(), id: z.string(), campus: z.enum(["hssc", "nsc"]).nullable(), reason: z.string().nullable(), compact: z.string().optional() });
 
 const datedItem = z.object({
   id: z.string(),
@@ -99,7 +100,7 @@ const statusStatement = z.object({
 const statedChange = z.object({ what: z.enum(["date", "place", "eligibility", "benefit", "other"]), from: maybeEvidence, to: evidence });
 
 const condition = z.object({
-  ev: evidence,
+  ev: factEvidence,
   type: z.enum(["degree", "year", "enrollment", "major", "gpa", "language", "nationality", "income", "age", "sex", "campus", "other"]),
   polarity: z.enum(["include", "exclude", "also"]),
   strength: z.enum(["required", "preferred"]),
@@ -118,11 +119,11 @@ const audience = z.object({
   openToAll: maybeEvidence,
   inAttachment: maybeEvidence,
   allRequired: maybeEvidence,
-  forStudentsEv: maybeEvidence,
+  forStudentsEv: factEvidence.nullable(),
 });
 
 const benefit = z.object({
-  ev: evidence,
+  ev: factEvidence,
   thing: z.string(),
   earnedBy: z.enum(["attend", "complete", "selected", "win", "draw", "other"]),
   amount: z
@@ -138,8 +139,7 @@ const benefit = z.object({
   unattached: z.literal(true).optional(),
   ...tracked,
 });
-const consequence = z.object({
-  ...span,
+const consequence = factEvidence.extend({
   thing: z.string(),
   disputed: z.literal(true).optional(),
   unattached: z.literal(true).optional(),
@@ -215,6 +215,7 @@ export const noticeFacts = z.object({
   shortTitle: z.object({ text: z.string(), ok: z.boolean(), compact: z.string(), compactOk: z.boolean() }),
   verify: verify.optional(),
   rowCheck: z.object({ deadline: agreement, event: agreement, read: z.record(z.string(), z.unknown()) }).optional(),
+  compacts: z.object({ promptVersion: z.string(), rejudgedFrom: z.string().optional(), restoredFrom: z.string().optional(), models: z.array(z.string()), stored: z.number().int().min(0) }).optional(),
 });
 
 export type NoticeFacts = z.output<typeof noticeFacts>;

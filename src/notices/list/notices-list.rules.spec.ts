@@ -3,12 +3,14 @@
  * runs, rendered through the v1 brief shape the app already reads), the v1 period pick and the cursor's
  * cross-release decoding (ADR 0007: a legacy {d, c, i} cursor in app memory during a deploy must still decode),
  * and the day group a list item sits under (toListDay: umbrella ADR 0009 D2, by the KST day of its posting date, a week
- * starting on Monday).
+ * starting on Monday). On a read of several boards, each article is one row (umbrella ADR 0009 D8): selectShownRows keeps
+ * a scanned row only when it is its cluster's shown copy, the copy crawled last, then the first in list order.
  */
 import type { SummaryDate } from "../notices.document";
 import { encodeCursor } from "./notices-list.mapper";
 import { NoticesListCursorError } from "./notices-list.error";
-import { decodeCursor, isV2Summary, selectEffectivePeriod, selectRoleBadge, toListDay } from "./notices-list.rules";
+import { ObjectId } from "mongodb";
+import { decodeCursor, hasSeveralSources, isV2Summary, selectEffectivePeriod, selectRoleBadge, selectShownRows, toListDay } from "./notices-list.rules";
 
 const NOW = new Date("2026-10-09T12:00:00+09:00");
 const OID = "66a1b2c3d4e5f6a7b8c9d0e1";
@@ -548,5 +550,85 @@ describe("toListDay", () => {
 
     // Assert
     expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+  });
+});
+
+describe("hasSeveralSources", () => {
+  it.each([
+    ["one source by path", "skku-notice03", false],
+    ["one source in a list", ["skku-notice03"], false],
+    ["one source named twice", ["skku-notice03", "skku-notice03"], false],
+    ["two sources", ["skku-notice03", "skku-notice08"], true],
+  ])("is %s: %s", (_case, scope, expected) => {
+    // Act & Assert
+    expect(hasSeveralSources(scope)).toBe(expected);
+  });
+});
+
+describe("selectShownRows", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+  const crawled = (hour: number) => new Date(`2026-10-20T${String(hour).padStart(2, "0")}:00:00Z`);
+  // A batch is in list order: date desc, then _id desc.
+  const copy = (n: number, dupOf?: number, hour = 1) => ({ _id: id(n), crawledAt: crawled(hour), ...(dupOf === undefined ? {} : { dupOf: id(dupOf) }) });
+  const ids = (rows: Array<{ _id: ObjectId }>) => rows.map((row) => row._id.toHexString());
+  const keys = (...ns: number[]) => new Set(ns.map((n) => id(n).toHexString()));
+
+  it("keeps the first copy in list order and drops the later copies of its cluster", () => {
+    // Arrange
+    const batch = [copy(3, 1), copy(2, 1), copy(1, 1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, keys()))).toEqual([id(3).toHexString()]);
+  });
+
+  it("keeps the first copy though a later copy was crawled after it", () => {
+    // Arrange
+    const batch = [copy(3, 1, 1), copy(2, 1, 9)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, keys()))).toEqual([id(3).toHexString()]);
+  });
+
+  it("drops every row of a cluster that a decided key holds, as an earlier page or scan served it", () => {
+    // Arrange
+    const batch = [copy(3, 1), copy(2, 1)];
+
+    // Act & Assert
+    expect(selectShownRows(batch, keys(1))).toEqual([]);
+  });
+
+  it("keeps a row whose cluster no decided key holds", () => {
+    // Arrange
+    const batch = [copy(2, 1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, keys(9)))).toEqual([id(2).toHexString()]);
+  });
+
+  it("keeps the first row of each cluster in batch order across interleaved clusters", () => {
+    // Arrange
+    const batch = [copy(6, 101), copy(5, 104), copy(4, 101), copy(3, 107), copy(2, 104), copy(1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, keys(107)))).toEqual([id(6), id(5), id(1)].map((oid) => oid.toHexString()));
+  });
+
+  it("keys a notice the crawler has not linked yet on its own _id", () => {
+    // Arrange
+    const batch = [copy(2), copy(1)];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, keys(1)))).toEqual([id(2).toHexString()]);
+  });
+
+  it("collapses copies on one board too, since it compares copies and never their boards", () => {
+    // Arrange
+    const batch = [
+      { ...copy(2, 1), sourceId: "skku-notice03" },
+      { ...copy(1, 1), sourceId: "skku-notice03" },
+    ];
+
+    // Act & Assert
+    expect(ids(selectShownRows(batch, keys()))).toEqual([id(2).toHexString()]);
   });
 });

@@ -2,7 +2,8 @@
  * The list row of the umbrella repository's ADR 0009 (notice list rows, D3 to D9, as amended 2026-10-27 and 2026-10-28)
  * from a parsed facts record at a KST moment: its status token, title, line 2, qualifier, date mark, dimming and urgency.
  * Line 1 falls back to the original title's whole words within 20 characters, a qualifier that would push line 2 past 26
- * characters is left out whole, and line 2 drops a track's tag, which the line the detail's status names keeps.
+ * characters is left out whole, unless the crawler's compact of its text fits (never without its label), and line 2 drops a
+ * track's tag, which the line the detail's status names keeps.
  *
  * The crawler's row.py is the reference: every golden case it dumps (__tests__/nest/notices/fixtures/facts-rows/, refreshed
  * by scripts/sync-facts-row-fixtures.js) renders here as row.py rendered it, unless the ADR says otherwise. Each such case
@@ -559,6 +560,223 @@ describe("toFactsRow, the qualifier's fit on line 2 (ADR 0009 D3, D5)", () => {
 
     // Act & Assert
     expect(toFactsRow(sourceOf(record), kstNoon("2026-10-22")).qualifier).toBeNull();
+  });
+});
+
+describe("toFactsRow, the table label before the qualifier's quote (codebook v3.11)", () => {
+  const evidence = (quote: string, label?: string) => ({ src: "body", quote, start: 0, end: quote.length, match: "exact", ...(label === undefined ? {} : { label }) });
+  const condition = (quote: string, label?: string, type = "degree") => ({ ev: evidence(quote, label), type, polarity: "include", strength: "required", thing: MAIN_THING, scope: "", restricts: true, narrows: true, appliesTo: [], tag: "", tagBy: "" });
+  const benefit = (quote: string, label?: string, isDraw = false) => ({ ev: evidence(quote, label), thing: MAIN_THING, earnedBy: isDraw ? "draw" : "selected", amount: null, isDraw, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const cost = (quote: string, label?: string) => ({ ...evidence(quote, label), thing: MAIN_THING, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const at = kstNoon("2026-10-22");
+  const rowOf = (edit: (record: any) => void) => toFactsRow(sourceOf(recordFrom(WINDOW, edit)), at);
+  const readingOf = (edit: (record: any) => void) => toRowReading(sourceOf(recordFrom(WINDOW, edit)), at);
+
+  // Line 2 reads the deadline line, 11 characters, and " · " joins it to the qualifier, so 12 characters fill the 26.
+  it.each<[string, (record: any) => void, string | null]>([
+    ["a condition's label that fits", (r) => r.audience.conditions.push(condition("석사과정만", "대상")), "대상 · 석사과정만"],
+    ["a condition's label that fills the budget exactly", (r) => r.audience.conditions.push(condition("석사과정만", "대상자격")), "대상자격 · 석사과정만"],
+    ["a condition's label one over the budget, which drops the whole qualifier", (r) => r.audience.conditions.push(condition("석사과정만", "대상 자격")), null],
+    ["the same condition with no label", (r) => r.audience.conditions.push(condition("석사과정만")), "석사과정만"],
+    ["the same condition with an empty label", (r) => r.audience.conditions.push(condition("석사과정만", "")), "석사과정만"],
+    ["a label the condition's quote already says", (r) => r.audience.conditions.push(condition("대상: 석사과정만", "대상")), "대상: 석사과정만"],
+    ["a cost of missing with a label that fits", (r) => r.costOfMissing.push(cost("졸업 불가", "미이수")), "미이수 · 졸업 불가"],
+    ["a cost of missing with a label that passes the budget", (r) => r.costOfMissing.push(cost("졸업 불가", "미이수 시")), null],
+    ["a benefit's label that fills the budget exactly", (r) => r.benefits.push(benefit("월 50만원", "장학금")), "장학금 · 월 50만원"],
+    ["a benefit's label one over the budget", (r) => r.benefits.push(benefit("월 50만원", "장학금액")), null],
+    ["a draw whose label and mark push it past the budget", (r) => r.benefits.push(benefit("커피 쿠폰", "경품", true)), null],
+    ["two conditions in one dimension, which a count states without their labels", (r) => r.audience.conditions.push(condition("경영학과", "전공", "major"), condition("경제학과", "전공", "major")), "조건 1개"],
+  ])("shows %s", (_title, edit, qualifier) => {
+    // Act & Assert
+    expect(rowOf(edit).qualifier).toBe(qualifier);
+  });
+
+  it.each<[string, (record: any) => void, string]>([
+    ["a condition", (r) => r.audience.conditions.push(condition("석사과정만", "지원 자격")), "지원 자격 · 석사과정만"],
+    ["a cost of missing", (r) => r.costOfMissing.push(cost("졸업 불가", "미이수 시")), "미이수 시 · 졸업 불가"],
+    ["a draw, its mark after the quote", (r) => r.benefits.push(benefit("커피 쿠폰", "경품", true)), "경품 · 커피 쿠폰 (추첨)"],
+    ["a draw whose label already says 추첨, with no second mark", (r) => r.benefits.push(benefit("커피 쿠폰", "추첨 경품", true)), "추첨 경품 · 커피 쿠폰"],
+    ["a label broken over two lines, as one", (r) => r.benefits.push(benefit("월 50만원", "장학금\n지급액")), "장학금 지급액 · 월 50만원"],
+  ])("leaves the unfitted qualifier of %s whole for the one-liner, label first", (_title, edit, fullQualifier) => {
+    // Act & Assert
+    expect(readingOf(edit).fullQualifier).toBe(fullQualifier);
+  });
+
+  it("serves a record without a label exactly as one with empty labels", () => {
+    // Arrange
+    const plain = (r: any) => {
+      r.audience.conditions.push(condition("석사과정만"));
+      r.benefits.push(benefit("월 50만원"));
+    };
+    const empty = (r: any) => {
+      r.audience.conditions.push(condition("석사과정만", ""));
+      r.benefits.push(benefit("월 50만원", ""));
+    };
+
+    // Act & Assert
+    expect(readingOf(empty).row).toEqual(readingOf(plain).row);
+    expect(readingOf(empty).fullQualifier).toBe(readingOf(plain).fullQualifier);
+    expect(readingOf(plain).fullQualifier).toBe("석사과정만");
+  });
+});
+
+describe("toFactsRow, the compact of the qualifier's text (the crawler's ADR 015 decision 25, owner 2026-10-29)", () => {
+  type Wording = { label?: string; compact?: string };
+  const evidence = (quote: string, { label, compact }: Wording = {}) => ({ src: "body", quote, start: 0, end: quote.length, match: "exact", ...(label === undefined ? {} : { label }), ...(compact === undefined ? {} : { compact }) });
+  const condition = (quote: string, wording: Wording = {}, type = "degree") => ({ ev: evidence(quote, wording), type, polarity: "include", strength: "required", thing: MAIN_THING, scope: "", restricts: true, narrows: true, appliesTo: [], tag: "", tagBy: "" });
+  const benefit = (quote: string, wording: Wording = {}, isDraw = false, amount: unknown = null) => ({ ev: evidence(quote, wording), thing: MAIN_THING, earnedBy: isDraw ? "draw" : "selected", amount, isDraw, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const cost = (quote: string, wording: Wording = {}) => ({ ...evidence(quote, wording), thing: MAIN_THING, track: "", appliesTo: [], tag: "", tagBy: "" });
+  const won = (value: number) => ({ value, unit: "won", per: "total", upTo: false });
+  const at = kstNoon("2026-10-22");
+  const rowOf = (edit: (record: any) => void) => toFactsRow(sourceOf(recordFrom(WINDOW, edit)), at);
+  const readingOf = (edit: (record: any) => void) => toRowReading(sourceOf(recordFrom(WINDOW, edit)), at);
+  const LONG_CONDITION = "석사과정 재학생만 신청 가능";
+
+  // Line 2 reads the deadline line, 11 characters, and " · " joins it to the qualifier, so 12 characters fill the 26.
+  it.each<[string, (record: any) => void, string | null]>([
+    ["the full text when it fits, though a compact exists", (r) => r.audience.conditions.push(condition("석사과정만", { compact: "석사" })), "석사과정만"],
+    ["the compact when the full text passes the budget", (r) => r.audience.conditions.push(condition(LONG_CONDITION, { compact: "석사과정만" })), "석사과정만"],
+    ["no qualifier when the full text passes the budget and there is no compact", (r) => r.audience.conditions.push(condition(LONG_CONDITION)), null],
+    ["a cost of missing, compact", (r) => r.costOfMissing.push(cost("졸업 요건 미충족 시 졸업이 불가능합니다", { compact: "졸업 불가" })), "졸업 불가"],
+    ["a benefit, compact", (r) => r.benefits.push(benefit("월 50만원 지급 및 기숙사비 전액 면제", { compact: "월 50만원" })), "월 50만원"],
+    ["the larger benefit's compact when every amount shares a unit", (r) => r.benefits.push(benefit("10만원 지급과 기숙사비 면제 혜택", { compact: "10만원" }, false, won(100000)), benefit("30만원 지급과 기숙사비 면제 혜택", { compact: "30만원" }, false, won(300000))), "30만원"],
+    ["a draw's compact, marked as a draw", (r) => r.benefits.push(benefit("커피 쿠폰 100명 랜덤 증정 이벤트", { compact: "커피 쿠폰" }, true)), "커피 쿠폰 (추첨)"],
+    ["a draw whose compact says so, with no second mark", (r) => r.benefits.push(benefit("추첨으로 커피 쿠폰 증정 이벤트 안내", { compact: "추첨 쿠폰" }, true)), "추첨 쿠폰"],
+    ["no qualifier when the draw's compact and its mark pass the budget", (r) => r.benefits.push(benefit("커피 쿠폰 100명 랜덤 증정 이벤트", { compact: "커피 쿠폰 100명" }, true)), null],
+  ])("shows %s", (_title, edit, qualifier) => {
+    // Act & Assert
+    expect(rowOf(edit).qualifier).toBe(qualifier);
+  });
+
+  it.each<[string, (record: any) => void, string | null]>([
+    ["label and quote when they fit, though a compact exists", (r) => r.audience.conditions.push(condition("석사과정만", { label: "대상", compact: "석사" })), "대상 · 석사과정만"],
+    ["label and compact when label and quote pass the budget", (r) => r.audience.conditions.push(condition(LONG_CONDITION, { label: "대상", compact: "석사과정만" })), "대상 · 석사과정만"],
+    ["no qualifier when label and compact pass the budget, though the bare compact fits", (r) => r.audience.conditions.push(condition(LONG_CONDITION, { label: "지원 대상 자격", compact: "석사과정만" })), null],
+    ["a compact that fills the budget exactly beside its label", (r) => r.audience.conditions.push(condition(LONG_CONDITION, { label: "대상", compact: "석사과정 재학" })), "대상 · 석사과정 재학"],
+    ["no qualifier when the compact is one over the budget beside its label", (r) => r.audience.conditions.push(condition(LONG_CONDITION, { label: "대상", compact: "석사과정 재학생" })), null],
+    ["label and compact when the quote already says the label", (r) => r.audience.conditions.push(condition(`대상: ${LONG_CONDITION}`, { label: "대상", compact: "석사과정만" })), "대상 · 석사과정만"],
+    ["a compact that says the label itself, alone", (r) => r.audience.conditions.push(condition(`대상: ${LONG_CONDITION}`, { label: "대상", compact: "대상: 석사과정" })), "대상: 석사과정"],
+    ["a cost of missing, label and compact", (r) => r.costOfMissing.push(cost("졸업 요건 미충족 시 졸업이 불가능합니다", { label: "미이수", compact: "졸업 불가" })), "미이수 · 졸업 불가"],
+    ["a benefit, label and compact", (r) => r.benefits.push(benefit("월 50만원 지급 및 기숙사비 전액 면제", { label: "장학금", compact: "월 50만원" })), "장학금 · 월 50만원"],
+    ["a draw, label and compact with the mark after", (r) => r.benefits.push(benefit("커피 쿠폰 100명 랜덤 증정 이벤트", { label: "경품", compact: "쿠폰" }, true)), "경품 · 쿠폰 (추첨)"],
+  ])("shows, with a label, %s", (_title, edit, qualifier) => {
+    // Act & Assert
+    expect(rowOf(edit).qualifier).toBe(qualifier);
+  });
+
+  it("shows the count of conditions, which has no compact, whatever the conditions' compacts", () => {
+    // Act
+    const row = rowOf((r) => r.audience.conditions.push(condition("석사과정만", { compact: "석사" }), condition("2학년 이상만", { compact: "2학년" }, "year")));
+
+    // Assert
+    expect(row.qualifier).toBe("조건 2개");
+  });
+
+  it("leaves out a hard condition that fits in no form, and shows no lesser qualifier in its place", () => {
+    // Act
+    const row = rowOf((r) => {
+      r.audience.conditions.push(condition(LONG_CONDITION, { label: "지원 대상 자격", compact: "석사과정만" }));
+      r.benefits.push(benefit("월 50만원", { compact: "50만원" }));
+    });
+
+    // Assert
+    expect(row.qualifier).toBeNull();
+  });
+
+  it("shows a condition's compact before a benefit's text", () => {
+    // Act
+    const row = rowOf((r) => {
+      r.audience.conditions.push(condition(LONG_CONDITION, { compact: "석사과정만" }));
+      r.benefits.push(benefit("월 50만원", { compact: "50만원" }));
+    });
+
+    // Assert
+    expect(row.qualifier).toBe("석사과정만");
+  });
+
+  it("leaves the full text, label first, for the one-liner while the row shows the compact", () => {
+    // Arrange
+    const edit = (r: any) => r.audience.conditions.push(condition(LONG_CONDITION, { label: "대상", compact: "석사과정만" }));
+
+    // Act
+    const reading = readingOf(edit);
+
+    // Assert
+    expect(reading.row.qualifier).toBe("대상 · 석사과정만");
+    expect(reading.fullQualifier).toBe(`대상 · ${LONG_CONDITION}`);
+  });
+
+  it("serves a record with a compact on every fact that fits whole exactly as one with none", () => {
+    // Arrange
+    const withCompacts = (r: any) => {
+      r.audience.conditions.push(condition("석사과정만", { label: "대상", compact: "석사" }));
+      r.costOfMissing.push(cost("졸업 불가", { compact: "불가" }));
+      r.benefits.push(benefit("월 50만원", { compact: "50만원" }));
+    };
+    const withoutCompacts = (r: any) => {
+      r.audience.conditions.push(condition("석사과정만", { label: "대상" }));
+      r.costOfMissing.push(cost("졸업 불가"));
+      r.benefits.push(benefit("월 50만원"));
+    };
+
+    // Act & Assert
+    expect(readingOf(withCompacts).row).toEqual(readingOf(withoutCompacts).row);
+    expect(readingOf(withCompacts).fullQualifier).toBe(readingOf(withoutCompacts).fullQualifier);
+  });
+
+  describe("on a place", () => {
+    const sessionAt = kstNoon("2026-10-25");
+    const LONG_PLACE = "성균관대학교 경영관 33101호 대회의실";
+    const placeRow = (edit: (record: any) => void) => toFactsRow(sourceOf(recordFrom(SESSION, edit)), sessionAt);
+
+    // Line 2 reads the session's day alone, 8 characters, so 15 characters fill the 26 beside the joiner.
+    it.each<[string, (record: any) => void, string | null]>([
+      ["the place's text when it fits, though a compact exists", (r) => (r.times[0].where.places[0].compact = "경영관"), "경영관 33101호"],
+      ["the place's compact when its text passes the budget", (r) => Object.assign(r.times[0].where.places[0], { text: LONG_PLACE, compact: "경영관 33101호" }), "경영관 33101호"],
+      ["no qualifier when the place's text passes the budget and it has no compact", (r) => (r.times[0].where.places[0].text = LONG_PLACE), null],
+      ["the online word, which has no compact", (r) => Object.assign(r.times[0].where, { mode: "online" }), "온라인"],
+      ["no qualifier for two places, whatever their compacts", (r) => r.times[0].where.places.push({ ...r.times[0].where.places[0], text: LONG_PLACE, compact: "경영관 33102호" }), null],
+    ])("shows %s", (_title, edit, qualifier) => {
+      // Act & Assert
+      expect(placeRow(edit).qualifier).toBe(qualifier);
+    });
+
+    it("leaves the place's whole text for the one-liner while the row shows its compact", () => {
+      // Act
+      const reading = toRowReading(sourceOf(recordFrom(SESSION, (r) => Object.assign(r.times[0].where.places[0], { text: LONG_PLACE, compact: "경영관 33101호" }))), sessionAt);
+
+      // Assert
+      expect(reading.row.qualifier).toBe("경영관 33101호");
+      expect(reading.fullQualifier).toBe(LONG_PLACE);
+    });
+  });
+
+  describe("on the words that make a notice not for students", () => {
+    const staffAt = kstNoon("2026-10-22");
+    const LONG_STAFF = "교직원 및 외부 기관 소속 직원 대상으로만 신청 가능한 안내입니다";
+    const staffRow = (edit: (record: any) => void) => toFactsRow(sourceOf(recordFrom(STAFF, edit)), staffAt);
+    const staffWords = (wording: Wording, quote = "교직원 대상") => (r: any) => (r.audience.forStudentsEv = { ...r.audience.forStudentsEv, quote, end: quote.length, ...wording });
+
+    // Line 2 is empty here, so the whole 26 characters are the qualifier's.
+    it.each<[string, (record: any) => void, string | null]>([
+      ["the words when they fit, though a compact exists", staffWords({ compact: "교직원" }), "교직원 대상"],
+      ["the compact when the words pass the budget", staffWords({ compact: "교직원 대상" }, LONG_STAFF), "교직원 대상"],
+      ["no qualifier when the words pass the budget and there is no compact", staffWords({}, LONG_STAFF), null],
+      ["the label before the words, which a label now reaches here too", staffWords({ label: "신청 대상" }), "신청 대상 · 교직원 대상"],
+      ["the label before the compact when the labelled words pass the budget", staffWords({ label: "신청 대상", compact: "교직원 대상" }, LONG_STAFF), "신청 대상 · 교직원 대상"],
+      ["no qualifier when the label and the compact pass the budget, though the bare compact fits", staffWords({ label: "교직원 외부 기관 소속 직원 신청 대상 안내", compact: "교직원 대상" }, LONG_STAFF), null],
+    ])("shows %s", (_title, edit, qualifier) => {
+      // Act & Assert
+      expect(staffRow(edit).qualifier).toBe(qualifier);
+    });
+
+    it("still dims the row, whichever text fits", () => {
+      // Act
+      const row = staffRow(staffWords({ compact: "교직원 대상" }, LONG_STAFF));
+
+      // Assert
+      expect(row.dimmed).toBe(true);
+    });
   });
 });
 

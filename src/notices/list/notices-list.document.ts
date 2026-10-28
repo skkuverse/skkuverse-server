@@ -5,5 +5,9 @@ export type NoticeListRow = Pick<
   | "_id" | "sourceId" | "articleNo" | "title" | "category" | "author" | "department" | "date" | "views" | "sourceUrl"
   | "attachments" | "contentHash" | "editCount" | "crawledAt" | "summary" | "summaryOneLiner" | "summaryType"
   | "summaryPeriods" | "summaryAt" | "summaryVersion" | "summaryApplication" | "summaryDates"
-  | "facts" | "factsHistory"
+  | "facts" | "factsHistory" | "dupOf"
 >;
+
+export type ClusterMember = Pick<NoticeDoc, "_id" | "dupOf">;
+
+export type ScannedRow = Pick<NoticeDoc, "_id" | "dupOf" | "date" | "crawledAt">;

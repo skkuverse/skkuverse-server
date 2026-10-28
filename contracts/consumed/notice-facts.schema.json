@@ -60,6 +60,70 @@
       ],
       "additionalProperties": false
     },
+    "factEvidence": {
+      "type": "object",
+      "description": "Evidence of a fact that can become the row's qualifier (an audience condition, a benefit, or the words that make a notice not for students): `evidence` plus its optional table `label` and its optional `compact`.",
+      "properties": {
+        "src": {
+          "type": "string",
+          "description": "body | title | poster:N (N = 1-based image index)",
+          "pattern": "^(body|title|poster:\\d+)$"
+        },
+        "quote": {
+          "type": "string",
+          "description": "Verbatim span, as extracted."
+        },
+        "start": {
+          "type": "integer",
+          "description": "Character offset of the quote in the source text (contentText, the title or the poster transcription), located by code."
+        },
+        "end": {
+          "type": "integer",
+          "description": "End offset (exclusive)."
+        },
+        "match": {
+          "type": "string",
+          "description": "How the quote was located. Facts whose quote is not found are not stored.",
+          "enum": [
+            "exact",
+            "ws"
+          ]
+        },
+        "tag": {
+          "type": "string",
+          "description": "The label shown before the fact in a shared block (tracks.py), \"\" when it applies to the whole notice."
+        },
+        "tagBy": {
+          "type": "string",
+          "enum": [
+            "",
+            "label",
+            "section",
+            "thing",
+            "verifier"
+          ],
+          "description": "Which rule set the tag: the fact's own label, a declared track section, its thing's name, or the verifier's scope check (v3.10)."
+        },
+        "label": {
+          "type": "string",
+          "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
+        },
+        "compact": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 11,
+          "description": "Adr-015 decision 25: a short form of the quote for the list row's qualifier, at most 11 characters (Python len), every word a part of the quote, judged the same as the quote by a blind Haiku call. Absent when no such form exists, the fact was never offered, or its record predates compacts."
+        }
+      },
+      "required": [
+        "src",
+        "quote",
+        "start",
+        "end",
+        "match"
+      ],
+      "additionalProperties": false
+    },
     "dateParts": {
       "type": "object",
       "description": "One point of a dated item as the model wrote it (codebook v3.6). Unresolved: an unwritten part is X, a post-relative day is \"post\". A key the model did not write is absent.",
@@ -681,6 +745,12 @@
                         "null"
                       ],
                       "description": "Why it is unresolved: online, offcampus, campus_only, not_a_place, unknown_place, ambiguous. Null when resolved."
+                    },
+                    "compact": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 11,
+                      "description": "Adr-015 decision 25: a short form of `text` for the place qualifier, under the same rules as a quote's compact."
                     }
                   },
                   "required": [
@@ -992,7 +1062,7 @@
             "description": "A condition.",
             "properties": {
               "ev": {
-                "$ref": "#/$defs/evidence"
+                "$ref": "#/$defs/factEvidence"
               },
               "type": {
                 "type": "string",
@@ -1131,7 +1201,7 @@
           "description": "The words that limit who can act to non-students (codebook v3.3 forStudentsQuote), located; null when none. The row shows not-for-students only with it.",
           "anyOf": [
             {
-              "$ref": "#/$defs/evidence"
+              "$ref": "#/$defs/factEvidence"
             },
             {
               "type": "null"
@@ -1157,7 +1227,7 @@
         "description": "A benefit.",
         "properties": {
           "ev": {
-            "$ref": "#/$defs/evidence"
+            "$ref": "#/$defs/factEvidence"
           },
           "thing": {
             "type": "string",
@@ -1300,6 +1370,16 @@
           "quote": {
             "type": "string",
             "description": "Verbatim span, as extracted."
+          },
+          "label": {
+            "type": "string",
+            "description": "Codebook v3.11: for a fact stated in a table, the words that say what the quoted value is (its row label, its column header, or both), copied verbatim from the quote's own line or from a header line of the same table above it. `label` plus `quote` states the fact on its own; the row and the screen show \"label · quote\". Absent when the quote states the fact by itself, and in every record extracted before v3.11. A label that code cannot find there is dropped."
+          },
+          "compact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 11,
+            "description": "Adr-015 decision 25: a short form of the quote for the list row's qualifier, at most 11 characters (Python len), every word a part of the quote, judged the same as the quote by a blind Haiku call. Absent when no such form exists, the fact was never offered, or its record predates compacts."
           },
           "start": {
             "type": "integer",
@@ -1723,6 +1803,42 @@
         "event",
         "read"
       ]
+    },
+    "compacts": {
+      "type": "object",
+      "description": "Adr-015 decision 25: present once the record's candidates went through the compact writer and the blind judge (the live extraction or `facts-compact`); absent before, and on a record with no candidate.",
+      "properties": {
+        "promptVersion": {
+          "type": "string",
+          "description": "skkuverse-ai PROMPT_VERSION of the writer, or of the judge that last re-judged the stored compacts (`facts-compact --rejudge`), or of the writer and judge that last added place compacts (`facts-compact --restore-places`)."
+        },
+        "rejudgedFrom": {
+          "type": "string",
+          "description": "The PROMPT_VERSION the compacts had before `facts-compact --rejudge` judged them again under `promptVersion` and removed those no longer judged the same. Absent on a record never re-judged."
+        },
+        "restoredFrom": {
+          "type": "string",
+          "description": "The PROMPT_VERSION the record had before `facts-compact --restore-places` wrote and judged its place candidates without a compact again under `promptVersion` and added those judged the same. Absent on a record never restored."
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The writer's model, then the judge's when it ran (after a rejudge, the judge that re-judged; after a restore, the writer and judge of the restore)."
+        },
+        "stored": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many compacts the record holds."
+        }
+      },
+      "required": [
+        "promptVersion",
+        "models",
+        "stored"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

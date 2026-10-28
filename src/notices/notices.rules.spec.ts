@@ -1,177 +1,28 @@
 /**
- * The root's shared decisions: the content-identity grouping key (skkuverse-server#75), the summary type, the
- * search text, the source-id list and the cross-references of the committed tab files.
- *
- * The grouping key decides which notice documents collapse into a single FCM push.
- *
- * The key decides which notice documents collapse into a single FCM push, so
- * both directions are safety-critical and both are pinned here:
- *   - failing to merge  → the duplicate-notification bug returns;
- *   - merging too eagerly → a real notice is swallowed and never delivered,
- *     which is the worse of the two. Hence "exact match only, no fuzz".
+ * The root's shared decisions: the cluster key that makes the copies of one article one push and one list row, the
+ * summary type, the search text, the source-id list, the cross-references of the committed tab files, and a fact's
+ * quote as the row and the screen show it: after its table label (codebook v3.11) unless the label is empty or the
+ * quote already says it, with a draw always marked. A row that cannot fit that text takes the crawler's compact of it,
+ * which keeps the label and the draw mark, so the texts a fact offers are its full text first.
  */
 
 import { ObjectId } from "mongodb";
 import { AppError } from "../http/app.error";
 import {
   categoryReferenceProblems,
-  dedupKeyOf,
+  clusterKeyOf,
   excludeReasonProblems,
-  groupByDedupKey,
+  groupByClusterKey,
   isSummaryType,
   normalizeSummaryType,
   toSearchQuery,
+  toBenefitText,
+  toBenefitTexts,
+  toQuoteText,
+  toQuoteTexts,
   toSourceIds,
 } from "./notices.rules";
 import type { CategoryConfig, SourceConfig } from "./notices.types";
-
-const HASH_A = "a".repeat(64);
-const HASH_B = "b".repeat(64);
-
-function doc(extra: Record<string, unknown> = {}) {
-  return {
-    _id: new ObjectId(),
-    sourceId: "skku-notice02",
-    articleNo: 138897,
-    title: "공지 제목",
-    contentHash: HASH_A,
-    ...extra,
-  };
-}
-
-describe("dedupKeyOf", () => {
-  it("gives identical keys to same title + same contentHash across sources", () => {
-    // Arrange
-    // The prod cross-post shape: one article, N board views, byte-identical HTML.
-    const a = doc({ sourceId: "skku-notice02" });
-
-    // Act
-    const b = doc({ sourceId: "skku-notice07" });
-
-    // Assert
-    expect(dedupKeyOf(a)).toBe(dedupKeyOf(b));
-  });
-
-  it("trims surrounding whitespace in the title", () => {
-    // Act & Assert
-    expect(dedupKeyOf(doc({ title: "  공지 제목  " }))).toBe(
-      dedupKeyOf(doc({ title: "공지 제목" })),
-    );
-  });
-
-  it("separates documents whose titles differ", () => {
-    // Act & Assert
-    expect(dedupKeyOf(doc({ title: "공지 A" }))).not.toBe(
-      dedupKeyOf(doc({ title: "공지 B" })),
-    );
-  });
-
-  it("separates documents whose contentHash differs (edited after posting)", () => {
-    // Act & Assert
-    // 0.8% of prod sibling groups: one board's copy was edited, so the hashes
-    // diverge. They must NOT merge — different content, different notice.
-    expect(dedupKeyOf(doc({ contentHash: HASH_A }))).not.toBe(
-      dedupKeyOf(doc({ contentHash: HASH_B })),
-    );
-  });
-
-  it("cannot be fooled by a title/hash boundary shift", () => {
-    // Act & Assert
-    // "ab"+"c" must never collide with "a"+"bc" — the unit separator is why.
-    expect(dedupKeyOf({ _id: new ObjectId(), title: "ab", contentHash: "c" })).not.toBe(
-      dedupKeyOf({ _id: new ObjectId(), title: "a", contentHash: "bc" }),
-    );
-  });
-
-  it("falls back to a per-document identity key when contentHash is missing", () => {
-    // Arrange
-    // Detail fetch failed → body never hashed → merging is declined, not guessed.
-    const a = doc({ contentHash: null });
-
-    // Act
-    const b = doc({ contentHash: null });
-
-    // Assert
-    expect(dedupKeyOf(a)).not.toBe(dedupKeyOf(b));
-    expect(dedupKeyOf(a)).toBe(`id:${String(a._id)}`);
-  });
-
-  it("keeps hash-keyed and identity-keyed namespaces disjoint", () => {
-    // Arrange
-    const withHash = dedupKeyOf(doc());
-
-    // Act
-    const withoutHash = dedupKeyOf(doc({ contentHash: undefined }));
-
-    // Assert
-    expect(withHash.startsWith("h:")).toBe(true);
-    expect(withoutHash.startsWith("id:")).toBe(true);
-  });
-
-  it("does not throw on null/undefined input", () => {
-    // Assert
-    expect(typeof dedupKeyOf(null)).toBe("string");
-    expect(typeof dedupKeyOf(undefined)).toBe("string");
-  });
-});
-
-describe("groupByDedupKey", () => {
-  it("collapses an 8-way cross-post into one group", () => {
-    // Arrange
-    // skku-main + skku-notice02..08 — the family reported in the issue.
-    const sources = [
-      "skku-main",
-      "skku-notice02",
-      "skku-notice03",
-      "skku-notice04",
-      "skku-notice05",
-      "skku-notice06",
-      "skku-notice07",
-      "skku-notice08",
-    ];
-
-    // Act
-    const groups = groupByDedupKey(sources.map((sourceId) => doc({ sourceId })));
-
-    // Assert
-    expect(groups).toHaveLength(1);
-    expect(groups[0]).toHaveLength(8);
-  });
-
-  it("keeps genuinely different articles in separate groups", () => {
-    // Act
-    const groups = groupByDedupKey([
-      doc({ title: "공지 A" }),
-      doc({ title: "공지 A" }),
-      doc({ title: "공지 B" }),
-    ]);
-
-    // Assert
-    expect(groups).toHaveLength(2);
-    expect(groups.map((g) => g.length).sort()).toEqual([1, 2]);
-  });
-
-  it("preserves first-seen order between and within groups", () => {
-    // Arrange
-    // Determinism matters: the dispatcher picks a representative per group and
-    // sweeps should be reproducible.
-    const first = doc({ title: "A", sourceId: "s1" });
-    const second = doc({ title: "B", sourceId: "s2" });
-    const third = doc({ title: "A", sourceId: "s3" });
-
-    // Act
-    const groups = groupByDedupKey([first, second, third]);
-
-    // Assert
-    expect(groups[0]!.map((d) => d.sourceId)).toEqual(["s1", "s3"]);
-    expect(groups[1]!.map((d) => d.sourceId)).toEqual(["s2"]);
-  });
-
-  it("returns no groups for an empty batch", () => {
-    // Act & Assert
-    expect(groupByDedupKey([])).toEqual([]);
-  });
-});
 
 describe("isSummaryType", () => {
   it.each([
@@ -299,5 +150,102 @@ describe("excludeReasonProblems", () => {
 
     // Assert
     expect(problems).toEqual(['sources.json: "s" has excludeReason "missing" with no entry in exclude-reasons.json']);
+  });
+});
+
+describe("clusterKeyOf", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+
+  it.each([
+    ["the crawler's dupOf", { _id: id(2), dupOf: id(1) }, id(1)],
+    ["its own _id when the crawler has not linked it yet", { _id: id(2) }, id(2)],
+    ["its own _id when dupOf is null", { _id: id(2), dupOf: null }, id(2)],
+  ])("keys a notice on %s", (_case, notice, anchor) => {
+    // Act & Assert
+    expect(clusterKeyOf(notice)).toBe(anchor.toHexString());
+  });
+});
+
+describe("groupByClusterKey", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+
+  it("groups the notices whose key is equal, each group in the order given, the groups in order of their first notice", () => {
+    // Arrange
+    const notices = [{ _id: id(3), dupOf: id(1) }, { _id: id(4), dupOf: id(4) }, { _id: id(1), dupOf: id(1) }, { _id: id(5) }];
+
+    // Act
+    const groups = groupByClusterKey(notices);
+
+    // Assert
+    expect(groups.map((group) => group.map((notice) => notice._id))).toEqual([[id(3), id(1)], [id(4)], [id(5)]]);
+  });
+
+  it("forms no group from no notices", () => {
+    // Act & Assert
+    expect(groupByClusterKey([])).toEqual([]);
+  });
+});
+
+describe("toQuoteText", () => {
+  it.each<[string, { quote: string; label?: string }, string]>([
+    ["puts the label before the quote", { quote: "3,000,000원", label: "장학금" }, "장학금 · 3,000,000원"],
+    ["shows the quote alone when there is no label", { quote: "3,000,000원" }, "3,000,000원"],
+    ["shows the quote alone when the label is empty", { quote: "3,000,000원", label: "" }, "3,000,000원"],
+    ["shows the quote alone when the label is only spaces", { quote: "3,000,000원", label: " \n " }, "3,000,000원"],
+    ["shows the quote alone when it already says the label", { quote: "장학금 3,000,000원", label: "장학금" }, "장학금 3,000,000원"],
+    ["compares the two without their spaces", { quote: "지원 자격: 재학생", label: "지원자격" }, "지원 자격: 재학생"],
+    ["compares the two without their line breaks", { quote: "지원\n자격 재학생", label: "지원 자격" }, "지원\n자격 재학생"],
+    ["writes a label's line break and padding as one space", { quote: "100명", label: "  모집\n인원 " }, "모집 인원 · 100명"],
+    ["keeps the quote's own spacing", { quote: "월\n50만원", label: "혜택" }, "혜택 · 월\n50만원"],
+    ["keeps a label that only contains the quote, which says less than the quote", { quote: "재학생", label: "재학생 대상 지원 자격" }, "재학생 대상 지원 자격 · 재학생"],
+  ])("%s", (_title, evidence, expected) => {
+    // Act & Assert
+    expect(toQuoteText(evidence)).toBe(expected);
+  });
+});
+
+describe("toBenefitText", () => {
+  const benefit = (quote: string, isDraw: boolean, label?: string) => ({ isDraw, ev: { quote, ...(label === undefined ? {} : { label }) } });
+
+  it.each([
+    ["a benefit that is no draw, as its quote text", benefit("월 50만원", false, "장학금"), "장학금 · 월 50만원"],
+    ["a draw, marked after its text", benefit("커피 쿠폰", true), "커피 쿠폰 (추첨)"],
+    ["a labelled draw, marked after the label and the quote", benefit("커피 쿠폰", true, "경품"), "경품 · 커피 쿠폰 (추첨)"],
+    ["a draw whose quote says so", benefit("추첨을 통해 상품권 지급", true), "추첨을 통해 상품권 지급"],
+    ["a draw whose label says so, and the quote does not", benefit("커피 쿠폰", true, "추첨 경품"), "추첨 경품 · 커피 쿠폰"],
+    ["a benefit that is no draw but says 추첨", benefit("추첨 결과 발표", false), "추첨 결과 발표"],
+  ])("writes %s", (_title, input, expected) => {
+    // Act & Assert
+    expect(toBenefitText(input)).toBe(expected);
+  });
+});
+
+describe("toQuoteTexts", () => {
+  it.each<[string, { quote: string; label?: string; compact?: string }, string[]]>([
+    ["offers the quote alone when the crawler stored no compact", { quote: "석사과정만" }, ["석사과정만"]],
+    ["offers the quote, then its compact", { quote: "석사과정 재학생만 신청 가능", compact: "석사과정만" }, ["석사과정 재학생만 신청 가능", "석사과정만"]],
+    ["offers no compact the crawler stored empty", { quote: "석사과정만", compact: "" }, ["석사과정만"]],
+    ["puts the label before the quote and before its compact", { quote: "석사과정 재학생만", label: "대상", compact: "석사과정" }, ["대상 · 석사과정 재학생만", "대상 · 석사과정"]],
+    ["keeps the label on the compact when the quote already says it", { quote: "대상: 석사과정 재학생만", label: "대상", compact: "석사과정" }, ["대상: 석사과정 재학생만", "대상 · 석사과정"]],
+    ["offers a compact that says the label itself alone", { quote: "대상: 석사과정 재학생만", label: "대상", compact: "대상: 석사과정" }, ["대상: 석사과정 재학생만", "대상: 석사과정"]],
+    ["leaves out the label when it is empty", { quote: "석사과정 재학생만", label: " ", compact: "석사과정" }, ["석사과정 재학생만", "석사과정"]],
+  ])("%s", (_title, evidence, expected) => {
+    // Act & Assert
+    expect(toQuoteTexts(evidence)).toEqual(expected);
+  });
+});
+
+describe("toBenefitTexts", () => {
+  const benefit = (quote: string, isDraw: boolean, extra: { label?: string; compact?: string } = {}) => ({ isDraw, ev: { quote, ...extra } });
+
+  it.each([
+    ["a benefit that is no draw, its quote text then its compact", benefit("월 50만원 지급 및 기숙사비 면제", false, { compact: "월 50만원" }), ["월 50만원 지급 및 기숙사비 면제", "월 50만원"]],
+    ["a draw, marked after the quote and after its compact", benefit("커피 쿠폰 100명 랜덤 증정", true, { compact: "커피 쿠폰" }), ["커피 쿠폰 100명 랜덤 증정 (추첨)", "커피 쿠폰 (추첨)"]],
+    ["a labelled draw, the label before each", benefit("커피 쿠폰", true, { label: "경품", compact: "쿠폰" }), ["경품 · 커피 쿠폰 (추첨)", "경품 · 쿠폰 (추첨)"]],
+    ["a draw whose compact says so, with no second mark", benefit("추첨으로 커피 쿠폰 증정", true, { compact: "추첨 쿠폰" }), ["추첨으로 커피 쿠폰 증정", "추첨 쿠폰"]],
+    ["a benefit with no compact, as its one text", benefit("커피 쿠폰", true), ["커피 쿠폰 (추첨)"]],
+  ])("offers %s", (_title, input, expected) => {
+    // Act & Assert
+    expect(toBenefitTexts(input)).toEqual(expected);
   });
 });

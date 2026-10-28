@@ -1,15 +1,7 @@
 import { AppError } from "../http/app.error";
-import { MAX_QUERY_CODEPOINTS, MAX_SOURCE_IDS, SUMMARY_TYPES } from "./notices.constants";
+import { DRAW_MARK, MAX_QUERY_CODEPOINTS, MAX_SOURCE_IDS, QUOTE_LABEL_JOINER, SUMMARY_TYPES } from "./notices.constants";
+import type { NoticeDoc } from "./notices.document";
 import type { CategoryConfig, CategoryPicker, ExcludeReasonMap, SourceConfig, SummaryType } from "./notices.types";
-
-interface DedupFields {
-  _id?: unknown;
-  title?: string;
-  contentHash?: string | null;
-}
-
-// WHY: U+001F cannot appear in a title or a hex digest, so "a" + "bc" never meets "ab" + "c".
-const KEY_SEPARATOR = "\u001f";
 
 export function isSummaryType(value: unknown): value is SummaryType {
   return (SUMMARY_TYPES as readonly unknown[]).includes(value);
@@ -19,6 +11,17 @@ export function normalizeSummaryType(value: unknown): SummaryType {
   return isSummaryType(value) ? value : "informational";
 }
 
+/** SEE: docs/decisions/0005-notice-dispatch-content-group.md — the copies of one article share the crawler's `dupOf`. */
+export function clusterKeyOf(notice: Pick<NoticeDoc, "_id" | "dupOf">): string {
+  return (notice.dupOf ?? notice._id).toHexString();
+}
+
+export function groupByClusterKey<T extends Pick<NoticeDoc, "_id" | "dupOf">>(notices: readonly T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const notice of notices) groups.set(clusterKeyOf(notice), [...(groups.get(clusterKeyOf(notice)) ?? []), notice]);
+  return [...groups.values()];
+}
+
 // WHY: a code-point count, so 100 emoji pass like 100 letters, and a control character drops the search.
 export function toSearchQuery(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
@@ -26,25 +29,6 @@ export function toSearchQuery(raw: unknown): string | null {
   const hasControl = [...trimmed].some((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127);
   if (trimmed.length === 0 || hasControl || [...trimmed].length > MAX_QUERY_CODEPOINTS) return null;
   return trimmed;
-}
-
-/**
- * SEE: docs/decisions/0005-notice-dispatch-content-group.md — one article cross-posted to several boards shares
- * its trimmed title and contentHash; without a hash a notice keys on its _id and never merges.
- */
-export function dedupKeyOf(doc: DedupFields | null | undefined): string {
-  const contentHash = doc && doc.contentHash;
-  if (contentHash) return `h:${(doc && doc.title ? doc.title : "").trim()}${KEY_SEPARATOR}${contentHash}`;
-  return `id:${doc && doc._id != null ? String(doc._id) : ""}`;
-}
-
-export function groupByDedupKey<T extends DedupFields>(docs: T[]): T[][] {
-  const groups = new Map<string, T[]>();
-  for (const doc of docs) {
-    const key = dedupKeyOf(doc);
-    groups.set(key, [...(groups.get(key) ?? []), doc]);
-  }
-  return Array.from(groups.values());
 }
 
 export function toSourceIds(raw: string, isKnown: (id: string) => boolean): string[] {
@@ -91,4 +75,32 @@ export function excludeReasonProblems(sources: readonly SourceConfig[], reasons:
   return sources
     .filter((s) => s.excludeReason !== null && !(s.excludeReason in reasons))
     .map((s) => `sources.json: "${s.id}" has excludeReason "${s.excludeReason}" with no entry in exclude-reasons.json`);
+}
+
+const squashed = (text: string): string => text.replace(/\s/g, "");
+
+// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/notice-facts/notice-facts.schema.json, codebook v3.11: a table
+// `label` plus its `quote` states the fact, which the row and the screen show as "label · quote".
+export function toQuoteText({ quote, label }: { quote: string; label?: string | undefined }): string {
+  const words = (label ?? "").replace(/\s+/g, " ").trim();
+  return squashed(quote).includes(squashed(words)) ? quote : `${words}${QUOTE_LABEL_JOINER}${quote}`;
+}
+
+// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/notice-facts/notice-facts.schema.json, a `compact` of at most 11
+// characters, each word a part of its quote: the row fits the first of these texts into line 2, and a compact keeps its label.
+export function toQuoteTexts({ quote, label, compact }: { quote: string; label?: string | undefined; compact?: string | undefined }): [string, ...string[]] {
+  const full = toQuoteText({ quote, label });
+  return compact ? [full, toQuoteText({ quote: compact, label })] : [full];
+}
+
+// WHY: umbrella ADR 0009 D5 and D13: a draw is always marked as one, unless its text already says so.
+const withDrawMark = (isDraw: boolean, text: string): string => (isDraw && !text.includes(DRAW_MARK) ? `${text} (${DRAW_MARK})` : text);
+
+export function toBenefitText({ isDraw, ev }: { isDraw: boolean; ev: { quote: string; label?: string | undefined } }): string {
+  return withDrawMark(isDraw, toQuoteText(ev));
+}
+
+export function toBenefitTexts({ isDraw, ev }: { isDraw: boolean; ev: { quote: string; label?: string | undefined; compact?: string | undefined } }): [string, ...string[]] {
+  const [, ...compacts] = toQuoteTexts(ev);
+  return [toBenefitText({ isDraw, ev }), ...compacts.map((text) => withDrawMark(isDraw, text))];
 }

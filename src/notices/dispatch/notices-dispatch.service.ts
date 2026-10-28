@@ -3,7 +3,7 @@ import { Clock } from "../../infra/clock";
 import config from "../../infra/config";
 import logger from "../../infra/logger";
 import type { NoticeDoc } from "../notices.document";
-import { groupByDedupKey } from "../notices.rules";
+import { groupByClusterKey } from "../notices.rules";
 import { buildTopics, TOPIC_CAP } from "../notices.topics";
 import { NoticesDispatchClient } from "./notices-dispatch.client";
 import { NoticesDispatchRepository } from "./notices-dispatch.repository";
@@ -97,7 +97,7 @@ export class NoticesDispatchService {
 
   private async dispatchAll(claimed: NoticeDoc[]): Promise<SweepTally> {
     const tally: SweepTally = { sent: 0, failed: 0, skippedNoTopics: 0, cfCalls: 0, sentGroups: 0 };
-    for (const members of groupByDedupKey(claimed)) {
+    for (const members of groupByClusterKey(claimed)) {
       const outcome = await this.dispatchGroup(members);
       if (outcome.result === "skippedNoTopics") tally.skippedNoTopics += members.length;
       else tally.cfCalls += 1;

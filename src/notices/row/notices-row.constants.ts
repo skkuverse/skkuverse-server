@@ -35,7 +35,6 @@ export const ROW_WORDS = {
   monthly: "매월",
   checkOriginal: "날짜 원문 확인",
   conditions: "조건 {n}개",
-  draw: "추첨",
   online: "온라인",
 } as const;
 

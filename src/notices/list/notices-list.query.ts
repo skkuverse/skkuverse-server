@@ -1,7 +1,7 @@
 import { ObjectId, type Document } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
-import type { NoticeListRow } from "./notices-list.document";
-import type { CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list.types";
+import type { ClusterMember, NoticeListRow, ScannedRow } from "./notices-list.document";
+import type { ClusterLookup, CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list.types";
 
 /**
  * EVIDENCE: hinted because prod also holds an undeclared sourceId_1_date_-1 index the planner picks for `$in`,
@@ -10,9 +10,9 @@ import type { CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list
  */
 export const FORCE_INDEX = { sourceId: 1, date: -1, _id: -1 } as const;
 
-// EVIDENCE: the lookup checks its sources and `_id: { $nin }` on these keys, so it fetches no copy outside the read or
-// already scanned. On _dev's general tab, page 1 (2026-10-29), it fetched 2 documents (39 KB); on (dupOf, _id) it
-// fetched 102 (2.3 MB), mostly copies on skku-main and skku-notice02 to 07, which the read leaves out.
+// EVIDENCE: the lookup checks its sources on these keys, so it fetches no copy outside the read. On _dev's general tab
+// (2026-10-29) a lookup on (dupOf, sourceId, _id) fetched 2 documents (39 KB); on (dupOf, _id) it fetched 102
+// (2.3 MB), mostly copies on skku-main and skku-notice02 to 07, which the read leaves out.
 export const CLUSTER_INDEX = { dupOf: 1, sourceId: 1, _id: 1 } as const;
 
 // WHY: a notice with facts and no summary has the type its row derives, which no stored field holds, so a read for a type
@@ -49,7 +49,14 @@ export const LIST_PROJECTION = {
   summaryDates: 1,
   facts: 1,
   factsHistory: 1,
+  dupOf: 1,
 } as const satisfies Record<keyof NoticeListRow, 1>;
+
+export const CLUSTER_MEMBER_PROJECTION = { _id: 1, dupOf: 1 } as const satisfies Record<keyof ClusterMember, 1>;
+
+// WHY: a scan of several sources reads only what orders a row and keys its cluster, and `crawledAt` for the cursor's
+// unread `c` (ADR 0007); the rows it serves are read again with LIST_PROJECTION.
+export const SCAN_PROJECTION = { _id: 1, dupOf: 1, date: 1, crawledAt: 1 } as const satisfies Record<keyof ScannedRow, 1>;
 
 // SEE: docs/decisions/0007-notice-ordering-key.md — after the cursor in (date desc, _id desc); `crawledAt` stays out.
 export function toCursorFilter(cursor: CursorPayload): Document {
@@ -75,4 +82,13 @@ export function toNoticeListFilter(scope: NoticeScope, query: NoticeListQuery, s
   }
   filter.$and = clauses;
   return filter;
+}
+
+function toAtOrBeforeCursorFilter(cursor: CursorPayload): Document {
+  return { $or: [{ date: { $gt: cursor.d } }, { date: cursor.d, _id: { $gte: new ObjectId(cursor.i) } }] };
+}
+
+export function toClusterMemberFilter(scopeFilter: Document, lookup: ClusterLookup): Document {
+  const clauses = scopeFilter.$and as Document[];
+  return { ...scopeFilter, $and: [...clauses, toAtOrBeforeCursorFilter(lookup.cursor)], dupOf: { $in: lookup.keys.map((key) => new ObjectId(key)) } };
 }
