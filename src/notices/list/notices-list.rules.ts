@@ -1,10 +1,12 @@
 import moment from "moment-timezone";
 import type { NoticeDoc, SummaryPeriod } from "../notices.document";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
+import { groupByClusterKey } from "../notices.rules";
 import type { SummaryType } from "../notices.types";
 import { OPEN_ENDED_DAYS, POSTING_DAY_LENGTH } from "./notices-list.constants";
 import { NoticesListCursorError } from "./notices-list.error";
-import type { BriefDate, BriefDates, BriefEnd, CursorPayload, ListDay } from "./notices-list.types";
+import type { ClusterMember } from "./notices-list.document";
+import type { BriefDate, BriefDates, BriefEnd, CursorPayload, ListDay, NoticeScope } from "./notices-list.types";
 
 interface Span {
   start: moment.Moment | null;
@@ -223,4 +225,23 @@ export function toListDay(postedDate: string, now: Date): ListDay {
   if (!posted.isBefore(today)) return "today";
   if (!posted.isBefore(today.clone().subtract(1, "day"))) return "yesterday";
   return posted.isBefore(today.clone().startOf("isoWeek")) ? "earlier" : "thisWeek";
+}
+
+// WHY: umbrella ADR 0009 D8 names the board and lists each article once only in a tab of several boards.
+export function hasSeveralSources(scope: NoticeScope): boolean {
+  return typeof scope !== "string" && new Set(scope).size > 1;
+}
+
+const crawledTime = (copy: ClusterMember): number => copy.crawledAt?.getTime() ?? Number.NEGATIVE_INFINITY;
+
+const byCodeUnit = (left: string, right: string): number => Number(left > right) - Number(left < right);
+
+// WHY: the copy crawled last carries the latest edit; a tie goes to list order, so the pick never depends on read order.
+const isShownOver = (copy: ClusterMember, shown: ClusterMember): boolean =>
+  (crawledTime(copy) - crawledTime(shown) || byCodeUnit(copy.date, shown.date) || byCodeUnit(copy._id.toHexString(), shown._id.toHexString())) > 0;
+
+export function selectShownRows<T extends ClusterMember>(batch: readonly T[], members: readonly ClusterMember[]): T[] {
+  const shownCopies = groupByClusterKey([...batch, ...members]).map((copies) => copies.reduce((shown, copy) => (isShownOver(copy, shown) ? copy : shown)));
+  const shownIds = new Set(shownCopies.map((copy) => copy._id.toHexString()));
+  return batch.filter((row) => shownIds.has(row._id.toHexString()));
 }

@@ -6,6 +6,10 @@
  * the clock: a notice with facts gets its row, one with none or with facts the schema refuses gets null, the board
  * name rides only on a multi-source read, and the whole page is rendered at the one instant the clock gave first.
  *
+ * On a read of two or more sources, each article is one row across all its pages (umbrella ADR 0009 D8): the
+ * service scans past the page and keeps a row only as its cluster's shown copy, which the fake's member lookup helps
+ * decide. A read of one source serves every copy.
+ *
  * src/infra/logger.ts is mocked: a refused record logs `notices.facts.unparsed`.
  */
 import fs from "fs";
@@ -25,6 +29,8 @@ import { NoticesRowService } from "../row/notices-row.service";
 import type { NoticesListRepository } from "./notices-list.repository";
 import { decodeCursor } from "./notices-list.rules";
 import { NoticesListService } from "./notices-list.service";
+import type { CursorPayload } from "./notices-list.types";
+import type { NoticeList } from "./notices-list.wire";
 
 const NOW = new Date("2026-10-14T03:00:00Z");
 const clock: Clock = { now: () => NOW };
@@ -203,5 +209,85 @@ describe("NoticesListService.listNotices", () => {
     // Assert
     expect(notices[0]?.row).toMatchObject({ token: { text: "내일 마감" }, day: "today" });
     expect(readClock.now).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("NoticesListService.listNotices on several boards", () => {
+  const anchor = (cluster: string) => new ObjectId((0x100 + cluster.charCodeAt(0)).toString(16).padStart(24, "0"));
+  // A copy numbered n is posted on day n of October, crawled at the hour given, and points at its cluster's anchor.
+  const copy = (n: number, sourceId: string, cluster: string | null, hour: number, extra: Partial<NoticeDoc> = {}): NoticeDoc =>
+    doc(n, `2026-10-${String(n).padStart(2, "0")}`, {
+      sourceId,
+      crawledAt: new Date(`2026-10-26T${String(hour).padStart(2, "0")}:00:00Z`),
+      ...(cluster === null ? {} : { dupOf: anchor(cluster) }),
+      ...extra,
+    });
+  const SCOPE = ["skku-notice03", "skku-notice08"];
+  const copies = (): NoticeDoc[] => [
+    copy(25, "skku-notice03", "K", 1),
+    copy(24, "skku-notice08", "K", 1),
+    copy(23, "skku-notice03", "K", 1),
+    copy(22, "skku-notice08", "K", 1),
+    copy(21, "skku-notice03", "K", 8),
+    copy(20, "skku-notice03", "A", 1),
+    copy(19, "skku-notice08", "B", 1),
+    copy(18, "skku-notice08", "A", 5),
+    copy(17, "skku-notice03", "C", 1),
+    copy(16, "skku-notice03", "B", 1),
+    copy(15, "skku-notice08", "D", 2),
+    copy(14, "skku-notice03", "E", 1),
+    copy(13, "skku-notice03", "D", 3),
+    copy(12, "skku-notice08", "E", 1),
+    copy(11, "skku-notice03", "F", 1),
+    copy(10, "skku-notice08", "G", 9),
+    copy(9, "skku-notice03", "H", 1),
+    copy(8, "skku-notice03", "I", 1),
+    copy(7, "skku-notice03", "I", 1),
+    copy(6, "skku-notice08", null, 1),
+    copy(5, "skku-notice06", "C", 9),
+    copy(4, "skku-notice08", "F", 9, { isDeleted: true }),
+    copy(2, "skku-notice08", "G", 1),
+    copy(1, "skku-notice08", "H", 7),
+  ];
+
+  it.each([1, 2, 3])("serves each article once at limit %i, as its copy crawled last, in list order, page by page", async (limit) => {
+    // Arrange
+    const repository = new FakeNoticesListRepository();
+    repository.docs = copies();
+    const service = serviceAt(repository);
+    const pages: NoticeList[] = [];
+
+    // Act
+    for (let cursor: CursorPayload | null = null; pages.length === 0 || cursor !== null; ) {
+      const page: NoticeList = await service.listNotices(SCOPE, { limit, cursor });
+      pages.push(page);
+      cursor = page.nextCursor === null || pages.length > 20 ? null : decodeCursor(page.nextCursor);
+    }
+
+    // Assert
+    // K: the copy crawled last (21) after four older ones; A: the later crawl (18) over the earlier row (20); B and E: a
+    // crawl tie goes to the first in list order (19, 14); C: a copy on a board outside the read (5) never counts; D: the
+    // later crawl (13); F: a deleted copy (4) never counts; G and H: the shown copy sits pages away (10 before 2, 1 after
+    // 9); I: two copies on one board; 6: not linked yet, alone.
+    expect(pages.flatMap((page) => page.notices.map((notice) => notice.articleNo))).toEqual([21, 19, 18, 17, 14, 13, 11, 10, 8, 6, 1]);
+    expect(pages.every((page) => page.notices.length === limit || page === pages.at(-1))).toBe(true);
+    expect(pages.map((page) => page.hasMore)).toEqual([...Array(pages.length - 1).fill(true), false]);
+    expect(pages.slice(0, -1).map((page) => decodeCursor(page.nextCursor).i)).toEqual(pages.slice(0, -1).map((page) => page.notices.at(-1)?.id));
+  });
+
+  it("serves every copy on a read of one source, named once or twice", async () => {
+    // Arrange
+    const repository = new FakeNoticesListRepository();
+    repository.docs = copies();
+    const service = serviceAt(repository);
+    const boardCopies = [25, 23, 21, 20, 17, 16, 14, 13, 11, 9, 8, 7];
+
+    // Act
+    const byPath = await service.listNotices("skku-notice03", { limit: 20, cursor: null });
+    const namedTwice = await service.listNotices(["skku-notice03", "skku-notice03"], { limit: 20, cursor: null });
+
+    // Assert
+    expect(byPath.notices.map((notice) => notice.articleNo)).toEqual(boardCopies);
+    expect(namedTwice.notices.map((notice) => notice.articleNo)).toEqual(boardCopies);
   });
 });

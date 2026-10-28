@@ -33,17 +33,6 @@ export function toReleasedFields(err: unknown): ReleasedFields {
   return { dispatchClaimedAt: null, pushError: message.slice(0, MAX_PUSH_ERROR_LENGTH) };
 }
 
-/** SEE: docs/decisions/0005-notice-dispatch-content-group.md — the copies of one article share the crawler's `dupOf`. */
-export function clusterKeyOf(notice: Pick<NoticeDoc, "_id" | "dupOf">): string {
-  return (notice.dupOf ?? notice._id).toHexString();
-}
-
-export function groupByClusterKey<T extends Pick<NoticeDoc, "_id" | "dupOf">>(notices: readonly T[]): T[][] {
-  const groups = new Map<string, T[]>();
-  for (const notice of notices) groups.set(clusterKeyOf(notice), [...(groups.get(clusterKeyOf(notice)) ?? []), notice]);
-  return [...groups.values()];
-}
-
 /**
  * SEE: docs/decisions/0005-notice-dispatch-content-group.md — the push links one (sourceId, articleNo): the
  * lowest sourceId among members that have a topic, so it never lands on a topic-less mirror such as skku-main.

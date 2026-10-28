@@ -1,7 +1,7 @@
 import { ObjectId, type Document } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
-import type { NoticeListRow } from "./notices-list.document";
-import type { CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list.types";
+import type { ClusterMember, NoticeListRow } from "./notices-list.document";
+import type { ClusterLookup, CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list.types";
 
 /**
  * EVIDENCE: hinted because prod also holds an undeclared sourceId_1_date_-1 index the planner picks for `$in`,
@@ -49,7 +49,10 @@ export const LIST_PROJECTION = {
   summaryDates: 1,
   facts: 1,
   factsHistory: 1,
+  dupOf: 1,
 } as const satisfies Record<keyof NoticeListRow, 1>;
+
+export const CLUSTER_MEMBER_PROJECTION = { _id: 1, dupOf: 1, crawledAt: 1, date: 1 } as const satisfies Record<keyof ClusterMember, 1>;
 
 // SEE: docs/decisions/0007-notice-ordering-key.md — after the cursor in (date desc, _id desc); `crawledAt` stays out.
 export function toCursorFilter(cursor: CursorPayload): Document {
@@ -75,4 +78,8 @@ export function toNoticeListFilter(scope: NoticeScope, query: NoticeListQuery, s
   }
   filter.$and = clauses;
   return filter;
+}
+
+export function toClusterMemberFilter(scopeFilter: Document, lookup: ClusterLookup): Document {
+  return { ...scopeFilter, dupOf: { $in: lookup.keys.map((key) => new ObjectId(key)) }, _id: { $nin: [...lookup.scannedIds] } };
 }
