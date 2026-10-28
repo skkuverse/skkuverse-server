@@ -34,7 +34,7 @@ export const NOTICE_TYPE_BY_CATEGORY: Readonly<Record<string, NoticeType>> = {
 // WHY: product copy; `{day}` is a day as the row writes it, `{text}` a quote.
 export const SCREEN_WORDS = {
   yesterday: "어제", firstSeen: "{day} 처음 올라옴", excluded: "제외: {text}", formerly: "기존 {text}", firstCome: "선착순",
-  draw: "추첨", date: "날짜", place: "장소", qr: "QR", link: "링크", ongoing: "진행 중",
+  draw: "추첨", date: "날짜", place: "장소", qr: "QR", link: "링크", ongoing: "진행 중", tentative: "예정",
 } as const;
 
 // WHY: product copy, umbrella ADR 0009 D12's fixed words; a status with no word (upcoming, nodate, abstain) gets no line.

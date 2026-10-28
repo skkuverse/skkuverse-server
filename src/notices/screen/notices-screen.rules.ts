@@ -24,6 +24,7 @@ const ADDRESS_IN_TEXT = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
 const PHONE_NUMBER = /\d{2,4}-\d{3,4}-\d{4}/;
 const HTTP_URL = /^https?:\/\/\S+$/i;
 const MAILTO = /^mailto:/i;
+const TENTATIVE_TAIL = ` ${SCREEN_WORDS.tentative}`;
 
 export function toBlockOrder(category: string | null | undefined, reading: RowReading): BlockKey[] {
   if (reading.isStaffOnly) return [];
@@ -183,8 +184,12 @@ export function toSessionOrder(readings: readonly ItemReading[]): ItemReading[] 
 export function toItemText({ item, line }: ItemReading): string {
   if (item.dateWarnings.length > 0) return withTag(item, item.ev.quote);
   const isVerbShown = item.kind === "window" || item.verb === "" || line.includes(item.verb);
-  return withTag(item, isVerbShown ? line : `${line} ${item.verb}`);
+  return withTag(item, isVerbShown ? line : withVerb(line, item.verb));
 }
+
+// WHY: umbrella ADR 0009 D4's example of a tentative date puts the verb before the tentative word, never after it.
+const withVerb = (line: string, verb: string): string =>
+  line.endsWith(TENTATIVE_TAIL) ? `${line.slice(0, -TENTATIVE_TAIL.length)} ${verb}${TENTATIVE_TAIL}` : `${line} ${verb}`;
 
 export const isStated = ({ disputed }: { disputed?: boolean }): boolean => disputed !== true;
 

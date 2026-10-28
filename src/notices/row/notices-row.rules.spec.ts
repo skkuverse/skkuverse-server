@@ -670,14 +670,34 @@ describe("toRowReading, each dated item", () => {
     ["a session with no end time", () => sessionAt({ time: "18:00" }, { date: "2026-10-29" }), "2026-10-25", "10/29(목) 18시"],
     ["a session whose end is the end of the day", () => sessionAt({ time: "18:00" }, { date: "2026-10-29", time: "23:59" }), "2026-10-25", "10/29(목) 18시"],
     ["a session with no start time", () => sessionAt({}, { date: "2026-10-29", time: "19:00" }), "2026-10-25", "10/29(목)"],
-    ["a session that ends the next day", () => sessionAt({ time: "18:00" }, { date: "2026-10-30", time: "09:00" }), "2026-10-25", "10/29(목)부터 10/30(금)까지"],
+    ["a session that ends the next day", () => sessionAt({ time: "18:00" }, { date: "2026-10-30", time: "09:00" }), "2026-10-25", "10/29(목) 18시~10/30(금) 9시"],
+    ["a session over several days with no times", () => sessionAt({}, { date: "2026-11-02" }), "2026-10-25", "10/29(목)~11/2(월)"],
+    ["a span that started before today, from its first day", () => sessionAt({}, { date: "2026-11-02" }), "2026-10-30", "10/29(목)~11/2(월)"],
     ["a tentative session", () => sessionAt({ time: "18:00", tentative: true }, { date: "2026-10-29", time: "19:00" }), "2026-10-25", "10/29(목) 18시 예정"],
+    ["a span whose end is tentative, as the row writes it", () => sessionAt({}, { date: "2026-11-02", tentative: true }), "2026-10-25", "10/29(목)부터 11/2(월)까지"],
+    ["a span whose end comes before its start, as the row writes it", () => sessionAt({ date: "2026-11-02" }, { date: "2026-10-29" }), "2026-10-25", "11/2(월)부터 10/29(목)까지"],
+    ["a span whose end is fuzzy, as the row writes it", () => sessionAt({}, { date: "", fuzzy: true, latest: "2026-11-02" }), "2026-10-25", "10/29(목)"],
   ])("reads %s", (_label, record, day, line) => {
     // Act
     const reading = toRowReading(sourceOf(record()), kstNoon(day));
 
     // Assert
     expect(reading.items.map((itemReading) => itemReading.line)).toEqual([line]);
+  });
+
+  it("gives a period over several days its first day too, where the row writes only its last", () => {
+    // Arrange
+    const record = recordFrom(SESSION, (r) => {
+      r.times[0].kind = "period";
+      r.times[0].end.date = "2026-11-02";
+    });
+
+    // Act
+    const reading = toRowReading(sourceOf(record), kstNoon("2026-10-25"));
+
+    // Assert
+    expect(reading.row.line2).not.toContain("10/29");
+    expect(reading.items.map(({ line }) => line)).toEqual(["10/29(목)~11/2(월)"]);
   });
 
   it("gives a window the row's line, never a range, even with a start and an end time on one day", () => {
