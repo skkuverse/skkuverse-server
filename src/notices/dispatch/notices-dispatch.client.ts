@@ -1,10 +1,17 @@
 import { Injectable } from "@nestjs/common";
+import { Clock } from "../../infra/clock";
 import { postToFcmFunction, type FcmResponse } from "../../infra/fcm";
 import type { NoticePushPayload } from "../../infra/fcm.wire";
+import { NoticesLegacyService } from "../legacy/notices-legacy.service";
 import type { NoticeDoc } from "../notices.document";
 
 @Injectable()
 export class NoticesDispatchClient {
+  constructor(
+    private readonly legacy: NoticesLegacyService,
+    private readonly clock: Clock,
+  ) {}
+
   sendPush(notice: NoticeDoc, topics: string[]): Promise<FcmResponse> {
     return postToFcmFunction(this.toPushPayload(notice, topics));
   }
@@ -17,12 +24,19 @@ export class NoticesDispatchClient {
       noticeId: String(notice._id),
       topics,
       title_ko: notice.title || "",
-      body_ko: notice.summaryOneLiner || "",
+      body_ko: notice.summaryOneLiner || this.deriveBody(notice),
       title_en: null,
       body_en: null,
       ...(notice.sourceId ? { sourceId: notice.sourceId } : {}),
       ...(notice.articleNo != null ? { articleNo: String(notice.articleNo) } : {}),
       ...(notice.category ? { category: notice.category } : {}),
     };
+  }
+
+  // WHY: with no summary the body is the row's rough one-liner, but only for facts that landed in time: a failed or
+  // timed-out gate means the crawler does not vouch for them, so the push is title-only (design.md "The live job").
+  private deriveBody(notice: NoticeDoc): string {
+    if (notice.factsGate !== "ok") return "";
+    return this.legacy.deriveBrief(notice, this.clock.now())?.oneLiner ?? "";
   }
 }

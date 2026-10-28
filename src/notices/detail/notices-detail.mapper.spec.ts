@@ -43,6 +43,38 @@ describe("toDetailItem", () => {
     });
   });
 
+  it("serves a derived summary with no text, periods, places or model when the notice has none of its own", () => {
+    // Arrange
+    const derived = { oneLiner: "내일 마감", type: "action_required" as const, startAt: null, endAt: null };
+
+    // Act
+    const item = toDetailItem(BASE, null, derived);
+
+    // Assert
+    expect(item.summary).toEqual({
+      text: null,
+      oneLiner: "내일 마감",
+      type: "action_required",
+      periods: [],
+      locations: [],
+      details: null,
+      model: null,
+      generatedAt: "2026-10-14T05:30:10.676Z",
+    });
+  });
+
+  it("serves the stored summary and ignores a derived one when the notice is summarized", () => {
+    // Arrange
+    const stored = { ...BASE, summaryAt: new Date("2026-10-14T06:00:00Z"), summaryOneLiner: "한 줄", summaryType: "event" };
+
+    // Act
+    const item = toDetailItem(stored, null, { oneLiner: "다른 줄", type: "informational", startAt: null, endAt: null });
+
+    // Assert
+    expect(item.summary).toEqual(toSummaryFull(stored));
+    expect(item.summary?.oneLiner).toBe("한 줄");
+  });
+
   it("keeps a referer only when stored, and the edit history once edited", () => {
     // Act
     const item = toDetailItem({

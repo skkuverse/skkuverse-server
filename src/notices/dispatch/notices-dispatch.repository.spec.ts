@@ -93,3 +93,19 @@ describe("NoticesDispatchRepository.onModuleInit", () => {
     );
   });
 });
+
+describe("NoticesDispatchRepository.onModuleInit, the facts gate", () => {
+  it("ensures dispatch_pending_facts_idx on the claim's sort, partial on the notices the live facts job has gated", async () => {
+    // Act
+    await new NoticesDispatchRepository().onModuleInit();
+
+    // Assert
+    expect(createIndex).toHaveBeenCalledWith(
+      { date: -1, _id: -1 },
+      { name: "dispatch_pending_facts_idx", partialFilterExpression: { pushedAt: null, factsAt: { $type: "date" } } },
+    );
+    // toHaveBeenCalledWith ignores key order, and a swapped key would plan a sort stage.
+    const factsIndexKey = createIndex.mock.calls.find(([, options]) => (options as { name: string }).name === "dispatch_pending_facts_idx")![0];
+    expect(Object.keys(factsIndexKey as object)).toEqual(["date", "_id"]);
+  });
+});

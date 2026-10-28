@@ -7,7 +7,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { NoticeDoc, SummaryDate } from "../notices.document";
-import { toSummaryBrief, encodeCursor, toItemRow, toListItem, toNoticePage } from "./notices-list.mapper";
+import { toSummaryBrief, encodeCursor, toItemRow, toListItem, toNoticePage, withDerivedBrief } from "./notices-list.mapper";
 import type { FactsRow } from "../row/notices-row.types";
 import { decodeCursor } from "./notices-list.rules";
 
@@ -152,6 +152,21 @@ describe("toListItem", () => {
       summary: null,
       row: null,
     });
+  });
+
+  it("serves the derived brief when the notice has no summary, and its own summary when it has one", () => {
+    // Arrange
+    const derived = { oneLiner: "내일 마감", type: "action_required" as const, startAt: null, endAt: { date: "2026-10-10", time: null, label: null } };
+    const stored = { ...base, summaryAt: new Date(ISO), summaryOneLiner: "한 줄", summaryType: "event" };
+
+    // Act
+    const withoutSummary = withDerivedBrief(toListItem(base, NOW, null), derived);
+    const withSummary = withDerivedBrief(toListItem(stored, NOW, null), derived);
+
+    // Assert
+    expect(withoutSummary.summary).toEqual(derived);
+    expect(withSummary.summary).toEqual(toSummaryBrief(stored, NOW));
+    expect(withSummary.summary?.oneLiner).toBe("한 줄");
   });
 
   it("turns empty strings to null, and reads content, attachments and edits as flags", () => {

@@ -10,6 +10,12 @@ import type { CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list
  */
 export const FORCE_INDEX = { sourceId: 1, date: -1, _id: -1 } as const;
 
+// WHY: a notice with facts and no summary has the type its row derives, which no stored field holds, so a read for a type
+// takes it too and the service keeps the ones whose derived type matches.
+const DERIVED_SUMMARY_FILTER: Document = { summaryAt: null, facts: { $type: "object" } };
+
+const SEARCH_FIELDS = ["title", "summaryOneLiner", "facts.shortTitle.text", "facts.shortTitle.compact"] as const;
+
 export const LIST_SORT = { date: -1, _id: -1 } as const;
 
 // WHY: an inclusion list, so a field the crawler adds later is never served by accident; no body field.
@@ -54,12 +60,13 @@ export function toNoticeListFilter(scope: NoticeScope, query: NoticeListQuery, s
     ...(typeof scope === "string" ? { sourceId: scope } : { sourceId: { $in: scope } }),
     isDeleted: { $ne: true },
   };
-  if (query.type) filter.summaryType = query.type;
   const clauses: Document[] = [{ date: { $gte: serviceStartDate } }];
+  if (query.type) clauses.push({ $or: [{ summaryType: query.type }, DERIVED_SUMMARY_FILTER] });
   if (query.cursor) clauses.push(toCursorFilter(query.cursor));
   if (query.q) {
     const pattern = escapeRegex(query.q);
-    clauses.push({ $or: [{ title: { $regex: pattern, $options: "i" } }, { summaryOneLiner: { $regex: pattern, $options: "i" } }] });
+    const matches = (field: string): Document => ({ [field]: { $regex: pattern, $options: "i" } });
+    clauses.push({ $or: SEARCH_FIELDS.map(matches) });
   }
   filter.$and = clauses;
   return filter;
