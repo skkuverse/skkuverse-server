@@ -281,6 +281,18 @@ describe("toBarAction", () => {
     expect(bar && { kind: bar.kind, target: bar.target }).toEqual(expected);
   });
 
+  it.each<[string, (stored: RawRecord) => void, string | null]>([
+    ["the subject a mailto link writes", (r) => { r.sources.links.push(linkOf("K1", "mailto:office@skku.edu?subject=%EC%8B%A0%EC%B2%AD%20%EC%84%9C%EB%A5%98&cc=a@skku.edu")); r.actions.push(actionOf()); }, "신청 서류"],
+    ["no subject for a mailto link that writes none", (r) => { r.sources.links.push(linkOf("K1", "mailto:office@skku.edu?cc=a@skku.edu")); r.actions.push(actionOf()); }, null],
+    ["no subject for an email action whose subject the notice gives only as a rule", (r) => r.actions.push(actionOf({ method: "email", target: "prof@skku.edu", subjectRule: evidenceOf("메일 제목: 학과_이름_신청서") })), null],
+  ])("fills %s into the email the bar opens", (_label, edit, subject) => {
+    // Act
+    const bar = toBarAction(readingAt(withBar(edit), kstNoon("2026-10-22")));
+
+    // Assert
+    expect(bar).toMatchObject({ kind: "email", subject });
+  });
+
   it("shows no bar for a notice for staff, whatever it links to", () => {
     // Arrange
     const stored = withBar(oneLink, STAFF);

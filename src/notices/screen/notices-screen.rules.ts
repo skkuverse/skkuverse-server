@@ -87,9 +87,9 @@ export function toBarAction(reading: RowReading): BarAction | null {
   const open = reading.facts.actions.filter((action) => isStated(action) && isOpenNow(action, reading));
   const bars = open.flatMap((action): BarAction[] => {
     const target = toActionTarget(action, reading.facts);
-    return target?.kind === "link" || target?.kind === "email" ? [{ label: action.verb.quote, kind: target.kind, target: target.target }] : [];
+    return target?.kind === "link" || target?.kind === "email" ? [{ ...target, label: action.verb.quote }] : [];
   });
-  const distinct = bars.filter((bar, at) => bars.findIndex(({ kind, target }) => kind === bar.kind && target === bar.target) === at);
+  const distinct = bars.filter((bar, at) => bars.findIndex((other) => other.kind === bar.kind && other.target === bar.target) === at);
   return distinct.length === 1 ? (distinct[0] ?? null) : null;
 }
 
@@ -105,14 +105,16 @@ export function toActionTarget(action: Action, facts: NoticeFacts): ScreenAction
 }
 
 function toLinkTarget(url: string): ScreenAction | null {
-  if (MAILTO.test(url)) return toEmailTarget(url.replace(MAILTO, "").split("?")[0] ?? "");
-  return HTTP_URL.test(url) ? { kind: "link", target: url } : null;
+  if (!MAILTO.test(url)) return HTTP_URL.test(url) ? { kind: "link", target: url } : null;
+  const [address = "", query = ""] = url.replace(MAILTO, "").split("?");
+  return toEmailTarget(address, new URLSearchParams(query).get("subject") || null);
 }
 
 // WHY: a contact's value is its quote, words and all, so the target is the number or the address inside it (umbrella ADR 0009 D13: tap to call or email).
 export function toContactAction({ kind, value }: Contact): ScreenAction | null {
   const target = (kind === "phone" ? PHONE_NUMBER : ADDRESS_IN_TEXT).exec(value.quote)?.[0];
-  return target ? { kind: kind === "phone" ? "call" : "email", target } : null;
+  if (!target) return null;
+  return kind === "phone" ? { kind: "call", target } : { kind: "email", target, subject: null };
 }
 
 // CONTRACT(skkuverse-crawler): a place written off campus is stored unresolved with this reason
@@ -136,7 +138,7 @@ const toCallTarget = (text: string): ScreenAction | null => {
   return number ? { kind: "call", target: number } : null;
 };
 
-const toEmailTarget = (address: string): ScreenAction | null => (ADDRESS.test(address) ? { kind: "email", target: address } : null);
+const toEmailTarget = (address: string, subject: string | null = null): ScreenAction | null => (ADDRESS.test(address) ? { kind: "email", target: address, subject } : null);
 
 export function toFirstSeen(firstSeenAt: Date, reading: RowReading): string {
   const day = reading.dayOffset(firstSeenAt) === -1 ? SCREEN_WORDS.yesterday : (reading.dayText(firstSeenAt) ?? "");

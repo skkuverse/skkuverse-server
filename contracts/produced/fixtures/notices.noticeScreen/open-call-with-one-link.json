@@ -130,7 +130,8 @@
             "actions": [
               {
                 "kind": "email",
-                "target": "contact@example.com"
+                "target": "contact@example.com",
+                "subject": null
               }
             ],
             "quote": "contact@example.com"
