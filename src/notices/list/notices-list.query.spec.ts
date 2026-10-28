@@ -5,7 +5,7 @@
  */
 
 import { ObjectId } from "mongodb";
-import { toCursorFilter } from "./notices-list.query";
+import { toCursorFilter, toNoticeListFilter } from "./notices-list.query";
 
 const OID = "66a1b2c3d4e5f6a7b8c9d0e1";
 const ISO = "2026-04-01T00:00:00.000Z";
@@ -36,5 +36,37 @@ describe("toCursorFilter", () => {
 
     // Assert
     expect(withC).toEqual(withoutC);
+  });
+});
+
+describe("toNoticeListFilter", () => {
+  const START = "2026-01-01";
+
+  it("matches a search word in the title, the stored one-liner or the facts' short title", () => {
+    // Act
+    const filter = toNoticeListFilter("skku-notice02", { limit: 20, cursor: null, q: "장학" }, START);
+
+    // Assert
+    const pattern = { $regex: "장학", $options: "i" };
+    expect(filter.$and).toContainEqual({
+      $or: [{ title: pattern }, { summaryOneLiner: pattern }, { "facts.shortTitle.text": pattern }, { "facts.shortTitle.compact": pattern }],
+    });
+  });
+
+  it("reads a notice with facts and no summary under any type, which the service then narrows to its derived type", () => {
+    // Act
+    const filter = toNoticeListFilter("skku-notice02", { limit: 20, cursor: null, type: "event" }, START);
+
+    // Assert
+    expect(filter.summaryType).toBeUndefined();
+    expect(filter.$and).toContainEqual({ $or: [{ summaryType: "event" }, { summaryAt: null, facts: { $type: "object" } }] });
+  });
+
+  it("adds no type clause when the read names no type", () => {
+    // Act
+    const filter = toNoticeListFilter("skku-notice02", { limit: 20, cursor: null }, START);
+
+    // Assert
+    expect(filter.$and).toEqual([{ date: { $gte: START } }]);
   });
 });

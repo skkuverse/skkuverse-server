@@ -54,11 +54,18 @@ describe("NoticesListRepository.listNotices", () => {
     expect(find.mock.calls[0]?.[0]).toEqual({
       sourceId: { $in: ["a", "b"] },
       isDeleted: { $ne: true },
-      summaryType: "event",
       $and: [
         { date: { $gte: START } },
+        { $or: [{ summaryType: "event" }, { summaryAt: null, facts: { $type: "object" } }] },
         { $or: [{ date: { $lt: "2026-04-01" } }, { date: "2026-04-01", _id: { $lt: new ObjectId(cursor.i) } }] },
-        { $or: [{ title: { $regex: "a\\.b", $options: "i" } }, { summaryOneLiner: { $regex: "a\\.b", $options: "i" } }] },
+        {
+          $or: [
+            { title: { $regex: "a\\.b", $options: "i" } },
+            { summaryOneLiner: { $regex: "a\\.b", $options: "i" } },
+            { "facts.shortTitle.text": { $regex: "a\\.b", $options: "i" } },
+            { "facts.shortTitle.compact": { $regex: "a\\.b", $options: "i" } },
+          ],
+        },
       ],
     });
     expect(limit).toHaveBeenCalledWith(6);
