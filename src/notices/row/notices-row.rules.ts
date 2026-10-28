@@ -507,6 +507,7 @@ const kstDayOf = (date: Date | string): KstDay | null => (typeof date === "strin
 export function toRowReading(source: RowSource, now: Date): RowReading {
   const scope = toRowScope(source.facts, now);
   const { today } = scope;
+  const row = toFactsRow(source, now);
   const statusOf = (items: readonly RowItem[]): RowStatus => toDatedStatus({ ...scope, items });
   const toItemReading = (item: RowItem): ItemReading => {
     const status = statusOf([item]).kind;
@@ -521,7 +522,8 @@ export function toRowReading(source: RowSource, now: Date): RowReading {
     };
   return {
     ...source,
-    row: toFactsRow(source, now),
+    row,
+    fullQualifier: squeezed(toQualifier(scope, scope.items.find(({ id }) => id === row.itemId) ?? null) ?? "") || null,
     eventStatus: statusOf(scope.items.filter((item) => item.kind !== "window")),
     isStaffOnly: isStaffOnly(source.facts),
     items: scope.times.map(toItemReading),
