@@ -23,6 +23,7 @@ export const CANDIDATE_PROJECTION = {
   contentHash: 1,
   summaryContentHash: 1,
   summaryApplication: 1,
+  dupOf: 1,
 } as const satisfies Record<keyof OverviewCandidate, 1>;
 
 /**

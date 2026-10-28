@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
+import { groupByClusterKey } from "../notices.rules";
 import { OVERVIEW_CANDIDATE_LIMIT } from "./notices-overview.constants";
 import type { OverviewCandidate } from "./notices-overview.document";
 
@@ -21,31 +22,19 @@ interface OverviewCacheKeyInput {
   candidates: readonly OverviewCandidate[];
 }
 
-/**
- * SEE: docs/decisions/0005-notice-dispatch-content-group.md — one article cross-posted to several boards shares
- * its trimmed title and contentHash; without a hash a notice keys on its _id and never merges.
- */
+/** WHY: a candidate's content in the cache key: the trimmed title and contentHash, so an edit makes a new key; without a hash, its _id. */
 export function dedupKeyOf(doc: DedupFields | null | undefined): string {
   const contentHash = doc && doc.contentHash;
   if (contentHash) return `h:${(doc && doc.title ? doc.title : "").trim()}${KEY_SEPARATOR}${contentHash}`;
   return `id:${doc && doc._id != null ? String(doc._id) : ""}`;
 }
 
-export function groupByDedupKey<T extends DedupFields>(docs: T[]): T[][] {
-  const groups = new Map<string, T[]>();
-  for (const doc of docs) {
-    const key = dedupKeyOf(doc);
-    groups.set(key, [...(groups.get(key) ?? []), doc]);
-  }
-  return Array.from(groups.values());
-}
-
-/** WHY: the highest-ranked copy of each cross-posted article, keyed as the crawler links copies into `dupOf`. */
-export function selectCandidates<T extends Pick<OverviewCandidate, "_id" | "title" | "contentHash">>(
+/** WHY: one article is one cluster key, as in the list and the push, so its copies never take two of the ai's slots. */
+export function selectCandidates<T extends Pick<OverviewCandidate, "_id" | "dupOf">>(
   ranked: readonly T[],
   limit: number = OVERVIEW_CANDIDATE_LIMIT,
 ): T[] {
-  return groupByDedupKey([...ranked])
+  return groupByClusterKey(ranked)
     .flatMap((group) => group.slice(0, 1))
     .slice(0, limit);
 }
