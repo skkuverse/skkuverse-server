@@ -1,12 +1,21 @@
-import { toDisplayNo } from "../../building.rules";
+import { isBuildNo, isCampus, isSpaceCd, toDisplayNo } from "../../building.rules";
 import type { Campus } from "../../building.types";
 import type { PinnedPlace, PlaceId, PlaceIndex, ResolvedPlace } from "../building-place.types";
-import type { CampusBuilding, CampusPrimaryPlace, PlaceDisplay } from "./building-place-display.types";
+import type { CampusBuilding, CampusPrimaryPlace, PlaceDisplay, StoredPlace } from "./building-place-display.types";
 
 // WHY: a room says the most about where a session is, then a building, then a facility.
 const SPECIFICITY: Readonly<Record<PinnedPlace["kind"], number>> = { space: 0, building: 1, facility: 2 };
 
 const isPinned = (place: ResolvedPlace): place is PinnedPlace => place.kind !== "unresolved";
+
+export function toStoredPlace(placeId: string): StoredPlace | null {
+  const [kind, campus, ...keys] = placeId.split(":");
+  const key = keys.join(":");
+  if (!isCampus(campus) || key === "") return null;
+  if (kind === "space") return isSpaceCd(key) ? { kind, campus, spaceCd: key } : null;
+  if (kind === "building") return isBuildNo(key) ? { kind, campus, buildNo: key } : null;
+  return kind === "facility" ? { kind, campus, slug: key } : null;
+}
 
 export function toPlaceId(place: PinnedPlace): PlaceId {
   if (place.kind === "space") return `space:${place.campus}:${place.spaceCd}`;
@@ -21,7 +30,7 @@ function toBuildingDisplay(buildNo: string | undefined, campus: Campus, index: P
   return displayNo ? { name: building.name, code: displayNo } : { name: building.name };
 }
 
-export function toPlaceDisplay(place: PinnedPlace, index: PlaceIndex): PlaceDisplay | null {
+export function toPlaceDisplay(place: StoredPlace, index: PlaceIndex): PlaceDisplay | null {
   if (place.kind === "building") return toBuildingDisplay(place.buildNo, place.campus, index);
   if (place.kind === "facility") {
     const facility = index.placeByKey.get(`${place.campus}:${place.slug}`);

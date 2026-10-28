@@ -1,8 +1,9 @@
 /**
- * BuildingPlaceDisplayService, the door a notice flow shows its pinned places
- * through, over in-memory repositories: each pinned place gets its
- * `장소명 장소코드` pair (a name and a code) from the current index, nothing
- * once skkumap no longer holds it, and a failed read rejects.
+ * BuildingPlaceDisplayService, the door a notice flow shows its places
+ * through by the place ids a notice stores, over in-memory repositories: each
+ * id gets its `장소명 장소코드` pair (a name and a code) from the current index,
+ * in the order given, nothing for an id that is unresolved, malformed or that
+ * skkumap no longer holds, and a failed read rejects.
  */
 jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -14,7 +15,6 @@ import type { BuildingRepository } from "../../building.repository";
 import type { BuildNo, DisplayNo, SkkuId, SpaceCd } from "../../building.types";
 import type { BuildingPlaceRepository } from "../building-place.repository";
 import { BuildingPlaceService } from "../building-place.service";
-import type { PinnedPlace } from "../building-place.types";
 import { BuildingPlaceDisplayService } from "./building-place-display.service";
 
 const text = (ko: string) => ({ ko, en: "" });
@@ -46,20 +46,26 @@ beforeEach(() => {
 });
 
 describe("BuildingPlaceDisplayService.describePlaces", () => {
-  it("shows each pinned place by name and code, and nothing for one skkumap no longer holds", async () => {
+  it("shows each stored place by name and code, and nothing for one skkumap no longer holds", async () => {
     // Arrange
-    const pinned: PinnedPlace[] = [
-      { kind: "space", campus: "hssc", spaceCd: "33B101" as SpaceCd, buildNo: "133" as BuildNo },
-      { kind: "building", campus: "hssc", buildNo: "133" as BuildNo },
-      { kind: "facility", campus: "nsc", slug: "engineering-2-courtyard" },
-      { kind: "building", campus: "nsc", buildNo: "286" as BuildNo },
-    ];
+    const placeIds = ["space:hssc:33B101", "building:hssc:133", "facility:nsc:engineering-2-courtyard", "building:nsc:286"];
 
     // Act
-    const displays = await service.describePlaces(pinned);
+    const displays = await service.describePlaces(placeIds);
 
     // Assert
     expect(displays).toEqual([{ name: "경영관", code: "33B101" }, { name: "경영관", code: "33" }, { name: "제2공학관 중앙정원" }, null]);
+  });
+
+  it("gives nothing for an unresolved or malformed id and keeps the position of each", async () => {
+    // Arrange
+    const placeIds = ["unresolved", "space:mars:33B101", "building:hssc:133", "building:hssc:", "garden"];
+
+    // Act
+    const displays = await service.describePlaces(placeIds);
+
+    // Assert
+    expect(displays).toEqual([null, null, { name: "경영관", code: "33" }, null, null]);
   });
 
   it("rejects when the index cannot be read", async () => {
