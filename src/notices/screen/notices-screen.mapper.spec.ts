@@ -310,7 +310,7 @@ describe("toScreenBlocks, 신청", () => {
     ]);
   });
 
-  it.each<[string, RawRecord, string | null, Array<{ kind: string; target: string }>]>([
+  it.each<[string, RawRecord, string | null, Array<Record<string, string | null>>]>([
     ["a system path copied as written", actionOf({ method: "system", target: "학사정보시스템 > 신청" }), "학사정보시스템 > 신청", []],
     ["a visit to an office as written", actionOf({ method: "visit", target: "학과 사무실 방문" }), "학과 사무실 방문", []],
     ["an attachment by its role label", actionOf({ method: "other", target: "A1" }), "지원서", []],
@@ -320,6 +320,8 @@ describe("toScreenBlocks, 신청", () => {
     ["a call to a number", actionOf({ method: "phone", target: "02-760-1234" }), null, [{ kind: "call", target: "02-760-1234" }]],
     ["a link by an id that names no link", actionOf({ target: "K9" }), null, []],
     ["a mailto link as an email", actionOf({ target: "K2" }), null, [{ kind: "email", target: "office@skku.edu" }]],
+    ["a mailto link's subject into the email", actionOf({ target: "K2" }), null, [{ kind: "email", target: "office@skku.edu", subject: "x" }]],
+    ["no subject for an email action whose subject the notice gives as a rule", actionOf({ method: "email", target: "a@skku.edu", subjectRule: evidenceOf("제목: 학번_이름") }), "제목: 학번_이름", [{ kind: "email", target: "a@skku.edu", subject: null }]],
   ])("reads %s", (_label, action, sub, actions) => {
     // Arrange
     const stored = withLinks((r) => {

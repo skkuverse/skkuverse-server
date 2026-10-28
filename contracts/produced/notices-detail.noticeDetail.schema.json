@@ -478,11 +478,18 @@
                                   },
                                   "target": {
                                     "type": "string"
+                                  },
+                                  "subject": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   }
                                 },
                                 "required": [
                                   "kind",
-                                  "target"
+                                  "target",
+                                  "subject"
                                 ]
                               },
                               {
@@ -544,26 +551,54 @@
             "action": {
               "anyOf": [
                 {
-                  "type": "object",
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "link",
-                        "email"
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "link"
+                        },
+                        "target": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "kind",
+                        "target"
                       ]
                     },
-                    "target": {
-                      "type": "string"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "email"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "subject": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "kind",
+                        "target",
+                        "subject"
+                      ]
                     }
-                  },
-                  "required": [
-                    "label",
-                    "kind",
-                    "target"
                   ]
                 },
                 {

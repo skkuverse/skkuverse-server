@@ -6,7 +6,8 @@ const screenAction = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("map"), target: z.string().regex(/^skku_building:[0-9]+$/), space: z.string().nullable() }),
   z.object({ kind: z.literal("search"), target: z.string() }),
   z.object({ kind: z.literal("call"), target: z.string() }),
-  z.object({ kind: z.literal("email"), target: z.string() }),
+  /** WHY: `subject` is a subject the notice writes out to copy (a mailto link's), never a rule for writing one. */
+  z.object({ kind: z.literal("email"), target: z.string(), subject: z.string().nullable() }),
   z.object({ kind: z.literal("link"), target: z.string() }),
 ]);
 
@@ -34,7 +35,12 @@ export const noticeScreen = z.object({
   header: z.object({ firstSeen: z.string(), change: headerChange.nullable() }),
   status: z.object({ word: z.string(), detail: z.string().nullable(), tone: z.enum(["open", "soon", "closed", "stopped", "neutral"]) }).nullable(),
   blocks: z.array(screenBlock),
-  action: z.object({ label: z.string(), kind: z.enum(["link", "email"]), target: z.string() }).nullable(),
+  action: z
+    .discriminatedUnion("kind", [
+      z.object({ label: z.string(), kind: z.literal("link"), target: z.string() }),
+      z.object({ label: z.string(), kind: z.literal("email"), target: z.string(), subject: z.string().nullable() }),
+    ])
+    .nullable(),
   collapsed: z.enum(["closed", "cancelled"]).nullable(),
   staffOnly: z.boolean(),
   posterOnly: z.boolean(),
