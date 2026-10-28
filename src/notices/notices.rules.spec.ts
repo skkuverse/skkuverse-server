@@ -2,7 +2,8 @@
  * The root's shared decisions: the cluster key that makes the copies of one article one push and one list row, the
  * summary type, the search text, the source-id list, the cross-references of the committed tab files, and a fact's
  * quote as the row and the screen show it: after its table label (codebook v3.11) unless the label is empty or the
- * quote already says it, with a draw always marked.
+ * quote already says it, with a draw always marked. A row that cannot fit that text takes the crawler's compact of it,
+ * which keeps the label and the draw mark, so the texts a fact offers are its full text first.
  */
 
 import { ObjectId } from "mongodb";
@@ -16,7 +17,9 @@ import {
   normalizeSummaryType,
   toSearchQuery,
   toBenefitText,
+  toBenefitTexts,
   toQuoteText,
+  toQuoteTexts,
   toSourceIds,
 } from "./notices.rules";
 import type { CategoryConfig, SourceConfig } from "./notices.types";
@@ -214,5 +217,35 @@ describe("toBenefitText", () => {
   ])("writes %s", (_title, input, expected) => {
     // Act & Assert
     expect(toBenefitText(input)).toBe(expected);
+  });
+});
+
+describe("toQuoteTexts", () => {
+  it.each<[string, { quote: string; label?: string; compact?: string }, string[]]>([
+    ["offers the quote alone when the crawler stored no compact", { quote: "석사과정만" }, ["석사과정만"]],
+    ["offers the quote, then its compact", { quote: "석사과정 재학생만 신청 가능", compact: "석사과정만" }, ["석사과정 재학생만 신청 가능", "석사과정만"]],
+    ["offers no compact the crawler stored empty", { quote: "석사과정만", compact: "" }, ["석사과정만"]],
+    ["puts the label before the quote and before its compact", { quote: "석사과정 재학생만", label: "대상", compact: "석사과정" }, ["대상 · 석사과정 재학생만", "대상 · 석사과정"]],
+    ["keeps the label on the compact when the quote already says it", { quote: "대상: 석사과정 재학생만", label: "대상", compact: "석사과정" }, ["대상: 석사과정 재학생만", "대상 · 석사과정"]],
+    ["offers a compact that says the label itself alone", { quote: "대상: 석사과정 재학생만", label: "대상", compact: "대상: 석사과정" }, ["대상: 석사과정 재학생만", "대상: 석사과정"]],
+    ["leaves out the label when it is empty", { quote: "석사과정 재학생만", label: " ", compact: "석사과정" }, ["석사과정 재학생만", "석사과정"]],
+  ])("%s", (_title, evidence, expected) => {
+    // Act & Assert
+    expect(toQuoteTexts(evidence)).toEqual(expected);
+  });
+});
+
+describe("toBenefitTexts", () => {
+  const benefit = (quote: string, isDraw: boolean, extra: { label?: string; compact?: string } = {}) => ({ isDraw, ev: { quote, ...extra } });
+
+  it.each([
+    ["a benefit that is no draw, its quote text then its compact", benefit("월 50만원 지급 및 기숙사비 면제", false, { compact: "월 50만원" }), ["월 50만원 지급 및 기숙사비 면제", "월 50만원"]],
+    ["a draw, marked after the quote and after its compact", benefit("커피 쿠폰 100명 랜덤 증정", true, { compact: "커피 쿠폰" }), ["커피 쿠폰 100명 랜덤 증정 (추첨)", "커피 쿠폰 (추첨)"]],
+    ["a labelled draw, the label before each", benefit("커피 쿠폰", true, { label: "경품", compact: "쿠폰" }), ["경품 · 커피 쿠폰 (추첨)", "경품 · 쿠폰 (추첨)"]],
+    ["a draw whose compact says so, with no second mark", benefit("추첨으로 커피 쿠폰 증정", true, { compact: "추첨 쿠폰" }), ["추첨으로 커피 쿠폰 증정", "추첨 쿠폰"]],
+    ["a benefit with no compact, as its one text", benefit("커피 쿠폰", true), ["커피 쿠폰 (추첨)"]],
+  ])("offers %s", (_title, input, expected) => {
+    // Act & Assert
+    expect(toBenefitTexts(input)).toEqual(expected);
   });
 });

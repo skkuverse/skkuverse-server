@@ -170,3 +170,35 @@ describe("toDerivedBrief, the table label of codebook v3.11", () => {
   });
 });
 
+describe("toDerivedBrief, the crawler's compact, which only the list row shows", () => {
+  const MAIN_THING = "th_441ff75112a0";
+  const QUOTE = "월 50만원 지급 및 기숙사비 전액 면제";
+  const compactBrief = (label: string | undefined) => {
+    const stored = JSON.parse(fs.readFileSync(path.join(FIXTURES, "a_deadline_tomorrow_reads_as_one_while_the_window_is_open.json"), "utf8")) as { now: string; record: { benefits: unknown[] } };
+    const ev = { src: "body", quote: QUOTE, start: 0, end: QUOTE.length, match: "exact", compact: "월 50만원", ...(label === undefined ? {} : { label }) };
+    stored.record.benefits.push({ ev, thing: MAIN_THING, earnedBy: "selected", amount: null, isDraw: false, track: "", appliesTo: [], tag: "", tagBy: "" });
+    const now = new Date(stored.now);
+    const reading = new NoticesRowService(new NoticesFactsService({ now: () => now })).readNotice({ _id: new ObjectId(), title: "제목", facts: stored.record, factsHistory: [] }, now);
+    if (!reading) throw new Error("the test record does not parse");
+    return { brief: toDerivedBrief(reading), qualifier: reading.row.qualifier };
+  };
+
+  it("keeps the whole quote in the one-liner where the row's 26 characters take the compact", () => {
+    // Act
+    const { brief, qualifier } = compactBrief(undefined);
+
+    // Assert
+    expect(qualifier).toBe("월 50만원");
+    expect(brief.oneLiner).toBe(`내일 마감 · ${QUOTE}`);
+  });
+
+  it("keeps the label before the whole quote where the row takes the labelled compact", () => {
+    // Act
+    const { brief, qualifier } = compactBrief("장학금");
+
+    // Assert
+    expect(qualifier).toBe("장학금 · 월 50만원");
+    expect(brief.oneLiner).toBe(`내일 마감 · 장학금 · ${QUOTE}`);
+  });
+});
+

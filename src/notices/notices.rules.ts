@@ -86,8 +86,21 @@ export function toQuoteText({ quote, label }: { quote: string; label?: string | 
   return squashed(quote).includes(squashed(words)) ? quote : `${words}${QUOTE_LABEL_JOINER}${quote}`;
 }
 
+// CONTRACT(skkuverse-crawler): skkuverse-crawler/docs/notice-facts/notice-facts.schema.json, a `compact` of at most 11
+// characters, each word a part of its quote: the row fits the first of these texts into line 2, and a compact keeps its label.
+export function toQuoteTexts({ quote, label, compact }: { quote: string; label?: string | undefined; compact?: string | undefined }): [string, ...string[]] {
+  const full = toQuoteText({ quote, label });
+  return compact ? [full, toQuoteText({ quote: compact, label })] : [full];
+}
+
 // WHY: umbrella ADR 0009 D5 and D13: a draw is always marked as one, unless its text already says so.
+const withDrawMark = (isDraw: boolean, text: string): string => (isDraw && !text.includes(DRAW_MARK) ? `${text} (${DRAW_MARK})` : text);
+
 export function toBenefitText({ isDraw, ev }: { isDraw: boolean; ev: { quote: string; label?: string | undefined } }): string {
-  const shown = toQuoteText(ev);
-  return isDraw && !shown.includes(DRAW_MARK) ? `${shown} (${DRAW_MARK})` : shown;
+  return withDrawMark(isDraw, toQuoteText(ev));
+}
+
+export function toBenefitTexts({ isDraw, ev }: { isDraw: boolean; ev: { quote: string; label?: string | undefined; compact?: string | undefined } }): [string, ...string[]] {
+  const [, ...compacts] = toQuoteTexts(ev);
+  return [toBenefitText({ isDraw, ev }), ...compacts.map((text) => withDrawMark(isDraw, text))];
 }
