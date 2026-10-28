@@ -577,7 +577,6 @@ describe("GET /notices — the facts row on a list item", () => {
       _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d201"),
       articleNo: 201,
       facts: factsEndingTomorrow(),
-      firstSeenAt: new Date("2026-04-11T01:00:00.000Z"),
       ...summaryFields,
     });
   const withoutFacts = (): NoticeDoc => rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d202"), articleNo: 202, date: "2026-04-09", ...summaryFields });
@@ -601,7 +600,7 @@ describe("GET /notices — the facts row on a list item", () => {
       qualifier: null,
       board: null,
       dimmed: false,
-      day: "today",
+      day: "yesterday",
     });
     expect(plain.row).toBeNull();
     expect(served.summary).toEqual(plain.summary);

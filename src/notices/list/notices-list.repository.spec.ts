@@ -72,14 +72,14 @@ describe("NoticesListRepository.listNotices", () => {
 });
 
 describe("NoticesListRepository.listNotices projection for the row", () => {
-  it("loads the facts, their history and the first-seen instant the row is rendered and grouped from", async () => {
+  it("loads the facts and their history the row is rendered from, and no first-seen instant: the day group reads the posting date", async () => {
     // Act
     await new NoticesListRepository().listNotices("skku-notice02", { limit: 20, cursor: null });
 
     // Assert
     const options = find.mock.calls[0]?.[1] as { projection: Record<string, number> };
-    expect(options.projection).toMatchObject({ facts: 1, factsHistory: 1, firstSeenAt: 1 });
-    expect(Object.keys(options.projection).filter((key) => ["factsAt", "factsGate", "groupId"].includes(key))).toEqual([]);
+    expect(options.projection).toMatchObject({ facts: 1, factsHistory: 1, date: 1 });
+    expect(Object.keys(options.projection).filter((key) => ["factsAt", "factsGate", "groupId", "firstSeenAt"].includes(key))).toEqual([]);
   });
 });
 
