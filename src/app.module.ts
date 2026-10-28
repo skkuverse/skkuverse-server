@@ -49,7 +49,6 @@ import { BuildingCatalogModule } from "./building/catalog/building-catalog.modul
 import { BuildingSearchModule } from "./building/search/building-search.module";
 import { BuildingCafeteriaListModule } from "./building/cafeteria-list/building-cafeteria-list.module";
 import { BuildingPlaceModule } from "./building/place/building-place.module";
-import { BuildingPlaceResolveModule } from "./building/place/resolve/building-place-resolve.module";
 import { BuildingPlaceDisplayModule } from "./building/place/display/building-place-display.module";
 import { MealsModule } from "./meals/meals.module";
 import { MealsCatalogModule } from "./meals/catalog/meals-catalog.module";
@@ -62,6 +61,9 @@ import { MapTransitModule } from "./map/transit/map-transit.module";
 import { MapEventModule } from "./map/event/map-event.module";
 import { MapEventDetailsModule } from "./map/event-details/map-event-details.module";
 import { NoticesModule } from "./notices/notices.module";
+import { NoticesFactsModule } from "./notices/facts/notices-facts.module";
+import { NoticesRowModule } from "./notices/row/notices-row.module";
+import { NoticesScreenModule } from "./notices/screen/notices-screen.module";
 import { NoticesTabsModule } from "./notices/tabs/notices-tabs.module";
 import { NoticesListModule } from "./notices/list/notices-list.module";
 import { NoticesOverviewModule } from "./notices/overview/notices-overview.module";
@@ -156,7 +158,6 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     BuildingCatalogModule,
     BuildingCafeteriaListModule,
     BuildingPlaceModule,
-    BuildingPlaceResolveModule,
     BuildingPlaceDisplayModule,
     MealsModule,
     MealsCatalogModule,
@@ -169,6 +170,9 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     MapEventModule,
     MapEventDetailsModule,
     NoticesModule,
+    NoticesFactsModule,
+    NoticesRowModule,
+    NoticesScreenModule,
     NoticesTabsModule,
     NoticesListModule,
     NoticesOverviewModule,

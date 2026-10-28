@@ -1,13 +1,31 @@
 /**
  * NoticesDetailService over FakeNoticesDetailRepository: a stored notice comes back as its detail, a missing
- * or soft-deleted one as null, which the controller answers with 404.
+ * or soft-deleted one as null, which the controller answers with 404. The detail's screen is rendered by the real
+ * NoticesScreenService at the one moment the clock gives: null for a notice with no facts or facts the schema refuses,
+ * finished text for one with, which changes with the clock and leaves every other field as it was.
+ *
+ * src/infra/logger.ts is mocked: a refused record logs `notices.facts.unparsed`.
  */
 import { ObjectId } from "mongodb";
+import type { Clock } from "../../infra/clock";
+
+jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
+
+import { FakeBuildingPlaceRepository } from "../../../__tests__/helpers/fakes/building/building-place.repository.fake";
+import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
 import { FakeNoticesDetailRepository } from "../../../__tests__/helpers/fakes/notices/notices-detail.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { goldenRecord } from "../../../__tests__/helpers/notices/facts-records";
+import { BuildingPlaceService } from "../../building/place/building-place.service";
+import { BuildingPlaceDisplayService } from "../../building/place/display/building-place-display.service";
+import { NoticesFactsService } from "../facts/notices-facts.service";
 import type { NoticeDoc } from "../notices.document";
+import { NoticesRowService } from "../row/notices-row.service";
+import { NoticesScreenService } from "../screen/notices-screen.service";
 import type { NoticesDetailRepository } from "./notices-detail.repository";
 import { NoticesDetailService } from "./notices-detail.service";
+
+const WINDOW = "a_deadline_tomorrow_reads_as_one_while_the_window_is_open";
 
 const doc = (extra: Partial<NoticeDoc> = {}): NoticeDoc => ({
   _id: new ObjectId(),
@@ -20,17 +38,69 @@ const doc = (extra: Partial<NoticeDoc> = {}): NoticeDoc => ({
   ...extra,
 });
 
+let now = new Date("2026-10-22T03:00:00Z");
+const clock: Clock = { now: () => now };
+let repository: FakeNoticesDetailRepository;
+let service: NoticesDetailService;
+
+beforeEach(() => {
+  now = new Date("2026-10-22T03:00:00Z");
+  repository = new FakeNoticesDetailRepository();
+  const placeService = new BuildingPlaceService(
+    asReal<ConstructorParameters<typeof BuildingPlaceService>[0]>(new FakeBuildingRepository()),
+    asReal<ConstructorParameters<typeof BuildingPlaceService>[1]>(new FakeBuildingPlaceRepository()),
+  );
+  const screens = new NoticesScreenService(new NoticesRowService(new NoticesFactsService(clock)), new BuildingPlaceDisplayService(placeService));
+  service = new NoticesDetailService(asReal<NoticesDetailRepository>(repository), screens, clock);
+});
+
 describe("NoticesDetailService.findNotice", () => {
   it("returns the stored notice's detail, and null for a missing or soft-deleted one", async () => {
     // Arrange
-    const repository = new FakeNoticesDetailRepository();
     repository.docs = [doc(), doc({ articleNo: 2, isDeleted: true })];
-    const service = new NoticesDetailService(asReal<NoticesDetailRepository>(repository));
 
     // Act
     const found = await Promise.all([service.findNotice("skku-notice02", 1), service.findNotice("skku-notice02", 2), service.findNotice("skku-notice02", 3)]);
 
     // Assert
     expect(found.map((detail) => detail?.articleNo ?? null)).toEqual([1, null, null]);
+  });
+
+  it("serves a null screen for a notice with no facts or facts the schema refuses", async () => {
+    // Arrange
+    repository.docs = [doc({ articleNo: 1 }), doc({ articleNo: 2, facts: { ...goldenRecord(WINDOW), v: 2 } })];
+
+    // Act
+    const found = await Promise.all([service.findNotice("skku-notice02", 1), service.findNotice("skku-notice02", 2)]);
+
+    // Assert
+    expect(found.map((detail) => detail?.screen)).toEqual([null, null]);
+  });
+
+  it("renders the screen of a notice with facts at the moment the clock gives, and changes no other field", async () => {
+    // Arrange
+    repository.docs = [doc({ articleNo: 1, title: "장학금 안내" }), doc({ articleNo: 2, title: "장학금 안내", facts: goldenRecord(WINDOW), firstSeenAt: new Date("2026-10-21T03:00:00Z") })];
+
+    // Act
+    const [plain, served] = await Promise.all([service.findNotice("skku-notice02", 1), service.findNotice("skku-notice02", 2)]);
+    now = new Date("2026-10-25T03:00:00Z");
+    const later = await service.findNotice("skku-notice02", 2);
+
+    // Assert
+    expect(served?.screen).toMatchObject({ header: { firstSeen: "어제 처음 올라옴" }, status: { word: "접수 중", tone: "open", detail: "10/26(월) 마감" } });
+    expect(later?.screen).toMatchObject({ header: { firstSeen: "10/21(수) 처음 올라옴" }, status: { word: "접수 중", tone: "soon", detail: "내일 마감" } });
+    expect({ ...served, id: null, articleNo: null, screen: null }).toEqual({ ...plain, id: null, articleNo: null, screen: null });
+  });
+
+  it("names the date that moved against the notice's last stored extraction", async () => {
+    // Arrange
+    const snapshot = { extractedAt: "2026-10-15T00:00:00+00:00", inputHash: "h1", times: [{ id: "tm_4ebf5287efb8", kind: "window", start: "2026-10-19", end: "2026-10-30", places: [] }], status: [] };
+    repository.docs = [doc({ facts: goldenRecord(WINDOW), factsHistory: [snapshot] })];
+
+    // Act
+    const served = await service.findNotice("skku-notice02", 1);
+
+    // Assert
+    expect(served?.screen?.header.change).toEqual({ what: "날짜", before: "10/19(월)~10/30(금)", after: "10/19(월)~10/26(월)" });
   });
 });

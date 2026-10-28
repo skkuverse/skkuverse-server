@@ -3,14 +3,6 @@
     "max": 215,
     "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list. Its max rises with each module added: that commit carries the Architecture-Debt trailer for this file and needs no other reason."
   },
-  "src/building/place/building-place.rules.ts": {
-    "max": 172,
-    "reason": "ADR 0010 D9, no reachable seam: `toPlaceIndex` derives one index from the synced buildings and spaces and `place-lexicon.json` (places, room keys, prefixes, aliases, offices, patterns), which both the resolve and display flows read whole, and the alias pass needs the places and spaces it is built over; a sibling sub-module cannot hold a part, since siblings share no rules (sub-modules.test.ts) and a parent never imports a child."
-  },
-  "src/building/place/resolve/building-place-resolve.rules.ts": {
-    "max": 273,
-    "reason": "ADR 0010 D9, no reachable seam: `resolvePlace` is one ordered method (off-campus markers, printed codes, building names, weak names, offices, the library board, online, campus only) whose steps read one `PlaceReading` and return early in that order, so the precedence is the decision; the room and alias lookups it calls are reached only from it, and a sibling sub-module cannot share rules with it (sub-modules.test.ts)."
-  },
   "src/bus/bus.wire.ts": {
     "max": 72,
     "reason": "ADR 0010 D9, no domain seam: `vehicle`, `vehiclePosition` and `operation` are the bus pieces of the one live shape that GET /bus/live/:groupId and the stop page both serve (ADR 0019), extending the shared call and vehicle of ADR 0022, and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the shapes the two routes share sit at the bus root beside the stop shapes /bus/config serves; each WHY a client reads to fall back on an open enum counts toward the cap."
@@ -67,9 +59,29 @@
     "max": 63,
     "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers, then the HSSC route layer and then the `tabs` each base layer states took it past the role cap."
   },
+  "src/notices/detail/notices-detail.wire.ts": {
+    "max": 60,
+    "reason": "ADR 0010 D9, no domain seam: `noticeDetail` is the one body the detail route serves, its screen part already split into `src/notices/notices.wire.ts`, and the other fields are the stored notice passed through (the summary's periods, details and edit history as the crawler and the ai stored them), so no part of it is a flow of its own."
+  },
+  "src/notices/facts/notices-facts.schema.ts": {
+    "max": 220,
+    "reason": "ADR 0010 D9, no domain seam: `noticeFacts` mirrors the one versioned record the crawler writes and the server parses as a unit, each of its sections checked against the same vendored file by `__tests__/contracts/notice-facts.test.ts`, so a split would leave half a record in each sub-module, and a sibling never imports another sub-module's schema (sub-modules.test.ts); `factsSnapshot`, an earlier version of that record the crawler stores beside it, is read through the same `NoticesFactsService`."
+  },
   "src/notices/list/notices-list.rules.ts": {
-    "max": 182,
-    "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
+    "max": 195,
+    "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it, with `toListDay`, the one KST day group a served item sits under; none is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
+  },
+  "src/notices/row/notices-row.rules.ts": {
+    "max": 424,
+    "reason": "ADR 0010 D9, no domain seam: `toFactsRows` turns a page of parsed facts into the list rows of umbrella ADR 0009, and its token table (`TOKEN_PRECEDENCE`), line 2, the abstention and the qualifier's place all read the one `RowStatus` that `toRowStatus` picks from the same row items and their KST days, so no step stands alone; a sibling sub-module meets the row only through a service (sub-modules.test.ts), which would put a Nest provider between pure steps of one computation, and a parent never imports a child, so the status cannot become a parent without a door no production code calls. The Korean words live in notices-row.constants.ts. `toRowReading` reads one notice for the detail screen over the same private scope, status and date text, so it closes over them and no other flow imports them."
+  },
+  "src/notices/row/notices-row.types.ts": {
+    "max": 64,
+    "reason": "ADR 0010 D9, no domain seam: `RowReading` and `ItemReading` are built only from `FactsRow`, `RowStatus` and `RowItem` declared beside them in this file, a folder holds one types file, and a parent never imports a child, so the reading cannot move into a sub-module."
+  },
+  "src/notices/screen/notices-screen.rules.ts": {
+    "max": 174,
+    "reason": "ADR 0010 D9, no domain seam: the status line, the collapse, the action bar, the block order and the header change all decide over the one `RowReading` that `NoticesRowService.readNotice` returns, and a sibling meets it only through a service, which would put a Nest provider between pure decisions over one reading; the block lines are `notices-screen.mapper.ts`'s and the Korean words `notices-screen.constants.ts`'s."
   },
   "src/subway/estimate/subway-estimate.rules.ts": {
     "max": 160,

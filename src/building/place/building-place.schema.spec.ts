@@ -1,7 +1,7 @@
 /**
  * placeLexiconFile, the shape of the committed place lexicon: the file as
  * committed parses, a copy missing any key fails (so a dropped table fails
- * the boot instead of resolving less), an unknown key fails (so a misspelt
+ * the boot instead of naming less), an unknown key fails (so a misspelt
  * table is not ignored), and a facility slug is a lowercase id, never a
  * display name.
  */

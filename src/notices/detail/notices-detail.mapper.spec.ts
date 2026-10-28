@@ -1,10 +1,11 @@
 /**
  * The detail response: the Markdown body as contentMarkdown (null when the crawler has none), attachments with a
  * referer only when stored, an edit history only once edited, the full summary only once summarized, and every
- * stored time as the ISO string JSON writes.
+ * stored time as the ISO string JSON writes, and the screen it is given beside them, null when there is none.
  */
 import { ObjectId } from "mongodb";
 import type { NoticeDoc } from "../notices.document";
+import type { NoticeScreen } from "../notices.wire";
 import { toSummaryFull, toDetailItem } from "./notices-detail.mapper";
 
 const ID = new ObjectId("66a1b2c3d4e5f6a7b8c9d0e1");
@@ -21,7 +22,7 @@ const BASE: NoticeDoc = {
 describe("toDetailItem", () => {
   it("serves defaults for every optional field the crawler may leave out", () => {
     // Act & Assert
-    expect(toDetailItem(BASE)).toEqual({
+    expect(toDetailItem(BASE, null)).toEqual({
       id: ID.toHexString(),
       sourceId: "skku-notice02",
       articleNo: 140482,
@@ -38,6 +39,7 @@ describe("toDetailItem", () => {
       crawledAt: "2026-10-14T05:30:10.676Z",
       editInfo: null,
       summary: null,
+      screen: null,
     });
   });
 
@@ -50,7 +52,7 @@ describe("toDetailItem", () => {
       editCount: 1,
       editHistory: [{ detectedAt: new Date("2026-10-13T02:00:08.400Z"), contentChanged: true }],
       lastModified: "2026-10-14",
-    });
+    }, null);
 
     // Assert
     expect(item).toMatchObject({
@@ -60,6 +62,33 @@ describe("toDetailItem", () => {
       lastModified: "2026-10-14",
     });
     expect(item.attachments[1]).not.toHaveProperty("referer");
+  });
+});
+
+describe("toDetailItem, the screen", () => {
+  const SCREEN: NoticeScreen = {
+    header: { firstSeen: "오늘 처음 올라옴", change: null },
+    status: { word: "접수 중", tone: "open", detail: "10/26(월) 마감" },
+    blocks: [],
+    action: null,
+    collapsed: null,
+    staffOnly: false,
+    posterOnly: false,
+    original: { posterCount: 0, attachments: [], links: [] },
+  };
+
+  it("serves the screen it is given next to the summary, and changes no other field", () => {
+    // Arrange
+    const summarized = { ...BASE, summaryAt: new Date("2026-10-14T06:00:00Z"), summaryOneLiner: "한 줄" };
+
+    // Act
+    const without = toDetailItem(summarized, null);
+    const withScreen = toDetailItem(summarized, SCREEN);
+
+    // Assert
+    expect(withScreen.screen).toEqual(SCREEN);
+    expect({ ...withScreen, screen: null }).toEqual(without);
+    expect(withScreen.summary).toMatchObject({ oneLiner: "한 줄" });
   });
 });
 

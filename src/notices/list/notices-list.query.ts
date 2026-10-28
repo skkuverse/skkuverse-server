@@ -36,6 +36,8 @@ export const LIST_PROJECTION = {
   summaryVersion: 1,
   summaryApplication: 1,
   summaryDates: 1,
+  facts: 1,
+  factsHistory: 1,
 } as const satisfies Record<keyof NoticeListRow, 1>;
 
 // SEE: docs/decisions/0007-notice-ordering-key.md — after the cursor in (date desc, _id desc); `crawledAt` stays out.
