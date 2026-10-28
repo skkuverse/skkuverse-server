@@ -7,7 +7,9 @@
  * equal to what was stored, so the mirror drops no key a record carries. A copy missing any required top-level key
  * or any key of a nested item does not parse, and neither does another `v`. A key the mirror does not know is
  * stripped, never refused, because the crawler adds optional keys without a version bump. The table `label` of
- * codebook v3.11 is one the mirror knows, on a condition's quote, a benefit's quote and a cost of missing.
+ * codebook v3.11 is one the mirror knows, on a condition's quote, a benefit's quote and a cost of missing, and so is
+ * the `compact` of the crawler's ADR 015 decision 25, on those, on the words that make a notice not for students and on
+ * a place, with the record's `compacts` mark.
  */
 import fs from "fs";
 import path from "path";
@@ -193,5 +195,99 @@ describe("noticeFacts, the table label of codebook v3.11", () => {
     // Assert
     expect(parsed.success).toBe(true);
     expect(parsed.data?.audience.conditions[0]?.ev).not.toHaveProperty("label");
+  });
+});
+
+describe("noticeFacts, the compact of the crawler's ADR 015 decision 25", () => {
+  const recordWith = (hasFact: (facts: Record<string, any>) => boolean): Record<string, any> => {
+    const found = RECORDS.find((r) => hasFact(r.facts));
+    if (!found) throw new Error("no captured record has the fact");
+    return copyOf(found.facts);
+  };
+  const withCondition = () => recordWith((f) => f.audience.conditions.length > 0);
+  const withBenefit = () => recordWith((f) => f.benefits.length > 0);
+  const withCost = () => recordWith((f) => f.costOfMissing.length > 0);
+  const withStaffWords = () => recordWith((f) => f.audience.forStudentsEv !== null);
+  const withPlace = () => recordWith((f) => f.times.some((t: any) => t.where.places.length > 0));
+  const placeAt = (facts: Record<string, any>): string[] => {
+    const index = facts.times.findIndex((t: any) => t.where.places.length > 0);
+    return ["times", String(index), "where", "places", "0", "compact"];
+  };
+
+  const COMPACT_PATHS: Array<[string, () => Record<string, any>, (facts: Record<string, any>) => string[]]> = [
+    ["a condition's quote", withCondition, () => ["audience", "conditions", "0", "ev", "compact"]],
+    ["a benefit's quote", withBenefit, () => ["benefits", "0", "ev", "compact"]],
+    ["a cost of missing", withCost, () => ["costOfMissing", "0", "compact"]],
+    ["the words that make a notice not for students", withStaffWords, () => ["audience", "forStudentsEv", "compact"]],
+    ["a place's text", withPlace, placeAt],
+  ];
+
+  it.each(COMPACT_PATHS)("keeps the compact of %s", (_label, record, keysOf) => {
+    // Arrange
+    const base = record();
+    const facts = withValueAt(base, keysOf(base), "석사만");
+
+    // Act
+    const parsed = noticeFacts.safeParse(facts);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual(facts);
+  });
+
+  it.each(COMPACT_PATHS)("refuses a compact of %s that is not text", (_label, record, keysOf) => {
+    // Arrange
+    const base = record();
+    const facts = withValueAt(base, keysOf(base), 3);
+
+    // Act & Assert
+    expect(noticeFacts.safeParse(facts).success).toBe(false);
+  });
+
+  it("keeps the label of the words that make a notice not for students, as it does on a condition", () => {
+    // Arrange
+    const base = withStaffWords();
+    const facts = withValueAt(base, ["audience", "forStudentsEv", "label"], "지원 자격");
+
+    // Act
+    const parsed = noticeFacts.safeParse(facts);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual(facts);
+  });
+
+  it("keeps the compacts mark, which nothing renders", () => {
+    // Arrange
+    const mark = { promptVersion: "compact-1", models: ["writer", "judge"], stored: 3 };
+    const facts = withValueAt(datedRecord(), ["compacts"], mark);
+
+    // Act
+    const parsed = noticeFacts.safeParse(facts);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.compacts).toEqual(mark);
+  });
+
+  it("refuses a compacts mark that is missing its count", () => {
+    // Arrange
+    const facts = withValueAt(datedRecord(), ["compacts"], { promptVersion: "compact-1", models: ["writer"] });
+
+    // Act & Assert
+    expect(noticeFacts.safeParse(facts).success).toBe(false);
+  });
+
+  it("reads a record written before compacts, which has none, as it always did", () => {
+    // Arrange
+    const facts = withCondition();
+
+    // Act
+    const parsed = noticeFacts.safeParse(facts);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.audience.conditions[0]?.ev).not.toHaveProperty("compact");
+    expect(parsed.data).not.toHaveProperty("compacts");
   });
 });
