@@ -62,6 +62,7 @@ import { MapEventModule } from "./map/event/map-event.module";
 import { MapEventDetailsModule } from "./map/event-details/map-event-details.module";
 import { NoticesModule } from "./notices/notices.module";
 import { NoticesFactsModule } from "./notices/facts/notices-facts.module";
+import { NoticesLegacyModule } from "./notices/legacy/notices-legacy.module";
 import { NoticesRowModule } from "./notices/row/notices-row.module";
 import { NoticesScreenModule } from "./notices/screen/notices-screen.module";
 import { NoticesTabsModule } from "./notices/tabs/notices-tabs.module";
@@ -172,6 +173,7 @@ import { JourneyRoutesModule } from "./journey/routes/journey-routes.module";
     NoticesModule,
     NoticesFactsModule,
     NoticesRowModule,
+    NoticesLegacyModule,
     NoticesScreenModule,
     NoticesTabsModule,
     NoticesListModule,
