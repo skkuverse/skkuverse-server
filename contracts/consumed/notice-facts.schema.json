@@ -1810,18 +1810,22 @@
       "properties": {
         "promptVersion": {
           "type": "string",
-          "description": "skkuverse-ai PROMPT_VERSION of the writer, or of the judge that last re-judged the stored compacts (`facts-compact --rejudge`)."
+          "description": "skkuverse-ai PROMPT_VERSION of the writer, or of the judge that last re-judged the stored compacts (`facts-compact --rejudge`), or of the writer and judge that last added place compacts (`facts-compact --restore-places`)."
         },
         "rejudgedFrom": {
           "type": "string",
           "description": "The PROMPT_VERSION the compacts had before `facts-compact --rejudge` judged them again under `promptVersion` and removed those no longer judged the same. Absent on a record never re-judged."
+        },
+        "restoredFrom": {
+          "type": "string",
+          "description": "The PROMPT_VERSION the record had before `facts-compact --restore-places` wrote and judged its place candidates without a compact again under `promptVersion` and added those judged the same. Absent on a record never restored."
         },
         "models": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "The writer's model, then the judge's when it ran (after a rejudge, the judge that re-judged)."
+          "description": "The writer's model, then the judge's when it ran (after a rejudge, the judge that re-judged; after a restore, the writer and judge of the restore)."
         },
         "stored": {
           "type": "integer",
