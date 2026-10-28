@@ -1,7 +1,7 @@
 import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
 import type { NoticeAttachment } from "../notices.document";
-import { toBenefitText, toQuoteText } from "../notices.rules";
+import { toBenefitTexts, toQuoteText } from "../notices.rules";
 import type { ItemReading } from "../row/notices-row.types";
 import { ATTACHMENT_ROLE_WORDS, BLOCK_SPECS, SCREEN_WORDS } from "./notices-screen.constants";
 import { isFromPoster, isStated, toActionTarget, toAttachmentUrl, toContactAction, toDistinctLines, toItemText, toLineSource, toPlaceAction, toPlaceText, toSessionOrder, withTag } from "./notices-screen.rules";
@@ -22,7 +22,7 @@ const BLOCK_LINES = {
   audience: toAudienceLines,
   apply: toApplyLines,
   commitment: toCommitmentLines,
-  benefit: ({ reading }) => reading.facts.benefits.filter(isStated).map((benefit) => toQuoteLine(benefit.ev, toBenefitText(benefit), benefit)),
+  benefit: ({ reading }) => reading.facts.benefits.filter(isStated).map((benefit) => toQuoteLine(benefit.ev, toBenefitTexts(benefit)[0], benefit)),
   costOfMissing: ({ reading }) => reading.facts.costOfMissing.filter(isStated).map((cost) => toQuoteLine(cost, toQuoteText(cost), cost)),
   laterSteps: (scope) => scope.reading.items.filter(({ item }) => LATER_KINDS.has(item.kind)).map((reading) => toItemLine(reading, scope)),
   change: ({ reading }) => reading.facts.statedChanges.map((change) => ({ ...toQuoteLine(change.to, change.to.quote), sub: toFormerly(change.from) })),
