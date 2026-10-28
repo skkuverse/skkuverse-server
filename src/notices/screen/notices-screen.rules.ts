@@ -234,10 +234,6 @@ export const isPosterOnly = ({ times }: NoticeFacts): boolean => times.length > 
 // WHY: umbrella ADR 0009 D13: a track's fact shows its tag first, as the row writes `[tag] text`.
 export const withTag = ({ tag }: { tag?: string }, text: string): string => (tag ? `[${tag}] ${text}` : text);
 
-// WHY: umbrella ADR 0009 D5 and D13: a draw is always marked as one.
-export const withDraw = ({ isDraw, ev }: NoticeFacts["benefits"][number]): string =>
-  isDraw && !ev.quote.includes(SCREEN_WORDS.draw) ? `${ev.quote} (${SCREEN_WORDS.draw})` : ev.quote;
-
 export const toPlaceText = ({ name, code }: PlaceDisplay): string => (code ? `${name} ${code}` : name);
 
 const joinParts = (...parts: string[]): string => parts.filter((part) => part !== "").join(" · ");

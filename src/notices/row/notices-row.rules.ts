@@ -1,6 +1,7 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { NoticeFacts } from "../facts/notices-facts.schema";
+import { toBenefitTexts, toQuoteTexts } from "../notices.rules";
 import { CHANGE_WINDOW_DAYS, DIMMED_STATUSES, MAX_SERIES_LOOKAHEAD_DAYS, ROW_TOKENS, ROW_WORDS, WEEKDAY_CODES } from "./notices-row.constants";
 import type { DatedItem, DatedStatusKind, FactsRow, ItemDays, ItemReading, KstDay, RowItem, RowReading, RowSource, RowStatus, RowToken, StatedStatusKind, StoppedStatusKind } from "./notices-row.types";
 
@@ -421,36 +422,35 @@ function withRowTag(line2: string, parts: readonly string[]): string {
 
 const isStaffOnly = ({ audience }: NoticeFacts): boolean => audience.forStudents === "no" && audience.forStudentsEv !== null;
 
-function toQualifier({ facts, mainThing }: RowScope, shown: RowItem | null): string | null {
+// WHY: umbrella ADR 0009 D5: the texts of the first rule that applies, the full text first and then its compact; the
+// rules after it never stand in for a fact that fits in no form.
+function toQualifier({ facts, mainThing }: RowScope, shown: RowItem | null): readonly string[] {
   const isMine = (fact: ScopedFact): boolean => isAboutMainThing(fact, mainThing);
   const [cost] = facts.costOfMissing.filter(isMine);
-  const audience = toAudienceQualifier(facts, isMine);
-  if (audience !== null) return audience;
-  if (cost) return cost.quote;
-  return toBenefitQualifier(facts.benefits.filter(isMine)) ?? toPlaceQualifier(shown);
+  const rules = [toAudienceQualifier(facts, isMine), cost ? toQuoteTexts(cost) : [], toBenefitQualifier(facts.benefits.filter(isMine)), toPlaceQualifier(shown)];
+  return rules.find((texts) => texts.length > 0) ?? [];
 }
 
-function toBenefitQualifier(benefits: NoticeFacts["benefits"]): string | null {
+function toBenefitQualifier(benefits: NoticeFacts["benefits"]): string[] {
   const units = new Set(benefits.map(({ amount }) => (amount ? `${amount.unit}/${amount.per}` : null)));
   const isComparable = units.size === 1 && !units.has(null);
   const benefit = isNonEmpty(benefits) && isComparable ? firstMaxBy(benefits, ({ amount }) => [amount?.value ?? 0]) : benefits[0];
-  if (!benefit) return null;
-  const { quote } = benefit.ev;
-  return benefit.isDraw && !quote.includes(ROW_WORDS.draw) ? `${quote} (${ROW_WORDS.draw})` : quote;
+  return benefit ? toBenefitTexts(benefit) : [];
 }
 
-function toAudienceQualifier({ audience }: NoticeFacts, isMine: (fact: ScopedFact) => boolean): string | null {
+function toAudienceQualifier({ audience }: NoticeFacts, isMine: (fact: ScopedFact) => boolean): string[] {
   const restrictions = audience.conditions.filter((condition) => condition.restricts && isMine(condition));
   const dimensionCount = new Set(restrictions.map(({ type }) => type)).size;
-  if (audience.forStudents === "no" && audience.forStudentsEv !== null) return audience.forStudentsEv.quote;
-  if (restrictions.length > 1) return ROW_WORDS.conditions.replace("{n}", String(dimensionCount));
-  return restrictions[0]?.ev.quote ?? null;
+  if (audience.forStudents === "no" && audience.forStudentsEv !== null) return toQuoteTexts(audience.forStudentsEv);
+  if (restrictions.length > 1) return [ROW_WORDS.conditions.replace("{n}", String(dimensionCount))];
+  return restrictions[0] ? toQuoteTexts(restrictions[0].ev) : [];
 }
 
-function toPlaceQualifier(shown: RowItem | null): string | null {
-  if (shown === null || !EVENT_KINDS.has(shown.kind) || shown.where.ev === null) return null;
-  if (shown.where.mode === "online") return ROW_WORDS.online;
-  return shown.where.places.length === 1 ? (shown.where.places[0]?.text ?? null) : null;
+function toPlaceQualifier(shown: RowItem | null): string[] {
+  if (shown === null || !EVENT_KINDS.has(shown.kind) || shown.where.ev === null) return [];
+  if (shown.where.mode === "online") return [ROW_WORDS.online];
+  const [place] = shown.where.places;
+  return place && shown.where.places.length === 1 ? toQuoteTexts({ quote: place.text, compact: place.compact }) : [];
 }
 
 function toCompactTitle({ facts }: RowSource, token: RowToken | null): string | null {
@@ -477,12 +477,11 @@ function toWholeWords(text: string, maxChars: number): string {
   return count < words.length ? `${words.slice(0, count).join(" ")}${ELLIPSIS}` : text;
 }
 
-// WHY: umbrella ADR 0009 D3 and D5: line 2 holds 26 characters, and a qualifier that would pass them is left out whole, so
-// a hard condition never shows in part; the app joins the two with " · ".
-function toFittedQualifier(line2: string, qualifier: string | null): string | null {
-  const text = qualifier === null ? "" : squeezed(qualifier);
-  const line = line2 === "" ? text : `${line2}${QUALIFIER_JOINER}${text}`;
-  return text !== "" && [...line].length <= LINE2_MAX_CHARS ? text : null;
+// WHY: umbrella ADR 0009 D3 and D5: line 2 holds 26 characters, and a qualifier that would pass them in every form is left
+// out whole, so a hard condition never shows in part; the app joins the two with " · ".
+function toFittedQualifier(line2: string, texts: readonly string[]): string | null {
+  const fits = (text: string): boolean => text !== "" && [...(line2 === "" ? text : `${line2}${QUALIFIER_JOINER}${text}`)].length <= LINE2_MAX_CHARS;
+  return texts.map(squeezed).find(fits) ?? null;
 }
 
 const squeezed = (text: string): string => text.replace(/\s+/g, " ").trim();
@@ -523,7 +522,7 @@ export function toRowReading(source: RowSource, now: Date): RowReading {
   return {
     ...source,
     row,
-    fullQualifier: squeezed(toQualifier(scope, scope.items.find(({ id }) => id === row.itemId) ?? null) ?? "") || null,
+    fullQualifier: squeezed(toQualifier(scope, scope.items.find(({ id }) => id === row.itemId) ?? null)[0] ?? "") || null,
     eventStatus: statusOf(scope.items.filter((item) => item.kind !== "window")),
     isStaffOnly: isStaffOnly(source.facts),
     items: scope.times.map(toItemReading),

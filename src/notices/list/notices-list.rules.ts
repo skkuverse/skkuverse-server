@@ -1,10 +1,12 @@
 import moment from "moment-timezone";
 import type { NoticeDoc, SummaryPeriod } from "../notices.document";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
+import { clusterKeyOf } from "../notices.rules";
 import type { SummaryType } from "../notices.types";
 import { OPEN_ENDED_DAYS, POSTING_DAY_LENGTH } from "./notices-list.constants";
 import { NoticesListCursorError } from "./notices-list.error";
-import type { BriefDate, BriefDates, BriefEnd, CursorPayload, ListDay } from "./notices-list.types";
+import type { ClusterMember } from "./notices-list.document";
+import type { BriefDate, BriefDates, BriefEnd, CursorPayload, ListDay, NoticeScope } from "./notices-list.types";
 
 interface Span {
   start: moment.Moment | null;
@@ -223,4 +225,21 @@ export function toListDay(postedDate: string, now: Date): ListDay {
   if (!posted.isBefore(today)) return "today";
   if (!posted.isBefore(today.clone().subtract(1, "day"))) return "yesterday";
   return posted.isBefore(today.clone().startOf("isoWeek")) ? "earlier" : "thisWeek";
+}
+
+// WHY: umbrella ADR 0009 D8 names the board and lists each article once only in a tab of several boards.
+export function hasSeveralSources(scope: NoticeScope): boolean {
+  return typeof scope !== "string" && new Set(scope).size > 1;
+}
+
+// WHY: the shown copy is the first in list order, whose (date, _id) a crawl never moves; `crawledAt` moves on a views
+// refresh with no edit, so picking by it lost or repeated rows mid-scroll. The batch is in list order.
+export function selectShownRows<T extends ClusterMember>(batch: readonly T[], decidedKeys: ReadonlySet<string>): T[] {
+  const seenKeys = new Set(decidedKeys);
+  const shownRows: T[] = [];
+  for (const row of batch) {
+    if (!seenKeys.has(clusterKeyOf(row))) shownRows.push(row);
+    seenKeys.add(clusterKeyOf(row));
+  }
+  return shownRows;
 }

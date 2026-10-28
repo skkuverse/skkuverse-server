@@ -51,6 +51,7 @@ const detailRepository = new FakeNoticesDetailRepository();
 const buildingRepository = new FakeBuildingRepository();
 const placeRepository = new FakeBuildingPlaceRepository();
 let listNotices: jest.SpyInstance;
+let listScannedRows: jest.SpyInstance;
 
 function rawDoc(overrides: Record<string, unknown> = {}): NoticeDoc {
   return {
@@ -97,6 +98,7 @@ beforeEach(() => {
   listRepository.docs = [];
   detailRepository.docs = [];
   listNotices = jest.spyOn(listRepository, "listNotices");
+  listScannedRows = jest.spyOn(listRepository, "listScannedRows");
 });
 
 describe("GET /notices/tabs", () => {
@@ -665,6 +667,50 @@ describe("GET /notices — the facts row on a list item", () => {
   });
 });
 
+describe("GET /notices — one row per article on several boards", () => {
+  // Three copies of one article on skku-notice03 and skku-notice08: the first in list order is served, though the one on
+  // skku-notice08 was crawled last.
+  const ANCHOR = new ObjectId("66a1b2c3d4e5f6a7b8c9d300");
+  const copies = (): NoticeDoc[] => [
+    rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d305"), articleNo: 305, sourceId: "skku-notice03", date: "2026-04-10", dupOf: ANCHOR }),
+    rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d304"), articleNo: 304, sourceId: "skku-notice08", date: "2026-04-09" }),
+    rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d303"), articleNo: 303, sourceId: "skku-notice08", date: "2026-04-08", dupOf: ANCHOR, crawledAt: new Date("2026-04-10T09:00:00.000Z") }),
+    rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d302"), articleNo: 302, sourceId: "skku-notice03", date: "2026-04-07" }),
+    rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d301"), articleNo: 301, sourceId: "skku-notice03", date: "2026-04-06", dupOf: ANCHOR }),
+  ];
+
+  it("serves the first copy in list order at its own place in the list, and the article on no other page", async () => {
+    // Arrange
+    listRepository.docs = copies();
+
+    // Act
+    const first = await request(httpServer).get("/notices?sourceIds=skku-notice03,skku-notice08&limit=2");
+    const second = await request(httpServer).get(`/notices?sourceIds=skku-notice03,skku-notice08&limit=2&cursor=${first.body.data.nextCursor}`);
+
+    // Assert
+    expect([first.status, second.status]).toEqual([200, 200]);
+    expect(first.body.data.notices.map((n: { articleNo: number }) => n.articleNo)).toEqual([305, 304]);
+    expect(first.body.data.notices[0]).toMatchObject({ sourceId: "skku-notice03", articleNo: 305 });
+    expect(first.body.data.hasMore).toBe(true);
+    expect(second.body.data.notices.map((n: { articleNo: number }) => n.articleNo)).toEqual([302]);
+    expect(second.body.data).toMatchObject({ hasMore: false, nextCursor: null });
+    expect(first.body.meta).toMatchObject({ count: 2 });
+    expectWire(noticeList, first.body.data);
+  });
+
+  it("serves every copy on the list of one board", async () => {
+    // Arrange
+    listRepository.docs = copies();
+
+    // Act
+    const res = await request(httpServer).get("/notices/source/skku-notice03");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.notices.map((n: { articleNo: number }) => n.articleNo)).toEqual([305, 302, 301]);
+  });
+});
+
 describe("GET /notices/:sourceId/:articleNo", () => {
   it("returns 400 INVALID_SOURCE_ID for unknown source", async () => {
     // Act
@@ -882,9 +928,10 @@ describe("GET /notices — multi-source search query", () => {
     );
 
     // Assert
-    expect(listNotices).toHaveBeenCalledWith(
+    expect(listScannedRows).toHaveBeenCalledWith(
       ["skku-main", "cse-undergrad"],
       expect.objectContaining({ q: "공지" }),
+      expect.any(Number),
     );
   });
 
@@ -895,7 +942,7 @@ describe("GET /notices — multi-source search query", () => {
     );
 
     // Act
-    const callArgs = listNotices.mock.calls[0]![1];
+    const callArgs = listScannedRows.mock.calls[0]![1];
 
     // Assert
     expect(callArgs.q).toBeUndefined();
@@ -913,7 +960,7 @@ describe("GET /notices — multi-source search query", () => {
     );
 
     // Act
-    const callArgs = listNotices.mock.calls[0]![1];
+    const callArgs = listScannedRows.mock.calls[0]![1];
 
     // Assert
     expect(callArgs.q).toBe("장학금");

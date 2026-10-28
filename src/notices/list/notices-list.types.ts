@@ -1,4 +1,4 @@
-import type { NoticeListRow } from "./notices-list.document";
+import type { NoticeListRow, ScannedRow } from "./notices-list.document";
 import type { SummaryType } from "../notices.types";
 import type { LIST_DAYS } from "./notices-list.constants";
 
@@ -26,6 +26,11 @@ export interface NoticeListQuery {
   q?: string;
 }
 
+export interface ClusterLookup {
+  keys: readonly string[];
+  cursor: CursorPayload;
+}
+
 export interface BriefDate {
   date: string | null;
   time: string | null;
@@ -39,6 +44,12 @@ export interface BriefDates {
   type: SummaryType;
   startAt: BriefDate | null;
   endAt: BriefEnd | null;
+}
+
+export interface ShownScan {
+  shownRows: ScannedRow[];
+  /** WHY: set only when the page ran out of scans: its next page starts after this row, not after the last one served. */
+  resumeAfter: ScannedRow | undefined;
 }
 
 export interface NoticePage {
