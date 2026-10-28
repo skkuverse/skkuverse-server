@@ -55,7 +55,10 @@ jest.mock("../../infra/db", () => ({
 // stubbed src/infra/db.ts.
 import type { Clock } from "../../infra/clock";
 import config from "../../infra/config";
+import { NoticesFactsService } from "../facts/notices-facts.service";
+import { NoticesLegacyService } from "../legacy/notices-legacy.service";
 import type { NoticeDoc } from "../notices.document";
+import { NoticesRowService } from "../row/notices-row.service";
 import { NoticesDispatchClient } from "./notices-dispatch.client";
 import { NoticesDispatchRepository } from "./notices-dispatch.repository";
 import { NoticesDispatchService } from "./notices-dispatch.service";
@@ -98,7 +101,7 @@ beforeEach(() => {
   jest.setSystemTime(FIXED_NOW);
   global.fetch = jest.fn() as unknown as typeof fetch;
   // A fresh service instance per test resets the private sweepInFlight flag.
-  service = new NoticesDispatchService(new NoticesDispatchRepository(), new NoticesDispatchClient(), clock);
+  service = new NoticesDispatchService(new NoticesDispatchRepository(), new NoticesDispatchClient(new NoticesLegacyService(new NoticesRowService(new NoticesFactsService(clock))), clock), clock);
 });
 
 afterEach(() => {
