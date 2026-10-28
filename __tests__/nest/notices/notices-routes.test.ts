@@ -638,6 +638,19 @@ describe("GET /notices — the facts row on a list item", () => {
     expectWire(noticeList, multi.body.data);
   });
 
+  it("names no board on a multi-source list of one source", async () => {
+    // Arrange
+    listRepository.docs = [withFacts()];
+
+    // Act
+    const res = await request(httpServer).get("/notices?sourceIds=skku-main");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.notices[0].row.board).toBeNull();
+    expectWire(noticeList, res.body.data);
+  });
+
   it("serves the Korean row in every language", async () => {
     // Arrange
     listRepository.docs = [withFacts()];
