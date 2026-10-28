@@ -4,7 +4,7 @@ import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { SummaryType } from "../notices.types";
 import { OPEN_ENDED_DAYS } from "./notices-list.constants";
 import { NoticesListCursorError } from "./notices-list.error";
-import type { BriefDate, BriefDates, BriefEnd, CursorPayload } from "./notices-list.types";
+import type { BriefDate, BriefDates, BriefEnd, CursorPayload, ListDay } from "./notices-list.types";
 
 interface Span {
   start: moment.Moment | null;
@@ -211,4 +211,14 @@ export function selectRoleBadge(application: unknown, dates: unknown, now: Date)
   if (pending) return pending;
   if (windows.length > 0 || dues.length > 0) return closedBadge([...windows, ...dues]);
   return rangeBadge(spans, nowMs) ?? { type: "informational", startAt: null, endAt: null };
+}
+
+// WHY: umbrella ADR 0009 D2: a notice stays under the KST day it was first seen, and a week starts on Monday, so the
+// this-week group is empty on Monday and Tuesday.
+export function toListDay(firstSeenAt: Date, now: Date): ListDay {
+  const today = moment(now).tz(KST_TIME_ZONE).startOf("day");
+  const firstSeen = moment(firstSeenAt).tz(KST_TIME_ZONE);
+  if (!firstSeen.isBefore(today)) return "today";
+  if (!firstSeen.isBefore(today.clone().subtract(1, "day"))) return "yesterday";
+  return firstSeen.isBefore(today.clone().startOf("isoWeek")) ? "earlier" : "thisWeek";
 }
