@@ -48,4 +48,7 @@ export interface StatusSpec {
   tone: ScreenStatus["tone"];
 }
 
-export type BlockLines = (scope: ScreenScope) => ScreenLine[];
+/** WHY: a line's text before its track's tag, which the block adds once it knows the line is not a repeat. */
+export type TaggedLine = ScreenLine & { tag: string };
+
+export type BlockLines = (scope: ScreenScope) => TaggedLine[];

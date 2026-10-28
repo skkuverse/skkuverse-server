@@ -406,8 +406,13 @@
                             "null"
                           ]
                         },
-                        "fromPoster": {
-                          "type": "boolean"
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "body",
+                            "title",
+                            "poster"
+                          ]
                         },
                         "actions": {
                           "type": "array",
@@ -518,7 +523,7 @@
                       "required": [
                         "text",
                         "sub",
-                        "fromPoster",
+                        "source",
                         "actions",
                         "quote"
                       ]

@@ -15,7 +15,8 @@ const screenAction = z.discriminatedUnion("kind", [
 const screenLine = z.object({
   text: z.string(),
   sub: z.string().nullable(),
-  fromPoster: z.boolean(),
+  /** WHY: where `quote` was read: the body, the title, or a poster's stored transcription (umbrella ADR 0009 D15). */
+  source: z.enum(["body", "title", "poster"]),
   actions: z.array(screenAction),
   quote: z.string(),
 });
