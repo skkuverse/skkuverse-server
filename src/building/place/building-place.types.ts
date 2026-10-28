@@ -15,8 +15,8 @@ export type PlaceId = `${PinnedPlace["kind"]}:${Campus}:${string}`;
 
 export interface IndexedSpace { spaceCd: SpaceCd; buildNo: BuildNo; campus: Campus }
 
-/** WHY: `key` is the buildNo of a building and `<campus>:<slug>` of a facility. */
-export interface IndexedPlace { key: string; campus: Campus; name: string; buildNo: BuildNo | null; slug: string | null }
+/** WHY: `key` is the buildNo of a building and `<campus>:<slug>` of a facility; `skkuId` is null for a place no `buildings` document lists. */
+export interface IndexedPlace { key: string; campus: Campus; name: string; buildNo: BuildNo | null; slug: string | null; skkuId: SkkuId | null }
 
 export interface PlaceIndex {
   placeByKey: ReadonlyMap<string, IndexedPlace>;

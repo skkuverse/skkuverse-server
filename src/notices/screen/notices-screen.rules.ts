@@ -10,6 +10,7 @@ type Contact = NoticeFacts["contacts"][number];
 type DatedItem = NoticeFacts["times"][number];
 type SnapshotItem = FactsSnapshot["times"][number];
 type RowKind = RowReading["row"]["status"];
+type StoredPlace = DatedItem["where"]["places"][number];
 
 const EVENT_ON_KINDS: ReadonlySet<string> = new Set(["today", "ongoing", "upcoming"]);
 const OPEN_WINDOW_KINDS: ReadonlySet<string> = new Set(["open", "ongoing"]);
@@ -25,6 +26,8 @@ const PHONE_NUMBER = /\d{2,4}-\d{3,4}-\d{4}/;
 const HTTP_URL = /^https?:\/\/\S+$/i;
 const MAILTO = /^mailto:/i;
 const TENTATIVE_TAIL = ` ${SCREEN_WORDS.tentative}`;
+const MAP_PLACE_KIND = "skku_building";
+const OFF_CAMPUS_REASON = "offcampus";
 
 export function toBlockOrder(category: string | null | undefined, reading: RowReading): BlockKey[] {
   if (reading.isStaffOnly) return [];
@@ -110,6 +113,13 @@ function toLinkTarget(url: string): ScreenAction | null {
 export function toContactAction({ kind, value }: Contact): ScreenAction | null {
   const target = (kind === "phone" ? PHONE_NUMBER : ADDRESS_IN_TEXT).exec(value.quote)?.[0];
   return target ? { kind: kind === "phone" ? "call" : "email", target } : null;
+}
+
+// CONTRACT(skkuverse-crawler): a place written off campus is stored unresolved with this reason
+// (skkuverse-crawler/py/src/skkuverse_crawler/plugins/facts/record.py); umbrella ADR 0009 opens it in the phone's map app.
+export function toPlaceAction({ text, reason }: StoredPlace, display: PlaceDisplay | undefined): ScreenAction | null {
+  if (display?.mapTarget) return { kind: "map", target: `${MAP_PLACE_KIND}:${display.mapTarget.skkuId}`, space: display.mapTarget.spaceCd };
+  return reason === OFF_CAMPUS_REASON && text !== "" ? { kind: "search", target: text } : null;
 }
 
 const toCallTarget = (text: string): ScreenAction | null => {

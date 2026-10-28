@@ -1,7 +1,7 @@
 import { isBuildNo, isCampus, isSpaceCd, toDisplayNo } from "../../building.rules";
-import type { Campus } from "../../building.types";
-import type { PinnedPlace, PlaceId, PlaceIndex, ResolvedPlace } from "../building-place.types";
-import type { CampusBuilding, CampusPrimaryPlace, PlaceDisplay, StoredPlace } from "./building-place-display.types";
+import type { Campus, SpaceCd } from "../../building.types";
+import type { IndexedPlace, PinnedPlace, PlaceId, PlaceIndex, ResolvedPlace } from "../building-place.types";
+import type { CampusBuilding, CampusPrimaryPlace, PlaceDisplay, PlaceMapTarget, StoredPlace } from "./building-place-display.types";
 
 // WHY: a room says the most about where a session is, then a building, then a facility.
 const SPECIFICITY: Readonly<Record<PinnedPlace["kind"], number>> = { space: 0, building: 1, facility: 2 };
@@ -27,18 +27,21 @@ function toBuildingDisplay(buildNo: string | undefined, campus: Campus, index: P
   const building = buildNo ? index.placeByKey.get(buildNo) : undefined;
   if (!building || building.campus !== campus) return null;
   const displayNo = toDisplayNo(building.buildNo, building.campus);
-  return displayNo ? { name: building.name, code: displayNo } : { name: building.name };
+  const mapTarget = toMapTarget(building, null);
+  return displayNo ? { name: building.name, code: displayNo, mapTarget } : { name: building.name, mapTarget };
 }
+
+const toMapTarget = ({ skkuId }: IndexedPlace, spaceCd: SpaceCd | null): PlaceMapTarget | null => (skkuId === null ? null : { skkuId, spaceCd });
 
 export function toPlaceDisplay(place: StoredPlace, index: PlaceIndex): PlaceDisplay | null {
   if (place.kind === "building") return toBuildingDisplay(place.buildNo, place.campus, index);
   if (place.kind === "facility") {
     const facility = index.placeByKey.get(`${place.campus}:${place.slug}`);
-    return facility ? { name: facility.name } : null;
+    return facility ? { name: facility.name, mapTarget: toMapTarget(facility, null) } : null;
   }
   const space = index.spacesByCd.get(place.spaceCd.toUpperCase())?.find((s) => s.campus === place.campus);
   const building = toBuildingDisplay(space?.buildNo, place.campus, index);
-  return building ? { name: building.name, code: place.spaceCd } : null;
+  return building ? { name: building.name, code: place.spaceCd, mapTarget: building.mapTarget && { ...building.mapTarget, spaceCd: place.spaceCd } } : null;
 }
 
 export function buildingOf(place: ResolvedPlace): CampusBuilding | null {

@@ -1,7 +1,8 @@
 /**
  * BuildingPlaceDisplayService, the door a notice flow shows its places
  * through by the place ids a notice stores, over in-memory repositories: each
- * id gets its `장소명 장소코드` pair (a name and a code) from the current index,
+ * id gets its `장소명 장소코드` pair (a name and a code) and the building sheet
+ * the campus map opens it on from the current index,
  * in the order given, nothing for an id that is unresolved, malformed or that
  * skkumap no longer holds, and a failed read rejects.
  */
@@ -54,7 +55,12 @@ describe("BuildingPlaceDisplayService.describePlaces", () => {
     const displays = await service.describePlaces(placeIds);
 
     // Assert
-    expect(displays).toEqual([{ name: "경영관", code: "33B101" }, { name: "경영관", code: "33" }, { name: "제2공학관 중앙정원" }, null]);
+    expect(displays).toEqual([
+      { name: "경영관", code: "33B101", mapTarget: { skkuId: 12, spaceCd: "33B101" } },
+      { name: "경영관", code: "33", mapTarget: { skkuId: 12, spaceCd: null } },
+      { name: "제2공학관 중앙정원", mapTarget: null },
+      null,
+    ]);
   });
 
   it("gives nothing for an unresolved or malformed id and keeps the position of each", async () => {
@@ -65,7 +71,7 @@ describe("BuildingPlaceDisplayService.describePlaces", () => {
     const displays = await service.describePlaces(placeIds);
 
     // Assert
-    expect(displays).toEqual([null, null, { name: "경영관", code: "33" }, null, null]);
+    expect(displays).toEqual([null, null, { name: "경영관", code: "33", mapTarget: { skkuId: 12, spaceCd: null } }, null, null]);
   });
 
   it("rejects when the index cannot be read", async () => {

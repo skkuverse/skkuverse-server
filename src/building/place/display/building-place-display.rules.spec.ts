@@ -1,7 +1,8 @@
 /**
  * How a resolved place is shown and which one a session shows: the stored id
  * of a pinned place, its `장소명 장소코드` pair derived from skkumap (never
- * stored), the session's primary place (a room over a building over a
+ * stored) with the building sheet the campus map opens it on (the skkumap
+ * id of its building or facility, and its room), the session's primary place (a room over a building over a
  * facility, ties by list order, never an unpinned one), one primary per
  * campus with the count of the campus's other pinned places, the building
  * a place stands in, by which a building's notices are found, and the stored
@@ -77,12 +78,12 @@ describe("toStoredPlace", () => {
 
 describe("toPlaceDisplay", () => {
   it.each([
-    [space("hssc", "33B101", "133"), { name: "경영관", code: "33B101" }],
-    [space("nsc", "33B101", "233"), { name: "화학관", code: "33B101" }],
-    [building("hssc", "133"), { name: "경영관", code: "33" }],
-    [building("nsc", "286"), { name: "N센터", code: "86" }],
-    [facility("nsc", "confucius-road"), { name: "공자로" }],
-    [facility("nsc", "ui-ye-kwan-yard"), { name: "의관·예관 사이" }],
+    [space("hssc", "33B101", "133"), { name: "경영관", code: "33B101", mapTarget: { skkuId: 12, spaceCd: "33B101" } }],
+    [space("nsc", "33B101", "233"), { name: "화학관", code: "33B101", mapTarget: { skkuId: 25, spaceCd: "33B101" } }],
+    [building("hssc", "133"), { name: "경영관", code: "33", mapTarget: { skkuId: 12, spaceCd: null } }],
+    [building("nsc", "286"), { name: "N센터", code: "86", mapTarget: { skkuId: 33, spaceCd: null } }],
+    [facility("nsc", "confucius-road"), { name: "공자로", mapTarget: { skkuId: 83, spaceCd: null } }],
+    [facility("nsc", "ui-ye-kwan-yard"), { name: "의관·예관 사이", mapTarget: null }],
   ])("shows %j as %j", (place, display) => {
     // Act & Assert
     expect(toPlaceDisplay(place, index)).toEqual(display);
@@ -94,8 +95,16 @@ describe("toPlaceDisplay", () => {
     const otherCampus = toStoredPlace("space:nsc:33B101");
 
     // Act & Assert
-    expect(stored && toPlaceDisplay(stored, index)).toEqual({ name: "경영관", code: "33B101" });
-    expect(otherCampus && toPlaceDisplay(otherCampus, index)).toEqual({ name: "화학관", code: "33B101" });
+    expect(stored && toPlaceDisplay(stored, index)).toEqual({ name: "경영관", code: "33B101", mapTarget: { skkuId: 12, spaceCd: "33B101" } });
+    expect(otherCampus && toPlaceDisplay(otherCampus, index)).toEqual({ name: "화학관", code: "33B101", mapTarget: { skkuId: 25, spaceCd: "33B101" } });
+  });
+
+  it("opens a room of a building skkumap lists only through its spaces on no building sheet", () => {
+    // Arrange
+    const stored = toStoredPlace("space:hssc:740101");
+
+    // Act & Assert
+    expect(stored && toPlaceDisplay(stored, index)).toEqual({ name: "E-하우스(본관)", code: "740101", mapTarget: null });
   });
 
   it.each([

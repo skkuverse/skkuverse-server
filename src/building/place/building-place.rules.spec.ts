@@ -2,7 +2,8 @@
  * The place index the display reads, built from the synced skkumap buildings
  * and spaces and the committed lexicon: facility ids pinned by SKKU id (never
  * derived from a name), a facility with no pinned slug left out and reported
- * instead of guessed, and a building only its spaces name.
+ * instead of guessed, and a building only its spaces name, which no
+ * `buildings` document gives a SKKU id.
  */
 import type { BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
 import { placeLexicon } from "./building-place.config";
@@ -36,7 +37,7 @@ describe("toPlaceIndex", () => {
     const index = toPlaceIndex({ buildings, spaces: [] }, lexicon);
 
     // Assert
-    expect(index.placeByKey.get("nsc:confucius-road")).toEqual({ key: "nsc:confucius-road", campus: "nsc", name: "공자로", buildNo: null, slug: "confucius-road" });
+    expect(index.placeByKey.get("nsc:confucius-road")).toEqual({ key: "nsc:confucius-road", campus: "nsc", name: "공자로", buildNo: null, slug: "confucius-road", skkuId: 83 });
     expect(index.unpinnedFacilities).toEqual([90]);
     expect([...index.placeByKey.keys()]).toEqual(["nsc:confucius-road"]);
   });
@@ -46,7 +47,7 @@ describe("toPlaceIndex", () => {
     const index = toPlaceIndex({ buildings: [], spaces: [placeSpace("74101", "174", "hssc", "E-하우스(본관)")] }, EMPTY_LEXICON);
 
     // Assert
-    expect(index.placeByKey.get("174")).toEqual({ key: "174", campus: "hssc", name: "E-하우스(본관)", buildNo: "174", slug: null });
+    expect(index.placeByKey.get("174")).toEqual({ key: "174", campus: "hssc", name: "E-하우스(본관)", buildNo: "174", slug: null, skkuId: null });
     expect(index.spacesByCd.get("74101")?.map((s) => s.buildNo)).toEqual(["174"]);
   });
 });
