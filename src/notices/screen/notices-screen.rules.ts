@@ -87,7 +87,7 @@ export function toBarAction(reading: RowReading): BarAction | null {
   const open = reading.facts.actions.filter((action) => isStated(action) && isOpenNow(action, reading));
   const bars = open.flatMap((action): BarAction[] => {
     const target = toActionTarget(action, reading.facts);
-    return target?.kind === "link" || target?.kind === "email" ? [{ ...target, label: action.verb.quote }] : [];
+    return target?.kind === "link" || target?.kind === "email" ? [{ label: action.verb.quote, ...target }] : [];
   });
   const distinct = bars.filter((bar, at) => bars.findIndex((other) => other.kind === bar.kind && other.target === bar.target) === at);
   return distinct.length === 1 ? (distinct[0] ?? null) : null;
