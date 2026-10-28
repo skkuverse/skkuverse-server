@@ -18,6 +18,9 @@ const moment = require("moment-timezone");
 const args = process.argv.slice(2);
 const isProd = args.includes("--prod");
 if (!isProd) process.env.NODE_ENV = process.env.NODE_ENV || "development";
+// WHY: src/infra/config.ts exits without these, which each execution context sets (CLAUDE.md "Environment"); this script serves nothing.
+process.env.PERIMETER_MODE = process.env.PERIMETER_MODE || "local-dev";
+process.env.HOST = process.env.HOST || "127.0.0.1";
 const limitFlag = args.indexOf("--limit");
 const LIMIT = limitFlag === -1 ? 200 : Number(args[limitFlag + 1]);
 if (!Number.isInteger(LIMIT) || LIMIT < 1) throw new Error("--limit takes a positive integer");
@@ -36,13 +39,13 @@ function summarize(brief, now) {
 }
 
 async function main() {
-  const config = require("../dist/infra/config").default;
-  const { getClient, closeClient } = require("../dist/infra/db");
-  const { Clock } = require("../dist/infra/clock");
-  const { NoticesFactsService } = require("../dist/notices/facts/notices-facts.service");
-  const { NoticesRowService } = require("../dist/notices/row/notices-row.service");
-  const { NoticesLegacyService } = require("../dist/notices/legacy/notices-legacy.service");
-  const { toSummaryBrief } = require("../dist/notices/list/notices-list.mapper");
+  const config = require("../dist/src/infra/config");
+  const { getClient, closeClient } = require("../dist/src/infra/db");
+  const { Clock } = require("../dist/src/infra/clock");
+  const { NoticesFactsService } = require("../dist/src/notices/facts/notices-facts.service");
+  const { NoticesRowService } = require("../dist/src/notices/row/notices-row.service");
+  const { NoticesLegacyService } = require("../dist/src/notices/legacy/notices-legacy.service");
+  const { toSummaryBrief } = require("../dist/src/notices/list/notices-list.mapper");
 
   const now = new Date();
   const legacy = new NoticesLegacyService(new NoticesRowService(new NoticesFactsService({ now: () => now })));

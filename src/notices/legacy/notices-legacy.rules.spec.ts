@@ -107,4 +107,18 @@ describe("toDerivedBrief", () => {
     // Assert
     expect(brief.oneLiner).toBe("연장 · 11/5(목) 11시");
   });
+
+  it("leaves out a qualifier that only counts conditions, which says nothing outside the detail", () => {
+    // Arrange
+    const reading = readingOf("a_specific_session_wins_over_the_span_that_contains_it");
+    const dated: RowReading = { ...reading, row: { ...reading.row, token: null, qualifier: "조건 2개" } };
+    const dateless: RowReading = { ...dated, row: { ...dated.row, line2: "" } };
+
+    // Act
+    const [withDate, withoutDate] = [toDerivedBrief(dated), toDerivedBrief(dateless)];
+
+    // Assert
+    expect(withDate.oneLiner).toBe("11/5(목) 11시");
+    expect(withoutDate.oneLiner).toBeNull();
+  });
 });
