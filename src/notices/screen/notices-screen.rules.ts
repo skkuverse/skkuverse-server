@@ -28,7 +28,7 @@ const TENTATIVE_TAIL = ` ${SCREEN_WORDS.tentative}`;
 
 export function toBlockOrder(category: string | null | undefined, reading: RowReading): BlockKey[] {
   if (reading.isStaffOnly) return [];
-  const leading = LEADING_BLOCKS[NOTICE_TYPE_BY_CATEGORY[category ?? ""] ?? "event"];
+  const leading = LEADING_BLOCKS[NOTICE_TYPE_BY_CATEGORY.get(category ?? "") ?? "event"];
   const changed: BlockKey[] = reading.facts.statedChanges.length > 0 ? ["change"] : [];
   return [...new Set<BlockKey>([...changed, ...leading, ...BLOCK_KEYS])];
 }

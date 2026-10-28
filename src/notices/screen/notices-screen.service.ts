@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { BuildingPlaceDisplayService } from "../../building/place/display/building-place-display.service";
+import type { PlaceDisplay } from "../../building/place/display/building-place-display.types";
+import logger from "../../infra/logger";
 import type { NoticeScreen } from "../notices.wire";
 import { NoticesRowService } from "../row/notices-row.service";
 import { toOriginal, toScreenBlocks } from "./notices-screen.mapper";
@@ -17,7 +19,7 @@ export class NoticesScreenService {
     const reading = this.rows.readNotice(notice, now);
     if (!reading) return null;
     const placeIds = toPlaceIds(reading);
-    const displays = placeIds.length > 0 ? await this.places.describePlaces(placeIds) : [];
+    const displays = placeIds.length > 0 ? await this.describePlaces(notice, placeIds) : [];
     const scope: ScreenScope = { reading, displayByPlaceId: toDisplayByPlaceId(placeIds, displays) };
     return {
       // CONTRACT(skkuverse-crawler): `firstSeenAt` is written once per copy; a copy stored before it lacks it, and the crawler dates it by its `_id` (skkuverse-crawler/docs/notice-facts/design.md "Storage").
@@ -30,5 +32,15 @@ export class NoticesScreenService {
       posterOnly: isPosterOnly(reading.facts),
       original: toOriginal(reading.facts),
     };
+  }
+
+  // WHY: place names are an enrichment; building's caches keep no stale value, so a failed reload shows each place's quote, not a 500.
+  private async describePlaces(notice: ScreenNotice, placeIds: string[]): Promise<Array<PlaceDisplay | null>> {
+    try {
+      return await this.places.describePlaces(placeIds);
+    } catch (err) {
+      logger.warn({ event: "notices.screen.places_unavailable", noticeId: notice._id.toHexString(), err }, "Notice places shown as written: building could not name them");
+      return [];
+    }
   }
 }

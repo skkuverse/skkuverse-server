@@ -26,10 +26,10 @@ export const LEADING_BLOCKS = {
 } as const satisfies Record<string, readonly BlockKey[]>;
 
 // WHY: product copy: the board categories skkuverse-crawler stores; any other category, or none, reads as an event.
-export const NOTICE_TYPE_BY_CATEGORY: Readonly<Record<string, NoticeType>> = {
+export const NOTICE_TYPE_BY_CATEGORY: ReadonlyMap<string, NoticeType> = new Map(Object.entries({
   학사: "academic", 입학: "academic", 수강신청: "academic", 대학원: "academic", 학부: "academic",
   장학: "scholarship", "행사/세미나": "event", "채용/모집": "jobs", 취업: "jobs", 모집: "jobs",
-};
+} as const));
 
 // WHY: product copy; `{day}` is a day as the row writes it, `{text}` a quote.
 export const SCREEN_WORDS = {

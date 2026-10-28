@@ -7,10 +7,12 @@
  * The services are real, building's place door included, and only the building repositories are in-memory fakes. The 40
  * records read from the development database render without a throw and every screen parses against the published wire
  * schema.
- * src/infra/logger.ts is mocked: a refused record logs `notices.facts.unparsed`.
+ * src/infra/logger.ts is mocked: a refused record logs `notices.facts.unparsed`, and a place read building fails
+ * logs `notices.screen.places_unavailable` while the screen shows each place's quote.
  */
 import { ObjectId } from "mongodb";
 import type { Clock } from "../../infra/clock";
+import logger from "../../infra/logger";
 
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -41,6 +43,7 @@ let buildings: FakeBuildingRepository;
 let service: NoticesScreenService;
 
 beforeEach(() => {
+  jest.clearAllMocks();
   buildings = new FakeBuildingRepository();
   const spaces = new FakeBuildingPlaceRepository();
   buildings.buildings = [storedBuilding({ _id: 12, buildNo: "133", campus: "hssc", name: text("경영관") })];
@@ -171,7 +174,22 @@ describe("NoticesScreenService.renderScreen", () => {
 
     // Assert
     expect(rendered?.blocks).toMatchObject([{ label: "언제·어디" }]);
-    await expect(service.renderScreen(notice(withPlace), OPEN_DAY)).rejects.toThrow("mongo down");
+    expect(logger.warn).not.toHaveBeenCalledWith(expect.objectContaining({ event: "notices.screen.places_unavailable" }), expect.any(String));
+    await service.renderScreen(notice(withPlace), OPEN_DAY);
+    expect(logger.warn).toHaveBeenCalledWith(expect.objectContaining({ event: "notices.screen.places_unavailable" }), expect.any(String));
+  });
+
+  it("shows each place's quote with no map when building cannot name places, and logs it", async () => {
+    // Arrange
+    buildings.failWith = new Error("mongo down");
+    const stored = record(SESSION, (r) => (r.times[0].where.places = [place("space:hssc:33B101", "경영관 지하 계단강의실")]));
+
+    // Act
+    const screen = await service.renderScreen(notice(stored), OPEN_DAY);
+
+    // Assert
+    expect(screen?.blocks).toMatchObject([{ label: "언제·어디", lines: [{ sub: "경영관 지하 계단강의실", actions: [] }] }]);
+    expect(logger.warn).toHaveBeenCalledWith(expect.objectContaining({ event: "notices.screen.places_unavailable" }), expect.any(String));
   });
 
   it("serves a notice for staff with no status, blocks, action or collapse", async () => {
