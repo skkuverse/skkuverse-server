@@ -238,6 +238,6 @@ describe("the LocalDev class for outboundPolicy", () => {
     const { beforeRedirect } = new LOCAL_DEV_CLASSES.outboundPolicy(perimeterTestDeps()).requestConfig("notice-attachment");
 
     // Act & Assert
-    expect(() => beforeRedirect?.({ href: "http://127.0.0.1:3000/internal" } as never, {} as never)).toThrow(OutboundBlockedError);
+    expect(() => beforeRedirect?.({ href: "http://127.0.0.1:3000/internal" } as never, {} as never, {} as never)).toThrow(OutboundBlockedError);
   });
 });
