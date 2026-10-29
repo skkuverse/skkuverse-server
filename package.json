@@ -52,7 +52,7 @@
     "axios": "1.13.6",
     "date-holidays": "3.37.0",
     "dotenv": "16.6.1",
-    "express": "4.22.2",
+    "express": "4.22.3",
     "express-rate-limit": "8.5.2",
     "firebase-admin": "13.10.0",
     "helmet": "8.2.0",
