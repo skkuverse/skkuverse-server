@@ -27,5 +27,5 @@ audience: internal
 
 - A failed push cannot destabilize the server, and token truth stays in Firestore.
 - Dispatch spans three repositories (server, Cloud Function maintained outside this repository, crawler), so no one file shows the whole path.
-- **Query real field names.** The first version queried `createdAt`, which no notice has, and selected nothing (commit `7c6944e`); sample a production document before writing a cross-service query.
+- **Query real field names.** The first version queried `createdAt`, which no notice has, and selected nothing (commit `1ce4f9b`); sample a production document before writing a cross-service query.
 - **Open:** a send that throws, a timeout included, releases the lease and is retried, so a timed-out call that did deliver sends twice. Mini-app push follows the opposite rule (an unknown outcome is never resent). Whether notices should too is undecided.

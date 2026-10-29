@@ -14,7 +14,7 @@ audience: internal
 | Item | Value |
 | --- | --- |
 | Date | 2026-10-17 (Saturday, holiday timetable) |
-| Status | Fixed in `176bba28`; the app does not render subway arrivals yet, so no user saw it |
+| Status | Fixed in `75a233f6`; the app does not render subway arrivals yet, so no user saw it |
 | Detection | The owner compared the station's down list (toward Hwaseo) with Naver and Kakao Map |
 | Trigger | Express `1935` (to Sinchang) running about 12.5 min behind its timetable |
 | Root cause | A down express passes every upstream station we observed, so a late one had no event until it approached the served station, and the estimate dropped an unseen train at its scheduled departure |
@@ -54,7 +54,7 @@ KST, from `subway_events` and `subway_predictions` in `bus_campus`.
 
 ## Resolution
 
-All in `176bba28`; the module doc's Glossary and Invariants carry the rules.
+All in `75a233f6`; the module doc's Glossary and Invariants carry the rules.
 
 | Change | What it does |
 | --- | --- |

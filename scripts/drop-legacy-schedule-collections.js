@@ -5,7 +5,7 @@
  * Until 2026-03-08 the campus shuttle timetable lived in one collection per
  * (service, day type): INJA_weekday, JAIN_friday and so on, read through a
  * dynamic `config.mongo.collections[key]` lookup in features/bus/campus.data.js.
- * Commit d5271f0 replaced all of it with bus_schedules + bus_overrides and
+ * Commit 944f05b replaced all of it with bus_schedules + bus_overrides and
  * deleted that reader; the migration copied the data across but never removed
  * the originals. Nothing in src/ has read them since.
  *

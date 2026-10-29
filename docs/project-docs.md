@@ -1265,12 +1265,12 @@ jest.mock("../features/bus/campus-eta.data", () => ({
 
 완료된 1회성 마이그레이션 보존 위치. 운영 코드는 새 스키마를 가정하므로 재실행은 보통 불필요(모두 idempotent하게 작성되어 있어 다시 돌려도 no-op). 어떤 변경이 적용됐는지 추적할 때 참고용으로 남겨둔다. 재실행이 필요해진 경우 git history(특히 첨부된 fix 커밋들)도 같이 확인할 것.
 
-- `migrate-building-two-layer.js` — 빌딩 데이터 raw/enriched 2-layer 분리 (feat `d2723a5`)
-- `migrate-inja-schedule.js` — INJA/JAIN 스케줄에 `routeType` 추가 (feat `ae6ec3a`)
-- `migrate-schedules.js` — 구 per-collection 포맷 → 통합 `bus_schedules` 이전 (feat `d5271f0`).
+- `migrate-building-two-layer.js` — 빌딩 데이터 raw/enriched 2-layer 분리 (feat `d38e960`)
+- `migrate-inja-schedule.js` — INJA/JAIN 스케줄에 `routeType` 추가 (feat `0f7f1c8`)
+- `migrate-schedules.js` — 구 per-collection 포맷 → 통합 `bus_schedules` 이전 (feat `944f05b`).
   이 마이그레이션은 복사만 하고 원본을 지우지 않아 `INJA_*`/`JAIN_*` 컬렉션이 5개월간 남아 있었다 —
   2026-08-31에 `scripts/drop-legacy-schedule-collections.js`로 정리됨
-- `migrate-source-dept-id.js` — `sourceDeptId` → `sourceId` 필드 rename (refactor `70923f6`, 후속 fix `8c62055`)
+- `migrate-source-dept-id.js` — `sourceDeptId` → `sourceId` 필드 rename (refactor `fde31e6`, 후속 fix `c6164b7`)
 
 ### `scripts/set-campus-schedule.js`
 
