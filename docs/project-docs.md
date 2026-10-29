@@ -1409,11 +1409,10 @@ Why 26:
 
 - **Node 22 reaches end of life on 2027-04-30.** Node 24 has been in maintenance since 2026-10-20 and ends on 2028-04-30. Node 26 has been LTS since 2026-10-28 and ends on 2029-04-30.
 - **The floor is 26.12.1**, the security release that fixed a Brotli decoder out-of-bounds write. The suite was checked on 26.13.0, the version `node:26-alpine` resolved to on 2026-10-30.
-- **Node 24 was held back over a reported TLS regression** ([nodejs/node#61448](https://github.com/nodejs/node/issues/61448), MongoDB SRV connection fails in v24.13). `SSL alert number 80` from Atlas was also seen here on macOS arm64.
 
 #### SSL alert 80 from Atlas (2026-05-24)
 
-A dev boot that looked stuck was **a public IP missing from the Atlas Network Access list**: `mongosh` was rejected with the same `SSL alert number 80`. Changing the Node version does not fix it. Add the IP under Atlas, Network Access, IP Access List. The symptom matches the Node 24 report above, so check the allowlist first when it comes back.
+A dev boot that looked stuck, with `SSL alert number 80` from Atlas, was **a public IP missing from the Atlas Network Access list**. `mongosh` was rejected the same way, and changing the Node version does not fix it. Add the IP under Atlas, Network Access, IP Access List. Check the allowlist first when it comes back.
 
 ---
 
