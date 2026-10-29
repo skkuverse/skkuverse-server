@@ -71,7 +71,7 @@ describe("the overlay build context", () => {
     const at = (line: string): number => lines.indexOf(line);
 
     // Act
-    const builder = at("FROM node:22-alpine AS builder");
+    const builder = at("FROM node:26-alpine AS builder");
     const source = at("COPY . .");
     const overlay = at("COPY --from=perimeter-overlay . src/private/");
     const build = at("RUN npm run build");

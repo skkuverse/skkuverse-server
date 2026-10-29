@@ -3,7 +3,7 @@
 # --- builder stage ---
 # devDeps 포함 (tsc + scripts/copy-build-assets.js 필요).
 # 이 stage의 산출물은 dist/ 디렉토리뿐 — runtime stage가 그것만 가져감.
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 # 패키지 매니페스트 + tsconfig만 먼저 복사 → npm ci 결과를 별도 layer로 캐시.
@@ -25,7 +25,7 @@ RUN npm run build
 
 # --- runtime stage ---
 # devDeps 없는 minimal 이미지. tsc/eslint/jest 등 빌드 도구는 ship되지 않음.
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /app
 
 # Production deps만 설치. node_modules 무게 절감 + 공격 표면 감소.

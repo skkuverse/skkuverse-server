@@ -1381,7 +1381,7 @@ TypeScript 전환을 앞두고 (2026-05-24) 모든 의존성을 정확 버전으
 ### 규칙
 
 - **`package.json`의 모든 deps/devDeps는 정확 버전** (`^`, `~` 금지). `.npmrc`의 `save-exact=true`가 신규 install을 자동으로 정확 버전으로 저장.
-- **`engine-strict=true`** — `engines.node` 위반 시 install 실패. Dockerfile이 `node:22-alpine`이므로 macOS 로컬 + Docker 일관성 유지.
+- **`engine-strict=true`**: `npm ci` and `npm install` fail when the running Node is outside `engines.node`. Nothing else checks it: `npm run dev`, `npm test` and `npx jest` run on whatever Node the shell has, so run `nvm use` first. The Dockerfile runs `npm ci` before `.npmrc` is copied, so the image does not check it either; `__tests__/nest/infra/node-version.test.ts` keeps both stages on the `.nvmrc` major.
 - **업데이트 절차**:
   1. 단일 PR에 단일 패키지 bump (`npm install foo@X.Y.Z`).
   2. `npm test` + `npm run lint` + `npm run knip` + `npm run depcheck` 모두 통과.
@@ -1403,16 +1403,17 @@ TypeScript 전환을 앞두고 (2026-05-24) 모든 의존성을 정확 버전으
 
 ### Node runtime
 
-**Node 22 LTS lock.** `package.json`의 `engines.node`가 `>=22.0.0`이고 `.npmrc`의 `engine-strict=true`가 install 시 자동 차단. 프로젝트 루트 `.nvmrc`(내용: `22`)로 `nvm use` 한 번에 자동 정렬.
+**Node 26 LTS lock.** `engines.node` is `>=26.12.1 <27`, and `.npmrc`'s `engine-strict=true` fails an install on any other Node. `.nvmrc` holds `26`, so `nvm use` picks it, and CI reads the same file (`actions/setup-node` with `node-version-file`). Both Dockerfile stages build from `node:26-alpine`.
 
-선택 이유:
-- **Node 20 LTS는 2026-04-30 EOL** — 오늘(2026-05-24) 이미 만료. Dockerfile도 `node:20-alpine` → `node:22-alpine`로 동시 bump.
-- **Node 24는 macOS + OpenSSL 3.4 환경에서 외부 TLS 시나리오 회귀 보고** ([nodejs/node#61448](https://github.com/nodejs/node/issues/61448) — MongoDB SRV connection fails in v24.13). 우리 환경(macOS arm64 + Atlas mongodb+srv)에서도 `SSL alert number 80` 증상을 재현했었음.
-- **Node 22 LTS는 2027-04-30 EOL** — TS 전환 작업 기간 내내 안전 + mongo driver v7 호환 (driver 최소 요구 Node 20.19+).
+Why 26:
 
-#### Node 24 회귀 incident 참고 (2026-05-24)
+- **Node 22 reaches end of life on 2027-04-30.** Node 24 has been in maintenance since 2026-10-20 and ends on 2028-04-30. Node 26 has been LTS since 2026-10-28 and ends on 2029-04-30.
+- **The floor is 26.12.1**, the security release that fixed a Brotli decoder out-of-bounds write. The suite was checked on 26.13.0, the version `node:26-alpine` resolved to on 2026-10-30.
+- **Node 24 was held back over a reported TLS regression** ([nodejs/node#61448](https://github.com/nodejs/node/issues/61448), MongoDB SRV connection fails in v24.13). `SSL alert number 80` from Atlas was also seen here on macOS arm64.
 
-dev 서버 부팅이 stuck처럼 보였던 별개 incident가 있었음. 원인은 **Atlas Network Access List에 현재 공용 IP가 등록되지 않음** (mongosh도 동일 SSL alert 80로 reject되며 명시 진단). Node 22 다운그레이드로는 해결되지 않으며, Atlas dashboard → Network Access → IP Access List에서 IP 추가 필요. Node 24 회귀 위험과 Atlas IP allowlist는 별개 이슈지만 증상이 같은 SSL alert 80이라 혼동 위험이 있음 — 비슷한 증상 재발 시 먼저 IP allowlist를 확인할 것.
+#### SSL alert 80 from Atlas (2026-05-24)
+
+A dev boot that looked stuck was **a public IP missing from the Atlas Network Access list**: `mongosh` was rejected with the same `SSL alert number 80`. Changing the Node version does not fix it. Add the IP under Atlas, Network Access, IP Access List. The symptom matches the Node 24 report above, so check the allowlist first when it comes back.
 
 ---
 

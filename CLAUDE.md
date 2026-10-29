@@ -64,7 +64,7 @@ One image, three boot paths picked by `ROLE` (`src/main.ts`): `poller` polls ext
 - **The event map is timezone-free on purpose.** Opening windows are absolute instants (`src/map/map.document.ts`); do not add KST conversion. Bus and notices date logic uses `moment-timezone` with `Asia/Seoul`.
 - **Vendored contract files are hash-locked** (`.contracts.lock.json`: `src/notices/{sources,categories,exclude-reasons}.json`, `scripts/render_env.py`, `.markdownlint.jsonc`, `docs/_template.md`, `contracts/consumed/notice-facts.schema.json`). Do not hand-edit them. Change the producer repo, then run `python3 exported/sync_contracts.py pull --repo server` in the umbrella repo `skkuverse`. CI checks the hashes.
 - **Lint must finish with 0 errors and 0 warnings.** CI (`.github/workflows/ci.yml`, pull requests to `dev`/`main`) runs typecheck, build, test, lint, knip and depcheck.
-- **Dependencies are pinned to exact versions** (no `^`/`~`; `.npmrc` sets `save-exact`). Bump one package per change and rerun test, lint, knip and depcheck. Node 22 LTS only (`.nvmrc`, `engines`, `engine-strict`): 20 is EOL, and 24 is unverified against Atlas TLS.
+- **Dependencies are pinned to exact versions** (no `^`/`~`; `.npmrc` sets `save-exact`). Bump one package per change and rerun test, lint, knip and depcheck. Node 26 LTS only (`.nvmrc`, `engines`, `engine-strict`, both Dockerfile stages): 22 reaches end of life on 2027-04-30, and 24 a year before 26. 24 is unverified against Atlas TLS.
 - **English everywhere** (code, comments, docs, commits). Korean is allowed only in user-facing product copy, whose files `.conventions.json` lists under `productCopy`.
 
 ## Reviews
