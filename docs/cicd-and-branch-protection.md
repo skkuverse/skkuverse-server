@@ -3,7 +3,7 @@ title: CI and Branch Protection
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-27
+last-updated: 2026-10-29
 audience: public
 ---
 
@@ -13,7 +13,7 @@ audience: public
 
 ## Summary
 
-The repository is public. Every change reaches `main` through a pull request: work lands on `dev`, and the only pull request into `main` is `dev` → `main`. CI runs on pull requests to either branch with a read-only token and no secret, so a fork's pull request runs the same checks as a maintainer's. Two workflows hold a secret. `contracts-sync.yml` never checks out a pull request. `claude.yml` does. On a pull request, including a fork's, the action checks out the pull request's head. It restores only `.claude/`, `CLAUDE.md` and a few other agent configuration files from the base branch. In read mode, Claude reads that code without a write token. No file tool or git form that it may use reaches `.git/`, and it may run only read-only git and `gh` commands.
+The repository is public. Every change reaches `main` through a pull request: work lands on `dev`, and the only pull request into `main` is `dev` → `main`, except a Dependabot security update for npm (see [Dependabot security updates](#dependabot-security-updates)). CI runs on pull requests to either branch with a read-only token and no secret, so a fork's pull request runs the same checks as a maintainer's. Two workflows hold a secret. `contracts-sync.yml` never checks out a pull request. `claude.yml` does. On a pull request, including a fork's, the action checks out the pull request's head. It restores only `.claude/`, `CLAUDE.md` and a few other agent configuration files from the base branch. In read mode, Claude reads that code without a write token. No file tool or git form that it may use reaches `.git/`, and it may run only read-only git and `gh` commands.
 
 ## Workflows
 
@@ -23,7 +23,7 @@ The repository is public. Every change reaches `main` through a pull request: wo
 | `claude.yml` | A comment or review that mentions `@claude`, from an owner, member or collaborator. A review or review comment on a fork's pull request is skipped: GitHub runs it without secrets | Job `mode`: none. Job `read`: `contents: read`, `pull-requests: write`, `issues: write` and `actions: read`; Claude gets this job token. Job `edit`: the same plus `id-token: write`; Claude gets the action's GitHub App token, which can push | `CLAUDE_CODE_OAUTH_TOKEN` | Answers in the pull request or issue. Read-only unless the comment asks `@claude edit` |
 | `contracts-sync.yml` | Daily at 06:00 KST, or by hand | `contents: write`, `pull-requests: write` | `UMBRELLA_DEPLOY_KEY`, `UMBRELLA_REPOSITORY`, `FLEET_READ_TOKEN`, in the `contracts-sync` environment | Compares the vendored contract files with their producers' `main`. When they drift, it checks the pulled files and opens or updates one pull request into `dev` |
 
-Every workflow sets an empty or read-only token at the top and grants more only on the job that needs it. Only `contracts-sync.yml` grants `contents: write`. No workflow uses `pull_request_target`. No `run:` script contains a `${{ }}` expression: an event field, a branch name or a step output reaches a script only through `env:`. Nothing under `.github/` names a private repository. Every action is pinned to a commit SHA with its version as a trailing comment, and Dependabot proposes new pins once a month. `__tests__/nest/infra/workflow-secrets.test.ts` and `workflow-pins.test.ts` check these rules.
+Every workflow sets an empty or read-only token at the top and grants more only on the job that needs it. Only `contracts-sync.yml` grants `contents: write`. No workflow uses `pull_request_target`. No `run:` script contains a `${{ }}` expression: an event field, a branch name or a step output reaches a script only through `env:`. Nothing under `.github/` names a private repository. Every action is pinned to a commit SHA with its version as a trailing comment, and Dependabot proposes new pins once a month. For npm it opens security updates only. `__tests__/nest/infra/workflow-secrets.test.ts` and `workflow-pins.test.ts` check these rules.
 
 ## Secrets
 
@@ -62,7 +62,13 @@ A pull request from a fork waits for a maintainer to approve its workflow runs. 
 | Deletion | Blocked | Blocked |
 | Bypass | Repository admins | Repository admins |
 
-Merge `dev` → `main` with a merge commit, never a squash, so `dev` and `main` keep one history. Pull requests from outside contributors are by invitation ([CONTRIBUTING.md](../CONTRIBUTING.md)); `.github/CODEOWNERS` names the owner for every path.
+Merge `dev` → `main` with a merge commit, never a squash, so `dev` and `main` keep one history.
+
+Pull requests from outside contributors are by invitation ([CONTRIBUTING.md](../CONTRIBUTING.md)); `.github/CODEOWNERS` names the owner for every path.
+
+### Dependabot security updates
+
+Dependabot security updates always use the repository's default branch, which is `main`, and `target-branch` does not change that. `.github/dependabot.yml` therefore sets no `target-branch` for npm, and a security pull request for npm opens against `main`. Merge it by hand once `test` passes, and never enable auto-merge. If it is a major version bump, close it: major upgrades are planned separately. Right after the merge, merge `main` back into `dev`, or the next `dev` → `main` pull request conflicts in `package-lock.json`. npm version updates stay off because dependencies are bumped one package per change by hand. The `nestjs` group keeps the `@nestjs/*` packages in one pull request, because they must move together.
 
 ## Related
 
