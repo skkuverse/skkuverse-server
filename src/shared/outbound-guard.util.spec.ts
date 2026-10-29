@@ -28,8 +28,8 @@ describe("the caller's allowlist", () => {
     const config = guardedRequestConfig(["example.org"]);
 
     // Act & Assert
-    expect(() => config.beforeRedirect?.({ href: "https://www.example.org/a" } as never, {} as never)).not.toThrow();
-    expect(() => config.beforeRedirect?.({ href: "https://nano.skku.edu/file" } as never, {} as never)).toThrow(OutboundBlockedError);
+    expect(() => config.beforeRedirect?.({ href: "https://www.example.org/a" } as never, {} as never, {} as never)).not.toThrow();
+    expect(() => config.beforeRedirect?.({ href: "https://nano.skku.edu/file" } as never, {} as never, {} as never)).toThrow(OutboundBlockedError);
   });
 });
 
