@@ -981,8 +981,6 @@ module.exports = [
     // refused, so adding one is a decision to hold a key again, not a lint-free edit. The imports are pinned to
     // `{ initializeApp }` from firebase-admin/app and `{ getAuth }` from firebase-admin/auth, unrenamed, and
     // neither is read as a value or exported, so no use hides under another name.
-    // WHY: the root `import admin` form stays accepted, under the same pins, until the perimeter overlay, which
-    // every deploy composes with this config, imports the two entry points; firebase-admin 14 drops the root form.
     name: "firebase/no-credential",
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
@@ -1002,18 +1000,19 @@ module.exports = [
           message: "Import `{ initializeApp }` from firebase-admin/app and `{ getAuth }` from firebase-admin/auth, unrenamed: the selectors below read those names.",
         },
         {
-          selector: `:matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=${FIREBASE_REEXPORT}]`,
-          message: "Do not re-export Firebase: a use through the re-export escapes the `admin` checks.",
+          // QUIRK(firebase-admin): 14 exports no root namespace, yet its types still declare initializeApp there, so
+          // `admin.initializeApp(…)` type-checks and is undefined at runtime.
+          selector: `ImportDeclaration[source.value=${FIREBASE_MODULE}]`,
+          message: "Import from firebase-admin/app and firebase-admin/auth: the root firebase-admin has no namespace to call.",
         },
         {
-          selector:
-            `ImportDeclaration[source.value=${FIREBASE_MODULE}] > :matches(ImportNamespaceSpecifier, ImportSpecifier, ImportDefaultSpecifier[local.name!='admin'])`,
-          message: "Import Firebase as `import admin from …`: the firebase/no-credential selectors read the name `admin`.",
+          selector: `:matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=${FIREBASE_REEXPORT}]`,
+          message: "Do not re-export Firebase: a use through the re-export escapes these checks.",
         },
         {
           selector: [
-            "CallExpression:matches([callee.name='initializeApp'], [callee.property.name='initializeApp']) > ObjectExpression.arguments > :not(Property[key.name='projectId'])",
-            "CallExpression:matches([callee.name='initializeApp'], [callee.property.name='initializeApp']):not([arguments.0.type='ObjectExpression']:matches([arguments.length=1], [arguments.length=2][arguments.1.type='Literal'][arguments.1.value=/^[a-z][a-z-]*$/]))",
+            "CallExpression[callee.name='initializeApp'] > ObjectExpression.arguments > :not(Property[key.name='projectId'])",
+            "CallExpression[callee.name='initializeApp']:not([arguments.0.type='ObjectExpression']:matches([arguments.length=1], [arguments.length=2][arguments.1.type='Literal'][arguments.1.value=/^[a-z][a-z-]*$/]))",
           ].join(", "),
           message: "initializeApp takes `{ projectId }` alone, and at most a literal app name: the server holds no service-account credential.",
         },
@@ -1024,33 +1023,6 @@ module.exports = [
             "MemberExpression[property.name='verifyIdToken']:not(CallExpression > MemberExpression.callee)",
           ].join(", "),
           message: "Call verifyIdToken with the token alone: checkRevoked reads the user record, which needs a service-account credential.",
-        },
-        {
-          // admin.auth and admin.initializeApp only as callees, so neither is read as a value and called later
-          // unchecked. A credential inside initializeApp's options is reported once, by the initializeApp selector.
-          selector: [
-            "MemberExpression[object.name='admin']",
-            ":not(CallExpression > MemberExpression.callee[property.name=/^(?:auth|initializeApp)$/])",
-            ":not(CallExpression[callee.property.name='initializeApp'] MemberExpression)",
-          ].join(""),
-          message: "Only admin.auth() and admin.initializeApp() run without a credential: Firestore, messaging and the rest need a service account.",
-        },
-        {
-          selector: [
-            "Identifier[name='admin']:not(:matches(ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier) > Identifier)",
-            ":not(MemberExpression > Identifier.object)",
-            // A property or member named `admin` (`user.admin`, `{ admin: true }`) is not the binding.
-            ":not(MemberExpression[computed=false] > Identifier.property)",
-            ":not(:matches(Property, PropertyDefinition, MethodDefinition, TSPropertySignature, TSMethodSignature)[computed=false] > Identifier.key)",
-          ].join(""),
-          message: "Use `admin` only as `admin.auth()` or `admin.initializeApp()`: an alias, a destructuring, an argument or an export escapes these checks.",
-        },
-        {
-          selector: [
-            "MemberExpression[object.callee.object.name='admin'][object.callee.property.name='auth'][property.name!='verifyIdToken']",
-            ":not(MemberExpression) > CallExpression[callee.object.name='admin'][callee.property.name='auth']",
-          ].join(", "),
-          message: "Call admin.auth().verifyIdToken() and nothing else on it: every other Auth call needs a service-account credential.",
         },
         {
           selector: [

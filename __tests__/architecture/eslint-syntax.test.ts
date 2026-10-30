@@ -38,12 +38,11 @@
  *     token alone (`checkRevoked` reads the user record), and the auth of an
  *     app reaches only `verifyIdToken`. The imports are `{ initializeApp }`
  *     from firebase-admin/app and `{ getAuth }` from firebase-admin/auth,
- *     unrenamed, and no other entry point is imported; both are only
- *     called, never read as values or exported. The root import, as `admin`
- *     reaching only `auth` and `initializeApp`, is accepted under the same
- *     checks until the perimeter overlay moves off it. `verifyIdToken` is
- *     only called, never with a spread, and nothing re-exports
- *     firebase-admin. Specs may mock it freely.
+ *     unrenamed; no other entry point and not the root, which has no
+ *     namespace since firebase-admin 14, is imported. Both are only called,
+ *     never read as values or exported, `verifyIdToken` is only called,
+ *     never with a spread, and nothing re-exports firebase-admin.
+ *     Specs may mock it freely.
  *   - `migrated/syntax-clock`: the `Date.now()` / `new Date()` ban covers
  *     every module scope but the shared layers, derived from the tree
  *     (scopes.ts), so a new module is bound from its first file. It and the
@@ -461,8 +460,8 @@ describe("firebase/no-credential", () => {
   it("passes the calls a project id serves", () => {
     // Arrange
     const sources = [
-      'import admin from "firebase-admin"; admin.initializeApp({ projectId: config.firebase.projectId });',
-      'import admin from "firebase-admin"; async function f(idToken: string) { return admin.auth().verifyIdToken(idToken); }',
+      'import { initializeApp } from "firebase-admin/app"; initializeApp({ projectId: config.firebase.projectId });',
+      'import { getAuth } from "firebase-admin/auth"; async function f(app: App, idToken: string) { return getAuth(app).verifyIdToken(idToken); }',
     ];
 
     // Act
@@ -475,16 +474,15 @@ describe("firebase/no-credential", () => {
   it("rejects a credential, a revocation check and every call that needs a credential", () => {
     // Arrange
     const sources = [
-      'admin.initializeApp({ projectId: "p", credential: admin.credential.applicationDefault() });',
-      'admin.initializeApp({ serviceAccountId: "sa@p.example" });',
-      "admin.auth().verifyIdToken(idToken, true);",
-      "admin.auth().getUser(uid);",
-      "admin.auth().revokeRefreshTokens(uid);",
-      "admin.firestore();",
-      "admin.messaging();",
+      'initializeApp({ projectId: "p", credential: applicationDefault() });',
+      'initializeApp({ serviceAccountId: "sa@p.example" });',
+      "initializeApp();",
+      "getAuth(app).verifyIdToken(idToken, true);",
+      "getAuth(app).getUser(uid);",
+      "getAuth(app).revokeRefreshTokens(uid);",
       'import { getFirestore } from "firebase-admin/firestore";',
-      'import fb from "firebase-admin";',
-      'import * as admin from "firebase-admin";',
+      'import { getMessaging } from "firebase-admin/messaging";',
+      'import { applicationDefault } from "firebase-admin/app";',
     ];
 
     // Act
@@ -494,20 +492,28 @@ describe("firebase/no-credential", () => {
     expect(counts).toEqual(sources.map(() => 1));
   });
 
-  it("rejects exporting `admin`, which a file importing it under another name would use unchecked", () => {
+  it("rejects the root import in any form, which has no namespace to call though its types declare one", () => {
+    // Arrange
+    const sources = [
+      'import admin from "firebase-admin"; admin.initializeApp({ projectId: "p" });',
+      'import fb from "firebase-admin";',
+      'import * as admin from "firebase-admin";',
+      'import { initializeApp } from "firebase-admin";',
+    ];
+
     // Act
-    const messages = lint("firebase/no-credential", "src/perimeter/x.ts", 'import admin from "firebase-admin"; admin.initializeApp({ projectId: "p" }); export = admin;');
+    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
 
     // Assert
-    expect(messages).toHaveLength(1);
+    expect(counts).toEqual(sources.map(() => 1));
   });
 
   // WHY: the local-development authenticator verifies on a Firebase app of its own (ADR 0023, D2), named by a literal.
   it("passes a named app's init with a project id alone, and the auth of that app", () => {
     // Arrange
     const sources = [
-      'import admin from "firebase-admin"; admin.initializeApp({ projectId: "p" }, "perimeter-local-dev");',
-      'import admin from "firebase-admin"; const app = admin.initializeApp({ projectId: deps.firebaseProjectId }, "perimeter-local-dev"); const verify = (t: string) => admin.auth(app).verifyIdToken(t);',
+      'import { initializeApp } from "firebase-admin/app"; initializeApp({ projectId: "p" }, "perimeter-local-dev");',
+      'import { initializeApp } from "firebase-admin/app"; import { getAuth } from "firebase-admin/auth"; const app = initializeApp({ projectId: deps.firebaseProjectId }, "perimeter-local-dev"); const verify = (t: string) => getAuth(app).verifyIdToken(t);',
     ];
 
     // Act
@@ -520,86 +526,34 @@ describe("firebase/no-credential", () => {
   it("rejects a named app whose name is no literal, whose options carry a credential, or with a third argument", () => {
     // Arrange
     const sources = [
-      'admin.initializeApp({ projectId: "p" }, name);',
-      'admin.initializeApp({ projectId: "p", credential: admin.credential.cert(key) }, "local");',
-      'admin.initializeApp({ projectId: "p" }, "local", extra);',
-      'admin.initializeApp(options, "local");',
-    ];
-
-    // Act
-    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
-
-    // Assert
-    expect(counts).toEqual(sources.map(() => 1));
-  });
-
-  it("rejects the ways around the member checks: another name, an alias, a value read, a spread and a re-export", () => {
-    // Arrange
-    const sources = [
-      'import { auth } from "firebase-admin";',
-      'import admin from "firebase-admin"; const fb = admin;',
-      "const { messaging } = admin;",
-      "register(admin);",
-      "admin.apps[0]!.firestore();",
-      "const send = admin.messaging;",
-      "admin.auth().verifyIdToken(...args);",
-      "const verify = admin.auth().verifyIdToken;",
-      "admin.auth().verifyIdToken.call(auth, idToken, true);",
-      'export { getFirestore } from "firebase-admin/firestore";',
-      'export * from "firebase-admin/firestore";',
-      'export { default as fb } from "firebase-admin";',
-    ];
-
-    // Act
-    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
-
-    // Assert
-    expect(counts).toEqual(sources.map(() => 1));
-  });
-
-  it("rejects admin.auth and admin.initializeApp read as values, which a later call would use unchecked", () => {
-    // Arrange
-    const sources = [
-      'import admin from "firebase-admin"; const a = admin.auth; a().getUser(u);',
-      'import admin from "firebase-admin"; const init = admin.initializeApp; init({ credential: c });',
-    ];
-
-    // Act
-    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
-
-    // Assert
-    expect(counts).toEqual(sources.map(() => 1));
-  });
-
-  it("passes the modular calls a project id serves: a named app's init and verifyIdToken on that app's auth", () => {
-    // Arrange
-    const sources = [
-      'import { initializeApp } from "firebase-admin/app"; initializeApp({ projectId: config.firebase.projectId });',
-      'import { initializeApp } from "firebase-admin/app"; import { getAuth } from "firebase-admin/auth"; const app = initializeApp({ projectId: deps.firebaseProjectId }, "perimeter-local-dev"); const verify = (t: string) => getAuth(app).verifyIdToken(t);',
-    ];
-
-    // Act
-    const reported = sources.filter((source) => lint("firebase/no-credential", file, source).length > 0);
-
-    // Assert
-    expect(reported).toEqual([]);
-  });
-
-  it("rejects, in the modular form, a credential, a revocation check, every other Auth call and every other import", () => {
-    // Arrange
-    const sources = [
-      'initializeApp({ projectId: "p", credential: applicationDefault() });',
       'initializeApp({ projectId: "p" }, name);',
-      "initializeApp();",
-      "getAuth(app).verifyIdToken(idToken, true);",
-      "getAuth(app).getUser(uid);",
-      "getAuth(app).revokeRefreshTokens(uid);",
-      "const auth = getAuth(app);",
-      'import { getMessaging } from "firebase-admin/messaging";',
-      'import { applicationDefault } from "firebase-admin/app";',
+      'initializeApp({ projectId: "p", credential: cert(key) }, "local");',
+      'initializeApp({ projectId: "p" }, "local", extra);',
+      'initializeApp(options, "local");',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("rejects the ways around the call checks: another name, a namespace, an alias, a spread and a re-export", () => {
+    // Arrange
+    const sources = [
       'import { getAuth as auth } from "firebase-admin/auth";',
       'import * as firebaseAuth from "firebase-admin/auth";',
       'import firebaseApp from "firebase-admin/app";',
+      "const auth = getAuth(app);",
+      "getAuth(app).verifyIdToken(...args);",
+      "const verify = getAuth(app).verifyIdToken;",
+      "getAuth(app).verifyIdToken.call(auth, idToken, true);",
+      'export { getAuth } from "firebase-admin/auth";',
+      'export { initializeApp as init } from "firebase-admin/app";',
+      'export { getFirestore } from "firebase-admin/firestore";',
+      'export * from "firebase-admin/firestore";',
+      'export { default as fb } from "firebase-admin";',
     ];
 
     // Act
@@ -615,8 +569,6 @@ describe("firebase/no-credential", () => {
       "const init = initializeApp; init({ credential: c });",
       "register(getAuth);",
       'import { getAuth } from "firebase-admin/auth"; export { getAuth };',
-      'export { getAuth } from "firebase-admin/auth";',
-      'export { initializeApp as init } from "firebase-admin/app";',
     ];
 
     // Act
@@ -626,9 +578,14 @@ describe("firebase/no-credential", () => {
     expect(counts).toEqual(sources.map(() => 1));
   });
 
-  it("passes `admin` as a property name, which is no use of Firebase", () => {
+  it("passes getAuth and initializeApp as property names, which are no use of Firebase", () => {
     // Arrange
-    const sources = ["const role = user.admin;", "const flags = { admin: true };", "type Roles = { admin: boolean };"];
+    const sources = [
+      "const auth = service.getAuth();",
+      "const flags = { initializeApp: true };",
+      "type Hooks = { getAuth: () => void };",
+      "class Setup { initializeApp() {} }",
+    ];
 
     // Act
     const reported = sources.filter((source) => lint("firebase/no-credential", file, source).length > 0);
