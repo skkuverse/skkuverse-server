@@ -93,7 +93,7 @@ const PURE_IMPORT_PATTERNS = [
     message: "A pure file does not schedule work; a poller registers it.",
   },
   {
-    regex: "^(?:axios|fs|node:fs|firebase-admin)$|^@(?:nestjs|sentry)/",
+    regex: "^(?:axios|fs|node:fs)$|^firebase-admin(?:$|/)|^@(?:nestjs|sentry)/",
     message: "A pure file does no IO and knows no framework: move the call to a client, repository or service.",
   },
 ];
@@ -978,9 +978,11 @@ module.exports = [
   {
     // The server holds no Firebase service-account key: verifyIdToken without checkRevoked needs only the
     // project id (the REQUEST_AUTHENTICATOR implementations, ADR 0023 D2). Every call that needs a credential is
-    // refused, so adding one is a decision to hold a key again, not a lint-free edit. The import is pinned to
-    // `admin`, which the member selectors read, and `admin` is never aliased or exported, so no use hides under
-    // another name.
+    // refused, so adding one is a decision to hold a key again, not a lint-free edit. The imports are pinned to
+    // `{ initializeApp }` from firebase-admin/app and `{ getAuth }` from firebase-admin/auth, unrenamed, and
+    // neither is read as a value or exported, so no use hides under another name.
+    // WHY: the root `import admin` form stays accepted, under the same pins, until the perimeter overlay, which
+    // every deploy composes with this config, imports the two entry points; firebase-admin 14 drops the root form.
     name: "firebase/no-credential",
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
@@ -989,8 +991,15 @@ module.exports = [
       "src-syntax/firebase-calls": [
         "error",
         {
-          selector: "ImportDeclaration[source.value=/^firebase-admin\\//]",
-          message: "Import the firebase-admin namespace, not a subpath: its subpath entry points reach services that need a credential.",
+          selector: "ImportDeclaration[source.value=/^firebase-admin\\//]:not([source.value=/^firebase-admin\\/(?:app|auth)$/])",
+          message: "Import only firebase-admin/app and firebase-admin/auth: the other entry points reach services that need a credential.",
+        },
+        {
+          selector: [
+            "ImportDeclaration[source.value='firebase-admin/app'] > :matches(ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier[imported.name!='initializeApp'], ImportSpecifier[local.name!='initializeApp'])",
+            "ImportDeclaration[source.value='firebase-admin/auth'] > :matches(ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier[imported.name!='getAuth'], ImportSpecifier[local.name!='getAuth'])",
+          ].join(", "),
+          message: "Import `{ initializeApp }` from firebase-admin/app and `{ getAuth }` from firebase-admin/auth, unrenamed: the selectors below read those names.",
         },
         {
           selector: `:matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=${FIREBASE_REEXPORT}]`,
@@ -1003,8 +1012,8 @@ module.exports = [
         },
         {
           selector: [
-            "CallExpression[callee.property.name='initializeApp'] > ObjectExpression.arguments > :not(Property[key.name='projectId'])",
-            "CallExpression[callee.property.name='initializeApp']:not([arguments.0.type='ObjectExpression']:matches([arguments.length=1], [arguments.length=2][arguments.1.type='Literal'][arguments.1.value=/^[a-z][a-z-]*$/]))",
+            "CallExpression:matches([callee.name='initializeApp'], [callee.property.name='initializeApp']) > ObjectExpression.arguments > :not(Property[key.name='projectId'])",
+            "CallExpression:matches([callee.name='initializeApp'], [callee.property.name='initializeApp']):not([arguments.0.type='ObjectExpression']:matches([arguments.length=1], [arguments.length=2][arguments.1.type='Literal'][arguments.1.value=/^[a-z][a-z-]*$/]))",
           ].join(", "),
           message: "initializeApp takes `{ projectId }` alone, and at most a literal app name: the server holds no service-account credential.",
         },
@@ -1042,6 +1051,25 @@ module.exports = [
             ":not(MemberExpression) > CallExpression[callee.object.name='admin'][callee.property.name='auth']",
           ].join(", "),
           message: "Call admin.auth().verifyIdToken() and nothing else on it: every other Auth call needs a service-account credential.",
+        },
+        {
+          selector: [
+            "MemberExpression[object.callee.name='getAuth'][property.name!='verifyIdToken']",
+            ":not(MemberExpression) > CallExpression[callee.name='getAuth']",
+          ].join(", "),
+          message: "Call getAuth(app).verifyIdToken() and nothing else on it: every other Auth call needs a service-account credential.",
+        },
+        {
+          // A re-export from firebase-admin is reported once, by the re-export selector.
+          selector: [
+            "Identifier[name=/^(?:getAuth|initializeApp)$/]:not(ImportSpecifier > Identifier)",
+            ":not(CallExpression > Identifier.callee)",
+            ":not(ExportSpecifier > Identifier.exported)",
+            ":not(ExportNamedDeclaration[source] > ExportSpecifier > Identifier)",
+            ":not(MemberExpression[computed=false] > Identifier.property)",
+            ":not(:matches(Property, PropertyDefinition, MethodDefinition, TSPropertySignature, TSMethodSignature)[computed=false] > Identifier.key)",
+          ].join(""),
+          message: "Use getAuth and initializeApp only as calls: a value read, an alias, an argument or an export escapes these checks.",
         },
       ],
     },

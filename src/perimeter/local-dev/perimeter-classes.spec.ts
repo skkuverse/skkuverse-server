@@ -6,7 +6,6 @@
  */
 import axios from "axios";
 import express from "express";
-import admin from "firebase-admin";
 import type { AddressInfo } from "node:net";
 import request from "supertest";
 import { LoopbackServers } from "../../../__tests__/helpers/nest/loopback-servers";
@@ -16,6 +15,7 @@ import { describeMiniAppPushAuthorizerContract } from "../../../__tests__/helper
 import { describeMiniAppPushQuotaContract } from "../../../__tests__/helpers/perimeter/mini-app-push-quota.contract";
 import { describeOriginTrustContract } from "../../../__tests__/helpers/perimeter/origin-trust.contract";
 import { describeOutboundPolicyContract } from "../../../__tests__/helpers/perimeter/outbound-policy.contract";
+import { LocalFirebaseSigningKey, strangerSigningKey } from "../../../__tests__/helpers/perimeter/firebase-id-tokens";
 import { capturingLogger, perimeterRequest, perimeterTestDeps } from "../../../__tests__/helpers/perimeter/perimeter-deps";
 import { describePushContentPolicyContract } from "../../../__tests__/helpers/perimeter/push-content-policy.contract";
 import { describeRateLimitPolicyContract } from "../../../__tests__/helpers/perimeter/rate-limit-policy.contract";
@@ -57,16 +57,16 @@ describe("LOCAL_DEV_CLASSES", () => {
 describe("the LocalDev class for requestAuthenticator", () => {
   it("verifies on a Firebase app of its own, named and made on first use, for the configured project", async () => {
     // Arrange
-    let isolated: { firebase: typeof admin; Authenticator: typeof LOCAL_DEV_CLASSES.requestAuthenticator } | undefined;
+    let isolated: { firebase: typeof import("firebase-admin/app"); Authenticator: typeof LOCAL_DEV_CLASSES.requestAuthenticator } | undefined;
     jest.isolateModules(() => {
       isolated = {
-        firebase: require("firebase-admin") as typeof admin,
+        firebase: require("firebase-admin/app") as typeof import("firebase-admin/app"),
         Authenticator: (require("./request-authenticator") as typeof import("./request-authenticator")).LocalDevRequestAuthenticator,
       };
     });
     const { firebase, Authenticator } = isolated!;
     const authenticator = new Authenticator(perimeterTestDeps());
-    const appsBefore = firebase.apps.map((app) => app?.name);
+    const appsBefore = firebase.getApps().map((app) => app.name);
 
     // Act
     await authenticator.authenticate(perimeterRequest({ headers: { Authorization: "Bearer not-a-token" } }));
@@ -74,8 +74,52 @@ describe("the LocalDev class for requestAuthenticator", () => {
 
     // Assert
     expect(appsBefore).toEqual([]);
-    expect(firebase.apps.map((app) => app?.name)).toEqual(["perimeter-local-dev"]);
-    expect(firebase.app("perimeter-local-dev").options.projectId).toBe("demo-perimeter-contract");
+    expect(firebase.getApps().map((app) => app.name)).toEqual(["perimeter-local-dev"]);
+    expect(firebase.getApp("perimeter-local-dev").options.projectId).toBe("demo-perimeter-contract");
+  });
+});
+
+// WHY: the real firebase-admin, unmocked, so a token this server would accept in development verifies here, and an
+// entry point the installed firebase-admin no longer exports fails this test instead of rejecting every user.
+describe("the LocalDev class for requestAuthenticator, verifying with the real firebase-admin", () => {
+  const signingKey = new LocalFirebaseSigningKey();
+
+  beforeAll(async () => {
+    await signingKey.start();
+  });
+
+  afterAll(async () => {
+    await signingKey.stop();
+  });
+
+  it("accepts a token signed for the configured project as its user", async () => {
+    // Arrange
+    const authenticator = new LOCAL_DEV_CLASSES.requestAuthenticator(perimeterTestDeps());
+    const token = signingKey.sign({ projectId: "demo-perimeter-contract", uid: "user-1", signInProvider: "anonymous" });
+
+    // Act & Assert
+    await expect(authenticator.authenticate(perimeterRequest({ headers: { Authorization: `Bearer ${token}` } }))).resolves.toEqual({
+      kind: "user",
+      uid: "user-1",
+      signInProvider: "anonymous",
+    });
+  });
+
+  it("rejects a token signed for another project, by a key Google does not serve, or expired", async () => {
+    // Arrange
+    const authenticator = new LOCAL_DEV_CLASSES.requestAuthenticator(perimeterTestDeps());
+    const claims = { projectId: "demo-perimeter-contract", uid: "user-1", signInProvider: "anonymous" };
+    const otherProject = signingKey.sign({ ...claims, projectId: "demo-other-project" });
+    const otherKey = signingKey.sign(claims, { key: strangerSigningKey() });
+    const expired = signingKey.sign(claims, { isExpired: true });
+
+    // Act
+    const authentications = await Promise.all(
+      [otherProject, otherKey, expired].map((token) => authenticator.authenticate(perimeterRequest({ headers: { Authorization: `Bearer ${token}` } }))),
+    );
+
+    // Assert
+    expect(authentications).toEqual([{ kind: "rejected" }, { kind: "rejected" }, { kind: "rejected" }]);
   });
 });
 

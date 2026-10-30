@@ -35,14 +35,15 @@
  *   - `firebase/no-credential`: src/ makes only the Firebase calls a project
  *     id serves, since the server holds no service-account key:
  *     `initializeApp` takes `projectId` alone, `verifyIdToken` takes the
- *     token alone (`checkRevoked` reads the user record), `admin` reaches
- *     only `auth` and `initializeApp`, `admin.auth()` only `verifyIdToken`,
- *     firebase-admin's subpath entry points are not imported, and
- *     firebase-admin is imported as `admin`, so the member checks see every
- *     use. `admin` itself is never aliased, destructured, passed on or
- *     exported, `verifyIdToken` is only called, never with a spread, and
- *     nothing re-exports firebase-admin.
- *     Specs may mock it freely.
+ *     token alone (`checkRevoked` reads the user record), and the auth of an
+ *     app reaches only `verifyIdToken`. The imports are `{ initializeApp }`
+ *     from firebase-admin/app and `{ getAuth }` from firebase-admin/auth,
+ *     unrenamed, and no other entry point is imported; both are only
+ *     called, never read as values or exported. The root import, as `admin`
+ *     reaching only `auth` and `initializeApp`, is accepted under the same
+ *     checks until the perimeter overlay moves off it. `verifyIdToken` is
+ *     only called, never with a spread, and nothing re-exports
+ *     firebase-admin. Specs may mock it freely.
  *   - `migrated/syntax-clock`: the `Date.now()` / `new Date()` ban covers
  *     every module scope but the shared layers, derived from the tree
  *     (scopes.ts), so a new module is bound from its first file. It and the
@@ -561,6 +562,61 @@ describe("firebase/no-credential", () => {
     const sources = [
       'import admin from "firebase-admin"; const a = admin.auth; a().getUser(u);',
       'import admin from "firebase-admin"; const init = admin.initializeApp; init({ credential: c });',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("passes the modular calls a project id serves: a named app's init and verifyIdToken on that app's auth", () => {
+    // Arrange
+    const sources = [
+      'import { initializeApp } from "firebase-admin/app"; initializeApp({ projectId: config.firebase.projectId });',
+      'import { initializeApp } from "firebase-admin/app"; import { getAuth } from "firebase-admin/auth"; const app = initializeApp({ projectId: deps.firebaseProjectId }, "perimeter-local-dev"); const verify = (t: string) => getAuth(app).verifyIdToken(t);',
+    ];
+
+    // Act
+    const reported = sources.filter((source) => lint("firebase/no-credential", file, source).length > 0);
+
+    // Assert
+    expect(reported).toEqual([]);
+  });
+
+  it("rejects, in the modular form, a credential, a revocation check, every other Auth call and every other import", () => {
+    // Arrange
+    const sources = [
+      'initializeApp({ projectId: "p", credential: applicationDefault() });',
+      'initializeApp({ projectId: "p" }, name);',
+      "initializeApp();",
+      "getAuth(app).verifyIdToken(idToken, true);",
+      "getAuth(app).getUser(uid);",
+      "getAuth(app).revokeRefreshTokens(uid);",
+      "const auth = getAuth(app);",
+      'import { getMessaging } from "firebase-admin/messaging";',
+      'import { applicationDefault } from "firebase-admin/app";',
+      'import { getAuth as auth } from "firebase-admin/auth";',
+      'import * as firebaseAuth from "firebase-admin/auth";',
+      'import firebaseApp from "firebase-admin/app";',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("rejects getAuth and initializeApp read as values or exported, which a later call would use unchecked", () => {
+    // Arrange
+    const sources = [
+      "const init = initializeApp; init({ credential: c });",
+      "register(getAuth);",
+      'import { getAuth } from "firebase-admin/auth"; export { getAuth };',
+      'export { getAuth } from "firebase-admin/auth";',
+      'export { initializeApp as init } from "firebase-admin/app";',
     ];
 
     // Act

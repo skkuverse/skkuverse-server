@@ -235,6 +235,7 @@ describe("import boundary blocks apply as specified", () => {
       'import { BuildingClient } from "./building.client";',
       'import { AppError } from "../http/zod-validation.pipe";',
       'import axios from "axios";',
+      'import { getAuth } from "firebase-admin/auth";',
       'import { Injectable } from "@nestjs/common";',
       'import type { Filter } from "mongodb";',
       'import { ObjectId } from "mongodb";',
