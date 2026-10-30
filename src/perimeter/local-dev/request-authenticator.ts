@@ -1,10 +1,11 @@
-import admin from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { RequestAuthenticator, type Authentication, type PerimeterDeps, type PerimeterRequest } from "../perimeter.ports";
 import { announceLocalDev } from "./local-dev-banner";
 
 function createVerifier(projectId: string) {
-  const app = admin.initializeApp({ projectId }, "perimeter-local-dev");
-  return (idToken: string) => admin.auth(app).verifyIdToken(idToken);
+  const app = initializeApp({ projectId }, "perimeter-local-dev");
+  return (idToken: string) => getAuth(app).verifyIdToken(idToken);
 }
 
 // WHY: a named app of its own, made on first use, so constructing touches no Firebase state and the default app
