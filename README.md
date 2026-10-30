@@ -109,7 +109,7 @@ Tests need no network and no database of yours: they start an in-memory `mongod`
 | [docs/decisions/0023-perimeter-ports.md](docs/decisions/0023-perimeter-ports.md) | The ports every access decision sits behind |
 | [docs/README.md](docs/README.md) | The docs index: reference, explanation, how-to and every decision record |
 
-In short: NestJS 11 on Node.js 26, TypeScript `strict`, the native MongoDB driver, zod at every boundary, pino for logs. Each feature is a module under `src/` (`bus`, `subway`, `journey`, `notices`, `map`, `building`, `meals`, `miniapps`, `ui` and others), split into one sub-module per flow. `__tests__/architecture/` and the ESLint rules enforce the layout. The `ROLE` variable picks the boot path: `poller` polls and serves nothing, `api` serves and polls nothing, `combined` (the local default) does both.
+In short: NestJS 12 on Node.js 26, TypeScript `strict`, the native MongoDB driver, zod at every boundary, pino for logs. Each feature is a module under `src/` (`bus`, `subway`, `journey`, `notices`, `map`, `building`, `meals`, `miniapps`, `ui` and others), split into one sub-module per flow. `__tests__/architecture/` and the ESLint rules enforce the layout. The `ROLE` variable picks the boot path: `poller` polls and serves nothing, `api` serves and polls nothing, `combined` (the local default) does both.
 
 Every success is `{ meta: { lang }, data }` and every error `{ error: { code, message } }`. The module docs under [docs/reference/](docs/reference/) hold the request and response contracts, and `contracts/produced/` holds a JSON Schema for every shape the server sends to another repository.
 

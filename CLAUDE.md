@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-NestJS 11 + TypeScript (strict) API behind the skkuverse app for SKKU: shuttle and city-bus tracking, campus shuttle timetables, notices with FCM push, building search, the campus and festival map, server-driven UI and mini apps. When sources disagree, trust code in `src/` first, then `README.md`, then `docs/` ([docs/README.md](docs/README.md) is the index and the doc-writing rules), then this file.
+NestJS 12 + TypeScript (strict) API behind the skkuverse app for SKKU: shuttle and city-bus tracking, campus shuttle timetables, notices with FCM push, building search, the campus and festival map, server-driven UI and mini apps. When sources disagree, trust code in `src/` first, then `README.md`, then `docs/` ([docs/README.md](docs/README.md) is the index and the doc-writing rules), then this file.
 
 ## Commands
 
