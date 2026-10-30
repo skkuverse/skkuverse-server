@@ -9,7 +9,7 @@
  *   node scripts/sync-facts-row-fixtures.js [--crawler ../skkuverse-crawler] [--ref origin/dev]
  *
  * Fetch the crawler first. Rerun whenever the crawler regenerates its fixtures (its row.py, record.py or test_row.py
- * changed), then rerun `npx jest src/notices/row` and review the override table there against the new expected rows.
+ * changed), then rerun `NODE_OPTIONS=--experimental-vm-modules npx jest src/notices/row` and review the override table there against the new expected rows.
  */
 const fs = require("node:fs");
 const path = require("node:path");

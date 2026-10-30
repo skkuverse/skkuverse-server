@@ -13,7 +13,7 @@ const HAS_OVERLAY = fs.existsSync(path.join(__dirname, "src/private/perimeter.ov
 module.exports = {
   testEnvironment: "node",
   moduleNameMapper: HAS_OVERLAY ? {} : { "^.*/src/private/perimeter\\.overlay$": "<rootDir>/__tests__/helpers/perimeter/stand-in.overlay.ts" },
-  setupFiles: ["<rootDir>/__tests__/helpers/network-guard.ts", "<rootDir>/jest.setup.ts"],
+  setupFiles: ["<rootDir>/__tests__/helpers/esm-flag-guard.ts", "<rootDir>/__tests__/helpers/network-guard.ts", "<rootDir>/jest.setup.ts"],
   // ts-jest only transpiles. Type checking is the job of `npm run typecheck`
   // (tsc --noEmit + tsc -p tsconfig.test.json --noEmit), so `diagnostics: false`
   // avoids duplicate work and keeps the test loop fast. tsconfig path points to

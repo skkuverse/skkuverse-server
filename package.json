@@ -24,7 +24,7 @@
     "dev:watch": "concurrently -k \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"nodemon --watch dist dist/src/main.js\" \"nodemon --quiet --on-change-only --watch src --ext json --exec 'node scripts/copy-build-assets.js'\"",
     "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && node scripts/copy-build-assets.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "jest",
+    "test": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --experimental-vm-modules\" jest",
     "lint": "eslint . && npm run lint:md",
     "lint:md": "markdownlint-cli2",
     "knip": "knip",
@@ -45,7 +45,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nestjs/common": "11.1.24",
-    "@nestjs/config": "4.0.4",
+    "@nestjs/config": "12.0.1",
     "@nestjs/core": "11.1.24",
     "@nestjs/platform-express": "11.1.24",
     "@sentry/nestjs": "11.1.0",
