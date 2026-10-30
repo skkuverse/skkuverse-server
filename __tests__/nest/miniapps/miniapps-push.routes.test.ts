@@ -10,6 +10,7 @@
  *    raw bytes sent, and delivers an allowed send once;
  *  - a refusal answers 401 or 403 before an unknown id's 404, and nothing is written, sent or read;
  *  - a signed send whose body came with a Content-Encoding is 401, whatever the authorizer said;
+ *  - a JSON Content-Type with malformed parameters still reaches the authorizer with the raw bytes;
  *  - a signed send without an Idempotency-Key is 400, nothing written or sent;
  *  - a spent quota is 429 with the quota's Retry-After and the public body, nothing written or sent;
  *  - the policy's problems answer 400 INVALID_PAYLOAD joined by "; ", nothing written or sent;
@@ -21,7 +22,7 @@
  * The registry, the sent_notifications rows and the Cloud Function are fakes.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { gzipSync } from "node:zlib";
+import { brotliCompressSync, gzipSync, zstdCompressSync } from "node:zlib";
 import request from "supertest";
 import { ConfigModule } from "../../../src/config/config.module";
 import { Clock } from "../../../src/infra/clock";
@@ -169,6 +170,34 @@ describe("POST /miniapps/:id/notifications", () => {
     expect([res.status, res.body.error?.code]).toEqual([401, "UNAUTHORIZED"]);
     expect(sendPush).not.toHaveBeenCalled();
   });
+
+  // WHY: the JSON parser decodes br and zstd as well as gzip, so the route's own refusal must answer them too.
+  it.each<[string, (bytes: string) => Buffer]>([
+    ["br", (bytes) => brotliCompressSync(bytes)],
+    ["zstd", (bytes) => zstdCompressSync(bytes)],
+  ])("answers a signed send whose body came with Content-Encoding: %s with 401, whatever the authorizer said", async (encoding, compress) => {
+    // Act
+    const res = await post(SEND_PATH, { "Content-Encoding": encoding }, compress(BODY));
+
+    // Assert
+    expect([res.status, res.body.error?.code]).toEqual([401, "UNAUTHORIZED"]);
+    expect(sendPush).not.toHaveBeenCalled();
+  });
+
+  // WHY: the JSON parser reads a JSON media type whose parameters are malformed, so the signature is checked over
+  // the raw bytes as for a well-formed one, instead of the send being refused for a missing body.
+  it.each(["application/json;", "application/json; charset=utf-8;", "application/json; foo"])(
+    "asks the authorizer with the bytes sent when the Content-Type is %j, and delivers once",
+    async (contentType) => {
+      // Act
+      const res = await post(SEND_PATH, { "Content-Type": contentType });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(authorizer.calls.map(({ rawBody }) => rawBody?.toString("utf8"))).toEqual([BODY]);
+      expect(sendPush).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("answers a signed send without an Idempotency-Key with 400, nothing written or sent", async () => {
     // Act
