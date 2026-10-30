@@ -23,6 +23,8 @@ type CreateApp = (adapter: ExpressAdapter, options: NestApplicationOptions) => N
 export async function bootstrapHttpApp(create: CreateApp, rawBodyRoutePaths: readonly string[]): Promise<NestExpressApplication> {
   const expressInstance = express();
   expressInstance.set("trust proxy", 1);
+  // WHY: the app sends only scalar keys, so no bracketed key (`a[b]=1`) may reach a schema as a nested object.
+  expressInstance.set("query parser", "simple");
   if (config.perimeter.mode === "local-dev") expressInstance.use(localDevRequestFilter);
   expressInstance.use(helmet());
   mountRequestLogging(expressInstance);
