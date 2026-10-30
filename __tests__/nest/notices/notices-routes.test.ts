@@ -981,6 +981,17 @@ describe("GET /notices — multi-source search query", () => {
     expect(res.body.error.code).toBe("INVALID_PARAMS");
   });
 
+  // WHY: the query parser is "simple", so a bracketed key stays a flat key the schema never reads, never a
+  // nested array that reached the comma split and answered 500.
+  it("returns 400 INVALID_PARAMS for a bracketed sourceIds[] key", async () => {
+    // Act
+    const res = await request(httpServer).get("/notices?sourceIds[]=skku-main");
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual({ code: "INVALID_PARAMS", message: "sourceIds: 1-20 comma-separated source IDs required" });
+  });
+
   it("returns 400 INVALID_PARAMS when more than 20 sourceIds", async () => {
     // Arrange
     // 21 ids. The count guard runs before the unknown-sourceId guard, so
