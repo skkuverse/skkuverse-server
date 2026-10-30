@@ -1,8 +1,12 @@
-# Keeps the SHA-pinned actions current: one grouped pull request a month for
-# every `uses:` in .github/workflows/, each pin rewritten with its new version
-# comment. npm is left out on purpose: dependencies are bumped one package per
-# change by hand (CLAUDE.md). __tests__/nest/infra/workflow-pins.test.ts pins
-# this file and the SHA pins it maintains.
+# Two lanes. github-actions: one grouped version-update pull request a month
+# into dev, each pin rewritten with its new version comment. npm: security
+# updates only, which GitHub opens against the default branch (main) whatever
+# `target-branch` says, so that entry sets none; version updates stay off
+# because dependencies are bumped one package per change by hand (CLAUDE.md).
+# The nestjs group exists because the four @nestjs/* packages must move
+# together: a lone @nestjs/platform-express bump failed with ERESOLVE.
+# docs/cicd-and-branch-protection.md has the merge rules.
+# __tests__/nest/infra/workflow-pins.test.ts pins this file.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -14,3 +18,13 @@ updates:
       github-actions:
         patterns:
           - "*"
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      nestjs:
+        applies-to: security-updates
+        patterns:
+          - "@nestjs/*"

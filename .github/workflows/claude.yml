@@ -28,44 +28,16 @@ env:
     --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash(git add:*),Bash(git commit:*),Bash(git rm:*),Bash(git push:*),Bash(*git-push.sh*),mcp__github_file_ops__commit_files,mcp__github_file_ops__delete_files"
 
 jobs:
-  # WHY: the repository is public and the jobs below hold CLAUDE_CODE_OAUTH_TOKEN, so nothing starts unless a
-  # maintainer asked; anyone else's `@claude` starts nothing. An issue comment runs in this repository's context,
-  # with its secrets, even when it sits on a fork's pull request; a review or review comment there runs without
-  # them, so it is skipped instead of failing. `read` and `edit` need this job, so they are skipped with it.
-  mode:
+  # WHY: Claude runs on this job's own token, which cannot push and expires with the job. Without the OIDC
+  # permission the job cannot mint the action's GitHub App token, which can push.
+  read:
+    # WHY: the repository is public and this job holds CLAUDE_CODE_OAUTH_TOKEN, so the check sits on the job:
+    # an issue comment runs with this repository's secrets even on a fork's pull request. A review or review
+    # comment there runs without them, so it is skipped instead of failing.
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
       (github.event_name == 'pull_request_review_comment' && !github.event.pull_request.head.repo.fork && contains(github.event.comment.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
       (github.event_name == 'pull_request_review' && !github.event.pull_request.head.repo.fork && contains(github.event.review.body, '@claude') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association))
-    runs-on: ubuntu-latest
-    permissions: {}
-    outputs:
-      mode: ${{ steps.mode.outputs.mode }}
-    steps:
-      # `@claude …` is read-only: read code, run read-only git/gh, comment.
-      # `@claude edit …` may also edit, commit and push.
-      - name: Choose mode
-        id: mode
-        env:
-          BODY: ${{ github.event.comment.body || github.event.review.body }}
-          ASSOCIATION: ${{ github.event.comment.author_association || github.event.review.author_association }}
-        run: |
-          mode="read"
-          opt_in='(^|[[:space:]])@claude[[:space:]]+edit([^[:alnum:]_-]|$)'
-          if [[ "$BODY" =~ $opt_in ]]; then
-            case "$ASSOCIATION" in
-              OWNER|MEMBER|COLLABORATOR) mode="edit" ;;
-              *) echo "::notice::@claude edit needs OWNER, MEMBER or COLLABORATOR; running read-only" ;;
-            esac
-          fi
-          echo "Claude mode: $mode"
-          echo "mode=$mode" >> "$GITHUB_OUTPUT"
-
-  # WHY: read mode runs on this job's own token, which cannot push and expires with the job, instead of the
-  # action's GitHub App token, which can. With no `id-token: write`, the job cannot mint that App token either.
-  read:
-    needs: mode
-    if: needs.mode.outputs.mode == 'read'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -89,31 +61,3 @@ jobs:
             ${{ env.CLAUDE_READ_TOOLS }}
             ${{ env.CLAUDE_GIT_LOCK }}
             ${{ env.CLAUDE_READ_ONLY_LOCK }}
-
-  # WHY: edit mode pushes, so it takes the action's GitHub App token (minted through `id-token: write`), and
-  # only a maintainer's `@claude edit` reaches it.
-  edit:
-    needs: mode
-    if: needs.mode.outputs.mode == 'edit'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-      id-token: write
-      actions: read
-    env:
-      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: Run Claude Code
-        uses: anthropics/claude-code-action@8041f1d17e0e7d2f2cfe35002962e9f26237c0bb # v1.0.263
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: |
-            ${{ env.CLAUDE_READ_TOOLS }}
-            ${{ env.CLAUDE_GIT_LOCK }}
