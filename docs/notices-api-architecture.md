@@ -2,7 +2,7 @@
 title: Notices API 아키텍처 (분할됨)
 type: explanation
 status: superseded
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-07-22
 audience: internal
 ---
@@ -22,6 +22,5 @@ audience: internal
 | §3.18 FCM dispatch | [decisions/0003-fcm-dispatch-cloud-function-claim-lease.md](decisions/0003-fcm-dispatch-cloud-function-claim-lease.md) |
 | §3.17 strict config + pre-deploy | [decisions/0004-strict-config-pre-deploy-dry-load.md](decisions/0004-strict-config-pre-deploy-dry-load.md) |
 | §8 검증 체크리스트 | [how-to/verify-notices-changes.md](how-to/verify-notices-changes.md) |
-| §10 2026-04-10 incident retrospective | kept with the operations records, outside this repository; the decision it led to is [decisions/0004](decisions/0004-strict-config-pre-deploy-dry-load.md) |
 
 전체 문서 인덱스는 [docs/README.md](README.md).

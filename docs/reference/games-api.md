@@ -2,7 +2,7 @@
 title: Games Registry API Reference
 type: reference
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-26
 audience: internal
 ---

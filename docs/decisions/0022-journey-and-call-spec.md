@@ -2,7 +2,7 @@
 title: Journey and Call Spec
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-26
 audience: internal
 ---
@@ -165,7 +165,7 @@ A stored field a new release adds is optional on read, because api replicas depl
 - Adding something later takes this much work:
   - A line of a polled source, or a stop area: data only (`journey-routes` or `bus-stops`).
   - A subway station or line: a code entry plus the topology and timetable data, the tracker stretch and the poller ceiling.
-  - Another Gyeonggi bus: a `REGIONAL_ROUTES` entry and TOPIS quota. Its seats need the GBIS operating account, because 7800 already spends up to 867 of the development account's 1,000 calls a day.
+  - Another Gyeonggi bus: a `REGIONAL_ROUTES` entry and TOPIS quota. Its seats need a GBIS account of their own.
   - Taxi: a new kind plus the travel-time source.
 - The subway poller grows by 사당, 금정 and 종로5가; the call-volume arithmetic in the subway API reference moves with it.
 - The bus and subway module docs sit at their 200-line caps, so this ADR holds the shared glossary: call, run, run id, stop area.

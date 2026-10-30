@@ -2,7 +2,7 @@
 title: Update Subway Timetables
 type: how-to
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-25
 audience: internal
 ---
@@ -27,7 +27,7 @@ Rerun when:
 ## Prerequisites
 
 - What [edit-runtime-data.md](edit-runtime-data.md#prerequisites) needs: `.env` from `npm run env:pull`, and a build, which `npm run data` runs first.
-- Python 3, standard library only. Only the Seoul part reads a key, `SEOUL_OPENAPI_GENERAL_KEY` from Doppler `backend/dev_personal`; `--only korail` and `--only shinbundang` need none.
+- Python 3, standard library only. Only the Seoul part reads a key, `SEOUL_OPENAPI_GENERAL_KEY` from the environment; `--only korail` and `--only shinbundang` need none.
 
 ## Steps
 
@@ -42,7 +42,7 @@ Rerun when:
 2. Rerun the converter into that `parts/` directory. `--out` is required, and each file it writes is named by its part key, so it replaces the pulled file. `--only <source>` or `--line <code>` (repeatable) rebuilds part of it and leaves the other files as pulled:
 
    ```bash
-   doppler run -p backend -c dev_personal -- python3 -I scripts/subway-timetable/convert.py --out .data/dev/subway-timetables/parts --line 2
+   SEOUL_OPENAPI_GENERAL_KEY=<key> python3 -I scripts/subway-timetable/convert.py --out .data/dev/subway-timetables/parts --line 2
    python3 -I scripts/subway-timetable/convert.py --out .data/dev/subway-timetables/parts --only korail
    ```
 

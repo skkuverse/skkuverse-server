@@ -2,14 +2,14 @@
 title: A Cross-posted Notice Is Pushed Once per Sweep, by Content Group
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-29
 audience: internal
 ---
 
 # 0005. A Cross-posted Notice Is Pushed Once per Sweep, by Content Group
 
-> Why the dispatcher merges identical copies of one article into one Cloud Function call, and what that costs. Decided 2026-08-04 ([issue #75](https://github.com/spencer0124/skkuverse-server/issues/75)).
+> Why the dispatcher merges identical copies of one article into one Cloud Function call, and what that costs. Decided 2026-08-04.
 
 ## Context
 

@@ -2,7 +2,7 @@
 title: 7800 and One Arrival Shape for Every Bus
 type: plan
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -54,7 +54,7 @@ The raw answers were not kept; PR 2 captures the fixtures again.
 | First and last departures: weekday 호매실 05:00–23:50, 사당 06:00–01:00; Saturday, Sunday and holiday 호매실 05:00–23:00, 사당 06:00–00:00. Headway fields read `peekAlloc` 1 / `nPeekAlloc` 14 on weekdays, 8/10 Saturday, 10/12 Sunday (the weekday `1` looks wrong) | `getBusRouteInfoItemv2` |
 | **`getBusArrivalItemv2` labels are shifted**, in JSON and XML alike: `stationNm1` holds the plate (`경기70사1720`), `lowPlate1` holds seconds (`665`, beside `predictTime1` 10), `plateNo1/2` hold `0`/`2` (the TOPIS `busType` of the same two buses), `vehId1/2` hold `N`. `predictTime`, `locationNo`, `flag`, `turnSeq`, `staOrder` match TOPIS. `remainSeatCnt1/2` read `1`/`0`, and whether that label is shifted too cannot be told from one answer | two calls 22 s apart, same values |
 
-**data.go.kr quotas** (owner's account, 2026-10-24): TOPIS quotas are per operation per day: 버스도착정보 20,000 × 4 operations, 버스위치정보 20,000 × 5, 노선정보 10,000 × 4 (운영). GBIS 15080346 (도착), 15080648 (위치), 15080662 (노선), 15080666 (정류소): 자동승인, 개발계정 1,000/day per operation, valid to 2028-10-24; an 운영계정 is also 자동승인 but needs a registered 활용사례, and raises the cap (by how much: **Unverified**).
+**data.go.kr quotas** are per operation per day and per key; an 운영계정 needs a registered 활용사례 and raises a 개발계정's cap (by how much: **Unverified**).
 
 ### Unverified
 
@@ -68,38 +68,29 @@ The raw answers were not kept; PR 2 captures the fixtures again.
 
 ### 3.1 Options
 
-| Option | Arrivals | Positions | Seats | Quota | Verdict |
-| --- | --- | --- | --- | --- | --- |
-| A. TOPIS only, as a fourth TOPIS route | `getArrInfoByRouteAll`, all 80 stations, both slots | `getBusPosByRtid`, GPS | none | the Jongno operations' spare (below) | **Primary.** The Jongno client, registry, route-path sync, live mapper and stop index already read exactly this |
-| B. GBIS 도착 per stop | `getBusArrivalItemv2`, one stop per call, labels shifted today | none | `remainSeatCnt` (label **Unverified**) | 1,000/day per operation on 개발 | Not a live route source: one stop per call cannot fill 80 stations |
-| C. GBIS 위치 per route | none | `getBusLocationListv2`, per vehicle | `remainSeatCnt` per vehicle | 1,000/day on 개발 | **Seats, later**: one call covers every bus, joined to TOPIS's vehicles by plate |
-| D. TAGO | per stop | — | none | 1,000/day on 개발 (**Unverified**) | Rejected: nothing TOPIS lacks |
+| Option | Arrivals | Positions | Seats | Verdict |
+| --- | --- | --- | --- | --- |
+| A. TOPIS only, as a fourth TOPIS route | `getArrInfoByRouteAll`, all 80 stations, both slots | `getBusPosByRtid`, GPS | none | **Primary.** The Jongno client, registry, route-path sync, live mapper and stop index already read exactly this |
+| B. GBIS 도착 per stop | `getBusArrivalItemv2`, one stop per call, labels shifted today | none | `remainSeatCnt` (label **Unverified**) | Not a live route source: one stop per call cannot fill 80 stations |
+| C. GBIS 위치 per route | none | `getBusLocationListv2`, per vehicle | `remainSeatCnt` per vehicle | **Seats, later**: one call covers every bus, joined to TOPIS's vehicles by plate |
+| D. TAGO | per stop | — | none | Rejected: nothing TOPIS lacks |
 
 Fallback if TOPIS stops answering `200000150`: GBIS `getBusArrivalItemv2` for the four poles §6 names, in the same poller, `basis: provider`; the live route then states `noData` at every other station (ADR 0019, D8). Seats are not the fallback's reason.
 
 ### 3.2 Budget per operation
 
-Interval 30 s, all day, no service window: 86,400 / 30 = 2,880 calls a day on each of the two operations. All day because TOPIS's own `운행종료` text is what makes a station `ended` (ADR 0019, D8) and a gap in the poll would make the group `noData` overnight instead; a window would save 480 calls a day and add code.
+Interval 30 s, all day, no service window. All day because TOPIS's own `운행종료` text is what makes a station `ended` (ADR 0019, D8) and a gap in the poll would make the group `noData` overnight instead; a window would save few calls and add code.
 
-| data.go.kr operation | Today | 7800 | Total | Margin |
-| --- | --- | --- | --- | --- |
-| `getArrInfoByRouteAllList` | Jongno 3 × 3,456 = 10,368 (`JONGRO_POLL_INTERVAL_MS`, `src/bus/bus.constants.ts`) | 2,880 | **13,248** of 20,000 | 6,752 |
-| `getBusPosByRtidList` | Jongno 10,368 + probe ≤ 2,000 (`src/infra/config.ts:178`) | 2,880 | **≤ 15,248** of 20,000 | ≥ 4,752 |
-| `getArrInfoByRouteList` | 0 | 0 | 0 | the per-stop fallback inside TOPIS, untouched |
-| `busRouteInfo` `getStaionByRoute`, `getRoutePath` (10,000 each) | the daily route-path sync, about 1 per route | about 1 | ~4 | — |
-| GBIS `getBusLocationListv2` (1,000, 개발) | 0 | seats at 90 s, 05:00–01:00 = 800 | 800 | — |
-
-- The planner plan's arithmetic was already per operation and right for arrivals (`transit-route-planner.md`, "Cadence and the TOPIS budget"); it left positions out because its journey poller read no positions. Joining the live route costs the positions operation 2,880 as well.
-- 25 s instead of 30 s costs 3,456 a day on each operation, 576 more: arrivals at 13,824 and positions at ≤ 15,824 of 20,000, so 25 s fits. The 7800 owner (bis) keeps 30 s for now (Q4).
-- A laptop's `npm run dev` polls on the same key (`docs/project-docs.md`, "Daily Usage and Quota Check"). Production's positions operation at 15,248 leaves 4,752, so a laptop polling the Jongno routes fits about 11 hours a day instead of about 17, and one also polling 7800 about 8. Hence the switch in §4.
+- Every caller of the key shares each operation's daily quota, a laptop's `npm run dev` included (`docs/project-docs.md`, "Daily Usage and Quota Check"). Hence the switch in §4.
+- 25 s instead of 30 s also fits. The 7800 owner (bis) keeps 30 s for now (Q4).
 
 ### 3.3 Seats
 
-TOPIS gives none (§2). Seats come from GBIS 위치 per vehicle, later (PR 7), polled where pollers run with `DATA_GO_KR_SERVICE_KEY`, which holds the same key. The server dropped that required value when skkuverse-crawler took over the public-holiday sync (2026-10-24), so PR 7 adds it back as a `poller` value, with both `config/env.*.keys` files and both Doppler configs. Before that PR: one capture of `getBusLocationListv2` beside a TOPIS answer, to check its labels and the plate join. 30 s polling needs the 운영계정.
+TOPIS gives none (§2). Seats come from GBIS 위치 per vehicle, later (PR 7), polled where pollers run with `DATA_GO_KR_SERVICE_KEY`, which holds the same key. The server dropped that required value when skkuverse-crawler took over the public-holiday sync (2026-10-24), so PR 7 adds it back as a `poller` value, with both `config/env.*.keys` files. Before that PR: one capture of `getBusLocationListv2` beside a TOPIS answer, to check its labels and the plate join. 30 s polling needs the 운영계정.
 
 ### 3.4 API applications
 
-Applied 2026-10-24 in the owner's data.go.kr account, each 자동승인 → 승인 at once, 개발계정, 1,000 calls a day per operation, valid to 2028-10-24:
+The 경기도 APIs this plan reads:
 
 | API | data.go.kr id | Base URL | Operations |
 | --- | --- | --- | --- |
@@ -109,17 +100,16 @@ Applied 2026-10-24 in the owner's data.go.kr account, each 자동승인 → 승�
 | 경기도_정류소 조회 | 15080666 | `apis.data.go.kr/6410000/busstationservice/v2` | `getBusStationListv2`, `getBusStationAroundListv2`, `getBusStationViaRouteListv2`, `busStationInfov2` |
 
 - Not applied: TAGO 버스도착정보 (15098530) and 버스위치정보 (15098533). They carry no seats, and their 경기 coverage cannot be read without a key.
-- Already held: 서울 버스도착정보 and 버스위치정보 (운영, 20,000 per operation, to 2027-08-28), 노선정보 (운영, 10,000, to 2028-10-18), 정류소정보 (개발, 1,000).
-- **Keys.** A data.go.kr account has one 일반 인증키, so the new approvals attach to the key both Doppler secrets already hold (§2). No new secret and no new required variable.
+- **Keys.** A data.go.kr account has one 일반 인증키, so the new approvals attach to the key already configured. No new secret and no new required variable.
 - **운영계정.** Converting the 경기도 위치 API is also 자동승인 but asks for a registered 활용사례 (a public page describing the service). Needed only for seats faster than 90 s (Q7); register it once the 7800 card ships.
 
 ## 4. Poller and roles (ADR 0012)
 
 - **Identity.** `JONGRO_ROUTES` (`src/bus/bus.constants.ts:8`) becomes the TOPIS route list with an explicit `code` per entry (`02`, `07`, `08`, `7800`), since `toJongroRoute` slices the id after `jongro` (`src/bus/bus.mapper.ts:9`), and the per-route facts the code branches on (ADR 0013, D2): `capabilities` (7800: `occupancy: false`, `lowFloor: true`, `plateNumber`, `lastBus`, `positionSource: "gps"`), `isListed` (§8, Q2) and `pollIntervalMs`. Folder and type names stay `jongro` in this plan; renaming them is Q5.
-- **Poller.** `BusRealtimeJongroPoller` already registers one poller per route (`src/bus/realtime/jongro/bus-realtime-jongro.poller.ts:17`), so `poller.failing` and the Sentry check-in come per route, and 7800 is `jongro-7800` in the registry. It rejects on failure; nothing catches.
+- **Poller.** `BusRealtimeJongroPoller` already registers one poller per route (`src/bus/realtime/jongro/bus-realtime-jongro.poller.ts:17`), so `poller.failing` comes per route, and 7800 is `jongro-7800` in the registry. It rejects on failure; nothing catches.
 - **Writes.** `bus_cache` keys `jongro_stations_7800` and `jongro_locations_7800` (`src/bus/cache/bus-cache.document.ts:90`). The stored key prefix stays `jongro_` so a replica of the previous release reads the Jongno keys it knows during a deploy; the new keys are read only by the new release. `jongro_routes` gets 7800's stations from the arrival rows (ADR 0014, D4); `jongro_route_paths` gets its line and directions from the daily `busRouteInfo` sync (ADR 0014, D8).
 - **Reads.** An api replica reads the same keys through `BusRealtimeGroupService.findJongroReading` (`src/bus/realtime/group/bus-realtime-group.service.ts:75`); no upstream call (D1). Freshness as Jongno: the group's `updatedAt` is null when nothing was written within a minute.
-- **Switch.** `REGIONAL_BUS` (`src/infra/runtime-switches.ts`): on in production and test, off by default in development, gating the 7800 poller only (D5), since development spends production's quota. Off, `/bus/live/<7800 id>` serves `noData`, as for a stopped poller. The Jongno pollers stay unswitched as today.
+- **Switch.** `REGIONAL_BUS` (`src/infra/runtime-switches.ts`): on in production and test, off by default in development, gating the 7800 poller only (D5), since development spends the same key's quota. Off, `/bus/live/<7800 id>` serves `noData`, as for a stopped poller. The Jongno pollers stay unswitched as today.
 - **Required env.** TOPIS reuses `SEOUL_BUS_SERVICE_KEY`. The GBIS seat poller (PR 7) adds `DATA_GO_KR_SERVICE_KEY` back (removed with the holiday sync on 2026-10-24) and a second switch, `GBIS`, same defaults.
 - **Not served on the deprecated route.** `/bus/realtime/data/:groupId` is frozen (ADR 0019, D11): its source map (`bus-realtime-group.service.ts:110`) keeps the three Jongno routes only.
 
@@ -218,7 +208,7 @@ Each PR is test-first (ADR 0011, D9: the test is written from the behavior and f
 | 1 | TOPIS route identity: explicit `code`, per-route `capabilities`, `isListed`, `pollIntervalMs`; the deprecated route keeps its three | `/bus/config`, `/bus/live/jongro0x` and a Jongno stop page byte-identical; `contracts/produced/` unchanged | nothing |
 | 2 | 7800 fixtures captured; pass-through stations (`(미정차)`) in stops away and `isPassThrough`; occupancy gated by capability | rules specs over the 7800 fixture (`[0번째 전]`, 출발대기, 19 virtual stations); Jongno characterization unchanged | nothing (no 7800 yet) |
 | 3 | `bus-stops` `topisIds` alias; unlisted routes index aliased poles only; ADR 0019 D5 note | schema and push-check specs; stop index spec | nothing until a push |
-| 4 | 7800 in the route list (`REGIONAL_ROUTES`), unlisted; `REGIONAL_BUS` switch; no `jongro-route-attributes` entry (an unlisted route on no card reads none, and its source reports no load, so no seat count); quota table in `project-docs.md`; `bus.topis.quota_exceeded` and its alert | route test for `/bus/live/<id>` over the fixture; api-role boot test | new `/bus/live/<7800 id>`; then push the four stops: four new `/bus/stops` entries and their pages |
+| 4 | 7800 in the route list (`REGIONAL_ROUTES`), unlisted; `REGIONAL_BUS` switch; no `jongro-route-attributes` entry (an unlisted route on no card reads none, and its source reports no load, so no seat count); `bus.topis.quota_exceeded` | route test for `/bus/live/<id>` over the fixture; api-role boot test | new `/bus/live/<7800 id>`; then push the four stops: four new `/bus/stops` entries and their pages |
 | 5 | Domain twin `StopCall` and `toArrival`; Jongno, 7800 and HSSC live mappers through it | live and stop page characterization unchanged | nothing |
 | 6 | F1: `listRuns`, stop page timetable entries from runs, the `"HH:mm"` parsing deleted | smart view and stop page characterization unchanged; a past-midnight run spec | nothing |
 | 7 | Seats: GBIS 위치 poller (`GBIS` switch), `vehicle.seatsLeft`, `capabilities.seats`, ADR 0019 D17 | a captured `getBusLocationListv2` fixture; plate join spec | additive `seatsLeft` (null except 7800) |
@@ -237,7 +227,7 @@ Size and doc caps each PR must respect: `bus.wire.ts` (96), `bus-config.mapper.t
 | Q1 | 7800 as a fourth TOPIS route in the bus pipeline (this plan), or the planner plan's separate `journey/` poller | The bus pipeline: `/bus/live`, the stop page, directions, trajectories and the planner all from one poll, and no second TOPIS client |
 | Q2 | List 7800 on `/bus/config` now | No. Installed bundles open a realtime card's `dataEndpoint`, the frozen route (D11); list it once the app's live-route screen is adopted, decided with the app side |
 | Q3 | Stop ids for poles with no ARS number | Local stops aliasing TOPIS station ids (`topisIds`); the two 성균관대학교 poles now, 성균관대역 only when a route uses it |
-| Q4 | 30 s, or 25 s like Jongno (arrivals 13,824 and positions ≤ 15,824 of 20,000: both fit) | 30 s for now, the 7800 owner's (bis) call; 25 s fits whenever it is wanted |
+| Q4 | 30 s, or 25 s like Jongno (both fit the quota) | 30 s for now, the 7800 owner's (bis) call; 25 s fits whenever it is wanted |
 | Q5 | Rename `jongro` code names (`realtime/jongro`, `JongroArrivalDoc`, …) to `topis` | Not in this sequence: a mechanical PR of its own after PR 4, stored key names unchanged |
 | Q6 | Group id for 7800 (`/bus/live/:groupId`) | `gyeonggi7800`; data and app both key on it, so decide before PR 4 |
 | Q7 | Seats via GBIS 위치 at 90 s on the 개발 cap, or wait for the 운영계정 | Capture first; ship at 90 s if the labels hold, register the 활용사례 in parallel |
@@ -247,4 +237,4 @@ Size and doc caps each PR must respect: `bus.wire.ts` (96), `bus-config.mapper.t
 
 - [transit-route-planner.md](transit-route-planner.md): the planner, the dataset and the PR sequence this revises
 - [ADR 0012](../decisions/0012-runtime-roles.md), [ADR 0013](../decisions/0013-runtime-data-in-mongodb.md), [ADR 0014](../decisions/0014-jongro-realtime-from-topis.md), [ADR 0019](../decisions/0019-bus-live-api.md)
-- [docs/project-docs.md](../project-docs.md) ("Daily Usage and Quota Check"): the per-operation table PR 4 updates
+- [docs/project-docs.md](../project-docs.md) ("Daily Usage and Quota Check"): the shared daily quotas

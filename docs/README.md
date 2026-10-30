@@ -2,7 +2,7 @@
 title: Docs Index & Conventions
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-28
 audience: internal
 ---
@@ -52,9 +52,9 @@ Docs are split by [Diátaxis](https://diataxis.fr/). **A doc is classified by th
 | [configure-map-overlays.md](how-to/configure-map-overlays.md) | Everything the map can draw and how to add or change one — which tier you edit, whether it needs a deploy, and what to check when a shape does not appear |
 | [migrate-app-to-map-overlays.md](how-to/migrate-app-to-map-overlays.md) | The client half of the overlay change, for `skkuverse-app` — what changed on the wire, the ring winding the SDK needs reversed, and the fallback config that still points at a deleted route |
 | [resync-the-jongro-registry.md](how-to/resync-the-jongro-registry.md) | When the Jongro station registry holds a TOPIS stop list change, or a route's document is missing — reading the held change from its log, checking it against TOPIS, and applying it with a guarded write on `jongro_routes` |
-| [raise-the-minimum-app-version.md](how-to/raise-the-minimum-app-version.md) | Raising `minVersion` or `minOsVersion` on `/app/config` — the store release live for everyone, `npm run app-gate:check`, the GA4 impact query, the `npm run data` push, the two 60-second caches, rollback, creating the dataset from the live response (never the test fixture), and what the move off the environment variables costs until it reaches `main` |
+| [raise-the-minimum-app-version.md](how-to/raise-the-minimum-app-version.md) | Raising `minVersion` or `minOsVersion` on `/app/config` — the store release live for everyone, `npm run app-gate:check`, the GA4 impact query, the `npm run data` push, the two 60-second caches, rollback, and creating the dataset from the live response (never the test fixture) |
 
-Operating production (deploys, hosts, monitoring, secrets, incident records) is documented in the maintainer's private operations repository, not here.
+Production configuration and data are kept outside this repository.
 
 ### reference (contracts and specs)
 
@@ -104,7 +104,7 @@ Operating production (deploys, hosts, monitoring, secrets, incident records) is 
 | [0006-building-search-relevance-ranking.md](decisions/0006-building-search-relevance-ranking.md) | accepted |
 | [0007-notice-ordering-key.md](decisions/0007-notice-ordering-key.md) | accepted |
 | [0008-dispatch-age-gate-on-publication-date.md](decisions/0008-dispatch-age-gate-on-publication-date.md) | accepted |
-| [0009-multi-origin-active-active.md](decisions/0009-multi-origin-active-active.md) | accepted (Phase A ended 2026-10-03: one origin; Phase B deferred; every-role seeding superseded by 0012) |
+| [0009-multi-origin-active-active.md](decisions/0009-multi-origin-active-active.md) | deprecated (superseded by 0012) |
 | [0010-server-architecture.md](decisions/0010-server-architecture.md) | accepted |
 | [0011-test-strategy.md](decisions/0011-test-strategy.md) | accepted |
 | [0012-runtime-roles.md](decisions/0012-runtime-roles.md) | accepted (supersedes 0009's every-role seeding) |
@@ -151,7 +151,7 @@ These docs are not yet split into Diátaxis. Each carries a drift banner and is 
 
 Flagship first: only notices is fully migrated so far. What moves next:
 
-- **Split `project-docs.md` (large):** the bus schedule system into `explanation/bus-schedule-architecture.md`, `reference/bus-api.md` and `how-to/add-bus-route.md`; the external APIs (HSSC, Jongro, Hyehwa, quotas, map) into `reference/external-apis.md`; buildings are done: [explanation/building-architecture.md](explanation/building-architecture.md), with the 2026-03 data survey moved to [archive/building-data-2026-03.md](archive/building-data-2026-03.md). Fix the Express-to-NestJS drift throughout.
+- **Split `project-docs.md` (large):** the bus schedule system into `explanation/bus-schedule-architecture.md`, `reference/bus-api.md` and `how-to/add-bus-route.md`; the external APIs (HSSC, Jongro, Hyehwa, map) into `reference/external-apis.md`; buildings are done: [explanation/building-architecture.md](explanation/building-architecture.md), with the 2026-03 data survey moved to [archive/building-data-2026-03.md](archive/building-data-2026-03.md). Fix the Express-to-NestJS drift throughout.
 - **`skku-departments.md`**: move it to `reference/` and bring it up to date. (`skku-notice-sources.md` is already a pointer stub to the crawler's and `src/notices/sources.json`'s source of truth.)
 - When you split a doc, remove its line from `ignores` in `.markdownlint-cli2.jsonc`.
 
@@ -166,7 +166,7 @@ Every doc starts with YAML frontmatter:
 title: <Title Case title>
 type: how-to | reference | explanation | tutorial | adr | plan | postmortem
 status: draft | accepted | superseded | deprecated
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: YYYY-MM-DD
 audience: internal | public
 ---

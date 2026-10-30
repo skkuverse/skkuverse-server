@@ -2,14 +2,14 @@
 title: FCM Dispatch Age Gate — the Notice's Own Date, not a Crawl Timestamp
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-28
 audience: internal
 ---
 
 # 0008. FCM Dispatch Age Gate — the Notice's Own Date, not a Crawl Timestamp
 
-> Why a notice is pushed only while its publication `date` is within 14 days in `Asia/Seoul`, and never by a crawl timestamp. Decided 2026-09-13 ([skkuverse#52](https://github.com/spencer0124/skkuverse/issues/52)).
+> Why a notice is pushed only while its publication `date` is within 14 days in `Asia/Seoul`, and never by a crawl timestamp. Decided 2026-09-13.
 
 ## Context
 

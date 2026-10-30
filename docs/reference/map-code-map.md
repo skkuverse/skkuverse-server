@@ -2,7 +2,7 @@
 title: Map Code Map
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-23
 audience: internal
 ---

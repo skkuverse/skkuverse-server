@@ -2,7 +2,7 @@
 title: The Dispatch Gate Is the Crawler's factsAt, not aiSummaryAt
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-28
 audience: internal
 ---
@@ -35,7 +35,7 @@ Rejected:
 
 ## Consequences
 
-- **The switch releases a backlog.** Notices the live job gated but ai_summary skipped have waited since the job started, and the first sweep after the switch claims them, newest first. On 2026-10-28 prod held 12 in the 14-day window, all image-only, one gated a day before (`pushedAt: null`, not deleted, `factsAt` a date, `aiSummaryAt` not a date). Count them before the release, and stamp the epoch `pushedAt` on any that should not push late.
+- **The switch releases a backlog.** Notices the live job gated but ai_summary skipped have waited since the job started, and the first sweep after the switch claims them, newest first. Count them before the release (`pushedAt: null`, not deleted, `factsAt` a date, `aiSummaryAt` not a date), and stamp the epoch `pushedAt` on any that should not push late.
 - **Some notices are never pushed.** A notice is lost when it was first seen before the live job ran, when it has no `firstSeenAt`, or when the live job was down or skipping ticks for longer than 6 hours after it was first seen. Nothing on the server reports such a notice. Before the release, count the notices the old gate would push and the new one never will (`pushedAt: null`, not deleted, in the window, `aiSummaryAt` a date, `factsAt` not a date): 0 on prod on 2026-10-28.
 - **The live job wakes the sweep.** The poller's cron sweeps every 30 minutes by default. Since skkuverse-crawler a3aeb5b (2026-10-28), the live job also pings `POST /internal/notices/dispatch-pending` at the end of each tick that writes a gate, so a gated notice is claimed within minutes. The ai_summary batch keeps its own ping until that job stops.
 - **The suppression procedure keeps its form and gets less time.** Stamping `pushedAt` with the epoch still keeps a backlog from pushing (skkuverse-crawler `docs/known-issues.md` §13). It must land before the live job's next tick, at most 10 minutes after the crawl, and before the timeout pass, 30 to 40 minutes after `firstSeenAt`, gates whatever extraction has not reached.

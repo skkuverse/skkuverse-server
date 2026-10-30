@@ -2,7 +2,7 @@
 title: Health Architecture
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -19,7 +19,7 @@ Health owns no data and serves no app screen. It answers the probes that decide 
 | --- | --- | --- | --- |
 | The container healthcheck in `docker-compose.yml` | — | A probe of each api container (the poller binds no port and has none) | `GET /health/ready` |
 | The rolling deploy, run outside this repository | — | A wait on each api replica before the next restarts | `GET /health/ready` |
-| UptimeRobot and the per-host heartbeat (a host cron) | — | Outside-in and inside-out probes that alert on failure | `GET /health/ready`, through nginx |
+| External monitors, run outside this repository | — | Probes that alert on failure | `GET /health/ready`, through the reverse proxy |
 | MongoDB | — | A ping | `ping` in `src/infra/db.ts` |
 | The poller registry | — | Whether the pollers have started | `PollerRegistryService.isReady` |
 

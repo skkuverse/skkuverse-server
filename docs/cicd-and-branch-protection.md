@@ -2,7 +2,7 @@
 title: CI and Branch Protection
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-29
 audience: public
 ---
@@ -34,7 +34,7 @@ Every workflow sets an empty or read-only token at the top and grants more only 
 | `UMBRELLA_REPOSITORY` | `contracts-sync` environment | `contracts-sync.yml` | The `owner/name` of that repository. It is a secret, not a variable, so the log masks it |
 | `FLEET_READ_TOKEN` | `contracts-sync` environment | `contracts-sync.yml` | A fine-grained token with `contents: read` on the repositories that produce the vendored files, and on nothing else. Same trigger as above |
 
-This table is the target configuration, which the maintainers apply before the repository goes public (release step 2B-8). The `contracts-sync` environment limits deployments to the default branch, so a workflow on any other branch cannot read its secrets. The three secrets exist only there, with no repository-level copy. Until the environment is set up, the workflow's first step fails before it fetches anything, because the secrets it needs are missing. No secret exists for `ci.yml`. A pull request from Dependabot or a fork gets no secret.
+The `contracts-sync` environment limits deployments to the default branch, so a workflow on any other branch cannot read its secrets. The three secrets exist only there, with no repository-level copy. No secret exists for `ci.yml`. A pull request from Dependabot or a fork gets no secret.
 
 ## CI
 
@@ -55,12 +55,11 @@ A pull request from a fork waits for a maintainer to approve its workflow runs. 
 
 | Rule | `main` | `dev` |
 | --- | --- | --- |
-| Pull request required | Yes, no approving review required | No |
+| Pull request required | Yes | No |
 | Merge method | Merge commit only | — |
 | Required status check | `test` (from `ci.yml`) | — |
 | Force push | Blocked | Blocked |
 | Deletion | Blocked | Blocked |
-| Bypass | Repository admins | Repository admins |
 
 Merge `dev` → `main` with a merge commit, never a squash, so `dev` and `main` keep one history.
 

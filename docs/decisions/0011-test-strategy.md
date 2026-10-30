@@ -2,7 +2,7 @@
 title: Test Strategy — Levels, Doubles and the Guards That Keep Tests Honest
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -15,7 +15,7 @@ audience: internal
 
 - Agents write most tests here, and an agent imitates the test next to the one it writes. Route tests stubbed whole services, service specs mocked `infra/db` and `axios` module-wide, and each route builder copied the `src/main.ts` pipeline by hand, so tests checked copies and call shapes: when the first refactored module renamed a service's methods, its "frozen" route test had to be rewritten.
 - An audit with hand mutants found the surviving bugs at the seams: query semantics (filter windows, soft-delete, pagination), cache keys and payload translation. The level that catches them was missing, not under-weighted.
-- Nothing stopped a test from being deleted, skipped or loosened to get green, and the session that implemented a change could edit its test. It happened: on 2026-10-05 the rate-limit 429 regression test was deleted (7b77a40, ed55d58) because a load flake blocked the gate. ImpossibleBench (2025) finds most of Claude models' test cheating is editing the test.
+- Nothing stopped a test from being deleted, skipped or loosened to get green, and the session that implemented a change could edit its test. It happened: a regression test was once deleted because a flake blocked the gate. ImpossibleBench (2025) finds most of Claude models' test cheating is editing the test.
 - Production runs in `Asia/Seoul`, CI in UTC, laptops in KST. A route test once sent real requests to production hosts.
 
 ## Decision
@@ -101,9 +101,9 @@ Rejected: a global mutation-score gate. No study measures one as a gate, and Goo
 
 ### D11. End-to-end: a read-only smoke after each deploy
 
-Not built yet. After the rolling update, the host deploy script, which runs outside this repository, compares a committed list of public `GET` routes on one replica against committed baseline shapes (`scripts/compare-responses.js` in shape mode); a difference warns first, and fails through the rollback path after two clean deploys. `npm run verify:serve` stays the manual pre-deploy check.
+Not built yet. After the rolling update, the deploy compares a committed list of public `GET` routes on one replica against committed baseline shapes (`scripts/compare-responses.js` in shape mode); a difference warns first, and fails through the rollback path after two clean deploys. `npm run verify:serve` stays the manual pre-deploy check.
 
-Rejected: a scheduled synthetic monitor. UptimeRobot and Healthchecks already watch liveness; the gap is the shape after a deploy.
+Rejected: a scheduled synthetic monitor. Liveness is already watched; the gap is the shape after a deploy.
 
 ### D12. The shape of a spec
 

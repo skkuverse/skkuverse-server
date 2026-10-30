@@ -2,14 +2,14 @@
 title: Building Search — Relevance Ranking over a Declarative Tier Table
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-22
 audience: internal
 ---
 
 # 0006. Building Search — Relevance Ranking over a Declarative Tier Table
 
-> Why `GET /building/search` ranks by SKKU's own room numbering, why the row caps are split into two bands, and the limits of a ranked scan. Decided 2026-08-06 ([issue #91](https://github.com/spencer0124/skkuverse-server/issues/91)).
+> Why `GET /building/search` ranks by SKKU's own room numbering, why the row caps are split into two bands, and the limits of a ranked scan. Decided 2026-08-06.
 
 ## Context
 
@@ -52,7 +52,7 @@ Under the cap and without `campus`, `meta.spaceCount` equals `meta.counts.space.
 
 ## Consequences
 
-**A ranked search scans.** You cannot rank a set you have not enumerated, and no index removes the scan: a `$or` uses index union only if every branch is indexed, `name.*` and `buildingName.*` are not, and `$options: "i"` defeats prefix anchoring anyway. Measured: ~1,242 docs examined (~4 ms) became ~7,691 (~20 ms) per scan, still a net win over the six scans before. `spaces` is ~2.5 MB. If it grows about tenfold, Atlas Search with an `autocomplete`/`edgeGram` mapping on `spaceCd` is what removes the scan.
+**A ranked search scans.** You cannot rank a set you have not enumerated, and no index removes the scan: a `$or` uses index union only if every branch is indexed, `name.*` and `buildingName.*` are not, and `$options: "i"` defeats prefix anchoring anyway. Measured: one scan examines about six times the documents it did, still a net win over the six scans before. If `spaces` grows about tenfold, Atlas Search with an `autocomplete`/`edgeGram` mapping on `spaceCd` is what removes the scan.
 
 **`$regexMatch` throws on a non-string input** (`$regexMatch needs 'input' to be of type string`, verified on the cluster), and two production rows have `spaceCd: null`. Every scored path is coerced with a `$type` test, not `$ifNull`: `$ifNull` would still pass a number, and the sync passes SKKU's JSON values through, so one numeric `spaceCd` would make every search 500, for every query. The JS twin uses the same `typeof === "string"` rule.
 

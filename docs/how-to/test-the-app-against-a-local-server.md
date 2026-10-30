@@ -2,7 +2,7 @@
 title: Test the App Against a Local Server
 type: how-to
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -13,17 +13,17 @@ audience: internal
 
 ## Overview
 
-A maintainer's local server holds credentials that reach real people. The maintainers' development `.env` points `FCM_FUNCTION_URL` at the Cloud Function production uses, and that function pushes by topic to every subscriber. So `NODE_ENV=development` (what `npm run dev` sets, and the default when `NODE_ENV` is unset) switches the outbound side effects off. The resolver is [`src/infra/runtime-switches.ts`](../../src/infra/runtime-switches.ts).
+A maintainer's local server holds credentials that reach real people. So `NODE_ENV=development` (what `npm run dev` sets, and the default when `NODE_ENV` is unset) switches the outbound side effects off. The resolver is [`src/infra/runtime-switches.ts`](../../src/infra/runtime-switches.ts).
 
 | Env var | development | production | What "off" means |
 | --- | --- | --- | --- |
 | `PUSH_DELIVERY` | `suppressed` | `live` | `postToFcmFunction` logs `push.delivery.suppressed` and returns `{ sent: 0 }` without calling the Cloud Function. Callers record it as a completed send, so `_dev` notices get `pushedAt`. |
 | `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed) and the bus timetable cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
 | `SHUTTLE_ETA` | `off` | `on` | No NAVER Directions or TMAP call: the 인자셔틀 arrival-estimate jobs, which use metered keys, do not run. Smart schedules still apply whatever estimates `bus_campus_dev.shuttle_eta` holds. Production may set it `off`. |
-| `SUBWAY` | `off` | `on` | No Seoul subway API call or train-map crawl: the subway pollers do not run. The API key and its daily quota are shared with production. Production may set it `off`. |
-| `REGIONAL_BUS` | `off` | `on` | No TOPIS call for the regional routes (7800): neither its realtime poller (`jongro-7800`) nor its daily line sync (`jongro-path-7800`) runs. On a database where no 7800 poller ever stored its stations (a laptop's `_dev`), `/bus/live/gyeonggi7800` answers `503 JONGRO_REGISTRY_UNAVAILABLE` and logs `bus.jongro.registry_missing` at most every 30 s; where they are stored, it answers `noData`, as for a stopped poller. The key's daily quota per operation is production's too, with 6,752 arrival calls a day to spare. Production may set it `off`. |
-| `GBIS` | `off` | `on` | No GBIS call for 7800's seats: its seat poller (`gbis-seats-7800`) does not run, so `/bus/live/gyeonggi7800` serves every `vehicle.seatsLeft` as `null` once the stored answer is 200 s old. The key's GBIS quota is 1,000 calls a day, production's too, which spends up to 867 of it. Production may set it `off`. |
-| `NOTICE_OVERVIEW` | `on` | `off` | No skkuverse-ai call for a search overview: `GET /notices/overview` answers `data.overview: null` with `meta.reason: "unavailable"` before it retrieves, so the app hides the card. The reverse of the others: production defaults it `off` until the route has a cost guard, and development keeps the feature working. Tests turn it on in `jest.setup.ts`. |
+| `SUBWAY` | `off` | `on` | No Seoul subway API call or train-map crawl: the subway pollers do not run. The API key's daily quota is limited. Production may set it `off`. |
+| `REGIONAL_BUS` | `off` | `on` | No TOPIS call for the regional routes (7800): neither its realtime poller (`jongro-7800`) nor its daily line sync (`jongro-path-7800`) runs. On a database where no 7800 poller ever stored its stations (a laptop's `_dev`), `/bus/live/gyeonggi7800` answers `503 JONGRO_REGISTRY_UNAVAILABLE` and logs `bus.jongro.registry_missing` at most every 30 s; where they are stored, it answers `noData`, as for a stopped poller. The key's daily quota is limited. Production may set it `off`. |
+| `GBIS` | `off` | `on` | No GBIS call for 7800's seats: its seat poller (`gbis-seats-7800`) does not run, so `/bus/live/gyeonggi7800` serves every `vehicle.seatsLeft` as `null` once the stored answer is 200 s old. The key's GBIS quota is limited. Production may set it `off`. |
+| `NOTICE_OVERVIEW` | `on` | `off` | No skkuverse-ai call for a search overview: `GET /notices/overview` answers `data.overview: null` with `meta.reason: "unavailable"` before it retrieves, so the app hides the card. The reverse of the others: production defaults it `off`, and development keeps the feature working. Tests turn it on in `jest.setup.ts`. |
 
 No switch turns the rate limit off: the perimeter mode chooses the limiter. `local-dev` limits each IP to 300 requests a minute in each rate-limit class (`general` covers every limited route but `/notices`), and every simulator request comes from one loopback address, so a burst past that answers 429 the way a deployed server does.
 
@@ -60,9 +60,9 @@ Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuild
 
    `npm run dev` sets `PERIMETER_MODE=local-dev` and `HOST=127.0.0.1`, so the server listens on loopback only, port `PORT` or 3000. The simulator and the emulator reach it; a phone on the Wi-Fi does not. `local-dev` refuses to start on any other address, and answers only a request whose `Host` is a loopback name, so the emulator's `10.0.2.2` alias gets a 403 ([ADR 0023](../decisions/0023-perimeter-ports.md)). Run `adb reverse` again after the emulator restarts. Plain http works in debug builds: Expo's iOS template allows local networking and its Android debug manifest allows cleartext.
 
-   A phone or a tunnel needs the `overlay` mode, the perimeter production runs, so it is for maintainers only. Its implementation is not in this repository ([ADR 0023](../decisions/0023-perimeter-ports.md)): a checkout without it refuses to start in `overlay` mode. With access to the private companion, run `npm run verify:serve`, which builds the production topology with the companion's overlay; never copy the overlay into a checkout you work in, because the public `npm test` would then run it with dummy settings. Without that access, use the simulator or the emulator.
+   A phone or a tunnel needs the `overlay` mode, whose implementation is kept outside this repository ([ADR 0023](../decisions/0023-perimeter-ports.md)), so it is for maintainers only: a checkout without it refuses to start in `overlay` mode. Without it, use the simulator or the emulator.
 
-   The `overlay` mode reads its settings, the rate limits among them, from `PERIMETER_SETTINGS`, and the push quotas from `PERIMETER_SETTINGS_QUOTAS`, which `npm run env:pull` renders from the maintainers' secret store. A tunnel puts the local server on a public URL, and that server reaches the shared Atlas cluster. Keep `CACHE=on` while a tunnel is up (with the caches off, every request through it is a query on the shared cluster), and stop the tunnel when you are done.
+   A tunnel puts the local server on a public URL. Keep `CACHE=on` while a tunnel is up, and stop the tunnel when you are done.
 
 3. Rebuild the native app: `npx expo run:ios` or `npx expo run:android`. `extra.baseUrl` is baked into the binary, so restarting Metro changes nothing. Builds with `EAS_BUILD_PROFILE` or `RELEASE_CHANNEL` set to `beta`/`production` ignore the variable and always use production.
 
@@ -86,13 +86,13 @@ A production override may only reduce outbound effects (`PUSH_DELIVERY=suppresse
 
 The switches cover what the server sends out. With the maintainers' development `.env`, these are shared with production regardless. With the README's placeholder `.env`, the server holds no production credential: only the Firebase project and the production web pages below still apply.
 
-- **Firebase.** There is one project, `skkubus-95723`. A dev build registers its FCM token in production Firestore (`devices/`), so the phone receives real production pushes. The local server verifies production ID tokens with the project id alone and holds no service-account key.
-- **Atlas.** The `_dev` databases live on the production cluster, which is billed by peak ops/s. Never load-test locally. `NODE_ENV=production` with the dev `.env` resolves production database names. To run the production image locally, use `npm run verify:serve`, which overrides them.
-- **Seoul TOPIS quota.** The local bus pollers use the production service key and share its daily quota. `docs/project-docs.md` puts production's own use at about a third of it, and a full day of local polling adds about as much again.
+- **Firebase.** There is one project, `skkubus-95723`. A dev build's phone receives real production pushes. The local server verifies production ID tokens with the project id alone and holds no service-account key.
+- **Databases.** The `_dev` databases hold real shared data. Never load-test against them. `NODE_ENV=production` with the dev `.env` resolves production database names. To run the production image locally, use `npm run verify:serve`, which overrides them.
+- **Upstream quotas.** The local bus pollers use a metered service key whose daily quota is limited ([project-docs.md](../project-docs.md#daily-usage-and-quota-check)). Stop them when you are done.
 - **Web pages.** Webview and mini-app pages inside the app load from their production hosts and call the production API, even when native screens use the local server.
 - **`GET /notices/overview`.** It calls skkuverse-ai at `AI_API_URL`, a loopback address in the dev config. Without a local skkuverse-ai the overview answers "unavailable".
 
-Sentry is off locally: the dev keys carry no `SENTRY_DSN`, and `npm run verify:serve` sets `SENTRY_DSN=disabled`. So neither reproduces what the Sentry SDK changes on the wire, such as the trace headers the data.go.kr gateway refuses ([holidays architecture](../explanation/calendar-architecture.md)); `__tests__/nest/infra/sentry.test.ts` pins those instead.
+Sentry is off locally, so a local run does not reproduce what the Sentry SDK changes on the wire, such as the trace headers the data.go.kr gateway refuses ([holidays architecture](../explanation/calendar-architecture.md)); `__tests__/nest/infra/sentry.test.ts` pins those instead.
 
 ## Troubleshooting
 

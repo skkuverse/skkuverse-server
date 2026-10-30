@@ -2,7 +2,7 @@
 title: Subway API Reference
 type: reference
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-26
 audience: internal
 ---
@@ -16,8 +16,8 @@ audience: internal
 | | |
 | --- | --- |
 | Routes | `GET /subway/stations`, `GET /subway/stations/:stationId/arrivals`, `GET /internal/subway/accuracy` |
-| Auth | none on the station list and the arrivals; `X-Internal-Token` on the accuracy report |
-| Rate limit | `GeneralRateLimitMiddleware`, bound to `subway` in `SubwayModule.configure` (`src/subway/subway.module.ts`); none on `internal/subway` |
+| Auth | none on the station list and the arrivals; the accuracy report is internal |
+| Rate limit | `GeneralRateLimitMiddleware`, bound to `subway` in `SubwayModule.configure` (`src/subway/subway.module.ts`) |
 | Wire types | `subwayStationList` in `src/subway/station-list/subway-station-list.wire.ts`, published as `contracts/produced/subway-station-list.subwayStationList.schema.json`; `subwayStationArrivals` and its meta, `subwayStationArrivalsMeta`, in `src/subway/arrivals/subway-arrivals.wire.ts`, published as `contracts/produced/subway-arrivals.subwayStationArrivals.schema.json` and `contracts/produced/subway-arrivals.subwayStationArrivalsMeta.schema.json` |
 | Controllers | `src/subway/station-list/subway-station-list.controller.ts`, `src/subway/arrivals/subway-arrivals.controller.ts`, `src/subway/history/subway-history.controller.ts` |
 | Served state | `subway_arrivals`, one document per platform, written by the tracker in the poller process (`src/subway/tracking/`, through `src/subway/state/`) when its trains change, or every 60 s |
@@ -279,7 +279,7 @@ Errors render as `{ "error": { "code", "message" } }`.
 
 ## GET /internal/subway/accuracy
 
-The error of the served arrivals over a range of service dates, for an operator. `Cache-Control: no-store`. No rate limit and no Firebase auth: the caller sends `SUBWAY_ACCURACY_TOKEN` as `X-Internal-Token`, a token of its own, never the notice dispatch token. The token is checked before the range, so a request without it learns nothing about the query.
+The error of the served arrivals over a range of service dates, for an operator; internal, not callable by clients. `Cache-Control: no-store`. `INTERNAL_AUTHORIZER` authorizes the caller before the range is read, so an unauthorized request learns nothing about the query.
 
 | Query | Required | Meaning |
 | --- | --- | --- |
@@ -338,7 +338,7 @@ The median and the percentile are nearest-rank: the value at position ⌈p × n�
 
 | Status | `code` | When |
 | --- | --- | --- |
-| 401 | `UNAUTHORIZED` | `X-Internal-Token` is missing or wrong |
+| 401 | `UNAUTHORIZED` | The caller is not authorized |
 | 400 | `INVALID_ACCURACY_RANGE` | `from` or `to` missing or not `YYYY-MM-DD`, or `to` before `from` |
 
 ## Upstream data notes

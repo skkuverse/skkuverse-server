@@ -70,7 +70,7 @@ curl http://127.0.0.1:3000/health/ready
 - **A stand-in perimeter.** `local-dev` mode answers authentication, rate limiting and the other access decisions with simple stand-ins that work only on loopback (ADR 0023, [docs/decisions/0023-perimeter-ports.md](docs/decisions/0023-perimeter-ports.md)).
 - **Paid and limited APIs off.** Development turns off push delivery, caching and the paid or quota-limited upstream calls (`src/infra/runtime-switches.ts`).
 - **Pollers that fail are reported, not fatal.** A poller whose upstream rejects a placeholder key logs `poller.failing`; the rest of the server keeps serving. Pollers still call the public upstreams that development leaves on, such as the Seoul bus API (TOPIS), with your placeholder key, and get refused.
-- **Simulator and emulator only.** `local-dev` answers only requests sent straight to a loopback address, from this machine. The iOS simulator reaches `http://localhost:3000`, and the Android emulator does after `adb reverse tcp:3000 tcp:3000`. A physical phone needs `overlay` mode, which needs the private overlay ([docs/how-to/test-the-app-against-a-local-server.md](docs/how-to/test-the-app-against-a-local-server.md)).
+- **Simulator and emulator only.** `local-dev` answers only requests sent straight to a loopback address, from this machine. The iOS simulator reaches `http://localhost:3000`, and the Android emulator does after `adb reverse tcp:3000 tcp:3000`. A physical phone needs `overlay` mode, which needs the production configuration ([docs/how-to/test-the-app-against-a-local-server.md](docs/how-to/test-the-app-against-a-local-server.md)).
 
 ### What answers on an empty database
 
@@ -84,13 +84,13 @@ An empty database is enough to boot. The production data is not part of this rep
 
 `npm run schedule` does not fill the bus timetables on an empty database. It writes `scripts/data/campus-schedule.json` to the `_dev` database (production only with `--prod`), but first checks the stop times against the stored `bus-stops` dataset, and refuses, writing nothing, while that dataset is missing. The dataset is not in this repository.
 
-`npm start` runs the build with whatever `NODE_ENV`, `PERIMETER_MODE`, `HOST` and `ROLE` you set. `local-dev` mode refuses to start unless `NODE_ENV=development` and the host is loopback, and `overlay` mode, which production uses, refuses to start without the private perimeter overlay.
+`npm start` runs the build with whatever `NODE_ENV`, `PERIMETER_MODE`, `HOST` and `ROLE` you set. `local-dev` mode refuses to start unless `NODE_ENV=development` and the host is loopback, and `overlay` mode, which production uses, refuses to start without the production perimeter configuration.
 
 ## Tests
 
 ```bash
 npm test                 # Jest with coverage; thresholds in jest.config.js
-npx jest __tests__/nest/bus/schedule.routes.test.ts   # one file
+NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/nest/bus/schedule.routes.test.ts   # one file; Jest needs the flag for the ESM-only NestJS packages
 npm run typecheck        # Jest does not type-check, so run this after a TypeScript change
 npm run lint             # ESLint, then markdownlint over docs/; 0 errors and 0 warnings
 ```
@@ -113,14 +113,9 @@ In short: NestJS 11 on Node.js 26, TypeScript `strict`, the native MongoDB drive
 
 Every success is `{ meta: { lang }, data }` and every error `{ error: { code, message } }`. The module docs under [docs/reference/](docs/reference/) hold the request and response contracts, and `contracts/produced/` holds a JSON Schema for every shape the server sends to another repository.
 
-## What is not in this repo, and why
+## What is not in this repo
 
-| Not here | Why |
-| --- | --- |
-| The production security perimeter: how requests are authenticated, rate-limited and authorized | The code calls it only through the ports in `src/perimeter/perimeter.ports.ts`. Production builds add a private implementation; this repo ships only the loopback-only `local-dev` stand-ins and the test fakes. Keeping the policy private is a layer on top of the public checks, not a replacement for them (ADR 0023) |
-| Operations: deployment, hosts, monitoring and secret values | Kept in a private operations repository. This repo names the variables it reads (`config/env.*.keys`, `src/infra/required-env.ts`); the values are never committed |
-| Private data collectors, such as the shuttle GPS fixes, collected privately | They run as a separate private service; this server neither reads nor serves what they collect (ADR 0018) |
-| The production data | Datasets, notices, buildings and timetables live in MongoDB (ADR 0013). Your local database starts empty |
+Production configuration and data are kept outside this repository. Running and testing the server needs neither.
 
 Data copied from school and public sites (timetables, the notice source lists) belongs to its sources, and trimmed third-party content in test fixtures is not covered by the license: see [NOTICE](NOTICE).
 
@@ -135,7 +130,7 @@ skkuverse 앱의 API 서버입니다. 셔틀·시내버스 실시간 위치, 셔
 
 - **로컬 실행:** Node.js 26과 직접 띄운 MongoDB만 있으면 됩니다. 위 [Quick start](#quick-start)의 `.env`를 만들고 `npm run dev`를 실행하세요. 운영자의 계정이나 비밀 값은 필요 없습니다. <!-- conventions:allow-korean: C3 summary -->
 - **테스트:** `npm test`. 인메모리 MongoDB를 쓰고 외부 네트워크에 접속하지 않습니다. <!-- conventions:allow-korean: C3 summary -->
-- **이 저장소에 없는 것:** 운영 보안 경계(인증·요청 제한 정책)의 구현, 배포·서버·비밀 값 같은 운영 정보, 비공개 데이터 수집기, 운영 데이터. 이유는 위 표에 있습니다. <!-- conventions:allow-korean: C3 summary -->
+- **이 저장소에 없는 것:** 운영 환경의 설정과 데이터. 로컬 실행과 테스트에는 필요 없습니다. <!-- conventions:allow-korean: C3 summary -->
 - **기여:** 이슈는 환영합니다. 풀 리퀘스트는 요청받은 경우에만 받습니다([CONTRIBUTING.md](CONTRIBUTING.md)). 보안 취약점은 [SECURITY.md](SECURITY.md)에 따라 비공개로 제보해 주세요. <!-- conventions:allow-korean: C3 summary -->
 
 ## License

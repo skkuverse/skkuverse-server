@@ -2,7 +2,7 @@
 title: <Module> Architecture
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: YYYY-MM-DD
 audience: internal
 ---

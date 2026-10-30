@@ -17,7 +17,7 @@ A maintainer may ask Claude about a pull request with `@claude`. On a pull reque
 ## How changes flow
 
 - `dev` is the working branch. Every change reaches `dev`, by pull request or by a maintainer's commit.
-- `main` is the release branch. It takes only the `dev` → `main` pull request, merged with a merge commit, and production is deployed from `main`.
+- `main` is the release branch. It takes only the `dev` → `main` pull request, merged with a merge commit.
 - An invited pull request targets `dev`.
 
 ## Before you open an invited pull request
@@ -38,7 +38,7 @@ npm run depcheck
 
 - Follow [CLAUDE.md](CLAUDE.md) and the architecture decision ([docs/decisions/0010-server-architecture.md](docs/decisions/0010-server-architecture.md)). The architecture tests in `__tests__/architecture/` and the ESLint rules enforce most of it.
 - Write the test first ([docs/decisions/0011-test-strategy.md](docs/decisions/0011-test-strategy.md)). Never weaken, skip or delete an existing test to get green.
-- Do not edit a vendored file listed in `.contracts.lock.json` by hand: its owner changes it, and the scheduled contract sync brings it here in a pull request. The vendored checker only checks; updating the lock needs the maintainers' private umbrella repository.
+- Do not edit a vendored file listed in `.contracts.lock.json` by hand: its owner changes it, and the scheduled contract sync brings it here in a pull request. The vendored checker only checks; updating the lock is a maintainer's step.
 - Write code, comments, docs and commit messages in English. Use conventional commit subjects, such as `fix(bus): …`.
 
 By contributing, you agree that your contribution is licensed under the [Apache License 2.0](LICENSE).

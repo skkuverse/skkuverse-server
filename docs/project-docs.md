@@ -2,7 +2,7 @@
 title: 프로젝트 문서 (통합 인덱스 · 미이관)
 type: reference
 status: deprecated
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -15,7 +15,7 @@ audience: internal
 > 운영 중인 deployment / external API / building data 가이드의 통합 인덱스. 원본은 15개 개별 문서를 2026-03-28에 한 파일로 통합한 것.
 >
 > **이 문서의 범위 (live)**:
-> - **Part 1: Server & Deployment** — pointers to the ops runbooks, the client-IP contract, bus schedule system architecture
+> - **Part 1: Server & Deployment** — the client-IP contract, bus schedule system architecture
 > - **Part 2: External APIs** — HSSC / Jongro / Station / SKKU Map API 응답 모양·쿼터
 > - **Part 5: Building Data** — moved: `docs/explanation/building-architecture.md`, survey in `docs/archive/building-data-2026-03.md`
 >
@@ -31,11 +31,9 @@ audience: internal
 
 ## Hosting and deploys
 
-The host setup, deploys, monitoring and disaster recovery are documented in the private operations repository. This repository keeps only what the app itself relies on.
+Production configuration, hosting and data are kept outside this repository. This repository keeps only what the app itself relies on.
 
-**Client IP.** The TCP peer is always a Cloudflare edge, so nginx resolves the client from `CF-Connecting-IP` (trusted only from Cloudflare's ranges) and sends it upstream as the *only* `X-Forwarded-For` entry. That pairs with `trust proxy 1` in `src/main.ts`, which takes the rightmost entry as `req.ip`, the rate limiter's key. Change one half and the other stops holding; the nginx half is pinned where the host is configured, outside this repository.
-
-**Loopback ports.** `docker-compose.yml` binds each api replica (`api-1`, `api-2`, …, sharing the `x-api` block) to a loopback port (`127.0.0.1:3001:3000`, …), so only nginx on the host reaches them. The host's nginx upstream lists the same ports.
+**Client IP.** `trust proxy 1` in `src/main.ts` takes the rightmost `X-Forwarded-For` entry as `req.ip`, the rate limiter's key, so the reverse proxy in front of the server must send the resolved client address as the only entry.
 
 ---
 
@@ -359,7 +357,6 @@ checks the URL text only:
   seven commute stops keep the `commute/stops/` prefix they were first published under.
 - Each object is a 1200 px wide JPEG uploaded with `Cache-Control: public, max-age=31536000, immutable`.
 - A key is never overwritten. A new photo gets a new key.
-- A tool kept privately renders the language variants from the originals.
 - Only the six station stops have language variants (the waiting line and the exit, labeled). The campus stops
   (N센터 맞은편 and the 인자셔틀 boarding stops) serve the capture alone, the same in every language.
 
@@ -882,14 +879,8 @@ holiday or a suspension removes from the timetable gets no call.
   more than 150 m from where the route places it, or the times go backwards.
 - **It is a car's travel time.** The bus stops, and it may wait longer at signals than a car would, so an estimate
   is a lower bound rather than a promise. That is why the app shows the time as estimated.
-- **External APIs and quotas:**
-  - NAVER Directions 5 uses the crawler's NCP application (`NAVER_API_KEY_ID`, `NAVER_API_KEY`), capped at 1,000
-    calls a day.
-  - TMAP is the SK open API app `skkuverse-server` on the Free plan (`TMAP_APP_KEY`). Its 경로안내 group allows 1,000
-    calls a day, and calls past that are blocked, not billed. Development and production share the app, because the
-    product terms count several apps for one service as abuse. The cap is 900 a day in production and 50 in
-    development.
-  - The caps are counters in the poller process, reset at 00:00 KST. A crossed cap rejects the tick.
+- **External APIs:** NAVER Directions 5 (`NAVER_API_KEY_ID`, `NAVER_API_KEY`) and TMAP (`TMAP_APP_KEY`) each have
+  a daily cap, enforced by counters in the poller process that reset at 00:00 KST. A crossed cap rejects the tick.
 - Failures are reported by the poller registry (`poller.failing` and so on); see `docs/reference/logging.md`.
 
 ### `GET /data/:serviceId/week` — Deprecated
@@ -936,7 +927,7 @@ Schedule endpoints use a different error format from the global `res.error()`:
 
 The cache stores the resolved week data. On cache hit, only `requestedFrom` is replaced (since it varies per call but the schedule data is the same).
 
-**When to invalidate**: After inserting/updating documents in `bus_schedules` or `bus_overrides`. No automatic invalidation, and **no endpoint reaches `clearCache()`** — nothing routes to it. The only lever in production is restarting the process: restart each api replica in turn (`docker compose restart api-1`, then the next), one at a time so nginx always has a live upstream. Restart the poller too (`docker compose restart poller`): the arrival-estimate pollers resolve schedules through the same cache, and a stale one would estimate runs that no longer exist. Use `docker compose restart`, not `up -d --no-deps`: with an unchanged image the latter is a no-op and leaves the stale cache in place.
+**When to invalidate**: After inserting/updating documents in `bus_schedules` or `bus_overrides`. No automatic invalidation, and **no endpoint reaches `clearCache()`** — nothing routes to it. The only lever is restarting the processes: every api replica, one at a time, and the poller, whose arrival-estimate pollers resolve schedules through the same cache and would otherwise estimate runs that no longer exist.
 
 ### Bus config ETag cache (in-memory)
 
@@ -1172,7 +1163,7 @@ db.bus_overrides.insertOne({
 If the server is running, the in-memory cache may still serve stale data (up to 1 hour). Options:
 
 1. **Wait** — cache expires after 1 hour TTL
-2. **Restart the API replicas** — one at a time, health-checking each (`docker compose restart api-1`, then the next). This is the only
+2. **Restart the API replicas** — one at a time, health-checking each. This is the only
    lever that works on demand. There is no management endpoint: `clearCacheForService()` exists on the service
    but nothing routes to it.
 
@@ -1409,10 +1400,6 @@ Why 26:
 - **Node 22 reaches end of life on 2027-04-30.** Node 24 has been in maintenance since 2026-10-20 and ends on 2028-04-30. Node 26 has been LTS since 2026-10-28 and ends on 2029-04-30.
 - **The floor is 26.12.1**, the security release that fixed a Brotli decoder out-of-bounds write. The suite was checked on 26.13.0, the version `node:26-alpine` resolved to on 2026-10-30.
 
-#### SSL alert 80 from Atlas (2026-05-24)
-
-A dev boot that looked stuck, with `SSL alert number 80` from Atlas, was **a public IP missing from the Atlas Network Access list**. `mongosh` was rejected the same way, and changing the Node version does not fix it. Add the IP under Atlas, Network Access, IP Access List. Check the allowlist first when it comes back.
-
 ---
 
 ## Appendix: Realtime vs Schedule Architecture
@@ -1641,43 +1628,20 @@ A dev boot that looked stuck, with `SSL alert number 80` from Atlas, was **a pub
 
 ---
 
-# External API Usage & Quota Analysis
+# External API Usage
 
-**Date**: 2026-10-18, when the Jongro poll moved from 40 s to 25 s (first written 2026-03-02, when an old and a new server both polled)
-**Context**: One TOPIS caller: the server's `ROLE=poller` container, every 25 s, for 종로02, 종로07 and 종로08 (TOPIS's `dataTm` advances about every 20 s). skkuverse-crawler makes no TOPIS calls.
+The server's `ROLE=poller` container is the only caller of the Seoul TOPIS APIs; skkuverse-crawler makes none.
 
 ---
 
 ## 공공데이터포털 (Seoul Open Data) APIs
-
-### Subscribed Services
-
-**1. 정류소 도착예정정보 조회 서비스** (Bus Arrival Info)
-
-| # | Function | Description | Daily Quota |
-|---|----------|-------------|-------------|
-| 1 | `getArrInfoByRouteAllList` | 경유노선 전체 정류소 도착예정정보 | 20,000 |
-| 2 | `getArrInfoByRouteList` | 한 정류소의 특정노선 도착예정정보 | 20,000 |
-| 3 | `getLowArrInfoByStIdList` | 정류소ID로 저상버스 도착예정정보 | 20,000 |
-| 4 | `getLowArrInfoByRouteList` | 한 정류소의 특정노선 저상버스 도착예정정보 | 20,000 |
-
-**2. 버스위치정보 조회 서비스** (Bus Position Info)
-
-| # | Function | Description | Daily Quota |
-|---|----------|-------------|-------------|
-| 1 | `getBusPosByRouteStList` | 노선ID와 구간정보로 차량 위치 | 20,000 |
-| 2 | `getBusPosByRtidList` | 노선ID로 차량 위치 | 20,000 |
-| 3 | `getBusPosByVehIdItem` | 차량ID로 위치 | 20,000 |
-| 4 | `getLowBusPosByRtidList` | 노선ID로 저상버스 위치 | 20,000 |
-| 5 | `getLowBusPosByRouteStList` | 노선ID와 구간정보로 저상차량 위치 | 20,000 |
 
 ### Endpoints We Use
 
 Single shared TOPIS service key drives every Jongro route. Per-route URLs
 are composed at runtime from `SEOUL_BUS_SERVICE_KEY` + `busRouteId` in
 `JONGRO_ROUTES` in `src/bus/bus.constants.ts` (`toJongroArrivalsUrl` / `toJongroPositionsUrl`
-in `src/bus/realtime/jongro/bus-realtime-jongro.mapper.ts`, called by the client at each request). Adding a route = one `JONGRO_ROUTES` entry and its stored `jongro-route-attributes`,
-and it adds 3,456 calls/day to **each** of the two Jongro functions below.
+in `src/bus/realtime/jongro/bus-realtime-jongro.mapper.ts`, called by the client at each request). Adding a route = one `JONGRO_ROUTES` entry and its stored `jongro-route-attributes`.
 
 | # | Env Var | Purpose | Interval |
 |---|---------|---------|----------|
@@ -1686,78 +1650,37 @@ and it adds 3,456 calls/day to **each** of the two Jongro functions below.
 
 ### Daily Usage and Quota Check
 
-Formula: Jongro `86,400 s/day ÷ 25 s = 3,456 calls/day` per route per function; 7800
-`86,400 s/day ÷ 30 s = 2,880 calls/day` per function (`pollIntervalMs` in `JONGRO_ROUTES`
-and `REGIONAL_ROUTES`, `src/bus/bus.constants.ts`; 7800 only with `REGIONAL_BUS` on).
-Quota is **per function per API key per day**, so every TOPIS route shares it.
-
-| 공공데이터포털 Function | Used By | Calls/Day | Quota | Usage |
-|---|---|---|---|---|
-| `getArrInfoByRouteAllList` | Jongro 02/07/08 list + 7800 list | 3 × 3,456 + 2,880 = **13,248** | 20,000 | **66%** |
-| `getBusPosByRouteStList` | none since 2026-10-17 (Jongro moved to `getBusPosByRtidList` for `trnstnid`) | 0 | 20,000 | 0% |
-| `getArrInfoByRouteList` | none since 2026-10-19 (the Hyehwa station route was deleted, ADR 0012) | 0 | 20,000 | 0% |
-| `getBusPosByRtidList` | Jongro 02/07/08 loc + 7800 loc + shuttle bus-lane probe (8800, 5000, 5005; `src/bus/eta/probe/`) | 10,368 + 2,880 + probe ≤2,000 (~150–450 in practice) = **≤15,248** | 20,000 | **≤77%** |
-| GBIS `getBusLocationListv2` (경기도_버스위치정보 15080648, 개발계정, `DATA_GO_KR_SERVICE_KEY`) | 7800 seats (`gbis-seats-7800`, `src/bus/realtime/gbis/`; only with `GBIS` on) | every 90 s from 04:50 to 02:30 KST, 1,300 min × 60 ÷ 90 = **≤867**, plus one per poller start | 1,000 | **≤87%** |
-
-A call over a function's quota is logged as `bus.topis.quota_exceeded` with the
-function, and an alert on that event pages the maintainer. GBIS is a
-separate pool: a spent GBIS quota logs `bus.gbis.quota_exceeded`, which
-alerts at a lower priority, since only 7800's seats are lost. Polling every 30 s
-needs the 운영계정 (a registered 활용사례), whose cap is unverified. A laptop with
-`GBIS=on` spends the same 1,000 calls: 40 an hour, so production's 867 leave it
-about 3 hours a day.
-
-Other callers of the same key count against the same pools:
-
-- **Local development.** `npm run dev` and `npm run verify:serve` start a Jongro poller
-  on the same key: 3 × 144 = 432 calls an hour per function, 10,368/day if left running
-  all day (development keeps `SHUTTLE_ETA=off`, so no probe calls, and `REGIONAL_BUS=off`,
-  so no 7800 calls; turning it on adds 120 an hour per function). Production leaves
-  6,752/day of `getArrInfoByRouteAllList` and at least 4,752/day of `getBusPosByRtidList`,
-  so a local Jongno poller fits for about 11 hours a day (8 with 7800); left running all
-  day, it pushes arrivals to 23,616/day and positions to up to 25,616/day, both over the
-  20,000 quota. Stop local pollers when you are done.
-- The 20,000/day figure was last checked on data.go.kr in 2026-03; for the
-  버스위치정보 functions again on 2026-10-17. Usage recomputed for the 25 s poll on 2026-10-18.
-- **Shuttle bus-lane probe.** `getBusPosByRtidList` is shared with the Jongro
-  positions poller. The lane client takes each request from
-  `config.shuttleEta.topisDailyCap` (2,000), and only the live estimate poller
-  requests it, so `SHUTTLE_ETA=off` makes none; with the cap, the pool stays
-  at or under 15,248/day.
+Every metered upstream (the TOPIS operations `getArrInfoByRouteAllList` and `getBusPosByRtidList`, GBIS, NAVER
+Directions, TMAP) has a daily quota per API key and per operation, and every caller of the same key, a local
+`npm run dev` included, draws on it. What the server may spend is fixed in code: the poll intervals in
+`JONGRO_ROUTES` and `REGIONAL_ROUTES` (`src/bus/bus.constants.ts`), the `REGIONAL_BUS` and `GBIS` switches, and the
+per-process caps of the shuttle estimate clients. A call refused for quota logs `bus.topis.quota_exceeded` or
+`bus.gbis.quota_exceeded` ([logging.md](reference/logging.md)). Development keeps the extra pollers off; stop local
+pollers when you are done.
 
 ## Non-공공데이터포털 APIs
 
 ### Polled (Background)
 
-| # | Source | Env Var | Purpose | Interval | Quota |
-|---|--------|---------|---------|----------|-------|
-| 1 | SKKU shuttle system | `API_HSSC_NEW_PROD` / `_DEV` | HSSC campus shuttle bus positions | 10s | None (SKKU internal) |
-| 2 | skku.edu | Hardcoded URL | Building/space data sync (3-phase: buildList→buildInfo→spaceList) | 7 days | None (SKKU public) |
+| # | Source | Env Var | Purpose | Interval |
+|---|--------|---------|---------|----------|
+| 1 | SKKU shuttle system | `API_HSSC_NEW_PROD` / `_DEV` | HSSC campus shuttle bus positions | 10s |
+| 2 | skku.edu | Hardcoded URL | Building/space data sync (3-phase: buildList→buildInfo→spaceList) | 7 days |
 
 > **Building sync** moved from on-demand (per user request) to weekly background sync in `building.sync.js`. Data is stored in MongoDB (`skkubus_building`/`_dev` DB per `MONGO_BUILDING_DB_NAME`) and served via `/building/*` routes. See the Building API section below for endpoint details.
-
-### Old Server Only (ec2-snapshot, not in new server)
-
-| # | Source | URL | Purpose | Interval |
-|---|--------|-----|---------|----------|
-| 5 | hc-ping.com | `https://hc-ping.com/...` | External healthcheck ping | 10s |
-| 6 | vote-hub.app | `https://vote-hub.app/api/voter` | Poll voter key fetch | 1 hour cron |
 
 ### Internal Services
 
 | # | Service | Purpose |
 |---|---------|---------|
-| 7 | MongoDB Atlas | Database reads/writes (bus_cache, schedules) |
+| 3 | MongoDB Atlas | Database reads/writes (bus_cache, schedules) |
 
 ---
 
 ## Notes
 
-- The HSSC shuttle API (`API_HSSC_NEW`) is SKKU's own system with no public quota.
-- 공공데이터포털 quota is **per function per API key per day**, not per URL.
-- The Jongro 02/07/08 list endpoints call the same `getArrInfoByRouteAllList` function with different route parameters — they share one 20,000 pool (likewise the loc endpoints).
 - `API_STATION_HEWA` has no PROD/DEV split (single env var). All other polled APIs use `apiUrl()` for environment selection.
-- The `skku.edu` building sync URLs are hardcoded (not env-var-configured). No known rate limits. Sync runs once per 7 days (~4 calls per sync: 2×buildList + 59×buildInfo + 2×spaceList = 63 total).
+- The `skku.edu` building sync URLs are hardcoded (not env-var-configured). Sync runs once per 7 days.
 
 ---
 

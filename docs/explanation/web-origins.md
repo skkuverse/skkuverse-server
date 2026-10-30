@@ -2,7 +2,7 @@
 title: Web Origins and URL Rules
 type: explanation
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-26
 audience: internal
 ---

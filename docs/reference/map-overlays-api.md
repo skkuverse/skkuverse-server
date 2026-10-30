@@ -2,7 +2,7 @@
 title: Map Overlays API Reference
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-25
 audience: internal
 ---
@@ -12,7 +12,7 @@ audience: internal
 > The one overlay schema every layer of the campus map draws — pins, zones and route lines alike —
 > the two layer flags that say when a layer is visible and who may change it, the chips that move the
 > camera and swap layer sets, and the five endpoints that carry them. Cross-repo ownership is
-> [umbrella ADR 0004](https://github.com/spencer0124/skkuverse/blob/main/docs/decisions/0004-event-map-layer-ownership.md);
+> umbrella ADR 0004;
 > the festival's storage, authoring and ops tiers are [event-places.md](event-places.md).
 
 ## 1. Summary
@@ -1613,6 +1613,6 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 - [how-to/configure-map-overlays.md](../how-to/configure-map-overlays.md) — the runbook: what can be drawn, which tier to edit, and what to check when a shape does not appear
 
 - [event-places.md](event-places.md) — the festival's storage, authoring and ops tiers
-- [ADR 0004 — event map layer ownership](https://github.com/spencer0124/skkuverse/blob/main/docs/decisions/0004-event-map-layer-ownership.md)
+- Umbrella ADR 0004: event map layer ownership
 - [skkuverse-app `docs/explanation/shared-map.md`](https://github.com/skkuverse/skkuverse-app/blob/main/docs/explanation/shared-map.md) — the client side
 - [docs/README.md](../README.md) — writing rules

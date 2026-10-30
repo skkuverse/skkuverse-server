@@ -2,7 +2,7 @@
 title: 2026-10 Subway Late Express Drop-Out Postmortem
 type: explanation
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---

@@ -2,7 +2,7 @@
 title: Adopt Diátaxis Docs Structure
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-22
 audience: internal
 ---

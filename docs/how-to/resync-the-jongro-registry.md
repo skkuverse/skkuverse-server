@@ -2,7 +2,7 @@
 title: Resync the Jongro Registry
 type: how-to
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -24,15 +24,15 @@ An applied change logs `bus.jongro.registry_synced` (warn) with `fromVersion`, `
 
 ## Prerequisites
 
-- Read access to the production logs (Grafana Loki).
-- Write access to the production Atlas cluster with `mongosh`. The `_dev` databases share that cluster: check the database name before every write.
-- `SEOUL_BUS_SERVICE_KEY` (Doppler `backend/prd_server`, never printed) to ask TOPIS yourself.
+- Read access to the production logs.
+- Write access to the production database with `mongosh`. Check the database name before every write.
+- `SEOUL_BUS_SERVICE_KEY` (never printed) to ask TOPIS yourself.
 
 ## Steps
 
 ### A held change
 
-1. Find the line in Loki: `{container=~"skkuverse-poller.*"} | json | event="bus.jongro.registry_change_held"`. It carries `code`, `fromVersion`, `toVersion`, `observed` (the whole list TOPIS answered, in ord order) and the `added`, `removed`, `moved` and `renamed` stops. It is logged once per distinct list, so a quiet log does not mean the list stopped.
+1. Find the poller's `bus.jongro.registry_change_held` line in the production logs. It carries `code`, `fromVersion`, `toVersion`, `observed` (the whole list TOPIS answered, in ord order) and the `added`, `removed`, `moved` and `renamed` stops. It is logged once per distinct list, so a quiet log does not mean the list stopped.
 2. Check the list against TOPIS: `getStaionByRoute?busRouteId=<busRouteId>` (the ids are `JONGRO_ROUTES` in `src/bus/bus.constants.ts`) and the operator's notice. A list that is another route's, or that drops most stops, is a bad answer: do nothing, and the poller keeps the stored list.
 3. For a real reroute, write it. Use the `observed` list as it is, and the turnaround stop the position rows name (`trnstnid` of `getBusPosByRtid`), or the stored one when no bus runs:
 
@@ -59,7 +59,7 @@ While buses run, wait: the poller inserts the route within three ticks (about 75
 
 To serve the route before then, insert it by hand:
 
-1. Take the stop list from `getArrInfoByRouteAllList?busRouteId=<busRouteId>` (each row's `stId`, `arsId`, `stNm`, ordered by `staOrd`) and the turnaround stop from the last trusted list (a `bus.jongro.registry_synced` or `registry_bootstrapped` line in Loki) or from `getStaionByRoute` (the station whose `transYn` is `Y`).
+1. Take the stop list from `getArrInfoByRouteAllList?busRouteId=<busRouteId>` (each row's `stId`, `arsId`, `stNm`, ordered by `staOrd`) and the turnaround stop from the last trusted list (a `bus.jongro.registry_synced` or `registry_bootstrapped` line in the logs) or from `getStaionByRoute` (the station whose `transYn` is `Y`).
 2. Insert it with `$setOnInsert`, so the write never replaces a document the poller stored first:
 
    ```js
