@@ -5,8 +5,7 @@
  *
  * src/infra/config.ts reads MONGO_URL when it is first imported, so a test calls
  * `startMongod()` before it loads any `src/` module: it imports `src/` only as
- * types at the top and `require()`s the rest in `beforeAll` (ts-jest keeps an
- * `await import()` native, which Jest refuses without --experimental-vm-modules).
+ * types at the top and `require()`s the rest in `beforeAll`.
  * `stop()` puts the previous MONGO_URL back.
  *
  * The binary is fetched by the package's postinstall during `npm ci`, never by

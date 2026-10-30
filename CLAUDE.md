@@ -5,7 +5,7 @@ NestJS 11 + TypeScript (strict) API behind the skkuverse app for SKKU: shuttle a
 ## Commands
 
 - `npm run dev` — build, then watch with dev DB + dev APIs. `npm run dev:prod-api`: dev DB + prod APIs.
-- `npm test` — Jest with coverage; the thresholds in `jest.config.js` fail the run. One file: `npx jest __tests__/nest/bus/schedule.routes.test.ts`.
+- `npm test` — Jest with coverage; the thresholds in `jest.config.js` fail the run. The script adds Node's `--experimental-vm-modules`, without which Jest cannot load the ESM-only NestJS packages and `__tests__/helpers/esm-flag-guard.ts` fails every file. One file: `NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/nest/bus/schedule.routes.test.ts`.
 - `npm run typecheck` — `tsc` over `src/` and the tests. Jest does not type-check (ts-jest `diagnostics: false`), so run it after every TS change.
 - `npm run lint` — ESLint, then markdownlint over `docs/**`.
 - `npm run knip` / `npm run depcheck` — unused files and dependencies; CI runs both.

@@ -90,7 +90,7 @@ An empty database is enough to boot. The production data is not part of this rep
 
 ```bash
 npm test                 # Jest with coverage; thresholds in jest.config.js
-npx jest __tests__/nest/bus/schedule.routes.test.ts   # one file
+NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/nest/bus/schedule.routes.test.ts   # one file; Jest needs the flag for the ESM-only NestJS packages
 npm run typecheck        # Jest does not type-check, so run this after a TypeScript change
 npm run lint             # ESLint, then markdownlint over docs/; 0 errors and 0 warnings
 ```

@@ -14,7 +14,7 @@ import { readSource } from "../helpers/architecture/tree";
 import { parseTestFile, testFiles } from "../helpers/architecture/tests";
 
 const FLOORS_FILE = path.join(ROOT, "__tests__/architecture/test-floors.json");
-const WRITE_COMMAND = "TEST_FLOORS_WRITE=1 npx jest __tests__/architecture/test-floors.test.ts";
+const WRITE_COMMAND = "TEST_FLOORS_WRITE=1 NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/architecture/test-floors.test.ts";
 
 export interface Counts {
   tests: number;
