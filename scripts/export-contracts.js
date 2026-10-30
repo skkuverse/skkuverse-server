@@ -41,6 +41,8 @@ function main() {
   // A CONTRACTS_WRITE left exported in the shell must not turn --check into a write.
   delete env.CONTRACTS_WRITE;
   if (!args.check) env.CONTRACTS_WRITE = "1";
+  // WHY: Jest loads the ESM-only NestJS packages only under this flag, as the npm test script sets it.
+  env.NODE_OPTIONS = `${env.NODE_OPTIONS ?? ""} --experimental-vm-modules`.trim();
 
   // One file cannot meet the global coverage thresholds in jest.config.js, so
   // coverage is off; npm test still runs this file with coverage on.
