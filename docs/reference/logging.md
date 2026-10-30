@@ -2,7 +2,7 @@
 title: Logging
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -25,9 +25,9 @@ Production writes one JSON object per line to stdout; development pretty-prints 
 | `msg` | The same thing in words, for a human scanning output |
 | `reqId` | Present on every line written while serving a request; absent for pollers, boot and shutdown |
 
-`reqId` is the client's `X-Request-Id` when well-formed, else Cloudflare's `CF-Ray`, else a UUID, and is echoed in the response's `X-Request-Id`. One id therefore finds a request in the Cloudflare dashboard, the access line, every line written while serving it, and its Sentry Issue (tag `request_id`). The mechanism is an AsyncLocalStorage scope plus a pino `mixin` (`src/infra/log-context.ts`, `src/infra/http-logging.ts`), so a service logs through the shared `logger` and still gets the id.
+`reqId` is the client's `X-Request-Id` when well-formed, else Cloudflare's `CF-Ray`, else a UUID, and is echoed in the response's `X-Request-Id`. One id therefore finds a request's access line, every line written while serving it, and its Sentry Issue (tag `request_id`). The mechanism is an AsyncLocalStorage scope plus a pino `mixin` (`src/infra/log-context.ts`, `src/infra/http-logging.ts`), so a service logs through the shared `logger` and still gets the id.
 
-Access lines (`msg: "request completed"`, or `"request errored"` for a 5xx) add `req` (method, masked URL, IP, a few headers), `res.statusCode`, `responseTime`, `appVersion`, `platform`, and `route`: the matched route template (`/notices/:id`), absent when no route matched. Grafana groups 5xx by `route`; the raw URL would split one endpoint into a series per id. Shipped to Grafana, a line has its IP and its query string blanked (by the host's Grafana Alloy config, outside this repository).
+Access lines (`msg: "request completed"`, or `"request errored"` for a 5xx) add `req` (method, masked URL, IP, a few headers), `res.statusCode`, `responseTime`, `appVersion`, `platform`, and `route`: the matched route template (`/notices/:id`), absent when no route matched. Grouping 5xx by `route` keeps one endpoint one series; the raw URL would split it into a series per id.
 
 ## Writing a line
 
@@ -57,11 +57,11 @@ logger.warn({ event: "bus.hssc.fetch_failed", err }, "HSSC fetch failed");
 
 Access lines take their level from the status: 5xx `error`, 4xx `warn`, but 401 and 404 `info`. `/health/*` is not logged at all.
 
-**Error-level lines do not become Sentry Issues.** A poller logs once per failed tick, and an upstream outage would spend the free plan's monthly event quota in a day. Issues come only from unknown errors reaching the exception filter (5xx), a poller being declared failing (once per failing spell), a dropped schedule override (below), and uncaught exceptions and unhandled rejections (`src/instrument.ts`).
+**Error-level lines do not become Sentry Issues.** A poller logs once per failed tick, so an upstream outage would raise an event per tick. Issues come only from unknown errors reaching the exception filter (5xx), a poller being declared failing (once per failing spell), a dropped schedule override (below), and uncaught exceptions and unhandled rejections (`src/instrument.ts`).
 
 A `bus_overrides` document that fails its schema is left out of the read, so its day serves the weekly pattern the operator closed or replaced. Because that fails open, the repository (`src/bus/schedule/bus-schedule.repository.ts`) also raises `BusScheduleDroppedOverrideError` (`src/bus/schedule/bus-schedule.error.ts`) as an Issue tagged `collection: bus_overrides`, naming each dropped document's `serviceId` and `date`, at most once an hour per document.
 
-**Sentry is for errors, Grafana Loki for logs.** No line goes to Sentry Logs. Every line the containers write reaches Loki through Alloy, kept for 14 days.
+**Sentry is for errors, not logs.** No line goes to Sentry Logs.
 
 ## Pollers
 
@@ -74,9 +74,9 @@ A poller reports by resolving or rejecting; it does not log its own failures. Th
 | `poller.still_failing` | warn | Every 15 minutes while it stays down |
 | `poller.recovered` | info | The first success after being declared, with `failures` and `downMs` |
 
-The poller process also checks in to the Sentry cron monitor `skkuverse-pollers` every 5 minutes — `error` while a fast poller (under a minute between ticks) is declared failing, `ok` otherwise. A poller ticking a minute or more apart reports only through its own Issue: its `error` would last at least one interval and hide the fast pollers. Sentry raises an Issue on failed check-ins and on missing ones, which is how a dead or hung poller process is noticed.
+The poller process also checks in to a Sentry cron monitor every 5 minutes — `error` while a fast poller (under a minute between ticks) is declared failing, `ok` otherwise. A poller ticking a minute or more apart reports only through its own Issue: its `error` would last at least one interval and hide the fast pollers. Sentry raises an Issue on failed check-ins and on missing ones, which is how a dead or hung poller process is noticed.
 
-Each `ok` check-in also pings a Healthchecks.io check at `HEALTHCHECKS_POLLER_PING_URL`, which alerts the maintainer when the pings stop. Unset, nothing is sent. A ping that fails, answers non-2xx or takes over 5 seconds logs `poller.healthchecks_ping_failed` (warn) with the HTTP `status` or the error's `reason` (its name only), never the URL, which is the check's credential.
+Each `ok` check-in also pings an external heartbeat check at `HEALTHCHECKS_POLLER_PING_URL`, which alerts when the pings stop. Unset, nothing is sent. A ping that fails, answers non-2xx or takes over 5 seconds logs `poller.healthchecks_ping_failed` (warn) with the HTTP `status` or the error's `reason` (its name only), never the URL, which is the check's credential.
 
 Upstream answers that carry no usable data throw `UpstreamError` (`src/infra/upstream.error.ts`) with the upstream's code, so they count as failures too. A TOPIS `headerCd` of `"4"` (no result) is not a failure.
 
@@ -87,14 +87,14 @@ The TOPIS pollers' own lines (`src/bus/realtime/jongro/`, `src/bus/route-path/`)
 | Event | Level | When |
 | --- | --- | --- |
 | `bus.regional.disabled` | info | At boot with `REGIONAL_BUS=off`: a regional route's poller (`jongro-7800`, `jongro-path-7800`) is not registered; one line per poller, named in `poller` |
-| `bus.topis.quota_exceeded` | error | TOPIS or the data.go.kr gateway refused a call over the key's daily quota (code 22), with the data.go.kr `operation` (`getArrInfoByRouteAllList`, `getBusPosByRtidList`) and the route's `code`; at most once a minute per operation, with `suppressed`; the tick still rejects, and every route of that operation fails until the quota resets. The `TopisQuotaExceeded` alert reads it |
+| `bus.topis.quota_exceeded` | error | TOPIS or the data.go.kr gateway refused a call over the key's daily quota (code 22), with the data.go.kr `operation` (`getArrInfoByRouteAllList`, `getBusPosByRtidList`) and the route's `code`; at most once a minute per operation, with `suppressed`; the tick still rejects, and every route of that operation fails until the quota resets. |
 
 The GBIS seat poller (`gbis-seats-<code>`, `src/bus/realtime/gbis/`) rejects with an `UpstreamError` that keeps the status, the GBIS result code or the gateway's reason code, and never the service key, a query parameter. Its own lines, and the live route's read of what it stores:
 
 | Event | Level | When |
 | --- | --- | --- |
 | `bus.gbis.disabled` | info | At boot with `GBIS=off`: a regional route's seat poller (`gbis-seats-7800`) is not registered; one line per poller, named in `poller` |
-| `bus.gbis.quota_exceeded` | warn | The data.go.kr gateway refused a call over the key's daily quota (code 22), with the `operation` (`getBusLocationListv2`) and the route's `code`; at most once a minute, with `suppressed`; the tick rejects, and the route serves no seats until the quota resets. The `GbisQuotaExceeded` alert reads it |
+| `bus.gbis.quota_exceeded` | warn | The data.go.kr gateway refused a call over the key's daily quota (code 22), with the `operation` (`getBusLocationListv2`) and the route's `code`; at most once a minute, with `suppressed`; the tick rejects, and the route serves no seats until the quota resets. |
 | `bus.gbis.read_failed` | warn | The live route could not read `bus_seats` (a timeout, an unreachable database), with the `routeId` and `err`; at most once a minute per route, with `suppressed`. The answer is served with every `seatsLeft` null, never failed |
 
 The arrival-estimate pollers (`shuttle-eta-live`, `shuttle-eta-baseline`, `src/bus/eta/`) reject with a `DirectionsError` or a `DailyCapError`. Either carries only the provider, a kind and a status. Neither wraps the axios error, whose config holds the API keys. A tick writes what it got before rejecting, and keeps rejecting on later ticks until a call succeeds, so an outage reads as one failing spell. Their own lines:

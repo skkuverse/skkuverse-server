@@ -2,7 +2,7 @@
 title: Subway Arrivals and Public Holidays — Sources, Budget and Accuracy Policy
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-25
 audience: internal
 ---
@@ -29,7 +29,7 @@ The train map is an unofficial page with no robots.txt (404 on 2026-10-16). We c
 
 ### D3. The call budget is ours, not the upstream's
 
-The Seoul real-time key has no daily limit since its gallery approval on 2026-10-16 (entry `cd82246baa4d1bb76d9b40bf064a3805`); the data.go.kr key allows 10,000 calls a day for 특일 정보 (15012690). The daily ceilings (`config.subway`) are runaway guards, kept as code constants rather than Doppler values, since a Doppler change needs a deploy too.
+The daily ceilings (`config.subway`) are runaway guards of our own, not the upstream's limits, kept as code constants rather than configured values, since a configured value needs a deploy to change too.
 
 ### D4. Every platform is polled all service day
 
@@ -41,7 +41,7 @@ Estimates are rules over observed events and the timetable (owner, 2026-10-18). 
 
 ### D6. Fix a lost train by coverage, not by a new rule
 
-When the tracker loses a train between stations, track every station between and ahead of the served platform instead of changing an estimate rule: positions stay one call per line and events stay at served platforms, so coverage adds no upstream call and no Atlas write. Rejected (2026-10-18, a 수인분당 train shown 10–16 min late): bounding standing time by `lastSeenAt`, a per-line "reports no departures" cap, and per-direction station sets in the route model.
+When the tracker loses a train between stations, track every station between and ahead of the served platform instead of changing an estimate rule: positions stay one call per line and events stay at served platforms, so coverage adds no upstream call and no database write. Rejected (2026-10-18, a 수인분당 train shown 10–16 min late): bounding standing time by `lastSeenAt`, a per-line "reports no departures" cap, and per-direction station sets in the route model.
 
 ### D7. 신분당 trainsets are matched to runs
 

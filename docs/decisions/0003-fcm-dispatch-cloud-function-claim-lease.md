@@ -2,7 +2,7 @@
 title: FCM Dispatch — a Cloud Function Sends, a Claim Lease Dedupes
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-28
 audience: internal
 ---

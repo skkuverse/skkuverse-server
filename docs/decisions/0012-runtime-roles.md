@@ -2,7 +2,7 @@
 title: Runtime Roles — Pollers Write, Api Replicas Read
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-22
 audience: internal
 ---
@@ -13,7 +13,7 @@ audience: internal
 
 ## Context
 
-- One image boots three ways (`src/main.ts`). Production runs one poller container and several api replicas against one Atlas cluster.
+- One image boots three ways (`src/main.ts`). Production runs one poller and several api replicas against one shared database.
 - The role used to gate only the poller timers; every module and boot hook loaded everywhere. So a read could fall back to what a poller held in the same process, which only `combined` has, and a local run answered differently from production; api replicas seeded collections and ran index DDL at boot on collections other processes write; an api replica needed the pollers' upstream keys to boot; and a script's or poller's write reached the replicas only after a TTL of up to an hour, or a restart.
 - Runtime data moving into MongoDB ([ADR 0013](0013-runtime-data-in-mongodb.md)) relies on one guarantee: a writer stores it, and every replica reads the same thing soon after.
 
@@ -35,11 +35,11 @@ An api replica inserts, updates and deletes nothing and creates no index or coll
 
 A collection that must hold a document before anything can serve it gets it from a writer, never from a committed snapshot: the Jongro poller bootstraps a missing registry route from TOPIS, and the daily route-line sync writes a missing line.
 
-Rejected: every role seeding the Jongro registry and route lines at boot, so that a standby host with no poller could serve on its first deploy ([ADR 0009](0009-multi-origin-active-active.md)). That host is gone, and a poller ships in every deploy.
+Rejected: every role seeding the Jongro registry and route lines at boot, so that a host with no poller could serve on its first deploy ([ADR 0009](0009-multi-origin-active-active.md)). A poller ships in every deploy.
 
 ### D4. Required configuration follows the role
 
-Each required value names the roles that need it (`src/infra/required-env.ts`): `poller` for the upstream keys only pollers use, `api` for what only serving uses (the AI API, the NAVER map style, the internal dispatch token, the notices start date), `all` for both (MongoDB, the FCM function, Sentry). A process exits at boot naming each missing value its role needs and ignores the rest. A value read in a role that does not require it throws at its first read, so a wrongly scoped value fails loudly instead of becoming `undefined` in a URL; never spread a `config` section that holds one: the spread reads every getter and throws in the role that lacks it. One rendered `.env` still feeds every container; the scope is what boot requires, not what is present.
+Each required value names the roles that need it (`src/infra/required-env.ts`): `poller` for the upstream keys only pollers use, `api` for what only serving uses (the AI API, the NAVER map style, the internal dispatch token, the notices start date), `all` for both (MongoDB, the FCM function). A process exits at boot naming each missing value its role needs and ignores the rest. A value read in a role that does not require it throws at its first read, so a wrongly scoped value fails loudly instead of becoming `undefined` in a URL; never spread a `config` section that holds one: the spread reads every getter and throws in the role that lacks it. One rendered `.env` still feeds every container; the scope is what boot requires, not what is present.
 
 ### D5. Runtime switches gate writers only
 
@@ -51,7 +51,7 @@ A poller that spends no paid quota and writes only its own environment's databas
 
 A process sees another's write when its cache entry expires; no writer notifies readers and nothing restarts them. Rejected: a shared version document readers poll, which every writer, scripts included, must bump. A cache's bound is its TTL only if, once the TTL has passed, a read waits for the reload instead of answering from the expired value: true with no stale window, or with `serveStale: "on-reload-failure"` (`src/infra/cached-loader.ts`). A cache whose stale window also answers while a reload runs (the default mode) is late by up to TTL plus one reload, and states its bound that way. A writer may clear its own process's cache after a write. Each reader's spec that cites this decision pins its bound. A cache on top adds its TTL: the festival event overlay routes serve a `map-layer-sets` push within about 65 s (`EVENT_CACHE_TTL_MS` over the 60 s dataset read).
 
-Reference data that a database outage must not take down (bus schedules and overrides, stored holidays, route lines, datasets, mini-app manifests) keeps a stale window that covers only a failed reload: it serves the last good value and logs `cache.reload_failed`. In that mode the first read after each TTL waits for the reload, so while Atlas is unreachable such a read can stall for up to `serverSelectionTimeoutMS` (`src/infra/db.ts`) about once per TTL; accepted.
+Reference data that a database outage must not take down (bus schedules and overrides, stored holidays, route lines, datasets, mini-app manifests) keeps a stale window that covers only a failed reload: it serves the last good value and logs `cache.reload_failed`. In that mode the first read after each TTL waits for the reload, so while the database is unreachable such a read can stall for up to `serverSelectionTimeoutMS` (`src/infra/db.ts`) about once per TTL; accepted.
 
 ## Consequences
 
@@ -59,6 +59,6 @@ Reference data that a database outage must not take down (bus schedules and over
 - **api replicas boot and scale without the pollers' keys or quotas**, and a failing upstream cannot slow an api boot.
 - **A fresh `_dev` or `_test` database serves no bus configuration until the poller has bootstrapped every Jongro route from TOPIS, which needs buses running**, so overnight it waits for the morning. `/bus/config` and the ui transit routes read every Jongro route at once and answer 503 as a whole until the last is stored; no route line serves until the first daily sync. The resync how-to inserts a route by hand.
 - **An index exists only after a poller boots.** If the poller never boots, api serves without the indexes it relies on; readiness and the deploy cover that case.
-- **Shorter TTLs cost reads**: a one-minute schedule cache adds a few reads per second across all processes. If Atlas ops/s shows a step, the TTL and the bound rise together.
-- **Exactly one poller stays an assumption**: daily caps, the registry's pending counts and the freezing of shuttle estimates rely on it. A second poller needs leader election first (ADR 0009, Phase B).
+- **Shorter TTLs cost reads**: a one-minute schedule cache adds a few reads per second across all processes. If database load shows a step, the TTL and the bound rise together.
+- **Exactly one poller stays an assumption**: daily caps, the registry's pending counts and the freezing of shuttle estimates rely on it. A second poller needs leader election first (ADR 0009).
 - The Hyehwa station route (`GET /bus/station/:stationId`) was deleted, not ported: the app does not call it, and its upstream answered "no result" in every recorded sample.

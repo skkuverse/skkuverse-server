@@ -2,7 +2,7 @@
 title: Bus Stops API Reference
 type: reference
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-25
 audience: internal
 ---

@@ -2,7 +2,7 @@
 title: Migrate the App to Map Overlays
 type: how-to
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-08-31
 audience: internal
 ---

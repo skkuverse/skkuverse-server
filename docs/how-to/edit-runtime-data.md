@@ -2,7 +2,7 @@
 title: Edit Runtime Data
 type: how-to
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-25
 audience: internal
 ---
@@ -45,11 +45,11 @@ A dataset's check may also read a collection outside the content database, decla
 | Development (default) | `$MONGO_CONTENT_DB_NAME` plus `_dev` | no flag |
 | Production | `$MONGO_CONTENT_DB_NAME` | `--prod` |
 
-The tool prints the database name first on every run. The `_dev` database lives on the production cluster, so it is real data too, but nothing user-facing reads it.
+The tool prints the database name first on every run. The `_dev` database is real shared data too, but nothing user-facing reads it.
 
 ## Prerequisites
 
-- A `.env` with `MONGO_URL` and `MONGO_CONTENT_DB_NAME` (and `MONGO_DB_NAME_BUS_CAMPUS` for `bus-stops`): `npm run env:pull` renders it from Doppler `backend/dev_server`.
+- A `.env` with `MONGO_URL` and `MONGO_CONTENT_DB_NAME` (and `MONGO_DB_NAME_BUS_CAMPUS` for `bus-stops`): maintainers render it with `npm run env:pull` from the maintainers' secret store.
 - `git config user.email` set, or `--by <email>` on every write: it is stored as the author of the revision.
 - A checkout of the code you mean to validate against. `npm run data` runs `npm run build` first and loads the schemas from `dist/src`, so the build output is always this checkout's.
 
@@ -213,15 +213,15 @@ npm run data -- push jongro-route-attributes --prod --note "jongro07 seat count 
 
 ```bash
 npm run data -- pull bus-lane-corridor --prod
-doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json
-doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-probe live
+node --env-file=.env scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json
+node --env-file=.env scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-probe live
 npm run data -- push bus-lane-corridor --prod --note "corridor rebuilt from OSM"
 ```
 
 `--dry-run` prints the summary and writes nothing. After any `entryExit` edit, run the entry-exit check before the push, with the pull's `--file`:
 
 ```bash
-doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-entry-exit
+node --env-file=.env scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-entry-exit
 ```
 
 It routes both directions through the file's entry and exit points with NAVER; a point NAVER cannot route through fails every forced route, and each bus-lane run then loses its live value. Of `entryExit`, the push itself refuses only a point more than 500 m off the centerline, or a direction whose exit lies before its entry along it. The live poller reads a push within two minutes (two ticks): the corridor cache lives 60 s, as long as a tick.

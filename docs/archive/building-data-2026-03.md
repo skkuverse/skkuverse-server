@@ -2,7 +2,7 @@
 title: Building Data Survey and Connections Guide (2026-03)
 type: reference
 status: superseded
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-11
 audience: internal
 ---

@@ -2,7 +2,7 @@
 title: Register a Mini App
 type: how-to
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -162,8 +162,8 @@ its fields:
 
 Steps:
 
-1. Issue a key pair with the key-issuing tool in the private companion repository. It writes the
-   private key to a file outside any git work tree and prints the public half. Hand the private key to
+1. Issue an Ed25519 key pair with the maintainers' key-issuing tool. It writes the private key to a
+   file outside any git work tree and prints the public half. Hand the private key to
    the mini app's backend over a private channel, then delete your local copy.
 2. Push the dataset only after the deploy that knows `sender` is live and healthy on every replica.
    An image built before it refuses the whole registry and logs `miniapps.registry.invalid`. A replica

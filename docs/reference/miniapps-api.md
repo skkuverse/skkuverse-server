@@ -2,7 +2,7 @@
 title: Mini-App Registry API Reference
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-26
 audience: internal
 ---
@@ -396,8 +396,7 @@ server stores only public keys.
 
 History is not `GET /miniapps/:id/notifications`: that path is the public feed (§5.1), which a shared
 cache may serve. Both routes are under the general rate limit of `/miniapps`, and a send also counts
-against the sender's configured quotas (per hour and per day) and a global ceiling, shared by every
-replica.
+against the configured quotas.
 
 Every call carries these headers:
 
@@ -437,7 +436,7 @@ The server refuses, in this order:
 | `404` | `MINIAPP_NOT_FOUND` | Only after a call is authenticated |
 | `400` | `INVALID_IDEMPOTENCY_KEY` | A signed send without `Idempotency-Key` (`a signed send needs an Idempotency-Key`), or one in the wrong format |
 | `400` | `INVALID_PAYLOAD` | The body, as §5.2 |
-| `429` | `RATE_LIMIT` | The rate limit, or the sender's quota or the global ceiling, with `Retry-After` in seconds; nothing written or sent |
+| `429` | `RATE_LIMIT` | The rate limit or a configured quota, with `Retry-After` in seconds; nothing written or sent |
 
 These routes take no `X-Internal-Token`: a call with no signature is `401`, whatever token it carries.
 No route under `/internal/miniapps` exists ([ADR 0020](../decisions/0020-miniapp-push-link-policy.md), D6).

@@ -2,7 +2,7 @@
 title: Academic Calendar
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -18,7 +18,7 @@ Accepted 2026-10-23.
 ## Context
 
 - The HSSC shuttle runs 07:00 to 23:00 on weekdays in a semester and 07:00 to 19:00 in a vacation, and nothing in the server knew which dates are which.
-- SKKU publishes each academic year's calendar (`학사일정`) on `ca_de_schedule.do`, a year running from March 1 to the last day of February. skkuverse-crawler crawls it daily at 05:35 KST (module `academic-calendar`, `spencer0124/skkuverse-crawler#84`, its adr-013) into `academic_calendars` in its base database, which this server already reads as `MONGO_NOTICES_DB_NAME`. Each document holds the year's two semesters, its rest days and every raw entry, keyed by the year.
+- SKKU publishes each academic year's calendar (`학사일정`) on `ca_de_schedule.do`, a year running from March 1 to the last day of February. skkuverse-crawler crawls it daily at 05:35 KST (module `academic-calendar`, its adr-013) into `academic_calendars` in its base database, which this server already reads as `MONGO_NOTICES_DB_NAME`. Each document holds the year's two semesters, its rest days and every raw entry, keyed by the year.
 - The date answers were spread out: the holidays module answered public holidays, the `skku-rest-days` dataset ([ADR 0013](0013-runtime-data-in-mongodb.md)) was read inside the bus schedule content, and a third source would have been a third door.
 - The crawler is deployed: production's `skku_notices.academic_calendars` holds `2026`, written 2026-10-23 12:39 UTC. `skku_notices_dev` holds none, so development and `npm run verify:serve` answer every year from the rule. A year can also go unpublished past March 1, or a page can change shape.
 
@@ -30,7 +30,7 @@ Accepted 2026-10-23.
 
 ### D2. The crawler crawls, the server reads
 
-The server reads `academic_calendars` and never writes it; the crawler owns its shape (`AcademicYearDoc` in `skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/models.py`). The read projects the fields it uses, parses each document with zod and leaves out a document that fails (a semester pair not term 1 then term 2 in order inside its year, an `_id` other than its year, a date that is no calendar date), logging `academic_calendar.invalid_document`; that year is then answered by the rule, never an error to a rider. The read is cached like the public holidays: ten minutes, kept a day through failed reloads. A read that fails with nothing good to serve answers no crawled year, so the rule answers every year and the schedule keeps serving: logged as `academic_calendar.read_failed`, retried once a minute. The crawler owns the Slack alerts for a stale, missing or broken year (its coverage records). The server's side, a read that fails or a document its schema refuses, nothing else would surface, since every request still answers: an alert on those log lines, kept with the host's monitoring outside this repository, tells the maintainer.
+The server reads `academic_calendars` and never writes it; the crawler owns its shape (`AcademicYearDoc` in `skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/models.py`). The read projects the fields it uses, parses each document with zod and leaves out a document that fails (a semester pair not term 1 then term 2 in order inside its year, an `_id` other than its year, a date that is no calendar date), logging `academic_calendar.invalid_document`; that year is then answered by the rule, never an error to a rider. The read is cached like the public holidays: ten minutes, kept a day through failed reloads. A read that fails with nothing good to serve answers no crawled year, so the rule answers every year and the schedule keeps serving: logged as `academic_calendar.read_failed`, retried once a minute. The crawler alerts on a stale, missing or broken year (its coverage records). The server's side, a read that fails or a document its schema refuses, nothing else would surface, since every request still answers, so the maintainer alerts on those log lines.
 
 ### D3. The default rule
 

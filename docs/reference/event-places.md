@@ -2,7 +2,7 @@
 title: Event Places — Storage, Authoring and Operations
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -11,7 +11,7 @@ audience: internal
 
 > How a festival's booths are stored, authored and switched on. The WIRE they reach the app over is
 > [map-overlays-api.md](map-overlays-api.md) — one shared marker schema for booths and buildings alike.
-> Cross-repo ownership is [ADR 0004](https://github.com/spencer0124/skkuverse/blob/main/docs/decisions/0004-event-map-layer-ownership.md).
+> Cross-repo ownership is umbrella ADR 0004.
 
 ## 1. Summary
 
@@ -380,32 +380,12 @@ fetched can linger on a device for up to a minute. **Rehearse before the festiva
 Import at any time. `/map/config` advertises no festival layers and `/map/overlays/event` returns `[]`
 until `activeFrom`, so content can sit on production with zero exposure.
 
-### 6.4 When Atlas refuses with `SSL alert number 80`
+### 6.4 When the database refuses with `SSL alert number 80`
 
-A TCP connection that is accepted and then dropped before the handshake completes is Atlas rejecting
-the source IP, not a client TLS fault. Two causes, and they look identical:
-
-1. The machine's IP is not in Network Access. Check the current one and add it.
-2. **The traffic is leaving over NAT64.** If `openssl s_client` to the shard host succeeds while the
-   Node driver still fails, this is the one. `dig AAAA` shows nothing because it queries DNS
-   directly; the synthesis happens in `getaddrinfo`:
-
-   ```bash
-   node -e 'require("dns").lookup("<shard-host>",{all:true,verbatim:true},(e,a)=>console.log(a))'
-   ```
-
-   A `64:ff9b::/96` address in that list is the RFC 6052 well-known prefix — the resolver has
-   synthesized an IPv6 address for an IPv4-only host. Node 18+ defaults to `verbatim` order and picks
-   it first, so the connection exits through the NAT64 gateway and Atlas sees *its* address rather
-   than the allowlisted one. Prefix the command:
-
-   ```bash
-   NODE_OPTIONS=--dns-result-order=ipv4first node scripts/import-eventmap-places.js --file <sheet> --dry-run
-   ```
-
-   This is a property of the network the script is run from, which is why it stays an environment
-   variable rather than a hardcoded `family: 4` in the driver options. Both npm scripts already carry
-   it, since those are the commands somebody runs while something is going wrong.
+A connection accepted and then dropped before the handshake completes is the database refusing the
+source address, not a client TLS fault. If the network synthesizes IPv6 addresses for IPv4-only hosts
+(NAT64), the connection may leave from an address other than the one you expect; prefix the command
+with `NODE_OPTIONS=--dns-result-order=ipv4first`, which both npm scripts already carry.
 
 ### 6.5 Replaying a past festival on `_dev`
 
@@ -449,5 +429,5 @@ since 2026-10-19: push the festival layout to `_dev` with `npm run data`
 - [how-to/configure-map-overlays.md](../how-to/configure-map-overlays.md) — the runbook: what can be drawn, which tier to edit, and what to check when a shape does not appear
 
 - [map-overlays-api.md](map-overlays-api.md) — the shared marker schema and the `/map/*` routes
-- [ADR 0004 — event map layer ownership](https://github.com/spencer0124/skkuverse/blob/main/docs/decisions/0004-event-map-layer-ownership.md)
+- Umbrella ADR 0004: event map layer ownership
 - Shuttle 증차 is a **separate** system — `bus_overrides` + `scripts/seed-eskara.js`. Link via a `route` action; do not rebuild it here.

@@ -2,7 +2,7 @@
 title: API Migration v2 — Client Update Guide (Historical)
 type: explanation
 status: superseded
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-03-31
 audience: internal
 ---

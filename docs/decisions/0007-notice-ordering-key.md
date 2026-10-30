@@ -2,14 +2,14 @@
 title: Notice List Ordering — an Immutable Key, not `crawledAt`
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-22
 audience: internal
 ---
 
 # 0007. Notice List Ordering — an Immutable Key, not `crawledAt`
 
-> Why the notice list and its cursor order on `(date, _id)` and still carry an unread `c`. Decided 2026-09-13 ([skkuverse#52](https://github.com/spencer0124/skkuverse/issues/52)).
+> Why the notice list and its cursor order on `(date, _id)` and still carry an unread `c`. Decided 2026-09-13.
 
 ## Context
 
@@ -30,6 +30,6 @@ Measured on prod 2026-09-06: one tick wrote 1,264 documents across 115 sources (
 ## Consequences
 
 - The ordering flip is gone, independent of any crawler change, and the list order no longer depends on when the crawler last ran.
-- Nothing sorts on `crawledAt`, so the crawler may stop rewriting it (most of the Atlas write volume of a tick changes nothing a reader sees). The dispatch gate had to move off it first: [ADR 0008](0008-dispatch-age-gate-on-publication-date.md).
+- Nothing sorts on `crawledAt`, so the crawler may stop rewriting it (most of a tick's writes change nothing a reader sees). The dispatch gate had to move off it first: [ADR 0008](0008-dispatch-age-gate-on-publication-date.md).
 - Within a day, an edited notice no longer jumps to the top. Judged correct: an old notice's edit reordering today's list was a side effect of the touch.
 - **Open:** retiring `c` is a separate release, once no deployed server requires it.

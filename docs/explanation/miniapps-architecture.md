@@ -2,7 +2,7 @@
 title: Miniapps Architecture
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-26
 audience: internal
 ---
@@ -101,7 +101,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/miniapps/schema.ts` 
 
 ## Open questions
 
-- Feed rows sent before [ADR 0020](../decisions/0020-miniapp-push-link-policy.md) may carry a `route` a send now refuses (`/mini-app?id=…`); the feed serves them as stored, and only the app's feed rule checks them (`spencer0124/skkuverse#72`).
+- Feed rows sent before [ADR 0020](../decisions/0020-miniapp-push-link-policy.md) may carry a `route` a send now refuses (`/mini-app?id=…`); the feed serves them as stored, and only the app's feed rule checks them.
 
 ## Related
 

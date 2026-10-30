@@ -2,7 +2,7 @@
 title: Raise the Minimum App Version
 type: how-to
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -102,13 +102,6 @@ npm run data -- push app-platform-gates --create --file /tmp/app-platform-gates.
 The push prints the gates it will store. Before you type `y`, check that each platform's `minVersion`, `updateUrl` and `minOsVersion` match what the `curl` returned. Run the push from a checkout whose dataset catalog (`scripts/lib/datasets/`) knows `app-platform-gates`: `origin/dev` until the change that added the dataset merges to `main`, and `main` after that. An older checkout answers `unknown dataset "app-platform-gates"`.
 
 Create it before the deploy that first reads it: that deploy rolls back when an api replica answers `/app/config` with anything but 200.
-
-## Until the dataset reaches main
-
-The gates moved from six environment variables (`APP_IOS_MIN_VERSION`, `APP_IOS_UPDATE_URL`, `APP_IOS_MIN_OS_VERSION` and the three `APP_ANDROID_` ones) to the dataset. Until that change merges to `main`, the move costs this:
-
-- `npm run env:pull` fails on any checkout whose `config/env.dev.keys` disagrees with Doppler `backend/dev_server`: `scripts/render_env.py` refuses a Doppler key the keys file does not list, and a listed key Doppler lacks. A checkout of `dev` fails while Doppler still holds the six keys; a checkout of `main` fails once they are removed. Keep an existing `.env`, or pull from the checkout that matches Doppler.
-- A revert to `main` from before the change needs the six keys added back to both Doppler configs (`dev_server`, `prd_server`) first, holding the gates production serves at that moment. That `main` lists all six in `config/env.prd.keys`, so its deploy aborts at render without them, and it serves the gates from those values, not from the dataset.
 
 ## Rollback
 

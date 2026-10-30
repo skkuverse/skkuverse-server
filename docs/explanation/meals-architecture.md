@@ -2,7 +2,7 @@
 title: Meals Architecture
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-24
 audience: internal
 ---

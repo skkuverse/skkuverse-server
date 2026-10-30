@@ -2,7 +2,7 @@
 title: Building Architecture
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-28
 audience: internal
 ---
@@ -124,7 +124,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 
 - The places skkumap lacks (`extraFacilities`) and the buildings only their spaces name have no `buildings` document, so no `skkuId` for the campus map to open them by. `NoticesScreenService` gives them no `map` action until they have one.
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
-- A version stamp that api replicas check, so a crawler run reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
+- A version stamp that api replicas check, so a crawler run reaches them before their TTL, is open.
 - Why spaceList stamps a `conspaceCd` on some rooms and not on others. The detail serves it on each space, and nothing joins on it there.
 - buildInfo also sends a floor code (`floor`), which `spaces` does not carry; `floorSortKey` orders floors by the Korean floor name instead.
 

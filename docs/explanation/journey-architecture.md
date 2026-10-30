@@ -2,7 +2,7 @@
 title: Journey Architecture
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-26
 audience: internal
 ---

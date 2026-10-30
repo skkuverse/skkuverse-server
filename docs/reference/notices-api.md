@@ -2,7 +2,7 @@
 title: Notices API 계약
 type: reference
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-29
 audience: internal
 ---
@@ -24,7 +24,7 @@ audience: internal
 | GET | `/notices/proxy/attachment` | optional | 첨부파일 프록시 |
 | GET | `/notices/:sourceId/:articleNo` | optional | 공지 상세 |
 | GET | `/notices/overview` | optional | AI answer card for a search (`?q=&sourceIds=`) |
-| POST | `/internal/notices/dispatch-pending` | X-Internal-Token | 크롤러 ping → FCM dispatch sweep |
+| POST | `/internal/notices/dispatch-pending` | internal | 크롤러 ping → FCM dispatch sweep |
 
 The controllers are the source of truth for the routes: one per flow under `src/notices/` (`tabs/`, `list/`, `detail/`, `overview/`, `attachment/`, `dispatch/`), each `notices-<flow>.controller.ts`; the dispatch one is `@Controller("internal/notices")`.
 
@@ -206,7 +206,7 @@ Outbound policy (`OUTBOUND_POLICY`, purpose `notice-attachment`, [ADR 0023](../d
 
 An AI answer for a notice search, in the style of an AI Overview, with numbered sources the app can open. It is a **separate request from the list**: the list never waits for it, and its absence never affects the list. Why it retrieves, caches and times out as it does: [ADR 0016](../decisions/0016-notice-search-overview.md).
 
-**Off in production.** The runtime switch `NOTICE_OVERVIEW` (`src/infra/runtime-switches.ts`) defaults to `off` in production until the route has a cost guard. With it off, every valid request answers `200` with `data.overview: null` and `meta.reason: "unavailable"`, and the server runs no retrieval and no skkuverse-ai call. Development defaults it to `on`.
+**Off in production.** The runtime switch `NOTICE_OVERVIEW` (`src/infra/runtime-switches.ts`) defaults to `off` in production. With it off, every valid request answers `200` with `data.overview: null` and `meta.reason: "unavailable"`, and the server runs no retrieval and no skkuverse-ai call. Development defaults it to `on`.
 
 **Parameters**
 
@@ -258,13 +258,13 @@ Every response carries `Cache-Control: no-store`.
 **Client obligations**
 
 - Send the overview request alongside the list request, and render the list without waiting for it.
-- Use a timeout of about **25 s** with **no automatic retry**. The server answers within 24 s; a retry doubles the LLM cost. The app's default (6 s, one retry) must not be used for this call.
+- Use a timeout of about **25 s** with **no automatic retry**. The server answers within 24 s; a retry repeats the whole answer. The app's default (6 s, one retry) must not be used for this call.
 - Hide the card when `data.overview` is `null`, including on `429`.
 - A source chip opens `/notices/[sourceId]/[articleNo]`. Build any schedule UI from the cited notices' own `summaryPeriods`, not from the answer text.
 
 ## POST /internal/notices/dispatch-pending
 
-크롤러가 크롤 cycle 끝에 호출하는 내부 엔드포인트. No Firebase auth and no rate limit: `INTERNAL_AUTHORIZER` checks the shared secret in `X-Internal-Token` (`INTERNAL_DISPATCH_TOKEN`) under the `notices.dispatch` scope ([ADR 0023](../decisions/0023-perimeter-ports.md)).
+크롤러가 크롤 cycle 끝에 호출하는 내부 엔드포인트, not callable by clients: `INTERNAL_AUTHORIZER` authorizes it under the `notices.dispatch` scope ([ADR 0023](../decisions/0023-perimeter-ports.md)).
 
 - **동작:** pending 공지를 sweep → claim-lease → FCM Cloud Function 호출로 fan-out. dispatch는 비동기 진행이라 응답이 빠르다.
 - **응답:** sweep 결과 카운트 (`swept`/`dispatched`/`skipped` 계열). The response is `SweepSummary` (`src/notices/dispatch/notices-dispatch.wire.ts`): `status`, `source`, `processed`, `sent`, `failed`, `skippedNoTopics`, `cfCalls`, `dedupedDocs`, `durationMs`.

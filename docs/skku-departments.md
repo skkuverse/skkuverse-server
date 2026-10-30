@@ -2,7 +2,7 @@
 title: 단과대학·학과 홈페이지 디렉토리 (editorial · 미이관)
 type: reference
 status: deprecated
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-07-22
 audience: internal
 ---

@@ -2,7 +2,7 @@
 title: Bus Architecture
 type: explanation
 status: draft
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -185,10 +185,10 @@ What the app reads, from `skkuverse-app/packages/shared/src/bus/parser.ts`:
 
 ## Open questions
 
-- A missing `bus_cache` key is logged, not answered: the response still reads as "no bus running" (`spencer0124/skkuverse#74`, option C). A `503` or a staleness flag the app shows would need an app change.
+- A missing `bus_cache` key is logged, not answered: the response still reads as "no bus running" (option C). A `503` or a staleness flag the app shows would need an app change.
 
 ## Related
 
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape, and where the estimate merge sits
 - [ADR 0012](../decisions/0012-runtime-roles.md): what the poller and the api replicas may each do
-- [Project docs](../project-docs.md): the bus schedule system and the external APIs in depth, their quotas included
+- [Project docs](../project-docs.md): the bus schedule system and the external APIs in depth

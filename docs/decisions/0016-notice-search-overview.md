@@ -2,7 +2,7 @@
 title: Notice Search Overview — Hybrid Retrieval, Per-Replica State
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-27
 audience: internal
 ---
@@ -15,7 +15,7 @@ audience: internal
 
 - The list search ranks `$regex` hits by date; an overview must answer from the most relevant notices.
 - `skku_notices.notices` has two Atlas search indexes: `notices_search` (lexical, `lucene.nori`, the whole corpus) and `notices_vector` (autoEmbed over `embeddingInput`, which only notices dated 2026-09-01 or later have). The cluster runs MongoDB 8.0: `$rankFusion` exists, `$scoreFusion` (8.2) does not.
-- The api replicas share no cache (no Redis), and Atlas Flex bills by peak ops/s.
+- The api replicas share no cache (no Redis).
 
 ## Decision
 
@@ -27,13 +27,13 @@ Rejected: a `?overview=1` flag on the list (couples list latency to the LLM, and
 
 ### D2. Cache, budget pause and rate limit live in each replica
 
-The overview cache, the pause after a `budget_exhausted` and the overview rate limit are per replica. Accepted: up to one ai call per replica for each distinct search, and an effective limit of the per-replica limit times the replica count; skkuverse-ai's daily token budget bounds the spend. Rejected: a Mongo-backed cache (Atlas ops on the hot path) and Redis (new infrastructure).
+The overview cache, the pause after a `budget_exhausted` and the overview rate limit are per replica. Accepted: up to one ai call per replica for each distinct search; skkuverse-ai's token budget bounds the spend. Rejected: a Mongo-backed cache (database reads on the hot path) and Redis (new infrastructure).
 
-Retrieval runs on every request, cache hits included, because the cache key holds the candidates' content hashes, so each request costs one `$rankFusion` with query-time embedding billed to the Atlas organization, bounded by the rate limit.
+Retrieval runs on every request, cache hits included, because the cache key holds the candidates' content hashes, so each request runs one `$rankFusion` with query-time embedding, bounded by the rate limit.
 
-### D3. A 24-second answer under nginx's 30 seconds
+### D3. A 24-second answer under the proxy's 30 seconds
 
-Retrieval gets `RETRIEVAL_MAX_TIME_MS` (query-time embedding included) and the ai call `AI_TIMEOUT_MS`, so the answer lands under 24 s. The app waits about 25 s with no retry, and nginx closes at `proxy_read_timeout 30s` (the host's api site, configured outside this repository): a server timeout rises only after those two.
+Retrieval gets `RETRIEVAL_MAX_TIME_MS` (query-time embedding included) and the ai call `AI_TIMEOUT_MS`, so the answer lands under 24 s. The app waits about 25 s with no retry, and the upstream proxy times out at 30 s: a server timeout rises only after those two.
 
 ## Consequences
 

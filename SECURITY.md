@@ -12,7 +12,7 @@ Include what you found, where (a route, a file or a commit), how to reproduce it
 ## What happens next
 
 - We aim to acknowledge a report within a few days.
-- We fix the problem privately, deploy the fix, and then publish it. A fix to public code may go through a private GitHub security advisory before it appears here.
+- We fix the problem privately, release the fix, and then publish it. A fix to public code may go through a private GitHub security advisory before it appears here.
 - We credit you in the advisory if you want to be credited.
 
 There is no bug bounty.

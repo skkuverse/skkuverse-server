@@ -2,7 +2,7 @@
 title: Runtime Data Lives in MongoDB
 type: adr
 status: accepted
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-10-23
 audience: internal
 ---
@@ -85,6 +85,6 @@ Code holds the identities of D2, the schemas, rules and readers, the response sh
 - **An edit needs no deploy and cannot fail a boot.** A bad edit is refused at push; a document that slips past serves the last good value or answers 503 on its own route, and other routes keep serving.
 - A committed config file still fails the boot (ADR 0010 D5); a dataset is validated at push and parsed at read instead, and needs no equivalence spec (ADR 0010 D13).
 - **A schema change can strand stored data.** D7's check is manual. **Open:** running it inside the deploy.
-- **Atlas reads grow by one `findOne` per dataset per replica per minute** while the dataset's route is requested.
+- **Database reads grow by one `findOne` per dataset per replica per minute** while the dataset's route is requested.
 - **Poller memory is read over hours.** Its `docker stats` figure is dominated by each tick's garbage (about 45 MB allocated per tick): compare the minimum `anon` of its cgroup's `memory.stat` over hours, never one reading.
 - **Production data is edited from a laptop with `MONGO_URL`.** **Open:** a database user scoped to the content database.

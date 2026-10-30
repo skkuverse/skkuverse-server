@@ -52,7 +52,7 @@ offline. By source:
   - Seoul Metro's train map pages, cut to what the tests read:
     __tests__/nest/subway/fixtures/trainmap-*.html;
   - NAVER Directions: __tests__/nest/bus/fixtures/naver-directions-inja.json;
-  - this server's own production responses, which carry the data above:
+  - responses of this server, which carry the data above:
     the *.capture.json files under __tests__/ and the files under
     contracts/produced/fixtures/.
 

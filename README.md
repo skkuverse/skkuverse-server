@@ -70,7 +70,7 @@ curl http://127.0.0.1:3000/health/ready
 - **A stand-in perimeter.** `local-dev` mode answers authentication, rate limiting and the other access decisions with simple stand-ins that work only on loopback (ADR 0023, [docs/decisions/0023-perimeter-ports.md](docs/decisions/0023-perimeter-ports.md)).
 - **Paid and limited APIs off.** Development turns off push delivery, caching and the paid or quota-limited upstream calls (`src/infra/runtime-switches.ts`).
 - **Pollers that fail are reported, not fatal.** A poller whose upstream rejects a placeholder key logs `poller.failing`; the rest of the server keeps serving. Pollers still call the public upstreams that development leaves on, such as the Seoul bus API (TOPIS), with your placeholder key, and get refused.
-- **Simulator and emulator only.** `local-dev` answers only requests sent straight to a loopback address, from this machine. The iOS simulator reaches `http://localhost:3000`, and the Android emulator does after `adb reverse tcp:3000 tcp:3000`. A physical phone needs `overlay` mode, which needs the private overlay ([docs/how-to/test-the-app-against-a-local-server.md](docs/how-to/test-the-app-against-a-local-server.md)).
+- **Simulator and emulator only.** `local-dev` answers only requests sent straight to a loopback address, from this machine. The iOS simulator reaches `http://localhost:3000`, and the Android emulator does after `adb reverse tcp:3000 tcp:3000`. A physical phone needs `overlay` mode, which needs the production configuration ([docs/how-to/test-the-app-against-a-local-server.md](docs/how-to/test-the-app-against-a-local-server.md)).
 
 ### What answers on an empty database
 
@@ -84,7 +84,7 @@ An empty database is enough to boot. The production data is not part of this rep
 
 `npm run schedule` does not fill the bus timetables on an empty database. It writes `scripts/data/campus-schedule.json` to the `_dev` database (production only with `--prod`), but first checks the stop times against the stored `bus-stops` dataset, and refuses, writing nothing, while that dataset is missing. The dataset is not in this repository.
 
-`npm start` runs the build with whatever `NODE_ENV`, `PERIMETER_MODE`, `HOST` and `ROLE` you set. `local-dev` mode refuses to start unless `NODE_ENV=development` and the host is loopback, and `overlay` mode, which production uses, refuses to start without the private perimeter overlay.
+`npm start` runs the build with whatever `NODE_ENV`, `PERIMETER_MODE`, `HOST` and `ROLE` you set. `local-dev` mode refuses to start unless `NODE_ENV=development` and the host is loopback, and `overlay` mode, which production uses, refuses to start without the production perimeter configuration.
 
 ## Tests
 

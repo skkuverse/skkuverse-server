@@ -2,7 +2,7 @@
 title: 공지 크롤링 소스 목록 (snapshot · 폐기)
 type: reference
 status: deprecated
-owner: zoyoong124@gmail.com
+owner: spencer0124
 last-updated: 2026-07-24
 audience: internal
 ---
