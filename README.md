@@ -22,7 +22,7 @@ The mobile app reads this server over HTTPS. The server:
 
 ## Quick start
 
-You need Node.js 22 (`.nvmrc`; run `nvm use`) and a MongoDB of your own, version 7 or later. You do not need any of the maintainers' accounts or secrets.
+You need Node.js 26 (`.nvmrc`; run `nvm use`) and a MongoDB of your own, version 7 or later. You do not need any of the maintainers' accounts or secrets.
 
 ```bash
 docker run --rm -d --name skkuverse-mongo -p 127.0.0.1:27017:27017 mongo:8
@@ -109,7 +109,7 @@ Tests need no network and no database of yours: they start an in-memory `mongod`
 | [docs/decisions/0023-perimeter-ports.md](docs/decisions/0023-perimeter-ports.md) | The ports every access decision sits behind |
 | [docs/README.md](docs/README.md) | The docs index: reference, explanation, how-to and every decision record |
 
-In short: NestJS 11 on Node.js 22, TypeScript `strict`, the native MongoDB driver, zod at every boundary, pino for logs. Each feature is a module under `src/` (`bus`, `subway`, `journey`, `notices`, `map`, `building`, `meals`, `miniapps`, `ui` and others), split into one sub-module per flow. `__tests__/architecture/` and the ESLint rules enforce the layout. The `ROLE` variable picks the boot path: `poller` polls and serves nothing, `api` serves and polls nothing, `combined` (the local default) does both.
+In short: NestJS 11 on Node.js 26, TypeScript `strict`, the native MongoDB driver, zod at every boundary, pino for logs. Each feature is a module under `src/` (`bus`, `subway`, `journey`, `notices`, `map`, `building`, `meals`, `miniapps`, `ui` and others), split into one sub-module per flow. `__tests__/architecture/` and the ESLint rules enforce the layout. The `ROLE` variable picks the boot path: `poller` polls and serves nothing, `api` serves and polls nothing, `combined` (the local default) does both.
 
 Every success is `{ meta: { lang }, data }` and every error `{ error: { code, message } }`. The module docs under [docs/reference/](docs/reference/) hold the request and response contracts, and `contracts/produced/` holds a JSON Schema for every shape the server sends to another repository.
 
@@ -133,7 +133,7 @@ Data copied from school and public sites (timetables, the notice source lists) b
 
 skkuverse 앱의 API 서버입니다. 셔틀·시내버스 실시간 위치, 셔틀 시간표, 지하철 도착 정보, 학과 공지와 푸시 알림, 건물 검색, 캠퍼스·축제 지도, 서버 주도 홈 화면을 제공합니다. <!-- conventions:allow-korean: C3 summary -->
 
-- **로컬 실행:** Node.js 22와 직접 띄운 MongoDB만 있으면 됩니다. 위 [Quick start](#quick-start)의 `.env`를 만들고 `npm run dev`를 실행하세요. 운영자의 계정이나 비밀 값은 필요 없습니다. <!-- conventions:allow-korean: C3 summary -->
+- **로컬 실행:** Node.js 26과 직접 띄운 MongoDB만 있으면 됩니다. 위 [Quick start](#quick-start)의 `.env`를 만들고 `npm run dev`를 실행하세요. 운영자의 계정이나 비밀 값은 필요 없습니다. <!-- conventions:allow-korean: C3 summary -->
 - **테스트:** `npm test`. 인메모리 MongoDB를 쓰고 외부 네트워크에 접속하지 않습니다. <!-- conventions:allow-korean: C3 summary -->
 - **이 저장소에 없는 것:** 운영 보안 경계(인증·요청 제한 정책)의 구현, 배포·서버·비밀 값 같은 운영 정보, 비공개 데이터 수집기, 운영 데이터. 이유는 위 표에 있습니다. <!-- conventions:allow-korean: C3 summary -->
 - **기여:** 이슈는 환영합니다. 풀 리퀘스트는 요청받은 경우에만 받습니다([CONTRIBUTING.md](CONTRIBUTING.md)). 보안 취약점은 [SECURITY.md](SECURITY.md)에 따라 비공개로 제보해 주세요. <!-- conventions:allow-korean: C3 summary -->

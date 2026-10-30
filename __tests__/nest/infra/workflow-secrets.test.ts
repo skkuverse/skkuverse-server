@@ -18,9 +18,12 @@
  *   - ci.yml reads no secret and clones no other repository: the contract and
  *     conventions checks run the copies vendored under .github/contract-tools/,
  *     hash-locked in .contracts.lock.json;
- *   - claude.yml starts only for a comment or review from an OWNER, MEMBER or
- *     COLLABORATOR: every disjunct of its gate checks `author_association`, and
- *     every other job needs the gated one;
+ *   - claude.yml has one job, and the gate sits on it: it starts only for a
+ *     comment or review from an OWNER, MEMBER or COLLABORATOR, and every
+ *     disjunct of its gate checks `author_association`;
+ *   - claude.yml never holds a token that can push: no `id-token` permission
+ *     (the action mints its GitHub App token through it), no `@claude edit`
+ *     mode, and the action runs on the job's own `github.token`;
  *   - contracts-sync.yml runs on a schedule or by hand, on the default branch,
  *     never for a pull request; it checks that its secrets are set before any
  *     other step, and its PR body links no private repository.
@@ -97,11 +100,6 @@ function jobIf(body: string): string | undefined {
   return text.trim().replace(/^\$\{\{([\s\S]*)\}\}$/, "$1").trim();
 }
 
-function jobNeeds(body: string): string[] {
-  const value = /^ {4}needs:[ \t]*(.*)$/m.exec(body)?.[1]?.trim() ?? "";
-  return value.replace(/^\[|\]$/g, "").split(",").map((s) => s.trim()).filter(Boolean);
-}
-
 /** Split an expression on a top-level operator, outside parentheses and '…' strings. */
 function splitTop(expr: string, op: "||" | "&&"): string[] {
   const parts: string[] = [];
@@ -149,19 +147,14 @@ const conjuncts = (disjunct: string) => splitTop(unwrap(disjunct), "&&").map(unw
 export const ungatedDisjuncts = (condition: string) =>
   splitTop(unwrap(condition), "||").filter((d) => !conjuncts(d).some((c) => GATE.test(c)));
 
-/** The jobs of a workflow that can start for someone who is not a maintainer. */
+/** The jobs whose own condition lets someone who is not a maintainer start them: a job gets no credit for needing another. */
 export function ungatedJobs(yaml: string): string[] {
-  const jobs = jobBlocks(yaml);
-  const gated = new Set([...jobs].filter(([, body]) => {
-    const condition = jobIf(body);
-    return condition !== undefined && ungatedDisjuncts(condition).length === 0;
-  }).map(([name]) => name));
-  return [...jobs].filter(([name, body]) => {
-    if (gated.has(name)) return false;
-    // A job that needs a skipped job is skipped too, unless its condition calls a status function.
-    const condition = jobIf(body) ?? "";
-    return !jobNeeds(body).some((need) => gated.has(need)) || /\b(always|failure|cancelled)\s*\(/.test(condition);
-  }).map(([name]) => name);
+  return [...jobBlocks(yaml)]
+    .filter(([, body]) => {
+      const condition = jobIf(body);
+      return condition === undefined || ungatedDisjuncts(condition).length > 0;
+    })
+    .map(([name]) => name);
 }
 
 /** The events a workflow listens to that no gated condition names. */
@@ -279,29 +272,28 @@ describe("the public-workflow rules apply as specified", () => {
     expect(ungatedDisjuncts(`(github.event_name == 'issue_comment' || github.event_name == 'issues') && ${gate}`)).toEqual([]);
   });
 
-  it("finds a job that runs whether or not the gated job ran", () => {
+  it("finds a job that does not hold the gate itself, whatever it needs", () => {
     // Arrange
-    const yaml = (secondIf: string) =>
+    const yaml = (...secondJob: string[]) =>
       [
         "on:",
         "  issue_comment:",
         "jobs:",
-        "  mode:",
+        "  read:",
         "    if: |",
         `      ${GATED_IF("issue_comment", "comment")}`,
         "    runs-on: ubuntu-latest",
-        "  run:",
-        "    needs: mode",
-        `    if: ${secondIf}`,
-        "    runs-on: ubuntu-latest",
+        ...secondJob,
         "",
       ].join("\n");
+    const second = (...lines: string[]) => ["  second:", "    needs: read", ...lines, "    runs-on: ubuntu-latest"];
 
     // Act & Assert
-    expect(ungatedJobs(yaml("needs.mode.outputs.mode == 'read'"))).toEqual([]);
-    expect(ungatedJobs(yaml("always() && needs.mode.outputs.mode == 'read'"))).toEqual(["run"]);
-    expect(ungatedJobs(yaml("!cancelled()"))).toEqual(["run"]);
-    expect(ungatedJobs(yaml("github.event_name == 'issue_comment'").replace("    needs: mode\n", ""))).toEqual(["run"]);
+    expect(ungatedJobs(yaml())).toEqual([]);
+    expect(ungatedJobs(yaml(...second()))).toEqual(["second"]);
+    expect(ungatedJobs(yaml(...second("    if: needs.read.result == 'success'")))).toEqual(["second"]);
+    expect(ungatedJobs(yaml(...second("    if: always() && needs.read.result == 'success'")))).toEqual(["second"]);
+    expect(ungatedJobs(yaml(...second("    if: github.event_name == 'issue_comment'")))).toEqual(["second"]);
   });
 });
 
@@ -414,29 +406,45 @@ describe("the vendored contract tools", () => {
 
 describe("claude.yml", () => {
   const claude = workflow("claude.yml");
+  const jobs = jobBlocks(claude);
+  const [job = ""] = jobs.values();
 
-  it("starts every job only for an OWNER, MEMBER or COLLABORATOR, for every event it listens to", () => {
-    // Act
-    const jobs = [...jobBlocks(claude).keys()];
-
+  it("has one job, which starts only for an OWNER, MEMBER or COLLABORATOR, for every event it listens to", () => {
     // Assert
     expect(triggerNames(claude).length).toBeGreaterThan(0);
-    expect(jobs.length).toBeGreaterThan(0);
+    expect([...jobs.keys()]).toHaveLength(1);
     expect(ungatedJobs(claude)).toEqual([]);
     expect(eventsWithoutGate(claude)).toEqual([]);
   });
 
-  it("gives read mode the job's own token, without id-token, and scrubs subprocess environments", () => {
+  it("reads its secret only in the job that holds the gate, never at the workflow level", () => {
     // Arrange
-    const jobs = jobBlocks(claude);
-    const readJob = [...jobs.values()].find((body) => /needs\.mode\.outputs\.mode == 'read'/.test(body)) ?? "";
+    const [workflowLevel = ""] = claude.split("\njobs:\n");
+    const readers = [...jobs].filter(([, body]) => readsSecret(body)).map(([name]) => name);
 
     // Assert
-    expect(readJob).toMatch(/^ {10}github_token: \$\{\{ github\.token \}\}$/m);
-    expect(readJob).not.toMatch(/id-token:/);
-    expect(readJob).toMatch(/^ {6}CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"$/m);
-    expect(readJob).toMatch(/\$\{\{ env\.CLAUDE_READ_ONLY_LOCK \}\}/);
-    expect(readJob).toMatch(/\$\{\{ env\.CLAUDE_GIT_LOCK \}\}/);
+    expect(readsSecret(workflowLevel)).toBe(false);
+    expect(readers.length).toBeGreaterThan(0);
+    expect(readers.filter((name) => ungatedJobs(claude).includes(name))).toEqual([]);
+  });
+
+  it("holds no token that can push: no id-token permission and no `@claude edit` mode", () => {
+    // Assert
+    expect(claude).not.toMatch(/id-token/);
+    expect(claude).not.toMatch(/@claude\s+edit/i);
+  });
+
+  it("runs the action on the job's own token and scrubs subprocess environments", () => {
+    // Arrange
+    const actionSteps = job.match(/^ +uses: anthropics\/claude-code-action@/gm) ?? [];
+    const ownTokens = job.match(/^ {10}github_token: \$\{\{ github\.token \}\}$/gm) ?? [];
+
+    // Assert
+    expect(actionSteps.length).toBeGreaterThan(0);
+    expect(ownTokens).toHaveLength(actionSteps.length);
+    expect(job).toMatch(/^ {6}CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"$/m);
+    expect(job).toMatch(/\$\{\{ env\.CLAUDE_READ_ONLY_LOCK \}\}/);
+    expect(job).toMatch(/\$\{\{ env\.CLAUDE_GIT_LOCK \}\}/);
   });
 
   it("keeps Claude out of .git/ and away from the git forms that read or write other files", () => {
@@ -451,7 +459,7 @@ describe("claude.yml", () => {
   // on a fork's pull request a maintainer asks with a top-level comment (docs/cicd-and-branch-protection.md).
   it("skips a review or a review comment on a fork's pull request", () => {
     // Arrange
-    const gate = jobIf(jobBlocks(claude).get("mode") ?? "") ?? "";
+    const gate = jobIf(job) ?? "";
 
     // Act
     const reviewDisjuncts = splitTop(unwrap(gate), "||").filter((d) => /github\.event_name == 'pull_request_review(?:_comment)?'/.test(d));

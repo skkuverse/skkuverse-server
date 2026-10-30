@@ -6,8 +6,10 @@
  *     `<owner>/<repo>[/<path>]@<40 hex>` followed by `# v<version>`, so a tag
  *     moved upstream cannot change what runs, and a reader still sees which
  *     release it is;
- *   - `.github/dependabot.yml` updates the `github-actions` ecosystem only,
- *     monthly, as one grouped pull request into `dev`.
+ *   - `.github/dependabot.yml` updates the `github-actions` pins monthly, as one
+ *     grouped pull request into `dev`, and takes npm security updates only,
+ *     which GitHub opens against `main` (docs/cicd-and-branch-protection.md,
+ *     "Dependabot security updates").
  *
  * Patterns rather than a YAML parser: the repo avoids the dependency.
  */
@@ -68,17 +70,29 @@ describe(".github/workflows", () => {
 });
 
 describe(".github/dependabot.yml", () => {
-  it("updates the github-actions pins only, monthly, in one grouped pull request into dev", () => {
-    // Arrange
-    const config = fs.readFileSync(path.join(root, ".github/dependabot.yml"), "utf8");
+  /** Each `- package-ecosystem:` entry of `updates`, in file order, with its comment lines dropped. */
+  function ecosystemBlocks(): Array<[string, string]> {
+    const config = fs.readFileSync(path.join(root, ".github/dependabot.yml"), "utf8").replace(/^\s*#.*\n/gm, "");
+    return config
+      .split(/^(?=\s*- package-ecosystem: )/m)
+      .slice(1)
+      .map((block) => [/^\s*- package-ecosystem: (\S+)$/m.exec(block)?.[1] ?? "", block]);
+  }
 
+  it("takes github-actions version updates monthly into dev and npm security updates only, with no target branch", () => {
     // Act
-    const ecosystems = [...config.matchAll(/^\s*- package-ecosystem: (\S+)$/gm)].map((m) => m[1]);
+    const blocks = ecosystemBlocks();
+    const [actions, npm] = blocks.map(([, block]) => block);
 
     // Assert
-    expect(ecosystems).toEqual(["github-actions"]);
-    expect(config).toMatch(/^ {4}schedule:\n {6}interval: monthly$/m);
-    expect(config).toMatch(/^ {4}target-branch: dev$/m);
-    expect(config).toMatch(/^ {4}groups:\n {6}github-actions:\n {8}patterns:\n {10}- "\*"$/m);
+    expect(blocks.map(([ecosystem]) => ecosystem)).toEqual(["github-actions", "npm"]);
+    expect(actions).toMatch(/^ {4}schedule:\n {6}interval: monthly$/m);
+    expect(actions).toMatch(/^ {4}target-branch: dev$/m);
+    expect(actions).toMatch(/^ {4}groups:\n {6}github-actions:\n {8}patterns:\n {10}- "\*"$/m);
+    expect(npm).toMatch(/^ {4}directory: \/$/m);
+    expect(npm).toMatch(/^ {4}open-pull-requests-limit: 0$/m);
+    expect(npm).toMatch(/^ {4}groups:\n {6}nestjs:\n {8}applies-to: security-updates\n {8}patterns:\n {10}- "@nestjs\/\*"$/m);
+    expect(npm).not.toMatch(/target-branch/);
+    expect(blocks.filter(([, block]) => /target-branch/.test(block)).map(([ecosystem]) => ecosystem)).toEqual(["github-actions"]);
   });
 });
