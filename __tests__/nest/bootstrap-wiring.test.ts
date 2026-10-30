@@ -1,34 +1,22 @@
 /**
- * Pins the main.ts production bootstrap wiring that a review found broken and
- * untested:
+ * Pins the production bootstrap wiring, through the pipeline itself (bootstrapHttpApp, via buildTestApp):
  *
- *  1. NestFactory.create on a PRE-BUILT ExpressAdapter MUST pass
- *     { bodyParser: false }. Otherwise app.init() runs
- *     registerParserMiddleware → ExpressAdapter.isMiddlewareApplied, which
- *     reads the `app.router` getter that express@4.22 removed and now THROWS
- *     ('app.router' is deprecated!), crashing the boot. Every spec previously
- *     used build-bus-app.ts (which DOES pass bodyParser:false), so the prod
- *     path was never exercised. This test boots BOTH ways to lock the fix in.
+ *  1. LangMiddleware runs app-wide as raw Express middleware, ahead of every module's own middleware. Those answer
+ *     early (auth, rate limit) and read the response timer it starts, so req.lang and Vary must land on a module
+ *     middleware that answers before the handler, as they land on a handler.
  *
- *  2. LangMiddleware must run app-wide. Nest's consumer.forRoutes("*") does
- *     NOT fire against a pre-built ExpressAdapter (verified: zero invocations).
- *     main.ts therefore mounts it as raw express middleware before
- *     NestFactory.create — this test asserts req.lang / Vary actually land.
+ *  2. express.json is the only body parser ({ bodyParser: false } keeps Nest's own off), so a form body reaches no
+ *     handler parsed. It decodes gzip, deflate, br and zstd, and a malformed or oversized compressed body is a 4xx
+ *     that leaves the process serving.
  *
- * The regression pins boot their own copy of the pipeline, because they vary
- * exactly what it fixes (bodyParser, the raw LangMiddleware). The CORS policy
- * runs through the production pipeline itself (bootstrapHttpApp, via
- * buildTestApp). Both use a minimal one-controller module (no DB / external
- * APIs), so they cover the wiring without the full AppModule's env + Mongo
- * requirements.
+ * Each case boots a minimal module (no DB / external APIs), so it covers the wiring without the full AppModule's
+ * env + Mongo requirements.
  */
-import { Controller, Get, Module, Post, Req } from "@nestjs/common";
-import { ExpressAdapter } from "@nestjs/platform-express";
+import { Controller, Get, Injectable, Module, Post, Req, type MiddlewareConsumer, type NestMiddleware, type NestModule } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { Test } from "@nestjs/testing";
-import express from "express";
+import type express from "express";
+import { brotliCompressSync, gzipSync, zstdCompressSync } from "node:zlib";
 import request from "supertest";
-import { LangMiddleware } from "../../src/http/lang.middleware";
 import { CORS_METHODS } from "../../src/http/cors.config";
 import config from "../../src/infra/config";
 import logger from "../../src/infra/logger";
@@ -49,71 +37,50 @@ class PingController {
 @Module({ controllers: [PingController] })
 class MiniModule {}
 
-function buildLikeMainTs(opts: {
-  bodyParser?: false;
-  mountLang: boolean;
-}): Promise<NestExpressApplication> {
-  return (async () => {
-    const expressInstance = express();
-    expressInstance.set("trust proxy", 1);
-    expressInstance.use(express.json({ limit: "100kb" }));
-    if (opts.mountLang) {
-      const lang = new LangMiddleware();
-      expressInstance.use((req, res, next) =>
-        lang.use(req as never, res as never, next),
-      );
-    }
-    const moduleRef = await Test.createTestingModule({
-      imports: [MiniModule],
-    }).compile();
-    const app = moduleRef.createNestApplication<NestExpressApplication>(
-      new ExpressAdapter(expressInstance),
-      opts.bodyParser === false ? { bodyParser: false } : {},
-    );
-    await app.listen(0, "127.0.0.1");
-    return app;
-  })();
+/** A module middleware that answers before the handler, as the auth and rate-limit middleware do. */
+@Injectable()
+class EarlyAnswerMiddleware implements NestMiddleware {
+  use(req: express.Request, res: express.Response): void {
+    res.json({ lang: (req as { lang?: unknown }).lang });
+  }
 }
 
-describe("main.ts bootstrap wiring (regression pins)", () => {
-  it("boots with { bodyParser: false } on a pre-built ExpressAdapter (express 4.22)", async () => {
-    const app = await buildLikeMainTs({ bodyParser: false, mountLang: true });
-    const res = await request(app.getHttpServer()).get("/ping");
-    expect(res.status).toBe(200);
+@Module({ controllers: [PingController] })
+class EarlyAnswerModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(EarlyAnswerMiddleware).forRoutes("ping");
+  }
+}
+
+describe("bootstrapHttpApp pipeline with a module middleware that answers early", () => {
+  let app: NestExpressApplication;
+
+  beforeAll(async () => {
+    app = await buildTestApp({ imports: [EarlyAnswerModule] });
+  });
+
+  afterAll(async () => {
     await app.close();
   });
 
-  it("WITHOUT bodyParser:false the prebuilt adapter crashes on app.router (proves the fix is load-bearing)", async () => {
-    await expect(
-      buildLikeMainTs({ mountLang: true }),
-    ).rejects.toThrow(/app\.router/);
-  });
-
-  it("raw-mounted LangMiddleware fires app-wide: req.lang set + Vary header", async () => {
-    const app = await buildLikeMainTs({ bodyParser: false, mountLang: true });
+  it("runs the lang middleware before a module's own middleware that answers early: req.lang and Vary", async () => {
+    // Act
     const res = await request(app.getHttpServer())
       .get("/ping")
       .set("Accept-Language", "en-US,en;q=0.9");
+
+    // Assert
     expect(res.status).toBe(200);
-    expect(res.body.lang).toBe("en");
-    expect(res.headers["vary"]).toBe("Accept-Language");
-    await app.close();
+    expect(res.body).toEqual({ lang: "en" });
+    expect(res.headers["vary"]).toMatch(/\bAccept-Language\b/);
   });
 
   it("defaults req.lang to ko when no Accept-Language header is sent", async () => {
-    const app = await buildLikeMainTs({ bodyParser: false, mountLang: true });
+    // Act
     const res = await request(app.getHttpServer()).get("/ping");
-    expect(res.body.lang).toBe("ko");
-    await app.close();
-  });
 
-  it("Nest forRoutes('*') does NOT fire on a pre-built adapter (documents why main.ts mounts lang raw)", async () => {
-    // If lang is NOT mounted raw, req.lang is undefined — confirming the
-    // forRoutes('*') path AppModule used to rely on would leave it unset.
-    const app = await buildLikeMainTs({ bodyParser: false, mountLang: false });
-    const res = await request(app.getHttpServer()).get("/ping");
-    expect(res.body.lang).toBeUndefined();
-    await app.close();
+    // Assert
+    expect(res.body).toEqual({ lang: "ko" });
   });
 });
 
@@ -312,9 +279,8 @@ describe("CORS policy when ORIGIN_TRUST throws", () => {
 });
 
 /**
- * Every step bootstrapHttpApp mounts, through the pipeline itself (PR 218 F1): the regression
- * pins above boot their own copy, and the response diff after a deploy compares bodies only, so
- * a deleted helmet, logging, body-limit, trust-proxy or no-store line would otherwise ship green.
+ * Every step bootstrapHttpApp mounts (PR 218 F1): the response diff after a deploy compares bodies
+ * only, so a deleted helmet, logging, body-limit, trust-proxy or no-store line would otherwise ship green.
  */
 @Controller("pipeline")
 class PipelineController {
@@ -337,14 +303,13 @@ type StackLayer = { name: string };
 
 /** The names of the Express middleware layers, in mount order. */
 function layerNames(app: NestExpressApplication): string[] {
-  const instance = app.getHttpAdapter().getInstance() as { _router: { stack: StackLayer[] } };
-  return instance._router.stack.map((layer) => layer.name);
+  const instance = app.getHttpAdapter().getInstance() as { router: { stack: StackLayer[] } };
+  return instance.router.stack.map((layer) => layer.name);
 }
 
-/** The first `count` layers after Express's own: the ones bootstrapHttpApp mounts before Nest adds its own. */
+/** The first `count` layers: the ones bootstrapHttpApp mounts before Nest adds its own. Express 5 adds none ahead of them. */
 function pipelineLayers(app: NestExpressApplication, count: number): string[] {
-  const names = layerNames(app);
-  return names.slice(names.indexOf("expressInit") + 1).slice(0, count);
+  return layerNames(app).slice(0, count);
 }
 
 describe("bootstrapHttpApp pipeline", () => {
@@ -456,6 +421,64 @@ describe("bootstrapHttpApp pipeline", () => {
     expect(charset.body).toEqual({ error: { code: "HTTP_ERROR", message: 'unsupported charset "LATIN1"' } });
     expect(malformed.status).toBe(400);
     expect(malformed.body.error.code).toBe("HTTP_ERROR");
+  });
+
+  function postCompressed(encoding: string, bytes: Buffer): request.Test {
+    // WHY: supertest would serialize a Buffer as JSON; the bytes go out as they are.
+    return request(app.getHttpServer())
+      .post("/pipeline")
+      .set({ "Content-Type": "application/json", "Content-Encoding": encoding })
+      .serialize((sent: string | Buffer) => sent as unknown as string)
+      .send(bytes);
+  }
+
+  // EVIDENCE: body-parser 2.3.0 leaves the decoder piped with no error listener when it refuses the charset, so this
+  // request crashed the process (GHSA-27r3-jxmh-p828, fixed in 2.4.0); express 5.3 accepts body-parser ^2.3.0.
+  it("answers a compressed body with an unknown utf- charset with 415 HTTP_ERROR, and keeps serving", async () => {
+    // Arrange
+    const refused = postCompressed("gzip", Buffer.from("not compressed")).set("Content-Type", "application/json; charset=utf-99");
+
+    // Act
+    const res = await refused;
+    const next = await request(app.getHttpServer()).get("/pipeline");
+
+    // Assert
+    expect(res.status).toBe(415);
+    expect(res.body).toEqual({ error: { code: "HTTP_ERROR", message: 'unsupported charset "UTF-99"' } });
+    expect(next.status).toBe(200);
+  });
+
+  it.each<[string, (bytes: string) => Buffer]>([
+    ["gzip", (bytes) => gzipSync(bytes)],
+    ["br", (bytes) => brotliCompressSync(bytes)],
+    ["zstd", (bytes) => zstdCompressSync(bytes)],
+  ])("parses a %s JSON body, refuses one that inflates past 100 kB with 413 and a malformed one with 400", async (encoding, compress) => {
+    // Arrange
+    const small = JSON.stringify({ a: 1 });
+    const bomb = JSON.stringify({ text: "x".repeat(200_000) });
+
+    // Act
+    const parsed = await postCompressed(encoding, compress(small));
+    const tooLarge = await postCompressed(encoding, compress(bomb));
+    const malformed = await postCompressed(encoding, Buffer.from("not compressed"));
+
+    // Assert
+    expect([parsed.status, parsed.body.data?.bodyLength]).toEqual([201, small.length]);
+    expect([tooLarge.status, tooLarge.body.error?.code]).toEqual([413, "PAYLOAD_TOO_LARGE"]);
+    expect([malformed.status, malformed.body.error?.code]).toEqual([400, "HTTP_ERROR"]);
+  });
+
+  // WHY: express.json is the only body parser; Nest's own, an extended urlencoded one among them, stay off.
+  it("leaves a form body unparsed, so the handler sees no body", async () => {
+    // Act
+    const res = await request(app.getHttpServer())
+      .post("/pipeline")
+      .set("Content-Type", "application/x-www-form-urlencoded")
+      .send("a=1&b[c]=2");
+
+    // Assert
+    expect(res.status).toBe(201);
+    expect(res.body.data.bodyLength).toBe(JSON.stringify(null).length);
   });
 
   it("runs the lang middleware before the handler: meta.lang and Vary", async () => {

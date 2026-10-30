@@ -30,16 +30,16 @@ export async function bootstrapHttpApp(create: CreateApp, rawBodyRoutePaths: rea
   mountRequestLogging(expressInstance);
   expressInstance.use(express.json(jsonBodyOptions(rawBodyRoutePaths)));
 
-  // QUIRK(nestjs): forRoutes("*") never fires against a pre-built ExpressAdapter, so LangMiddleware
-  // is mounted here as raw Express middleware, before any handler.
+  // WHY: a raw mount, not forRoutes("*"), fixes its place ahead of every module's middleware, whose early
+  // answers (auth, rate limit) read the response timer it starts.
   const langMiddleware = new LangMiddleware();
   expressInstance.use((req, res, next) => langMiddleware.use(req as never, res as never, next));
 
   // WHY: with CACHE=off every Cache-Control becomes no-store, so the phone's HTTP cache never answers.
   if (!config.cache.enabled) expressInstance.use(noStoreMiddleware);
 
-  // QUIRK(nestjs): Nest's own body parser reads `app.router`, which express 4.22 made throw, so it is off;
-  // express.json above parses the body instead.
+  // WHY: express.json above is the only body parser; without this option Nest adds its own, an extended
+  // urlencoded one among them, and a form body would reach the handlers parsed.
   const app = await create(new ExpressAdapter(expressInstance), { logger: new PinoNestLogger(), bodyParser: false });
 
   // SEE: docs/decisions/0023-perimeter-ports.md ("D5. CORS before dependency injection")
