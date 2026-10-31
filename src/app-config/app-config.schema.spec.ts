@@ -111,6 +111,10 @@ describe("appPlatformGatesDataset", () => {
     "https://evil.example/apps.apple.com",
     "https://user@apps.apple.com/app/id6446813434",
     "https://apps.apple.com:8443/app/id6446813434",
+    "https://apps.apple.com\\@evil.example/",
+    "https:\\\\apps.apple.com/app/id6446813434",
+    "https://APPS.APPLE.COM/app/id6446813434",
+    "https://apps.apple.com:443/app/id6446813434",
   ])("refuses the iOS updateUrl %j, which is not an App Store address", (updateUrl) => {
     // Arrange
     const raw = withGateField("ios", "updateUrl", updateUrl);
