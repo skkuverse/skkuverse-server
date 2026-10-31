@@ -38,9 +38,9 @@ export const sourceListRequest = z.object({
   q: searchQuery,
 });
 
-// WHY: no type check before the split: a repeated `sourceIds` answers 500, as the route tests pin; a 400 is its own change.
+// WHY: a repeated `sourceIds` (an array) reads as none, a 400, as on GET /notices/overview; the ids are comma-joined.
 export const multiListRequest = z.object({
-  sourceIds: z.unknown().optional().transform((raw) => toSourceIds((raw || "") as string, isKnownSourceId)),
+  sourceIds: z.unknown().optional().transform((raw) => toSourceIds(typeof raw === "string" ? raw : "", isKnownSourceId)),
   limit,
   type,
   cursor,
