@@ -99,7 +99,7 @@ describe("api replica topology", () => {
     ["the poller", serviceBlocks(verify).get("poller")],
   ])("local verify renames every database required-env.ts lists to its _dev name in %s", (_label, env) => {
     // Act
-    const missing = dbNameVariables.filter((key) => !new RegExp(`- ${key}=\\w+_dev\\n`).test(env ?? ""));
+    const missing = dbNameVariables.filter((key) => !new RegExp(`^ *- ${key}=\\w+_dev$`, "m").test(env ?? ""));
 
     // Assert
     expect(dbNameVariables).toContain("MONGO_DB_NAME_BUS_CAMPUS");
