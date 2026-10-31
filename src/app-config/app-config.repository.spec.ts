@@ -105,6 +105,7 @@ describe("AppConfigRepository.findPlatformGates", () => {
     "https://evil.example/apps.apple.com",
     "https://user@apps.apple.com/app/id1",
     "https://apps.apple.com:8443/app/id1",
+    "https://apps.apple.com\\@evil.example/",
     "http://apps.apple.com/app/id1",
     "",
     null,

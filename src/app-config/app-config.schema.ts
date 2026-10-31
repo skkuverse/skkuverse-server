@@ -3,13 +3,13 @@ import { ANDROID_API_LEVEL_PATTERN, APP_VERSION_PATTERN, IOS_VERSION_PATTERN, ST
 import type { AppPlatformGates, StoredAppPlatformGates } from "./app-config.document";
 import { appClientConfig } from "./app-config.wire";
 
-// WHY: `URL.host` is the hostname plus any port, without the userinfo, so an exact match refuses a port or a
-// look-alike suffix, and the userinfo is checked apart.
+// WHY: only the canonical form passes, because the app's URL conversion differs from WHATWG: iOS percent-encodes a
+// backslash, so `https://apps.apple.com\@evil.example/` would open evil.example.
 const storeUpdateUrl = z
   .url({ protocol: /^https$/, abort: true })
   .refine((value) => {
-    const { host, username, password } = new URL(value);
-    return STORE_UPDATE_URL_HOSTS.has(host) && username === "" && password === "";
+    const { href, host, username, password } = new URL(value);
+    return href === value && STORE_UPDATE_URL_HOSTS.has(host) && username === "" && password === "";
   });
 
 // WHY: stricter than the wire, which a reader parses leniently: the stored gate must be one the app can compare.
