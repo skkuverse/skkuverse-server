@@ -75,6 +75,24 @@ describe("AppConfigService.getConfig", () => {
     expect(loggedEvents("error")).toEqual([]);
   });
 
+  it("serves updateUrl null for a platform whose stored updateUrl is not a store address, keeping every other field", async () => {
+    // Arrange
+    const { repository, appConfig } = setup();
+    const gates = appPlatformGatesFixture();
+    gates.ios.updateUrl = "https://evil.example/app/id6446813434";
+    gates.android.minVersion = "3.6.2";
+    repository.storePlatformGates(gates);
+
+    // Act
+    const body = await appConfig.getConfig();
+
+    // Assert
+    expect(body.ios).toEqual({ ...appPlatformGatesFixture().ios, updateUrl: null });
+    expect(body.android).toEqual({ ...appPlatformGatesFixture().android, minVersion: "3.6.2" });
+    expect(body.webview.bridgeOrigins).toEqual([...BRIDGE_ORIGINS]);
+    expect(body.games?.origins).toEqual({ ...GAME_ID_BY_FIRST_PARTY_ORIGIN });
+  });
+
   it("Floor raised: serves the push once the TTL has passed, and not before", async () => {
     // Arrange
     const { repository, appConfig, advanceTo } = setup();

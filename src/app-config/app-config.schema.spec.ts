@@ -105,6 +105,36 @@ describe("appPlatformGatesDataset", () => {
     expect(pathsOf(withGateField("android", "minOsVersion", minOsVersion))).toEqual(["android.minOsVersion"]);
   });
 
+  it.each([
+    "https://evil.example/app/id6446813434",
+    "https://apps.apple.com.evil.example/app/id6446813434",
+    "https://evil.example/apps.apple.com",
+    "https://user@apps.apple.com/app/id6446813434",
+    "https://apps.apple.com:8443/app/id6446813434",
+  ])("refuses the iOS updateUrl %j, which is not an App Store address", (updateUrl) => {
+    // Arrange
+    const raw = withGateField("ios", "updateUrl", updateUrl);
+
+    // Act
+    const paths = pathsOf(raw);
+
+    // Assert
+    expect(paths).toEqual(["ios.updateUrl"]);
+  });
+
+  it("refuses a foreign Android updateUrl, and takes the Play Store one", () => {
+    // Arrange
+    const foreign = withGateField("android", "updateUrl", "https://evil.example/store/apps/details?id=com.zoyoong.skkubus");
+    const playStore = withGateField("android", "updateUrl", "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus");
+
+    // Act
+    const [foreignPaths, playStorePaths] = [pathsOf(foreign), pathsOf(playStore)];
+
+    // Assert
+    expect(foreignPaths).toEqual(["android.updateUrl"]);
+    expect(playStorePaths).toEqual([]);
+  });
+
   it.each(["http://apps.apple.com/app/id6446813434", "apps.apple.com/app/id6446813434", "", null])("fails the updateUrl %j", (updateUrl) => {
     // Act & Assert
     expect(pathsOf(withGateField("ios", "updateUrl", updateUrl))).toEqual(["ios.updateUrl"]);

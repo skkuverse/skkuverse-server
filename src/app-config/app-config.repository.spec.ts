@@ -99,6 +99,42 @@ describe("AppConfigRepository.findPlatformGates", () => {
     expect(logText(mockLogger.error.mock.calls[0])).toMatch(/data\.ios\.minVersion: /);
   });
 
+  it.each([
+    "https://evil.example/app/id1",
+    "https://apps.apple.com.evil.example/app/id1",
+    "https://evil.example/apps.apple.com",
+    "https://user@apps.apple.com/app/id1",
+    "https://apps.apple.com:8443/app/id1",
+    "http://apps.apple.com/app/id1",
+    "",
+    null,
+    42,
+  ])("serves updateUrl null for the stored iOS updateUrl %j, logged at error as app_config.platform_gates.update_url_refused", async (updateUrl) => {
+    // Arrange
+    const gates = appPlatformGatesFixture();
+    findOne.mockResolvedValue({ _id: "app-platform-gates", revision: 9, data: { ...gates, ios: { ...gates.ios, updateUrl } } });
+
+    // Act
+    const stored = await new AppConfigRepository().findPlatformGates();
+
+    // Assert
+    expect(stored).toEqual({ revision: 9, data: { ios: { ...gates.ios, updateUrl: null }, android: gates.android } });
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockLogger.error.mock.calls[0][0]).toMatchObject({ event: "app_config.platform_gates.update_url_refused", platform: "ios", revision: 9 });
+  });
+
+  it("serves both store addresses as stored, without a log", async () => {
+    // Arrange
+    findOne.mockResolvedValue({ _id: "app-platform-gates", revision: 9, data: appPlatformGatesFixture() });
+
+    // Act
+    const stored = await new AppConfigRepository().findPlatformGates();
+
+    // Assert
+    expect(stored?.data).toEqual(appPlatformGatesFixture());
+    expect(mockLogger.error).not.toHaveBeenCalled();
+  });
+
   it("rejects a failing read as AppConfigPlatformGatesReadError, carrying the driver's error as its cause", async () => {
     // Arrange
     const failure = new Error("server selection timed out");
