@@ -8,3 +8,6 @@ export const APP_PLATFORM_GATES_LOG_INTERVAL_MS = 60_000;
 export const APP_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 export const IOS_VERSION_PATTERN = /^\d+(\.\d+){0,2}$/;
 export const ANDROID_API_LEVEL_PATTERN = /^\d+$/;
+
+// WHY: the app opens this URL from its blocking force-update screen, so only an app store's host is served.
+export const STORE_UPDATE_URL_HOSTS: ReadonlySet<string> = new Set(["apps.apple.com", "play.google.com"]);
