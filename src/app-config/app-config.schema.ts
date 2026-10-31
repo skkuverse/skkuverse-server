@@ -3,7 +3,8 @@ import { ANDROID_API_LEVEL_PATTERN, APP_VERSION_PATTERN, IOS_VERSION_PATTERN, ST
 import type { AppPlatformGates, StoredAppPlatformGates } from "./app-config.document";
 import { appClientConfig } from "./app-config.wire";
 
-// WHY: `new URL` host is the registrable part only: userinfo, a port or a look-alike suffix never equal a store host.
+// WHY: `URL.host` is the hostname plus any port, without the userinfo, so an exact match refuses a port or a
+// look-alike suffix, and the userinfo is checked apart.
 const storeUpdateUrl = z
   .url({ protocol: /^https$/, abort: true })
   .refine((value) => {
