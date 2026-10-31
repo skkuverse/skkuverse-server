@@ -23,7 +23,20 @@ export class AppConfigRepository {
       });
     if (doc === null) return this.reportMissing();
     const parsed = storedAppPlatformGates.safeParse(doc);
-    return parsed.success ? parsed.data : this.reportInvalid(doc.revision, parsed.error);
+    if (!parsed.success) return this.reportInvalid(doc.revision, parsed.error);
+    for (const platform of ["ios", "android"] as const) {
+      if (parsed.data.data[platform].updateUrl === null) this.reportUpdateUrlRefused(parsed.data.revision, platform);
+    }
+    return parsed.data;
+  }
+
+  private reportUpdateUrlRefused(revision: number, platform: "ios" | "android"): void {
+    const taken = this.logThrottle.take(`update_url_refused:${revision}:${platform}`);
+    if (!taken) return;
+    logger.error(
+      { event: "app_config.platform_gates.update_url_refused", dataset: APP_PLATFORM_GATES_DATASET, revision, platform, ...taken },
+      "App platform gate updateUrl is not an app store address, served as null",
+    );
   }
 
   private reportMissing(): null {
