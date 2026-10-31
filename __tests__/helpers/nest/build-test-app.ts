@@ -19,6 +19,12 @@ import { toTestStub } from "../../../src/perimeter/perimeter-registry.rules";
 import { OriginTrust, RateLimitPolicy } from "../../../src/perimeter/perimeter.ports";
 import { FakeRateLimitPolicy } from "../fakes/perimeter/rate-limit-policy.fake";
 
+/**
+ * For a test that boots its app inside `it` and makes its first, cold request there: the journey route tests take
+ * 0.3–0.9 s alone, 2.0–2.5 s under 16 CPU burners in band, and reached 5.08 s in a full run at load 103 (2026-10-31).
+ */
+export const COLD_APP_TEST_TIMEOUT_MS = 15_000;
+
 export interface OverrideSpec {
   provide: unknown;
   useValue: unknown;
