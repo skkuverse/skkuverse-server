@@ -137,7 +137,7 @@ The controllers are the source of truth for the routes: one per flow under `src/
 
 ## GET /notices (several sources)
 
-`?sourceIds=a,b,c` with the same `limit`, `type`, `cursor` and `q` as above. The named sources are merged into one list, newest first. `src/notices/list/notices-list.schema.ts` and `src/notices/list/notices-list.wire.ts` are the source of truth for the parameters and the response shape.
+`?sourceIds=a,b,c` with the same `limit`, `type`, `cursor` and `q` as above. The ids go in one `sourceIds`, comma-separated; a repeated `sourceIds` key is `400 INVALID_PARAMS`, as on `GET /notices/overview`. The named sources are merged into one list, newest first. `src/notices/list/notices-list.schema.ts` and `src/notices/list/notices-list.wire.ts` are the source of truth for the parameters and the response shape.
 
 - **Each article once.** When `sourceIds` names two or more distinct sources, an article posted on several of them is one row (umbrella ADR 0009 D8). Copies are the notices with the same `dupOf`, which the crawler writes; a notice without `dupOf` is an article of its own. Copies on one source collapse too.
 - **The copy served.** The row is the first copy in list order: the latest `date`, then the highest `id`. It keeps its own `id`, `sourceId`, `articleNo` and `row.board`, and sits at that copy's place in the list. A copy is hidden only when another copy in the read sorts before it, and the crawler never moves either key, so a refresh of `crawledAt` or `views` between two page reads changes no row.
