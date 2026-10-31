@@ -74,8 +74,10 @@ describe("multiListRequest", () => {
     );
   });
 
-  it("lets a repeated sourceIds fail as a TypeError, the route's 500", () => {
+  it("refuses a repeated sourceIds as missing ids, the route's 400", () => {
     // Act & Assert
-    expect(() => multiListRequest.parse({ sourceIds: ["a", "b"] })).toThrow(TypeError);
+    expect(() => multiListRequest.parse({ sourceIds: ["skku-notice02", "skku-notice06"] })).toThrow(
+      new AppError("INVALID_PARAMS", "sourceIds: 1-20 comma-separated source IDs required", 400),
+    );
   });
 });

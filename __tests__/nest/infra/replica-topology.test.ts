@@ -17,7 +17,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { ROLES } from "../../../src/infra/required-env";
+import { ROLES, requiredValues } from "../../../src/infra/required-env";
 
 const root = path.join(__dirname, "../../..");
 const read = (rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
@@ -46,6 +46,18 @@ const replicaMappings = new Map(
     .map(([name, block]) => [name, block.split("\n").filter((line) => !/^\s*#/.test(line) && MAPPING.test(line))] as const),
 );
 const portOf = (line: string) => Number(MAPPING.exec(line)![1]);
+
+/**
+ * Every database name the server reads, as required-env.ts lists them: the values whose name gains `_dev` in development.
+ * A database added there is required here too, so local verify cannot boot against its production name.
+ */
+const DB_NAME_PROBE = "probe";
+const probeEnv = new Proxy({} as NodeJS.ProcessEnv, {
+  get: (_env, key) => (key === "NODE_ENV" ? "development" : typeof key === "string" ? DB_NAME_PROBE : undefined),
+});
+const dbNameVariables = requiredValues(probeEnv)
+  .filter(({ value }) => value === `${DB_NAME_PROBE}_dev`)
+  .map(({ env }) => env);
 
 describe("api replica topology", () => {
   // WHY: the deploy rolls each `api-N` under `services:` on the port of its one
@@ -80,18 +92,18 @@ describe("api replica topology", () => {
       expect(blocks.has(name)).toBe(true);
       expect(blocks.get(name)).toMatch(/environment: \*api-dev-env/);
     }
-    // The shared list itself must rename every database the api writes.
-    const env = verify.match(/x-api-dev-env: &api-dev-env\n((?: {2}- .*\n)+)/);
-    expect(env).not.toBeNull();
-    for (const key of [
-      "MONGO_DB_NAME_BUS_CAMPUS",
-      "MONGO_BUILDING_DB_NAME",
-      "MONGO_NOTICES_DB_NAME",
-      "MONGO_EVENTMAP_DB_NAME",
-      "MONGO_MINIAPPS_DB_NAME",
-    ]) {
-      expect(env![1]).toMatch(new RegExp(`- ${key}=\\w+_dev\\n`));
-    }
+  });
+
+  it.each([
+    ["the api replicas' shared list", verify.match(/x-api-dev-env: &api-dev-env\n((?: {2}- .*\n)+)/)?.[1]],
+    ["the poller", serviceBlocks(verify).get("poller")],
+  ])("local verify renames every database required-env.ts lists to its _dev name in %s", (_label, env) => {
+    // Act
+    const missing = dbNameVariables.filter((key) => !new RegExp(`^ *- ${key}=\\w+_dev$`, "m").test(env ?? ""));
+
+    // Assert
+    expect(dbNameVariables).toContain("MONGO_DB_NAME_BUS_CAMPUS");
+    expect(missing).toEqual([]);
   });
 
   // The api reads the datasets; a later stage may write them from the poller.

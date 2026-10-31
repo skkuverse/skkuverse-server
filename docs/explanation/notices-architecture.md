@@ -124,7 +124,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/notices/parser.ts` a
 
 - Notice reads are typed, not parsed per read ([ADR 0010](../decisions/0010-server-architecture.md), data access): `NoticeDoc` carries the crawler's `CONTRACT` tag, and the list, detail and overview reads are reasoned entries in `__tests__/architecture/exemptions/repository-reads.json`. The crawler's exported document type replaces the hand-written one.
 - `notices.topics.ts` has no role suffix because it reads the loaded categories itself; it joins a `.rules` file once it takes them as an argument.
-- The list answers a repeated `sourceIds` with a server error, and so does a list read whose hinted index is missing.
+- A list read whose hinted index is missing answers a server error.
 
 ## Related
 

@@ -992,6 +992,16 @@ describe("GET /notices — multi-source search query", () => {
     expect(res.body.error).toEqual({ code: "INVALID_PARAMS", message: "sourceIds: 1-20 comma-separated source IDs required" });
   });
 
+  // WHY: the simple query parser reads a repeated key as an array; the contract joins the ids with commas.
+  it("returns 400 INVALID_PARAMS for a repeated sourceIds key", async () => {
+    // Act
+    const res = await request(httpServer).get("/notices?sourceIds=skku-main&sourceIds=cse-undergrad");
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual({ code: "INVALID_PARAMS", message: "sourceIds: 1-20 comma-separated source IDs required" });
+  });
+
   it("returns 400 INVALID_PARAMS when more than 20 sourceIds", async () => {
     // Arrange
     // 21 ids. The count guard runs before the unknown-sourceId guard, so
