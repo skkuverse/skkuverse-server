@@ -3,19 +3,27 @@ import fs from "fs";
 import path from "path";
 import { ROOT } from "./ratchet";
 
+// WHY: rules call this once per file (1252 times in role-contents), one git spawn each: 540 s of a 590 s run (2026-10-31). Jest gives each suite its own module registry, so a suite sees one snapshot.
+const listed = new Map<string, readonly string[]>();
+
 /**
  * Repo-relative, `/`-separated paths of the files under `dir`, sorted: what git
  * tracks or would track (untracked but not ignored), and still on disk. A
  * local stray (`.DS_Store`, a build artifact) never fails a rule that CI passes.
  */
 export function filesUnder(dir: string): string[] {
-  const out = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", dir], {
-    cwd: ROOT,
-    encoding: "utf8",
-  });
-  return [...new Set(out.split("\0").filter(Boolean))]
-    .filter((rel) => fs.existsSync(path.join(ROOT, rel)))
-    .sort();
+  let cached = listed.get(dir);
+  if (cached === undefined) {
+    const out = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", dir], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    cached = [...new Set(out.split("\0").filter(Boolean))]
+      .filter((rel) => fs.existsSync(path.join(ROOT, rel)))
+      .sort();
+    listed.set(dir, cached);
+  }
+  return [...cached];
 }
 
 /** The directories under `dir` that hold at least one of those files, sorted. */

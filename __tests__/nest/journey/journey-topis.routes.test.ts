@@ -115,7 +115,7 @@ import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.c
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeJourneyRepository } from "../../helpers/fakes/journey/journey.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
-import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { COLD_APP_TEST_TIMEOUT_MS, buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
@@ -237,7 +237,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
     expect(jongro).toMatchObject({ mode: "bus", line: { id: "jongro08", name: "종로 08" }, basis: "estimate" });
     expect(jongro!.board).toMatchObject({ vehicleId: "100000074", expectedArrivalAt: "2026-10-20T19:09:09+09:00", basis: "provider" });
     expect(await liveCall(server, "jongro08", "100900046", "100000074")).toEqual(jongro!.board);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("The 사당 boarding call equals /bus/live/gyeonggi7800's at sadang-exit9 for the same vehicle", async () => {
     // Arrange
@@ -258,7 +258,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
       { id: "200010898", occupancy: null, seatsLeft: null, isLowFloor: false },
       { id: "200011607", occupancy: null, seatsLeft: null, isLowFloor: false },
     ]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Full bus: skips the vehicle GBIS reports with no seat left and boards half a headway after the rider is ready", async () => {
     // Arrange
@@ -273,7 +273,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
     expect(bus7800!.board).toMatchObject({ vehicleId: null, status: "unknown", basis: "estimate" });
     expect((Date.parse(bus7800!.board.expectedArrivalAt) - Date.parse(walk.endAt)) / 1000).toBe(60 + 300);
     expect(await liveCall(server, "gyeonggi7800", "sadang-exit9", "200010898")).toMatchObject({ vehicleId: "200010898" });
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Past both predicted vehicles: names no vehicle and boards half the stored headway after the rider is ready, as an estimate", async () => {
     // Arrange
@@ -289,7 +289,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
     expect(jongro!.board).toMatchObject({ status: "unknown", vehicleId: null, runId: null, basis: "estimate", expectedArrivalAt: "2026-10-20T19:19:25+09:00" });
     // WHY: the board names no vehicle; the one listed is the bus `upcoming` names, which the rider cannot reach (2026-10-26 upcoming calls).
     expect([jongro!.basis, jongro!.vehicles.map((vehicle: { id: string }) => vehicle.id)]).toEqual(["estimate", ["100000074"]]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Connection at risk: a 1호선 board within the 종로 08 headway's uncertainty warns, naming 종로5가", async () => {
     // Arrange
@@ -303,7 +303,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
     // WHY: 335 s at the platform is under the 종로 08 arrival's uncertainty, 150 s plus half its 9-minute headway (420 s).
     expect([jongro!.board.basis, jongro!.board.vehicleId, line1!.waitSec]).toEqual(["estimate", null, 335]);
     expect(option.warnings).toEqual([{ code: "connectionAtRisk", message: "종로5가역에서 갈아탈 차를 놓칠 수 있어요" }]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("No term: rows a poller older than the stored headway wrote serve with no extrapolation", async () => {
     // Arrange
@@ -314,7 +314,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
     // Assert
     expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: null, legs: [] });
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Ended: past the pole's last run, names the next day's first run from the stored firstTm", async () => {
     // Arrange
@@ -325,7 +325,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
     // Assert
     expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-21T06:00:00+09:00", leaveAt: null, arriveAt: null });
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Ended: TOPIS's 운행종료 at the pole ends the day before its last run", async () => {
     // Arrange
@@ -339,7 +339,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
     // Assert
     expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-21T06:00:00+09:00" });
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   describe("Overnight: TOPIS answers no rows, so bus_cache holds none for 종로 08", () => {
     // WHY: the hours the poller kept on the route from the previous service day's rows, dated as TOPIS dated them.
@@ -355,7 +355,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
       // Assert
       expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
-    });
+    }, COLD_APP_TEST_TIMEOUT_MS);
 
     it("names no next service with no hours kept on the route", async () => {
       // Arrange
@@ -366,7 +366,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
       // Assert
       expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: null });
-    });
+    }, COLD_APP_TEST_TIMEOUT_MS);
   });
 
   describe("before the first run, every slot waiting to depart with no bus", () => {
@@ -381,7 +381,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
       // Assert
       expect(option).toMatchObject({ status: "notRunning", reason: "ended", nextServiceAt: "2026-10-20T06:00:00+09:00", legs: [] });
-    });
+    }, COLD_APP_TEST_TIMEOUT_MS);
 
     it("boards the pole's first run from TOPIS's published time once it falls inside the window", async () => {
       // Arrange
@@ -395,7 +395,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
       expect(option.status).toBe("running");
       expect(jongro!.board).toMatchObject({ status: "scheduled", scheduledArrivalAt: "2026-10-20T06:00:00+09:00", basis: "timetable", vehicleId: null, isFirstRun: true });
       expect(option.leaveAt).toBe("2026-10-20T05:53:00+09:00");
-    });
+    }, COLD_APP_TEST_TIMEOUT_MS);
   });
 
   // WHY: the owner's rule that every option can show 운행종료 and its next service, checked for the sources the TOPIS
@@ -413,7 +413,7 @@ describe("GET /journey/routes with the TOPIS options", () => {
 
       // Assert
       expect(option).toMatchObject({ status: "notRunning", reason, nextServiceAt, legs: [] });
-    });
+    }, COLD_APP_TEST_TIMEOUT_MS);
   });
 });
 
@@ -440,7 +440,7 @@ describe("GET /journey/routes: the stops a ride passes between its board and ali
     expect(line4!.stops.map(({ place }: { place: Record<string, unknown> }) => [place.kind, place.name, place.action])).toEqual(
       ["동대문", "동대문역사문화공원", "충무로", "명동", "회현", "서울역", "숙대입구", "삼각지", "신용산", "이촌", "동작", "총신대입구(이수)"].map((name) => ["subway_station", name, null]),
     );
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Stops: the 종로 08 ride lists the poles from 명륜시장 to 종로5가 around its turnaround, each tapped open on the map", async () => {
     // Arrange
@@ -457,7 +457,7 @@ describe("GET /journey/routes: the stops a ride passes between its board and ali
     ]);
     expect([stops[0]!.place.name, stops.at(-1)!.place.name]).toEqual(["새마을금고", "서울특별시재향군인회관"]);
     expect(stops.every(({ place }) => place.action?.actionValue === `/map?place=bus_stop:${place.id}`)).toBe(true);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 });
 
 describe("GET /journey/routes: a ride's upcoming calls at its board stop, from now", () => {
@@ -476,7 +476,7 @@ describe("GET /journey/routes: a ride's upcoming calls at its board stop, from n
       ["200010898", "2026-10-20T19:15:50+09:00"],
     ]);
     expect(bus7800!.vehicles.map((vehicle: { id: string }) => vehicle.id).sort()).toEqual(["200010898", "200011607"]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Upcoming: skips the bus GBIS reports full, and lists no headway call beside a ride boarded on one", async () => {
     // Arrange
@@ -489,7 +489,7 @@ describe("GET /journey/routes: a ride's upcoming calls at its board stop, from n
     const [, bus7800] = ridesOf(option);
     expect(bus7800!.board).toMatchObject({ vehicleId: null, basis: "estimate" });
     expect(bus7800!.upcoming.map((call: Call) => call.vehicleId)).toEqual(["200011607"]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Upcoming: lists the predicted 종로 08 bus the rider cannot reach on foot, since it counts from now with no catch margin", async () => {
     // Arrange
@@ -502,5 +502,5 @@ describe("GET /journey/routes: a ride's upcoming calls at its board stop, from n
     const [jongro] = ridesOf(option);
     expect(jongro!.board.vehicleId).toBeNull();
     expect(jongro!.upcoming.map((call: Call) => [call.vehicleId, call.expectedArrivalAt])).toEqual([["100000074", "2026-10-20T19:09:09+09:00"]]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 });
