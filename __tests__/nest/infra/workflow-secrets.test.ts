@@ -358,6 +358,24 @@ describe("ci.yml", () => {
   });
 });
 
+describe("ci.yml workflow-lint", () => {
+  const lint = jobBlocks(workflow("ci.yml")).get("workflow-lint") ?? "";
+
+  it("runs actionlint, and zizmor offline over the workflows directory", () => {
+    // Assert
+    expect(lint).not.toBe("");
+    expect(lint).toMatch(/^ {6}- run: actionlint$/m);
+    expect(lint).toMatch(/^ {6}- run: zizmor --offline \.github\/workflows\/$/m);
+  });
+
+  it("holds no token and checks out without leaving one in .git/config", () => {
+    // Assert
+    expect(lint).not.toMatch(/GH_TOKEN|GITHUB_TOKEN|github\.token|ZIZMOR_GITHUB_TOKEN/);
+    expect(lint).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
+    expect(lint).not.toMatch(/^ {4}permissions:/m);
+  });
+});
+
 describe("the vendored contract tools", () => {
   it("are hash-locked in .contracts.lock.json at the paths ci.yml runs", () => {
     // Arrange

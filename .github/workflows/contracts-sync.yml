@@ -56,8 +56,10 @@ jobs:
             exit 1
           fi
 
+      # WHY: the step that opens the sync pull request pushes with the credential this checkout persists, so
+      # persist-credentials: false would break it, and no step uploads the workspace as an artifact.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
+        with: # zizmor: ignore[artipacked]
           ref: dev
           fetch-depth: 0
 
