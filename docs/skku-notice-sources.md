@@ -17,8 +17,8 @@ audience: internal
 | 알고 싶은 것 | 어디를 보나 |
 | --- | --- |
 | 서버가 실제 쓰는 소스 목록 (런타임 SSOT) | [`../src/notices/sources.json`](../src/notices/sources.json) |
-| 크롤러 학과 config SSOT (strategy·selector·baseUrl) | [crawler `sources.json`](https://github.com/spencer0124/skkuverse-crawler/blob/main/sources.json) (레포 루트) |
-| 학과 커버리지 (캠퍼스·단과대별 표) | [crawler coverage](https://github.com/spencer0124/skkuverse-crawler/blob/main/docs/reference/coverage/department-coverage-analysis.md) (codegen 생성) |
-| 전략별 필드 가용성·특이사항 | [crawler notices-data-contract §3](https://github.com/spencer0124/skkuverse-crawler/blob/main/docs/reference/notices-data-contract.md) |
+| 크롤러 학과 config SSOT (strategy·selector·baseUrl) | `skkuverse-crawler`의 `sources.json` (레포 루트, 이 레포 밖) |
+| 학과 커버리지 (캠퍼스·단과대별 표) | `skkuverse-crawler`의 학과 커버리지 분석 (codegen 생성, 이 레포 밖) |
+| 전략별 필드 가용성·특이사항 | `skkuverse-crawler`의 notices data contract §3 (이 레포 밖) |
 
 전체 문서 인덱스는 [docs/README.md](README.md).

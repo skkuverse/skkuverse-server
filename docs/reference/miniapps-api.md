@@ -12,8 +12,8 @@ audience: internal
 > The contract for `GET /miniapps` and `GET /miniapps/:id` — the registry the mobile client's home
 > grid and mini-app shell both read — plus the manifest fetch that lets a first-party mini app change
 > its own shell without a server deploy, and the broadcast feed endpoints beside them. The shared
-> wire protocol a mini-app page and the app bridge speak is
-> [skkuverse-miniapp's protocol reference](https://github.com/spencer0124/skkuverse-miniapp/blob/main/docs/reference/protocol.md);
+> wire protocol a mini-app page and the app bridge speak is documented in `skkuverse-miniapp`,
+> outside this repository;
 > the server half of registering a mini app is
 > [how-to/register-a-miniapp.md](../how-to/register-a-miniapp.md).
 
@@ -217,8 +217,7 @@ field added here, and `src/miniapps/catalog/miniapps-catalog.mapper.spec.ts` (wi
 cases in `src/miniapps/miniapps.mapper.spec.ts`) mirrors the vectors in
 `skkuverse-miniapp`'s `packages/miniapp/test/protocol.test.ts` `manifest` block, so a divergence shows
 up as a test failure on whichever side falls behind. The shared protocol both sides are keeping in
-step with is documented in
-[skkuverse-miniapp's protocol reference](https://github.com/spencer0124/skkuverse-miniapp/blob/main/docs/reference/protocol.md).
+step with is documented in that repository's protocol reference.
 
 ## 4. Push validation
 
@@ -537,5 +536,5 @@ deep link never passes through this server at all.
   new mini app
 - [how-to/configure-home.md](../how-to/configure-home.md) — how a registered mini app is placed on the home
   screen
-- [skkuverse-miniapp protocol reference](https://github.com/spencer0124/skkuverse-miniapp/blob/main/docs/reference/protocol.md) —
+- The protocol reference in `skkuverse-miniapp`, outside this repository —
   the bridge protocol a mini-app page and the app speak, and the manifest shape `parseShellFields` mirrors
