@@ -22,7 +22,8 @@ export function sentryOptions(): Sentry.NodeOptions {
       stackFrameVariables: false,
     },
     integrations: [
-      // (An operations detail is left out of the public history.)
+      // WHY: Sentry is for errors, the log pipeline for logs (docs/reference/logging.md). No line goes to
+      // Sentry Logs, and no error-level line becomes an Issue.
       Sentry.pinoIntegration({
         log: { levels: [] },
         error: { levels: [] },

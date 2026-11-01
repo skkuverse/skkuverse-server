@@ -248,8 +248,8 @@ describe("POST /internal/notices/dispatch-pending", () => {
     expect(sweepPending).toHaveBeenCalledWith("internal");
   });
 
-  it("is NOT rate-limited and requires NO Firebase auth (no Bearer needed)", async () => {
-    // (A perimeter detail is left out of the public history.)
+  it("accepts the internal token alone, without a Bearer, and answers without RateLimit-Limit", async () => {
+    // Act
     const res = await request(httpServer)
       .post("/internal/notices/dispatch-pending")
       .set("X-Internal-Token", config.notices.dispatch.internalToken as string)

@@ -217,9 +217,10 @@ describe("the public-workflow rules apply as specified", () => {
     expect(interpolatedRuns(yaml)).toEqual([]);
   });
 
+  const personalAccount = "spencer0124";
   it.each([
-    ["(An operations detail is left out of the public history.)", "git clone git@github.com:example/example.git"],
-    ["an https URL", "see the example-private repository"],
+    ["an ssh clone URL", `git clone git@github.com:${personalAccount}/example.git`],
+    ["an https URL", `see https://github.com/${personalAccount}/example/blob/main/x.md`],
   ])("finds %s of a personal-account repository", (_case, text) => {
     // Act & Assert
     expect(namesPersonalRepository(text)).toBe(true);

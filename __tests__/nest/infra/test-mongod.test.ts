@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import net from "node:net";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, freeLoopbackPort, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, freeLoopbackPort, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 
 type Db = typeof import("../../../src/infra/db");
 
@@ -32,7 +32,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 describe("startMongod", () => {
   it("serves on loopback, through the app's own client", () => {

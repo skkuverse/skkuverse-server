@@ -532,7 +532,7 @@ describe("GET …/smart with arrival estimates", () => {
 });
 
 // WHY: a service id is a lookup key, so a name Object.prototype already has must miss like any other
-// unknown id (skkuverse).
+// unknown id.
 describe("GET /bus/schedule/data/:serviceId with an Object.prototype name", () => {
   const PROTOTYPE_NAMES = ["toString", "__proto__", "constructor", "hasOwnProperty"];
 

@@ -1,5 +1,7 @@
 /**
- * (An operations detail is left out of the public history.)
+ * SEE: docs/how-to/test-the-app-against-a-local-server.md — a local run holds credentials that reach real
+ * people (the dev FCM_FUNCTION_URL pushes to every topic subscriber), so development switches outbound
+ * side effects off. Per-run values, never in the secret store (__tests__/nest/infra/runtime-switches.test.ts).
  */
 
 export type RuntimeMode = "production" | "development" | "test";

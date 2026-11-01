@@ -36,7 +36,7 @@ import type { PublicHolidaysDoc } from "../../../src/calendar/calendar.document"
 import type { SubwayArrivalsDoc } from "../../../src/subway/subway.document";
 import type { ProviderObservations, TrainEvent } from "../../../src/subway/subway.types";
 import type { SubwayTrackingService } from "../../../src/subway/tracking/subway-tracking.service";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import golden from "./fixtures/subway-timetables-characterization.golden.json";
 
@@ -153,7 +153,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 const INSTANTS = Object.keys(golden.instants) as Array<keyof typeof golden.instants>;
 

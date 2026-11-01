@@ -152,7 +152,7 @@ describe("GET /bus/realtime/data/:groupId", () => {
 });
 
 // WHY: a group id is a lookup key, so a name Object.prototype already has must miss like any other
-// unknown id (skkuverse).
+// unknown id.
 describe("GET /bus/realtime/data/:groupId with an Object.prototype name", () => {
   it.each(["toString", "__proto__", "constructor", "hasOwnProperty"])("%s → 404 GROUP_NOT_FOUND", async (groupId) => {
     // Act
