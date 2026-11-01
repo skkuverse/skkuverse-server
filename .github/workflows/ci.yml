@@ -37,7 +37,12 @@ jobs:
         with:
           path: /home/runner/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}-${{ runner.arch }}-${{ steps.mongod.outputs.version }}
-      - run: npm ci
+      # WHY: firewall-version is pinned because its default, `latest`, downloads whatever sfw-free released last.
+      - uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: 1.15.6
+      - run: sfw npm ci
       # WHY: the postinstall exits 0 when its download fails, so without this a failed download
       # passes `npm ci` and surfaces later as four test files that cannot find a binary.
       - name: mongod binary present
