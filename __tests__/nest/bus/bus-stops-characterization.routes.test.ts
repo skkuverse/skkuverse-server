@@ -65,7 +65,7 @@ import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, noAr
 import { FakeBusEtaForecastClient } from "../../helpers/fakes/bus/bus-eta-forecast.client.fake";
 import { FakeBusEtaProbeClient } from "../../helpers/fakes/bus/bus-eta-probe.client.fake";
 import { FakeBusEtaTravelClient } from "../../helpers/fakes/bus/bus-eta-travel.client.fake";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
 import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
@@ -303,7 +303,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 const get = (url: string, lang: Lang) => request(app.getHttpServer()).get(url).set("Accept-Language", lang);
 

@@ -49,7 +49,7 @@ import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry
 import { Clock } from "../../../src/infra/clock";
 import { toKstInstant } from "../../../src/shared/kst-date.util";
 import { jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, noArrivalBus } from "../../helpers/bus/bus-cache-docs";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
 import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
@@ -217,7 +217,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 const get = (url: string, lang: Lang) => request(app.getHttpServer()).get(url).set("Accept-Language", lang);
 

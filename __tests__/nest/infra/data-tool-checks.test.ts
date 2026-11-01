@@ -43,7 +43,7 @@
 import path from "node:path";
 import type { Db } from "mongodb";
 import { z } from "zod";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { checkContent, checkData, checkStored, readCollections, readStored } = require("../../../scripts/lib/datasets/checks");
@@ -609,7 +609,7 @@ describe("checkStored", () => {
     } finally {
       await mongod?.stop();
     }
-  });
+  }, MONGOD_STOP_TIMEOUT_MS);
 
   beforeEach(async () => {
     await clearCollections(db);

@@ -41,7 +41,7 @@ import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc } fro
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { asReal } from "../../helpers/fakes/public-of";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import proposal from "./fixtures/bus-stops-7800-proposal.json";
 import pinned from "./fixtures/stop-calls-pinned.json";
@@ -312,7 +312,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 interface Pin {
   status: number;

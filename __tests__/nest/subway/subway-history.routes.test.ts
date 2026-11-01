@@ -23,7 +23,7 @@ import { Clock } from "../../../src/infra/clock";
 import { InternalAuthorizer } from "../../../src/perimeter/perimeter.ports";
 import type { SubwayPredictionDoc } from "../../../src/subway/history/subway-history.document";
 import type { SubwayHistoryRepository } from "../../../src/subway/history/subway-history.repository";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
 
@@ -77,7 +77,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 function prediction(overrides: Partial<SubwayPredictionDoc> & Pick<SubwayPredictionDoc, "trainNo" | "predictedAt">): SubwayPredictionDoc {
   return {

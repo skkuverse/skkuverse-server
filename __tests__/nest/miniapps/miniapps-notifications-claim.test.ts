@@ -14,7 +14,7 @@ import type { Collection } from "mongodb";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { SentNotificationDoc } from "../../../src/miniapps/miniapps.document";
 import type { MiniappsNotificationsRepository } from "../../../src/miniapps/notifications/miniapps-notifications.repository";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
@@ -86,7 +86,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   await sentNotifications.deleteMany({});

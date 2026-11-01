@@ -34,7 +34,7 @@ import { CLUSTER_INDEX, CLUSTER_MEMBER_PROJECTION, toClusterMemberFilter, toNoti
 import { InternalAuthorizer, RequestAuthenticator } from "../../../src/perimeter/perimeter.ports";
 import { FakeRequestAuthenticator } from "../../helpers/fakes/perimeter/request-authenticator.fake";
 import { FakeInternalAuthorizer } from "../../helpers/fakes/perimeter/internal-authorizer.fake";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
@@ -163,7 +163,7 @@ afterAll(async () => {
     else process.env.FCM_FUNCTION_URL = previousFunctionUrl;
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   cf.reset();

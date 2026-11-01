@@ -25,7 +25,7 @@ import path from "node:path";
 import type { Db as MongoDb } from "mongodb";
 import { Test } from "@nestjs/testing";
 import type { MiniappsRepository } from "../../../src/miniapps/miniapps.repository";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const store = require("../../../scripts/lib/datasets/store");
@@ -119,7 +119,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "miniapps-dataset-"));
