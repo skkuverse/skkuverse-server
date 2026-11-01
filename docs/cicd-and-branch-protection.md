@@ -61,7 +61,7 @@ A pull request from a fork waits for a maintainer to approve its workflow runs. 
 | --- | --- | --- |
 | Pull request required | Yes | No |
 | Merge method | Merge commit only | — |
-| Required status check | `test` (from `ci.yml`) | — |
+| Required status checks | `test` and `workflow-lint` (from `ci.yml`) | — |
 | Force push | Blocked | Blocked |
 | Deletion | Blocked | Blocked |
 
@@ -71,7 +71,7 @@ Pull requests from outside contributors are by invitation ([CONTRIBUTING.md](../
 
 ### Dependabot security updates
 
-Dependabot security updates always use the repository's default branch, which is `main`, and `target-branch` does not change that. `.github/dependabot.yml` therefore sets no `target-branch` for npm, and a security pull request for npm opens against `main`. Merge it by hand once `test` passes, and never enable auto-merge. If it is a major version bump, close it: major upgrades are planned separately. Right after the merge, merge `main` back into `dev`, or the next `dev` → `main` pull request conflicts in `package-lock.json`. npm version updates stay off because dependencies are bumped one package per change by hand. The `nestjs` group keeps the `@nestjs/*` packages in one pull request, because they must move together.
+Dependabot security updates always use the repository's default branch, which is `main`, and `target-branch` does not change that. `.github/dependabot.yml` therefore sets no `target-branch` for npm, and a security pull request for npm opens against `main`. Merge it by hand once `test` and `workflow-lint` pass, and never enable auto-merge. If it is a major version bump, close it: major upgrades are planned separately. Right after the merge, merge `main` back into `dev`, or the next `dev` → `main` pull request conflicts in `package-lock.json`. npm version updates stay off because dependencies are bumped one package per change by hand. The `nestjs` group keeps the `@nestjs/*` packages in one pull request, because they must move together.
 
 ## Related
 
