@@ -1,0 +1,47 @@
+name: Scorecard
+
+# WHY: OpenSSF Scorecard reads this repository's own settings and workflows (token permissions, pinned actions,
+# branch rules and more) and reports each finding to the Security tab. publish_results is false, so no result
+# leaves the repository: the job needs no OIDC token, and the default token is all it uses.
+on:
+  # QUIRK(ossf/scorecard-action): only the default branch is supported.
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 22 * * 6'   # Sunday 07:17 KST
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    # WHY: security-events uploads the SARIF file to code scanning, and contents is the checkout. Scorecard's
+    # README asks for more reads only on a private repository.
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # WHY: the action's action.yaml runs its image by tag, which a registry can move, so the commit pin leaves the image
+      # unpinned. Dependabot skips docker:// steps: change the digest and the version comment together.
+      # QUIRK(ossf/scorecard-action): the image reads each input from an INPUT_* variable and gets no action.yaml default.
+      - name: Run analysis
+        uses: docker://ghcr.io/ossf/scorecard-action@sha256:1e1481c65fc2407d3fd6ab18a23c741eb4d1c0d9359ebafc4b3ab13aa61d8627 # v2.5.0
+        env:
+          INPUT_RESULTS_FILE: results.sarif
+          INPUT_RESULTS_FORMAT: sarif
+          INPUT_PUBLISH_RESULTS: false
+          INPUT_REPO_TOKEN: ${{ github.token }}
+          INPUT_INTERNAL_DEFAULT_TOKEN: ${{ github.token }}
+          INPUT_FILE_MODE: archive
+          INPUT_INTERNAL_PUBLISH_BASE_URL: https://api.scorecard.dev
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: results.sarif
