@@ -3,7 +3,7 @@ import type { SubwayArrivalsDoc } from "../subway.document";
 import { SubwayRepository } from "../subway.repository";
 import { isArrivalsWriteDue } from "./subway-state.rules";
 
-// WHY: Atlas bills by peak ops/s, and most ticks change few platforms. The last written documents
+// WHY: most ticks change few platforms, so only a changed document is written. The last written documents
 // live in the poller process's memory, so a restart writes every platform on its first tick; a document is
 // remembered only once its write resolved, so a failed one is written again on the next tick.
 @Injectable()

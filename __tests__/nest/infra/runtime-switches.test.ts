@@ -5,7 +5,7 @@
  *
  * Two halves. The resolver table pins what each mode defaults to and which
  * combinations refuse to boot. The file checks pin where the switches may and
- * may not be set: production's compose file and Doppler key lists never carry
+ * may not be set: production's compose file and secret-store key lists never carry
  * one (production must run on the defaults), and local verify — which runs the
  * production image on a laptop holding the real Cloud Function URL — always
  * suppresses push, the directions calls, the subway pollers, the regional
@@ -102,7 +102,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(switches.cacheEnabled).toBe(true);
   });
 
-  it("reads no RATE_LIMIT, in any mode, so no value of it switches a limiter off or refuses a boot", () => {
+  it("ignores RATE_LIMIT in every mode, so no value of it switches a limiter off or refuses a boot", () => {
     // Act
     const resolved = (["production", "development", "test"] as const).flatMap((mode) => ["off", "on", "true"].map((value) => resolveRuntimeSwitches({ RATE_LIMIT: value }, mode)));
 

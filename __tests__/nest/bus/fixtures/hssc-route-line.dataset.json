@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the hssc-route-line dataset (skku_content.datasets, _id hssc-route-line): the HSSC shuttle loop as [lng, lat], closed (last point = first), starting at the 농구장 stop, 235 points every ~16 m over 3,692 m. Measured, not captured from an upstream: a multi-lap principal curve of 64 clean laps of the shuttles' GPS fixes (collected privately) of 2026-10-20, 2026-10-22 and 2026-10-23, derived 2026-10-23 as docs/decisions/0018-hssc-arrival-estimates.md (D9) records.",
+  "_about": "Revision 1 of the hssc-route-line dataset (skku_content.datasets, _id hssc-route-line): the HSSC shuttle loop as [lng, lat], closed (last point = first), starting at the 농구장 stop, 235 points every ~16 m over 3,692 m. Measured, not captured from an upstream: a multi-lap principal curve measured from GPS traces of the shuttle loop, derived 2026-10-23 as docs/decisions/0018-hssc-arrival-estimates.md (D9) records.",
   "path": [
     [126.992374, 37.587807],
     [126.992364, 37.587665],

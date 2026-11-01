@@ -2,13 +2,13 @@
  * The api replicas are named in two files here, and a replica missing from
  * either fails quietly:
  *
- *   - docker-compose.yml runs it, and the deploy rolls what it lists;
+ *   - docker-compose.yml runs it;
  *   - docker-compose.local-verify.yml points it at _dev databases (missing:
  *     `npm run verify:serve` boots it against PRODUCTION data).
  *
- * The deploy reads the replicas from docker-compose.yml by the shape pinned
- * below, and the host's nginx upstream, which sends each replica traffic and is
- * configured outside this repository, balances exactly the map below.
+ * Tooling outside this repository reads the replicas from docker-compose.yml
+ * by the shape pinned below, and the reverse proxy, configured outside this
+ * repository, balances exactly the map below.
  *
  * This requires the two files to name the same set, and pins every ROLE a
  * compose file sets to the roles the server boots with. The files are parsed
@@ -72,9 +72,9 @@ describe("api replica topology", () => {
     expect(new Set(lines.map(([, mapped]) => portOf(mapped[0]!))).size).toBe(lines.length);
   });
 
-  // WHY: the host's nginx upstream, configured and tested outside this repository, balances across
-  // exactly these ports; change both together.
-  it("runs exactly the replicas the host's nginx upstream balances", () => {
+  // WHY: the reverse proxy, configured and tested outside this repository, balances across exactly
+  // these ports; change both together.
+  it("runs exactly the replicas the reverse proxy balances", () => {
     // Assert
     expect(Object.fromEntries([...replicaMappings].map(([name, mapped]) => [name, mapped.map(portOf)]))).toEqual({
       "api-1": [3001],

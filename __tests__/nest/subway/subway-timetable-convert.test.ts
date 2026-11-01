@@ -3,7 +3,7 @@
  * per part of the subway-timetables dataset, into a pulled directory
  * (ADR 0013, D3). This guards the script's own rules (train-number normalization, Excel
  * fractions to seconds past midnight, refusing an unmapped Korail name,
- * joining Seoul rows) without the network or the Doppler key, through its
+ * joining Seoul rows) without the network or the Seoul API key, through its
  * Python unittest suite. The rows it wrote are reviewed in the push report
  * (ADR 0013, D4).
  */

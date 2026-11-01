@@ -266,7 +266,7 @@ describe("listMissingRequired checks only the values the role needs", () => {
     expect(missingIn(role, "AI_API_URL")).toEqual(missing);
   });
 
-  // WHY: the shared push token is retired with the internal push routes (ADR 0020, D6); Doppler drops it one release later.
+  // WHY: the shared push token is retired with the internal push routes (ADR 0020, D6); the secret store drops it one release later.
   it.each(["api", "combined", "poller"])("without MINIAPP_PUSH_TOKEN, ROLE=%s misses nothing", (role) => {
     // Act & Assert
     expect(missingIn(role, "MINIAPP_PUSH_TOKEN")).toEqual([]);

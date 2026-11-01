@@ -2,15 +2,14 @@
 # port differs, so they share one definition. Adding a replica means a service
 # here and an override in docker-compose.local-verify.yml
 # (__tests__/nest/infra/replica-topology.test.ts fails until the two agree),
-# plus a line in the host's nginx upstream, which is configured outside this
-# repository and pinned to these ports. The deploy reads the replicas from this
-# file: each api-N service with its "127.0.0.1:<port>:3000" mapping.
+# plus a line in the reverse proxy, which is configured outside this repository
+# and pinned to these ports. Tooling outside this repository reads the replicas
+# from this file: each api-N service with its "127.0.0.1:<port>:3000" mapping.
 #
 # Sizing: a Node process runs its JavaScript on one thread, so a replica gains
 # nothing from more than one core; capacity comes from the number of replicas.
-# The VM has 4 cores; three 1-core replicas leave about one core for the
-# poller, crawler, AI service, OTA server and nginx. cpu_shares only matters
-# under contention, where it lets the replicas win over those neighbours.
+# cpu_shares only matters under contention, where it lets the replicas win over
+# the other processes on the host.
 x-api: &api
   # GIT_SHA, PERIMETER_OVERLAY_DIR and PERIMETER_OVERLAY_SHA come from the deploy's shell; unset
   # locally, the build takes the empty overlay folder and labels the image `none`.

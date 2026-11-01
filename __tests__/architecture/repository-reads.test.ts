@@ -1,7 +1,6 @@
 /**
  * Every Mongo read in a `*.repository.ts` is bounded or cached (ADR 0010, D2).
- * Atlas bills by peak ops/s, so an unbounded hot read is a cost and an outage
- * risk at once.
+ * An unbounded hot read is a cost and an outage risk at once.
  *
  * A read is a call to `find`, `findOne`, `aggregate`, `countDocuments`,
  * `estimatedDocumentCount` or `distinct`. It is:

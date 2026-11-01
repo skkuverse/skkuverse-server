@@ -82,7 +82,7 @@ describe("auth runs before the principal-keyed rate limit", () => {
     ]);
   });
 
-  it("answers a rejected credential 401 AUTH_INVALID, which no limiter counts, even with every class refusing", async () => {
+  it("answers a rejected credential 401 AUTH_INVALID with every limit count at zero, even with every class refusing", async () => {
     // Arrange
     for (const limitClass of ["notices", "notices-overview"] as const) rateLimitPolicy.refused.add(limitClass);
 

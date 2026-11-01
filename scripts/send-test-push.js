@@ -2,7 +2,7 @@
 /**
  * Send, or by default only validate, one FCM message to one device token, with
  * no key file and no env var. The runbook, with the project and the sender to
- * pass, is kept in the private operations repository.
+ * pass, is kept outside this repository.
  *
  * Usage:
  *   node scripts/send-test-push.js --token <FCM registration token>

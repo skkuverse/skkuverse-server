@@ -23,7 +23,7 @@ export function withMeta<T, M extends SuccessMeta>(data: T, meta: M): WithMeta<T
 }
 
 // QUIRK(cloudflare): its cache key leaves out Accept-Language, so a response it may store names no
-// language: an edge hit would carry another requester's (umbrella issue spencer0124/skkuverse#63).
+// language: an edge hit would carry another requester's.
 function successEnvelope(req: Request, res: Response, data: unknown): SuccessEnvelope {
   const lang = isSharedCacheable(res) ? {} : { lang: req.lang };
   return data instanceof MetaEnvelope ? { meta: { ...lang, ...data.meta }, data: data.data } : { meta: lang, data };

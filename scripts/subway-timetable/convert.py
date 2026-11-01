@@ -19,7 +19,7 @@ When to rerun:
 How to rerun (from the repository root; docs/how-to/update-subway-timetables.md):
 
     npm run data -- pull subway-timetables
-    doppler run -p backend -c dev_personal -- python3 -I scripts/subway-timetable/convert.py --out .data/dev/subway-timetables/parts [--line 2]
+    python3 -I scripts/subway-timetable/convert.py --out .data/dev/subway-timetables/parts [--line 2]
     npm run data -- push subway-timetables --dry-run
     npm run data -- push subway-timetables --note "Seoul Metro 2026-11 timetable"
 
@@ -33,8 +33,8 @@ stations a pulled Seoul table already lists, rebuilt as the rows the API would a
 Together they add a station to a line without calling for the stations it had: 사당, 금정 and the stretches around them
 were added so (2026-10-25), their answers committed under seoul-rows/. A new Seoul Metro timetable needs neither option.
 
-The Seoul part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; Doppler
-backend/dev_personal holds it, a config no service renders. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
+The Seoul part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; no service
+reads that key. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
 copies of the two 1호선 Korail URLs instead of downloading them, `--korail-k1 FILE` of the 수인분당 one,
 `--shinbundang-zip FILE` of all_kor.zip. Only the Seoul part needs the key.
 
@@ -1465,7 +1465,7 @@ def read_pulled(out_dir, line, day_type):
 def build_seoul(out_dir, today, lines=SEOUL_LINES, rows_dir=None, keep_pulled=False):
     key = os.environ.get("SEOUL_OPENAPI_GENERAL_KEY")
     if not key and not (rows_dir or keep_pulled):
-        raise ConvertError("SEOUL_OPENAPI_GENERAL_KEY is not set; run through doppler run -p backend -c dev_personal --")
+        raise ConvertError("SEOUL_OPENAPI_GENERAL_KEY is not set; set it in the environment")
 
     def call(code, week, inout):
         if not key:
