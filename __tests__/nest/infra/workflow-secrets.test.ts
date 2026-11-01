@@ -26,7 +26,9 @@
  *     mode, and the action runs on the job's own `github.token`;
  *   - contracts-sync.yml runs on a schedule or by hand, on the default branch,
  *     never for a pull request; it checks that its secrets are set before any
- *     other step, and its PR body links no private repository.
+ *     other step, and its PR body links no private repository;
+ *   - ci.yml's `workflow-lint` job runs actionlint and zizmor, zizmor with
+ *     `--offline`, so the job holds no token and calls no API.
  *
  * Patterns rather than a YAML parser: the repo has no parser dependency. The
  * rules are tested on the mutants they exist to catch, then on the real files.
@@ -383,6 +385,24 @@ describe("ci.yml", () => {
     // Assert
     expect(ci).toMatch(/^ {8}run: python3 \.github\/contract-tools\/exported\/sync_contracts\.py check --repo server --root \.$/m);
     expect(ci).toMatch(/python3 \.github\/contract-tools\/exported\/lint_conventions\.py --root \./);
+  });
+});
+
+describe("ci.yml workflow-lint", () => {
+  const lint = jobBlocks(workflow("ci.yml")).get("workflow-lint") ?? "";
+
+  it("runs actionlint, and zizmor offline over the workflows directory", () => {
+    // Assert
+    expect(lint).not.toBe("");
+    expect(lint).toMatch(/^ {6}- run: actionlint$/m);
+    expect(lint).toMatch(/^ {6}- run: zizmor --offline \.github\/workflows\/$/m);
+  });
+
+  it("holds no token and checks out without leaving one in .git/config", () => {
+    // Assert
+    expect(lint).not.toMatch(/GH_TOKEN|GITHUB_TOKEN|github\.token|ZIZMOR_GITHUB_TOKEN/);
+    expect(lint).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
+    expect(lint).not.toMatch(/^ {4}permissions:/m);
   });
 });
 

@@ -1,7 +1,9 @@
 name: Claude Code
 
 on:
-  issue_comment:
+  # WHY: zizmor flags issue_comment because it runs in the base repository's context. The one job below starts only
+  # for an OWNER, MEMBER or COLLABORATOR, and its token reads the repository and writes comments only.
+  issue_comment: # zizmor: ignore[dangerous-triggers]
     types: [created]
 
 permissions: {}
@@ -47,6 +49,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # WHY: the action sets its own git credentials from the github_token input, and the job never pushes, so
+          # the checkout's token has no use in .git/config.
+          persist-credentials: false
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@8041f1d17e0e7d2f2cfe35002962e9f26237c0bb # v1.0.263

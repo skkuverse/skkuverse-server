@@ -11,6 +11,12 @@
  *     which GitHub opens against `main` (docs/cicd-and-branch-protection.md,
  *     "Dependabot security updates").
  *
+ *   - the two workflow linters that `ci.yml` downloads (`workflow-lint`) are
+ *     pinned the same way: an exact version and the sha256 of its release
+ *     archive, which the install script checks before it unpacks the archive.
+ *     Dependabot does not see a download, so the test is what keeps a floating
+ *     version out.
+ *
  * Patterns rather than a YAML parser: the repo avoids the dependency.
  */
 import fs from "fs";
@@ -27,6 +33,22 @@ export function unpinnedUses(yaml: string): string[] {
     if (value === undefined || value.startsWith("./") || PINNED.test(value)) return [];
     return [`${i + 1}: ${value}`];
   });
+}
+
+/** `<tool>: <problem>` for each tool a job downloads without an exact version, a sha256 or a script that checks it. */
+export function unverifiedDownloads(job: string, tools: string[]): string[] {
+  const unchecked = /sha256sum --check\b/.test(job) ? [] : ["job: nothing runs sha256sum --check"];
+  return tools.flatMap((tool) => {
+    const env = (key: string) => new RegExp(`^\\s+${tool}_${key}: (\\S+)$`, "m").exec(job)?.[1];
+    const version = env("VERSION");
+    const sha256 = env("SHA256");
+    const problems: string[] = [];
+    if (version === undefined || !/^\d+\.\d+\.\d+$/.test(version)) problems.push("no exact version");
+    if (sha256 === undefined || !/^[0-9a-f]{64}$/.test(sha256)) problems.push("no sha256");
+    if (!job.includes(`"$${tool}_SHA256"`)) problems.push("the script never passes the sha256 to its check");
+    if (!job.includes(`\${${tool}_VERSION}`)) problems.push("the download URL does not use the pinned version");
+    return problems.map((p) => `${tool}: ${p}`);
+  }).concat(unchecked);
 }
 
 describe("workflow pin rule applies as specified", () => {
@@ -66,6 +88,78 @@ describe(".github/workflows", () => {
     // Assert
     expect(files.length).toBeGreaterThan(0);
     expect(unpinned).toEqual([]);
+  });
+});
+
+describe("workflow-lint download rule applies as specified", () => {
+  const SHA = "a".repeat(64);
+  const job = (overrides: { version?: string; sha256?: string; script?: string } = {}) =>
+    [
+      "    env:",
+      `      LINT_VERSION: ${overrides.version ?? "1.2.3"}`,
+      `      LINT_SHA256: ${overrides.sha256 ?? SHA}`,
+      "    run: |",
+      overrides.script ??
+        [
+          "      fetch() { curl --output \"$1\" \"$2\"; echo \"$3  $1\" | sha256sum --check; }",
+          "      fetch lint.tar.gz \"https://example.test/v${LINT_VERSION}/lint.tar.gz\" \"$LINT_SHA256\"",
+        ].join("\n"),
+    ].join("\n");
+
+  it("passes a tool with an exact version, a sha256 and a script that checks it", () => {
+    // Act & Assert
+    expect(unverifiedDownloads(job(), ["LINT"])).toEqual([]);
+  });
+
+  it.each([
+    ["a floating version", job({ version: "latest" }), "LINT: no exact version"],
+    ["a major-only version", job({ version: "1" }), "LINT: no exact version"],
+    ["a short checksum", job({ sha256: "abc123" }), "LINT: no sha256"],
+    ["an upper-case checksum", job({ sha256: SHA.toUpperCase() }), "LINT: no sha256"],
+    [
+      "a checksum the script never checks",
+      job({ script: "      curl --output lint.tar.gz \"https://example.test/v${LINT_VERSION}/lint.tar.gz\"" }),
+      "LINT: the script never passes the sha256 to its check",
+    ],
+    [
+      "a URL that skips the pinned version",
+      job({
+        script: [
+          "      fetch() { curl --output \"$1\" \"$2\"; echo \"$3  $1\" | sha256sum --check; }",
+          "      fetch lint.tar.gz \"https://example.test/latest/lint.tar.gz\" \"$LINT_SHA256\"",
+        ].join("\n"),
+      }),
+      "LINT: the download URL does not use the pinned version",
+    ],
+    [
+      "a function that never runs sha256sum",
+      job({
+        script: [
+          "      fetch() { curl --output \"$1\" \"$2\"; }",
+          "      fetch lint.tar.gz \"https://example.test/v${LINT_VERSION}/lint.tar.gz\" \"$LINT_SHA256\"",
+        ].join("\n"),
+      }),
+      "job: nothing runs sha256sum --check",
+    ],
+  ])("refuses %s", (_case, yaml, problem) => {
+    // Act & Assert
+    expect(unverifiedDownloads(yaml, ["LINT"])).toContain(problem);
+  });
+});
+
+describe("ci.yml workflow-lint", () => {
+  const ci = fs.readFileSync(path.join(root, WORKFLOWS, "ci.yml"), "utf8");
+  const lint = /^ {2}workflow-lint:\n((?: {4}.*\n|\s*\n)*)/m.exec(ci)?.[1] ?? "";
+
+  it("downloads actionlint and zizmor at an exact version and a sha256 its script checks", () => {
+    // Assert
+    expect(lint).not.toBe("");
+    expect(unverifiedDownloads(lint, ["ACTIONLINT", "ZIZMOR"])).toEqual([]);
+  });
+
+  it("names no floating release anywhere in the workflow", () => {
+    // Assert
+    expect(ci).not.toMatch(/releases\/latest|\/latest\/download|@latest/);
   });
 });
 

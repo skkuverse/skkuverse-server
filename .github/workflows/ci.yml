@@ -71,3 +71,40 @@ jobs:
       - run: npm run lint
       - run: npm run knip
       - run: npm run depcheck
+
+  # WHY: a workflow runs with this repository's token, so a change to one gets two linters. actionlint checks the
+  # syntax and the expressions. zizmor checks for the unsafe patterns: an untrusted trigger, an expression pasted
+  # into a script, a checkout that leaves its token in .git/config. A finding fails the job unless its line
+  # carries `# zizmor: ignore[<rule>]` and a reason.
+  workflow-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # WHY: no step pushes or calls the API, so the token is not left in .git/config.
+          persist-credentials: false
+      # WHY: each tool is pinned by version and by the sha256 of its release archive, as the actions above are
+      # pinned by commit: an archive fetched without a checksum is whatever the URL serves that day. Dependabot
+      # does not see a download, so a bump changes the version and its checksum together, from the release page.
+      - name: Install actionlint and zizmor
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          ZIZMOR_VERSION: 1.31.1
+          ZIZMOR_SHA256: d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          fetch() {
+            curl --fail --silent --show-error --location --retry 3 --output "$1" "$2"
+            echo "$3  $1" | sha256sum --check
+          }
+          fetch actionlint.tar.gz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" "$ACTIONLINT_SHA256"
+          fetch zizmor.tar.gz "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz" "$ZIZMOR_SHA256"
+          mkdir lint-bin
+          tar --extract --gzip --file actionlint.tar.gz --directory lint-bin actionlint
+          tar --extract --gzip --file zizmor.tar.gz --directory lint-bin zizmor
+          echo "$RUNNER_TEMP/lint-bin" >> "$GITHUB_PATH"
+      - run: actionlint
+      # WHY: --offline skips the audits that call the GitHub API, which need a token this job does not hold.
+      - run: zizmor --offline .github/workflows/
