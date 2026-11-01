@@ -40,6 +40,7 @@ export class BusEtaForecastClient extends BusEtaClient {
             params: { version: 1, reqCoordType: "WGS84GEO", resCoordType: "WGS84GEO", sort: "index", totalValue: 1 },
             headers: { appKey, Accept: "application/json", "Content-Type": "application/json" },
             timeout: TIMEOUT_MS,
+            maxRedirects: 0,
           },
         ),
       retryDelayMs,

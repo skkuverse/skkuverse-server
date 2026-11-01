@@ -10,6 +10,8 @@ import type { LatLng } from "../../../shared/lat-lng.types";
 import { BusEtaForecastClient } from "./bus-eta-forecast.client";
 import type { TmapPredictionResponse } from "./bus-eta-forecast.types";
 import axios from "axios";
+import { LoopbackServers } from "../../../../__tests__/helpers/nest/loopback-servers";
+import type http from "node:http";
 
 jest.mock("axios", () => {
   const actual = jest.requireActual("axios");
@@ -110,5 +112,35 @@ describe("BusEtaForecastClient.fetchOffsets", () => {
     await expect(new BusEtaForecastClient().fetchOffsets([STOPS[0]!, STOPS[1]!], DEPART, { appKey: KEY })).rejects.toMatchObject({ kind: "http" });
     expect(mockedPost.mock.calls[0]![1].routesInfo).not.toHaveProperty("wayPoints");
     expect(mockedPost).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("BusEtaForecastClient.fetchOffsets redirects", () => {
+  const servers = new LoopbackServers();
+  afterEach(() => servers.closeAll());
+
+  it("fails on a cross-origin 302 and never requests the Location target, so the app key goes nowhere else", async () => {
+    // Arrange
+    const targetHits: http.IncomingHttpHeaders[] = [];
+    const target = await servers.serve((req, res) => {
+      targetHits.push(req.headers);
+      res.setHeader("Content-Type", "application/json").end("{}");
+    });
+    const redirector = await servers.serve((_req, res) => {
+      res.statusCode = 302;
+      res.setHeader("Location", `http://127.0.0.1:${(target.address() as { port: number }).port}/elsewhere`).end();
+    });
+    const actualPost = jest.requireActual("axios").default.post as typeof axios.post;
+    mockedPost.mockReset();
+    mockedPost.mockImplementation((_url: string, body: unknown, config: object) =>
+      actualPost(`http://127.0.0.1:${(redirector.address() as { port: number }).port}/tmap`, body, config),
+    );
+
+    // Act
+    const err = await new BusEtaForecastClient().fetchOffsets(STOPS, new Date("2026-10-12T01:00:00Z"), { appKey: "app-key-secret-789", retryDelayMs: 0 }).catch((e: unknown) => e);
+
+    // Assert
+    expect(targetHits).toEqual([]);
+    expect(err).toMatchObject({ kind: "http", status: 302 });
   });
 });
