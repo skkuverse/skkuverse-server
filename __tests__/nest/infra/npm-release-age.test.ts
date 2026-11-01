@@ -1,12 +1,12 @@
 /**
- * `.npmrc` sets `min-release-age` to at least 7 days, so every npm that resolves versions in a checkout of this
+ * `.npmrc` sets `min-release-age` to at least 5 days, so every npm that resolves versions in a checkout of this
  * repository skips a release younger than that, whatever the user's own npm config says. `npm ci` installs the
  * lockfile as it is and is not affected.
  */
 import fs from "fs";
 import path from "path";
 
-const MIN_RELEASE_AGE_DAYS = 7;
+const MIN_RELEASE_AGE_DAYS = 5;
 
 const npmrc = fs.readFileSync(path.join(__dirname, "../../../.npmrc"), "utf8");
 
