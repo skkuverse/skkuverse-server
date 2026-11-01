@@ -22,6 +22,7 @@ jest.mock("date-holidays", () => {
   });
 });
 
+import Holidays from "date-holidays";
 import { lookupKoreanPublicHoliday, toHolidayYear } from "./korean-public-holiday.util";
 
 describe("lookupKoreanPublicHoliday", () => {
@@ -61,6 +62,26 @@ describe("lookupKoreanPublicHoliday", () => {
   ])("names the substitute holiday on %s", (date, name) => {
     // Act & Assert
     expect(lookupKoreanPublicHoliday(date)).toBe(name);
+  });
+
+  it("asks date-holidays once per date, a holiday or not, and answers the same each time", () => {
+    // Arrange
+    const krHolidays = (Holidays as unknown as jest.Mock).mock.results[0]?.value as { isHoliday: (date: Date) => unknown };
+    const isHoliday = jest.spyOn(krHolidays, "isHoliday");
+    // Dates no other test in this file asks for, so none is answered before the spy is in place.
+    const dates = ["2026-12-25", "2026-12-24"];
+
+    // Act
+    const answers = dates.map((date) => [1, 2, 3].map(() => lookupKoreanPublicHoliday(date)));
+
+    // Assert
+    // The call count is the behavior: each date-holidays call costs about 1.5 ms.
+    expect(answers).toEqual([
+      ["기독탄신일", "기독탄신일", "기독탄신일"],
+      [null, null, null],
+    ]);
+    expect(isHoliday).toHaveBeenCalledTimes(dates.length);
+    expect(isHoliday.mock.calls.map(([date]) => date.toISOString())).toEqual(["2026-12-25T03:00:00.000Z", "2026-12-24T03:00:00.000Z"]);
   });
 });
 

@@ -35,7 +35,7 @@ export class AppConfigRepository {
     if (!taken) return;
     logger.error(
       { event: "app_config.platform_gates.update_url_refused", dataset: APP_PLATFORM_GATES_DATASET, revision, platform, ...taken },
-      "App platform gate updateUrl is not an app store address, served as null",
+      "App platform gate updateUrl is not this app's own store listing, served as null",
     );
   }
 

@@ -20,9 +20,16 @@ export function toHolidayYear(dateStr: string): number {
   return day.year();
 }
 
+// EVIDENCE: about 1.5 ms per isHoliday; a route request asks for 14 dates about 57 times (2026-10-31).
+// Callers ask for days near today, so the map stays small.
+const answered = new Map<string, string | null>();
+
 // WHY: noon KST resolves the date whatever the host's time zone.
 export function lookupKoreanPublicHoliday(dateStr: string): string | null {
   toHolidayYear(dateStr);
+  if (answered.has(dateStr)) return answered.get(dateStr) ?? null;
   const holidays = krHolidays.isHoliday(new Date(`${dateStr}T12:00:00+09:00`));
-  return (holidays && holidays.find((h) => h.type === "public")?.name) || null;
+  const name = (holidays && holidays.find((h) => h.type === "public")?.name) || null;
+  answered.set(dateStr, name);
+  return name;
 }

@@ -5,7 +5,15 @@
  */
 import { filesUnder } from "./tree";
 
-export function moduleScopes(files: readonly string[] = filesUnder("src")): string[] {
+let srcScopes: readonly string[] | undefined;
+
+export function moduleScopes(files?: readonly string[]): string[] {
+  if (files !== undefined) return scopesOf(files);
+  srcScopes ??= scopesOf(filesUnder("src"));
+  return [...srcScopes];
+}
+
+function scopesOf(files: readonly string[]): string[] {
   const scopes = files.map((file) => {
     const [, top, rest] = /^src\/([^/]+)(\/.*)?$/.exec(file) ?? [];
     if (top === undefined) return undefined;

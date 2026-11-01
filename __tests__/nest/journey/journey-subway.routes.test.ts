@@ -84,7 +84,7 @@ import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.c
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeJourneyRepository } from "../../helpers/fakes/journey/journey.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
-import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { COLD_APP_TEST_TIMEOUT_MS, buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
@@ -192,7 +192,7 @@ describe("GET /journey/routes with the subway options", () => {
       ["4호선", "4/2026-10-20/4305", false],
       ["1호선", "1/2026-10-20/1907", true],
     ]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("A subway ride's board and alight calls equal the station boards' calls for the same run at both platforms", async () => {
     // Arrange
@@ -211,7 +211,7 @@ describe("GET /journey/routes with the subway options", () => {
     // Assert
     expect(boards).toEqual([line4!.board, line4!.alight, line1!.board, line1!.alight]);
     expect(line4!.alight).toMatchObject({ runId: line4!.board.runId, basis: "timetable", status: "scheduled", scheduledArrivalAt: "2026-10-20T08:46:00+09:00" });
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Stops: the 4호선 ride lists 사당 and the 과천선 stations to 금정, and the 1호선 express only 의왕, where it stops", async () => {
     // Arrange
@@ -228,7 +228,7 @@ describe("GET /journey/routes with the subway options", () => {
     ]);
     expect(line4!.stops[12]!.place).toMatchObject({ kind: "subway_station", id: "sadang", platformId: "S1-4-433", action: { actionValue: "/map?place=subway_station:sadang" } });
     expect([line1!.board.isExpress, line1!.stops.map(({ place }) => [place.id, place.name, place.platformId, place.action])]).toEqual([true, [["uiwang", "의왕", "KR-1-P152", null]]]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 
   it("Upcoming: the 1호선 ride after 4호선 lists the next two trains at 금정 from now, long before the one the connection boards", async () => {
     // Arrange
@@ -245,7 +245,7 @@ describe("GET /journey/routes with the subway options", () => {
     expect(upcoming.map((call) => call.runId)).not.toContain(line1.board.runId);
     expect(upcoming.every((call) => departsAt(call) >= AT_07_40_KST.getTime() && departsAt(call) < departsAt(line1.board))).toBe(true);
     expect(departsAt(upcoming[0]!)).toBeLessThan(departsAt(upcoming[1]!));
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 });
 
 describe("GET /journey/routes with 혜화's line 4 platform tracked live", () => {
@@ -283,5 +283,5 @@ describe("GET /journey/routes with 혜화's line 4 platform tracked live", () =>
       ["4/2026-10-20/4539", "timetable"],
       ["4/2026-10-20/4541", "timetable"],
     ]);
-  });
+  }, COLD_APP_TEST_TIMEOUT_MS);
 });
