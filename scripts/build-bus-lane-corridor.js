@@ -1,12 +1,46 @@
 #!/usr/bin/env node
 /**
- * (An operations detail is left out of the public history.)
+ * Build the 경부고속도로 bus-lane corridor of the `bus-lane-corridor` dataset
+ * (ADR 0013, D2 and D3): the centerline with its named boundaries, and
+ * each probe route's `sectOrd` ranges. It rewrites `data.corridor` and
+ * `data.probeRoutes` of a working file `npm run data -- pull` wrote, in place,
+ * keeping `data.entryExit` and the pulled revision, and writes nothing under
+ * src/. The lane hours and strategies are code (src/bus/eta/lane/).
  *
+ * The result reaches the server only through a push, which runs the server's
+ * own corridor checks (docs/how-to/edit-runtime-data.md):
  *
+ *   npm run data -- pull bus-lane-corridor
+ *   node scripts/build-bus-lane-corridor.js
+ *   npm run data -- push bus-lane-corridor
  *
+ * and the same with --prod and `--file .data/prod/bus-lane-corridor.json`.
  *
+ * Sources:
+ *   - centerline: OpenStreetMap (ODbL), the ways named 경부고속도로 between
+ *     한남IC and 신갈JC (`highway=trunk` north of 양재, `motorway` south of it),
+ *     averaged between the two carriageways and resampled every ~200 m;
+ *   - boundaries: OSM junction and toll nodes projected onto the centerline;
+ *   - ranges: TOPIS `getArrInfoByRouteAll`, one call per probe route. A bus in
+ *     section N is between station N and N+1, so a direction's range runs from
+ *     the section that reaches its first corridor station to the one that
+ *     leaves its last; the 60 m on-corridor test cuts the parts off 경부.
  *
+ * Usage (SEOUL_BUS_SERVICE_KEY, and NAVER_API_KEY_ID and NAVER_API_KEY where a
+ * check routes, come from the environment, never from argv):
+ *   node scripts/build-bus-lane-corridor.js [options]
  *
+ *   --file <file>         the pulled working file (default .data/dev/bus-lane-corridor.json)
+ *   --osm <file>          read the Overpass response from a file instead of fetching it
+ *   --save-osm <file>     write the fetched Overpass response there
+ *   --topis-dir <dir>     read arrive-<routeId>.json (getArrInfoByRouteAll) from <dir>
+ *   --dry-run             print the summary, write nothing
+ *   --check-probe <dir>   instead of building, project buspos-<routeId>.json
+ *                         (getBusPosByRtid) from <dir>, or fetch one snapshot per
+ *                         route when <dir> is "live", against the working file's corridor
+ *   --check-entry-exit    instead of building, route both directions through the
+ *                         working file's entry and exit points with NAVER Directions 5
+ *                         (2 calls) and report legs and via-point distances
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -78,7 +112,7 @@ function parseArgs(argv) {
 
 function requireEnv(name) {
   const value = process.env[name];
-  if (!value) throw new Error(`(An operations detail is left out of the public history.)`);
+  if (!value) throw new Error(`${name} is not set; set it in the environment`);
   return value;
 }
 

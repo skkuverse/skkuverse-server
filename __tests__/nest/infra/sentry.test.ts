@@ -1,6 +1,14 @@
 /**
- * (An operations detail is left out of the public history.)
+ * What reaches Sentry, pinned.
  *
+ * Runs the real SDK with the production options (infra/sentry-options.ts) and a
+ * transport that records envelopes instead of sending them, then requires:
+ *  - no token, cookie or service key in an error event (built by the SDK from
+ *    the request and from outgoing-call breadcrumbs);
+ *  - no log line at all: Sentry is for errors, the log pipeline for logs;
+ *  - only unknown errors become Issues: an AppError is an answer, not a fault;
+ *  - no trace header on an outgoing call: the data.go.kr gateway refuses a
+ *    request whose header holds `environment=`, which `baggage` does.
  */
 import pino from "pino";
 import * as Sentry from "@sentry/nestjs";
@@ -150,7 +158,7 @@ describe("error events", () => {
 });
 
 describe("logs", () => {
-  it("(An operations detail is left out of the public history.)", async () => {
+  it("never leave for Sentry, at any level: the log pipeline carries them", async () => {
     // Arrange
     const logger = pino({ ...loggerOptions(), level: "debug" }, { write: () => {} });
     const err = new AxiosError("timeout", "ECONNABORTED", {

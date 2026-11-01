@@ -45,7 +45,7 @@ const REFUSED_REFERERS = [
   "http://api-2:3000/notices/proxy/attachment",
   "https://attacker.example/callback",
   "https://evilskku.edu/",
-  "http://169.254.169.254/v1/instance/",
+  "http://169.254.169.254/",
 ];
 // WHY: the shape of the production request config, so the assertions below read what the client hands axios.
 const POLICY_CONFIG = { proxy: false as const, maxRedirects: 5, httpAgent: {}, httpsAgent: {}, beforeRedirect: () => undefined };

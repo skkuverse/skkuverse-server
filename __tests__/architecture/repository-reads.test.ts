@@ -1,12 +1,51 @@
 /**
- * (An operations detail is left out of the public history.)
+ * Every Mongo read in a `*.repository.ts` is bounded or cached (ADR 0010, D2).
+ * An unbounded hot read is a cost and an outage risk at once.
  *
+ * A read is a call to `find`, `findOne`, `aggregate`, `countDocuments`,
+ * `estimatedDocumentCount` or `distinct`. It is:
  *
+ *   - bounded when its options object literal has a `maxTimeMS` property, or
+ *     a `.maxTimeMS(...)` call follows it in the cursor chain;
+ *   - cached when it sits inside a `createCachedLoader(...)` call, or inside a
+ *     method or function that the loader's `load` callback calls
+ *     (`load: () => this.loadAll()`, `load: loadAll`).
  *
+ * `maxTimeMS: 0` means no limit, so it does not count.
  *
+ * `find`/`findOne` whose first argument is a function are Array methods, not
+ * reads. The check is syntactic: an options object passed through a variable
+ * does not count, so write the literal at the call.
  *
+ * Data written outside src/ is parsed where it is read (ADR 0010, D2;
+ * `.claude/rules/architecture.md`). A document type is written outside src/
+ * when its declaration in a `.document` file carries a `CONTRACT(<writer>):`
+ * comment (attached: no blank line between), and a type that a repository
+ * reads and no `src/` repository writes must carry one: deleting the tag, or
+ * detaching it with a blank line, fails instead of switching the check off.
+ * A tag a `.document` file holds detached from any type fails too, so a type
+ * that a `src/` repository also writes (the push fields of `NoticeDoc`)
+ * cannot drop out of the check by detaching its tag. A written type that
+ * carries an attached tag stays checked: the writer clause only waives the
+ * tag's requirement, never an attached tag. A read that D2 types instead of
+ * parsing is a reasoned entry in `exemptions/repository-reads.json`.
+ * In a module scope a repository opens a collection only in a private
+ * accessor declared to return `Collection<Type>` whose whole body returns
+ * `mongoCollection(…)`. A repository read of a collection of that type
+ * (`this.<accessor>().find(…)`, or through a local `const` assigned from the
+ * accessor) must:
  *
+ *   - pass a `projection` of at least one included field in its options
+ *     object literal (written there, a top-level `const` it names, or a
+ *     `const` a `.query` file exports, which a fake can share), so it loads
+ *     only what the flow uses; and
+ *   - parse the read's result through a schema imported from a `.schema` file
+ *     (`parseEach(docs, schema, …)`, `schema.parse(…)`, `schema.safeParse(…)`):
+ *     the read itself or the local it is assigned to, in the member that
+ *     reads, or handed to a member that parses its parameter.
  *
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  */
 import ts from "typescript";
 import {

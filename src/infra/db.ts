@@ -8,7 +8,9 @@ import config from "./config";
 export const HOT_READ_MAX_TIME_MS = 3_000;
 
 /**
- * (An operations detail is left out of the public history.)
+ * WHY: bounded, so a slow cluster fails requests fast instead of queueing them until the reverse proxy
+ * times out every upstream. The pool wait is bounded on `api` only: poller bulk writes hold every connection
+ * by design. No socket or operation timeout: long operations are legitimate; hot reads carry their own.
  */
 export function mongoClientOptions(
   role: string = config.role(),

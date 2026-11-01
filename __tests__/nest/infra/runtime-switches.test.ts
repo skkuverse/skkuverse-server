@@ -1,8 +1,22 @@
 /**
- * (An operations detail is left out of the public history.)
+ * PUSH_DELIVERY / CACHE / SHUTTLE_ETA / SUBWAY / REGIONAL_BUS / GBIS /
+ * NOTICE_OVERVIEW
+ * (src/infra/runtime-switches.ts).
  *
+ * Two halves. The resolver table pins what each mode defaults to and which
+ * combinations refuse to boot. The file checks pin where the switches may and
+ * may not be set: production's compose file and secret-store key lists never carry
+ * one (production must run on the defaults), and local verify — which runs the
+ * production image on a laptop holding the real Cloud Function URL — always
+ * suppresses push, the directions calls, the subway pollers, the regional
+ * bus pollers and the GBIS seat pollers, and its api
+ * replicas never call the ai for a notice overview.
  *
+ * NOTICE_OVERVIEW is the one switch production defaults off: every overview
+ * spends an LLM call, and production serves none until the route has a cost
+ * guard, so production turns it back on by its default, not by its compose file.
  *
+ * RATE_LIMIT is no switch (ADR 0023): the perimeter mode chooses the limiter, and every implementation limits.
  */
 import fs from "fs";
 import path from "path";
@@ -88,7 +102,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(switches.cacheEnabled).toBe(true);
   });
 
-  it("reads no RATE_LIMIT, in any mode, so no value of it switches a limiter off or refuses a boot", () => {
+  it("ignores RATE_LIMIT in every mode, so no value of it switches a limiter off or refuses a boot", () => {
     // Act
     const resolved = (["production", "development", "test"] as const).flatMap((mode) => ["off", "on", "true"].map((value) => resolveRuntimeSwitches({ RATE_LIMIT: value }, mode)));
 
