@@ -16,7 +16,7 @@ import type { BusCacheDocument } from "../../../src/bus/cache/bus-cache.document
 import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";
 import type { JongroRoutePathDocument } from "../../../src/bus/route-path/bus-route-path.document";
 import { Clock } from "../../../src/infra/clock";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import proposal from "./fixtures/bus-stops-7800-proposal.json";
 
@@ -96,7 +96,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 type StopPageRoute = { groupId: string; label: string; towards: string | null; direction: { id: string; label: string } | null; arrivals: unknown[] };
 const pageOf = async (stopId: string) => request(app.getHttpServer()).get(`/bus/stops/${stopId}/arrivals`);

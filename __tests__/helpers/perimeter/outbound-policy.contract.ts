@@ -26,7 +26,7 @@ export function describeOutboundPolicyContract(make: (deps: PerimeterDeps) => Ou
       const policy = make(perimeterTestDeps());
 
       // Act
-      const allowed = ["http://127.0.0.1/a.pdf", "http://[::1]/a.pdf", "http://169.254.169.254/opc/v1/instance/", "http://192.168.0.10/a.pdf"].map((url) => policy.allows(purpose, url));
+      const allowed = ["http://127.0.0.1/a.pdf", "http://[::1]/a.pdf", "http://169.254.169.254/", "http://192.168.0.10/a.pdf"].map((url) => policy.allows(purpose, url));
 
       // Assert
       expect(allowed).toEqual([false, false, false, false]);

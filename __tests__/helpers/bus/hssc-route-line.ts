@@ -1,6 +1,6 @@
 /**
  * Revision 1 of the `hssc-route-line` dataset (fixtures/hssc-route-line.dataset.json of bus, without its
- * provenance note): the HSSC loop measured from GPS on 2026-10-23, and an in-memory repository storing it. A test
+ * provenance note): the HSSC loop measured from GPS traces, and an in-memory repository storing it. A test
  * that needs another line changes a copy.
  */
 import fs from "fs";

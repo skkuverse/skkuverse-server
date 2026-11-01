@@ -8,8 +8,8 @@ import type { AccuracyReport } from "./subway-history.types";
 
 const rangePipe = new ZodValidationPipe(accuracyQuery, "INVALID_ACCURACY_RANGE");
 
-// SEE: docs/reference/subway-api.md ("GET /internal/subway/accuracy"): its own internal token and no limiter,
-// as every internal route; the guard runs before the range is read, so a caller without the token learns nothing.
+// SEE: docs/reference/subway-api.md ("GET /internal/subway/accuracy"): its own internal token, as every
+// internal route; the guard runs before the range is read, so a caller without the token learns nothing.
 @Controller("internal/subway")
 export class SubwayHistoryController {
   constructor(private readonly history: SubwayHistoryService) {}

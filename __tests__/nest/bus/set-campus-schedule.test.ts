@@ -16,7 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import type { Db, MongoClient } from "mongodb";
 import { busStopsFixture } from "../../helpers/bus/bus-stops";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { run } = require("../../../scripts/set-campus-schedule");
@@ -90,7 +90,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "set-campus-schedule-"));

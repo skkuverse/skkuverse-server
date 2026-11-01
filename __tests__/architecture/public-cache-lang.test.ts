@@ -1,6 +1,6 @@
 /**
  * A response a shared cache may store does not depend on the request's
- * language (umbrella issue spencer0124/skkuverse#63). Cloudflare's cache key
+ * language. Cloudflare's cache key
  * leaves out `Accept-Language` and it does not honor `Vary` on these
  * responses: measured 2026-10-14, `/map/overlays/campus` with
  * `Accept-Language: en` came back HIT carrying `ko`. A language-dependent

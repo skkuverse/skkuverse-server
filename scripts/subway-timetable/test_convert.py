@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests of convert.py, without the network or the Doppler key.
+"""Unit tests of convert.py, without the network or the Seoul API key.
 
 Run from the repository root (jest runs it from __tests__/nest/subway/subway-timetable-convert.test.ts):
 

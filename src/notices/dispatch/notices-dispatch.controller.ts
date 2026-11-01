@@ -6,7 +6,7 @@ import type { DispatchPing } from "./notices-dispatch.types";
 import type { SweepSummary } from "./notices-dispatch.wire";
 
 // CONTRACT(skkuverse-crawler): its cycle-end ping (skkuverse-crawler/py/src/skkuverse_crawler/plugins/dispatch/client.py) reads only processed,
-// sent and failed; the body is log correlation only. No auth middleware and no limiter: the caller is the crawler.
+// sent and failed; the body is log correlation only. The crawler is the only caller, with its internal token.
 @Controller("internal/notices")
 export class NoticesDispatchController {
   constructor(private readonly dispatch: NoticesDispatchService) {}

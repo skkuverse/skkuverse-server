@@ -1,6 +1,6 @@
 /**
  * Where PERIMETER_MODE and HOST are set (ADR 0023, D2): per execution context, like NODE_ENV and ROLE, and never
- * in a file Doppler renders. The containers run `overlay` on every interface and probe their health on IPv4
+ * in a rendered .env. The containers run `overlay` on every interface and probe their health on IPv4
  * loopback, because `0.0.0.0` does not listen on `::1`; `npm run dev` runs `local-dev` on loopback; Jest runs
  * `test`. The server listens on the configured host, not on every interface.
  */

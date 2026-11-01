@@ -19,7 +19,7 @@ import type { Db as MongoDb } from "mongodb";
 import { Test } from "@nestjs/testing";
 import type { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import type { Timetable } from "../../../src/subway/timetable/subway-timetable.types";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { subwayTimetableFixtureFiles } from "../../helpers/subway/timetables";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -81,7 +81,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   await clearCollections(content);

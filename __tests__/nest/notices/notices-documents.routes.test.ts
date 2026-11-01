@@ -1,5 +1,5 @@
 /**
- * Real production notice documents through the server's read path (spencer0124/skkuverse#61 option E, #68):
+ * Real production notice documents through the server's read path:
  * the documents in fixtures/prod-notice-documents.json, deserialized from Extended JSON into the BSON types the
  * driver hands over, are served by the list and detail routes, and every response parses with its published
  * wire schema. A drift between what the crawler stores and what the server types (an `articleNo` stored as a

@@ -27,7 +27,7 @@ import type { Collection } from "mongodb";
 import request from "supertest";
 import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";
 import { Clock } from "../../../src/infra/clock";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
@@ -164,7 +164,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   upstream.hssc = HSSC_ITEMS;

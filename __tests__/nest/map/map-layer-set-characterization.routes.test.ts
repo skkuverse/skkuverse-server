@@ -44,7 +44,7 @@ import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/map-production.capture.json";
 import festival from "./fixtures/map-festival.expected.json";
@@ -151,7 +151,7 @@ afterAll(async () => {
     if (savedStyleId === undefined) delete process.env.NAVER_MAP_STYLE_ID;
     else process.env.NAVER_MAP_STYLE_ID = savedStyleId;
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 /** Asserts an answer is the expected bytes: the body text, its weak ETag and the shared headers. */
 function expectAnswer(res: request.Response, expected: Expected, cacheControl: string | undefined): void {

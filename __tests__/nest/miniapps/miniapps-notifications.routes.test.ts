@@ -147,7 +147,7 @@ describe("GET /miniapps/:id/notifications", () => {
     // Assert
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
-    // A shared cache must not keep the error (spencer0124/skkuverse#79).
+    // A shared cache must not keep the error.
     expect(res.headers["cache-control"] ?? "").not.toMatch(/public|max-age/);
   });
 });

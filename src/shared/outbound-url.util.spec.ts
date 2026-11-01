@@ -41,7 +41,7 @@ describe("parseAllowedUrl", () => {
     "https://user:pw@www.skku.edu/x",
     "http://127.0.0.1:3000/",
     "http://api-2:3000/robots.txt",
-    "http://169.254.169.254/opc/v1/instance/",
+    "http://169.254.169.254/",
     "file:///etc/passwd",
     "ftp://www.skku.edu/x",
     "data:text/html,<script>alert(1)</script>",

@@ -256,7 +256,7 @@ describe("the LocalDev class for outboundPolicy", () => {
     expect(policy.allows("notice-attachment", "http://8.8.8.8/a.pdf")).toBe(true);
   });
 
-  it.each(["http://127.0.0.1/a.pdf", "http://[::1]/a.pdf", "http://169.254.169.254/opc/v1/instance/", "http://10.0.0.1/a.pdf", "https://files.example:8443/a.pdf"])(
+  it.each(["http://127.0.0.1/a.pdf", "http://[::1]/a.pdf", "http://169.254.169.254/", "http://10.0.0.1/a.pdf", "https://files.example:8443/a.pdf"])(
     "refuses %s: a non-public address, or a port other than the scheme's",
     (url) => {
       // Act & Assert

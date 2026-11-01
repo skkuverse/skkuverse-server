@@ -1,8 +1,9 @@
 /**
- * The server's .env is rendered from Doppler by scripts/render_env.py, which
- * writes exactly the names in config/env.{prd,dev}.keys and fails if Doppler
- * holds one name more or less. Those two lists are the contract between this
- * code and Doppler, and this file keeps them honest:
+ * The server's .env is rendered from the maintainers' secret store by
+ * scripts/render_env.py, which writes exactly the names in
+ * config/env.{prd,dev}.keys and fails if the store holds one name more or
+ * less. Those two lists are the contract between this code and the store, and
+ * this file keeps them honest:
  *
  *   - a .env holding only the listed names passes the bootstrap validation, so
  *     a rendered file always boots;
@@ -55,7 +56,7 @@ const PRD = allowlist("config/env.prd.keys");
 const DEV = allowlist("config/env.dev.keys");
 // WHY: the deploy restarts the previous image against the newly rendered .env when a deploy fails health, so a
 // name that image requires stays listed for one release after the code stops reading it; the next release deletes
-// the entry, the name in both lists and the Doppler key.
+// the entry, the name in both lists and the secret-store key.
 const KEPT_FOR_ROLLBACK: Readonly<Record<string, string>> = {};
 // Production adds SENTRY_DSN, and its overlay mode PERIMETER_SETTINGS, so its list is the longest.
 const REQUIRED = requiredValues({ NODE_ENV: "production", PERIMETER_MODE: "overlay" }).map((v) => v.env);

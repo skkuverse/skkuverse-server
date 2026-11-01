@@ -13,11 +13,9 @@ audience: internal
 > dataset you push with `npm run data`, the first-party origin a page we host needs in code, the
 > order of a registry push, a layout push and a deploy, and how to check each step in production.
 > The wire contract is [reference/miniapps-api.md](../reference/miniapps-api.md). Building the page
-> itself is a separate, cross-repo procedure:
-> [skkuverse-miniapp's create-a-miniapp how-to](https://github.com/spencer0124/skkuverse-miniapp/blob/main/docs/how-to/create-a-miniapp.md).
-> A page is deployed only after it passes the
-> [miniapp spec](https://github.com/spencer0124/skkuverse-miniapp/blob/main/docs/reference/miniapp-spec.md)
-> check, whose identity rules (the id pattern, the `<id>.mini.skkuverse.com` host) match this registry's.
+> itself is a separate, cross-repo procedure in `skkuverse-miniapp`, outside this repository.
+> A page is deployed only after it passes that repository's miniapp spec check, whose identity
+> rules (the id pattern, the `<id>.mini.skkuverse.com` host) match this registry's.
 
 ## Overview
 
@@ -51,7 +49,7 @@ fetch its shell, and makes the app open links to it in its own shell. A **home s
 ## Prerequisites
 
 - The mini app is built and deployed at its own origin, `https://<id>.mini.skkuverse.com` for a
-  first-party app, per skkuverse-miniapp's runbook linked above.
+  first-party app, per `skkuverse-miniapp`'s own procedure.
 - What [edit-runtime-data.md](edit-runtime-data.md#prerequisites) asks for: a `.env` from
   `npm run env:pull`, and `git config user.email`.
 - For a first-party mini app: a checkout of `dev` in `skkuverse-server`.
@@ -244,4 +242,3 @@ A `?b=$RANDOM` query skips Cloudflare's five-minute edge cache.
 - [how-to/edit-runtime-data.md](edit-runtime-data.md): `npm run data`, history, rollback and `check`
 - [how-to/configure-home.md](configure-home.md): placing a registered mini app on the home screen
 - [explanation/miniapps-architecture.md](../explanation/miniapps-architecture.md): the registry snapshot and what reads it
-- [skkuverse-miniapp's create-a-miniapp how-to](https://github.com/spencer0124/skkuverse-miniapp/blob/main/docs/how-to/create-a-miniapp.md): scaffolding, the Cloudflare Pages project and the custom domain

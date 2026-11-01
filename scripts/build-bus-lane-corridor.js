@@ -11,7 +11,7 @@
  * own corridor checks (docs/how-to/edit-runtime-data.md):
  *
  *   npm run data -- pull bus-lane-corridor
- *   doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js
+ *   node scripts/build-bus-lane-corridor.js
  *   npm run data -- push bus-lane-corridor
  *
  * and the same with --prod and `--file .data/prod/bus-lane-corridor.json`.
@@ -26,8 +26,9 @@
  *     the section that reaches its first corridor station to the one that
  *     leaves its last; the 60 m on-corridor test cuts the parts off 경부.
  *
- * Usage (keys come from the environment, never from argv):
- *   doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js [options]
+ * Usage (SEOUL_BUS_SERVICE_KEY, and NAVER_API_KEY_ID and NAVER_API_KEY where a
+ * check routes, come from the environment, never from argv):
+ *   node scripts/build-bus-lane-corridor.js [options]
  *
  *   --file <file>         the pulled working file (default .data/dev/bus-lane-corridor.json)
  *   --osm <file>          read the Overpass response from a file instead of fetching it
@@ -111,7 +112,7 @@ function parseArgs(argv) {
 
 function requireEnv(name) {
   const value = process.env[name];
-  if (!value) throw new Error(`${name} is not set; run under doppler run -p backend -c dev_server`);
+  if (!value) throw new Error(`${name} is not set; set it in the environment`);
   return value;
 }
 

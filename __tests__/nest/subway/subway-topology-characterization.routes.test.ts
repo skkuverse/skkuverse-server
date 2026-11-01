@@ -39,7 +39,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
 import type { StoredTrainArrival, SubwayArrivalsDoc } from "../../../src/subway/subway.document";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/subway-arrivals-production.capture.json";
 import night from "./fixtures/subway-arrivals-night.golden.json";
@@ -196,7 +196,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 describe("GET /subway/stations/:stationId/arrivals", () => {
   it.each(LANGS.flatMap((lang) => STATION_IDS.map((stationId) => [lang, stationId] as const)))(
