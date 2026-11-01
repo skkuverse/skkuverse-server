@@ -46,7 +46,7 @@ describe("ci.yml — the test job", () => {
   it("restores the mongod binary cache before npm ci and checks the binary after it", () => {
     // Act
     const order = steps(testJob)
-      .map((step) => /name: (mongod [\w ]+)|uses: (actions\/cache)@|run: (npm ci)$/m.exec(step)?.slice(1).find(Boolean))
+      .map((step) => /name: (mongod [\w ]+)|uses: (actions\/cache)@|run: (?:sfw )?(npm ci)$/m.exec(step)?.slice(1).find(Boolean))
       .filter(Boolean);
     const env = /^ {4}env:\n((?: {6}.*\n)+)/m.exec(testJob)?.[1];
 
@@ -54,5 +54,19 @@ describe("ci.yml — the test job", () => {
     expect(env).toBe("      MONGOMS_DOWNLOAD_DIR: /home/runner/.cache/mongodb-binaries\n");
     expect(order).toEqual(["mongod version", "actions/cache", "npm ci", "mongod binary present"]);
     expect(testJob).toContain("path: /home/runner/.cache/mongodb-binaries");
+  });
+
+  it("installs dependencies only through Socket Firewall, with the action and its binary pinned", () => {
+    // Act
+    const jobSteps = steps(testJob);
+    const firewall = jobSteps.findIndex((step) => /uses: SocketDev\/action@[0-9a-f]{40} /.test(step));
+    const install = jobSteps.findIndex((step) => /^ {6}- run: sfw npm ci$/m.test(step));
+
+    // Assert
+    expect(firewall).toBeGreaterThanOrEqual(0);
+    expect(install).toBeGreaterThan(firewall);
+    expect(jobSteps[firewall]).toMatch(/^ {10}mode: firewall-free$/m);
+    expect(jobSteps[firewall]).toMatch(/^ {10}firewall-version: "?\d+\.\d+\.\d+"?$/m);
+    expect(testJob).not.toMatch(/^ {6}- run: npm ci$/m);
   });
 });
