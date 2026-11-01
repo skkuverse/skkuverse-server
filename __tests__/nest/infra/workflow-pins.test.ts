@@ -35,18 +35,22 @@ export function unpinnedUses(yaml: string): string[] {
   });
 }
 
-/** `<tool>: <problem>` for each tool a job downloads without an exact version, a sha256 or a script that checks it. */
+/**
+ * `<tool>: <problem>` for each tool a job downloads without an exact version, a sha256 or a script that checks it.
+ * A line whose first non-space character is `#` runs nothing, so no rule reads it.
+ */
 export function unverifiedDownloads(job: string, tools: string[]): string[] {
-  const unchecked = /sha256sum --check\b/.test(job) ? [] : ["job: nothing runs sha256sum --check"];
+  const code = job.split("\n").filter((line) => !/^\s*#/.test(line)).join("\n");
+  const unchecked = /sha256sum --check\b/.test(code) ? [] : ["job: nothing runs sha256sum --check"];
   return tools.flatMap((tool) => {
-    const env = (key: string) => new RegExp(`^\\s+${tool}_${key}: (\\S+)$`, "m").exec(job)?.[1];
+    const env = (key: string) => new RegExp(`^\\s+${tool}_${key}: (\\S+)$`, "m").exec(code)?.[1];
     const version = env("VERSION");
     const sha256 = env("SHA256");
     const problems: string[] = [];
     if (version === undefined || !/^\d+\.\d+\.\d+$/.test(version)) problems.push("no exact version");
     if (sha256 === undefined || !/^[0-9a-f]{64}$/.test(sha256)) problems.push("no sha256");
-    if (!job.includes(`"$${tool}_SHA256"`)) problems.push("the script never passes the sha256 to its check");
-    if (!job.includes(`\${${tool}_VERSION}`)) problems.push("the download URL does not use the pinned version");
+    if (!code.includes(`"$${tool}_SHA256"`)) problems.push("the script never passes the sha256 to its check");
+    if (!code.includes(`\${${tool}_VERSION}`)) problems.push("the download URL does not use the pinned version");
     return problems.map((p) => `${tool}: ${p}`);
   }).concat(unchecked);
 }
@@ -140,6 +144,39 @@ describe("workflow-lint download rule applies as specified", () => {
         ].join("\n"),
       }),
       "job: nothing runs sha256sum --check",
+    ],
+    [
+      "a checksum check that sits in a comment",
+      job({
+        script: [
+          "      fetch() { curl --output \"$1\" \"$2\"; }",
+          "      # echo \"$3  $1\" | sha256sum --check",
+          "      fetch lint.tar.gz \"https://example.test/v${LINT_VERSION}/lint.tar.gz\" \"$LINT_SHA256\"",
+        ].join("\n"),
+      }),
+      "job: nothing runs sha256sum --check",
+    ],
+    [
+      "a sha256 that only a commented-out call passes to the check",
+      job({
+        script: [
+          "      fetch() { curl --output \"$1\" \"$2\"; echo \"$3  $1\" | sha256sum --check; }",
+          "      # fetch lint.tar.gz \"https://example.test/v${LINT_VERSION}/lint.tar.gz\" \"$LINT_SHA256\"",
+          "      fetch lint.tar.gz \"https://example.test/v${LINT_VERSION}/lint.tar.gz\" abc",
+        ].join("\n"),
+      }),
+      "LINT: the script never passes the sha256 to its check",
+    ],
+    [
+      "a pinned version that only a commented-out URL uses",
+      job({
+        script: [
+          "      fetch() { curl --output \"$1\" \"$2\"; echo \"$3  $1\" | sha256sum --check; }",
+          "      # fetch lint.tar.gz \"https://example.test/v${LINT_VERSION}/lint.tar.gz\" \"$LINT_SHA256\"",
+          "      fetch lint.tar.gz \"https://example.test/latest/lint.tar.gz\" \"$LINT_SHA256\"",
+        ].join("\n"),
+      }),
+      "LINT: the download URL does not use the pinned version",
     ],
   ])("refuses %s", (_case, yaml, problem) => {
     // Act & Assert
