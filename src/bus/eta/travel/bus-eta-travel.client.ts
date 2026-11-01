@@ -42,6 +42,7 @@ export class BusEtaTravelClient extends BusEtaClient {
           params,
           headers: { "X-NCP-APIGW-API-KEY-ID": credentials.keyId, "X-NCP-APIGW-API-KEY": credentials.key },
           timeout: TIMEOUT_MS,
+          maxRedirects: 0,
         }),
       opts.retryDelayMs ?? RETRY_DELAY_MS,
     );

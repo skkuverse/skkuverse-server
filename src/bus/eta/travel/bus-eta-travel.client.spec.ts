@@ -10,6 +10,8 @@ import type { LatLng } from "../../../shared/lat-lng.types";
 import { BusEtaTravelClient } from "./bus-eta-travel.client";
 import type { NaverDirectionsResponse, RoutePoint } from "./bus-eta-travel.types";
 import axios from "axios";
+import { LoopbackServers } from "../../../../__tests__/helpers/nest/loopback-servers";
+import type http from "node:http";
 
 jest.mock("axios", () => {
   const actual = jest.requireActual("axios");
@@ -178,5 +180,35 @@ describe("BusEtaTravelClient.fetchRouteTimes", () => {
 
     // Assert
     expect(mockedGet).toHaveBeenCalledTimes(calls);
+  });
+});
+
+describe("BusEtaTravelClient.fetchOffsets redirects", () => {
+  const servers = new LoopbackServers();
+  afterEach(() => servers.closeAll());
+
+  it("fails on a cross-origin 302 and never requests the Location target, so the keys go nowhere else", async () => {
+    // Arrange
+    const targetHits: http.IncomingHttpHeaders[] = [];
+    const target = await servers.serve((req, res) => {
+      targetHits.push(req.headers);
+      res.setHeader("Content-Type", "application/json").end("{}");
+    });
+    const redirector = await servers.serve((_req, res) => {
+      res.statusCode = 302;
+      res.setHeader("Location", `http://127.0.0.1:${(target.address() as { port: number }).port}/elsewhere`).end();
+    });
+    const actualGet = jest.requireActual("axios").default.get as typeof axios.get;
+    mockedGet.mockReset();
+    mockedGet.mockImplementation((_url: string, config: object) =>
+      actualGet(`http://127.0.0.1:${(redirector.address() as { port: number }).port}/naver`, config),
+    );
+
+    // Act
+    const err = await new BusEtaTravelClient().fetchOffsets(STOPS, { keyId: "key-id-123", key: "secret-456" }, { retryDelayMs: 0 }).catch((e: unknown) => e);
+
+    // Assert
+    expect(targetHits).toEqual([]);
+    expect(err).toMatchObject({ kind: "http", status: 302 });
   });
 });
