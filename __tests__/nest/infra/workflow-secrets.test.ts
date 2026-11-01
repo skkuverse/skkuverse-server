@@ -296,12 +296,12 @@ describe(".github/workflows on a public repository", () => {
     expect(readers.filter((f) => !SECRET_HOLDERS.includes(f))).toEqual([]);
   });
 
-  it("use an environment only in contracts-sync.yml", () => {
+  it("use an environment only in the workflows that hold a secret", () => {
     // Act
     const users = files.filter((f) => usesEnvironment(workflow(f)));
 
     // Assert
-    expect(users).toEqual(["contracts-sync.yml"]);
+    expect(users).toEqual(SECRET_HOLDERS);
   });
 
   it("grant contents: write only in contracts-sync.yml", () => {
@@ -428,18 +428,16 @@ describe("claude.yml", () => {
     expect(lock).toEqual(expect.arrayContaining(["Read(.git/**)", "Bash(*--output*)", "Bash(*--no-index*)"]));
   });
 
-  // WHY: GitHub runs a review event on a fork's pull request without secrets, so the job could only fail there;
-  // on a fork's pull request a maintainer asks with a top-level comment (docs/cicd-and-branch-protection.md).
-  it("skips a review or a review comment on a fork's pull request", () => {
-    // Arrange
-    const gate = jobIf(job) ?? "";
-
-    // Act
-    const reviewDisjuncts = splitTop(unwrap(gate), "||").filter((d) => /github\.event_name == 'pull_request_review(?:_comment)?'/.test(d));
-
+  it("keeps its secret in the `claude` environment", () => {
     // Assert
-    expect(reviewDisjuncts).toHaveLength(2);
-    for (const disjunct of reviewDisjuncts) expect(conjuncts(disjunct)).toContain("!github.event.pull_request.head.repo.fork");
+    expect(job).toMatch(/^ {4}environment: claude$/m);
+  });
+
+  // WHY: the `claude` environment admits only the default branch. An issue comment runs there, while a review or a
+  // review comment runs on the pull request's merge ref and would start without the secret.
+  it("listens only to issue comments", () => {
+    // Assert
+    expect(triggerNames(claude)).toEqual(["issue_comment"]);
   });
 });
 
