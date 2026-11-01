@@ -33,6 +33,12 @@ import { MongoMemoryServer } from "mongodb-memory-server";
  */
 export const MONGOD_START_TIMEOUT_MS = 30_000;
 
+/**
+ * mongodb-memory-server's own launch limit, 10 s by default, inside the hook's MONGOD_START_TIMEOUT_MS: a loaded
+ * deploy gate on 2026-11-01 failed transit-layout-dataset at 10 s while the hook still had 20 s left.
+ */
+const MONGOD_LAUNCH_TIMEOUT_MS = 20_000;
+
 /** For a `beforeEach` that boots Nest apps against mongod. */
 export const APP_BOOT_TIMEOUT_MS = 15_000;
 
@@ -61,7 +67,13 @@ async function createOnLoopback(nextPort: () => Promise<number>, attempt: number
   const port = await nextPort();
   try {
     return await MongoMemoryServer.create({
-      instance: { ip: "127.0.0.1", port, portGeneration: false, args: ["--setParameter", "ttlMonitorEnabled=false"] },
+      instance: {
+        ip: "127.0.0.1",
+        port,
+        portGeneration: false,
+        launchTimeout: MONGOD_LAUNCH_TIMEOUT_MS,
+        args: ["--setParameter", "ttlMonitorEnabled=false"],
+      },
     });
   } catch (err) {
     if (attempt >= START_ATTEMPTS || !isPortTaken(err)) throw err;
