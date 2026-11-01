@@ -28,7 +28,12 @@
  *     never for a pull request; it checks that its secrets are set before any
  *     other step, and its PR body links no private repository;
  *   - ci.yml's `workflow-lint` job runs actionlint and zizmor, zizmor with
- *     `--offline`, so the job holds no token and calls no API.
+ *     `--offline`, so the job holds no token and calls no API;
+ *   - scorecard.yml (OpenSSF Scorecard) runs on a push to main, on a schedule
+ *     or by hand, never for a pull request; it publishes nothing, so it has no
+ *     `id-token` permission, and its one job holds `security-events: write`
+ *     for the SARIF upload and `contents: read` for the checkout. No other
+ *     workflow grants `security-events: write`.
  *
  * Patterns rather than a YAML parser: the repo has no parser dependency. The
  * rules are tested on the mutants they exist to catch, then on the real files.
@@ -64,6 +69,18 @@ export const readsSecret = (yaml: string) => /\bsecrets\s*[.[]|\(\s*secrets\s*\)
 export const usesEnvironment = (yaml: string) => yamlLines(yaml).some((line) => /^\s*environment:/.test(line));
 
 export const grantsWrite = (yaml: string) => yamlLines(yaml).some((line) => /^\s*contents:\s*write\b|\bwrite-all\b/.test(line));
+
+export const grantsSecurityEventsWrite = (yaml: string) => yamlLines(yaml).some((line) => /^\s*security-events:\s*write\b/.test(line));
+
+/** A job's own `permissions:` entries as sorted `name: level` strings. */
+export function jobPermissions(body: string): string[] {
+  const block = /^ {4}permissions:\n((?: {6}.*\n)*)/m.exec(body)?.[1] ?? "";
+  return block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"))
+    .sort();
+}
 
 /** `<line>: <text>` for each line of a `run:` script that holds a `${{ }}` expression. */
 export function interpolatedRuns(yaml: string): string[] {
@@ -256,6 +273,29 @@ describe("the public-workflow rules apply as specified", () => {
     expect(namesPersonalRepository(text)).toBe(true);
   });
 
+  it("finds a security-events write grant, and reads a job's own permissions as sorted entries", () => {
+    // Arrange
+    const yaml = [
+      "name: Mutant",
+      "jobs:",
+      "  upload:",
+      "    permissions:",
+      "      security-events: write",
+      "      # a comment between entries",
+      "      contents: read",
+      "    steps:",
+      "      - run: echo",
+      "",
+    ].join("\n");
+    const [, body = ""] = [...jobBlocks(yaml)][0] ?? [];
+
+    // Act & Assert
+    expect(grantsSecurityEventsWrite(yaml)).toBe(true);
+    expect(grantsSecurityEventsWrite("      security-events: read")).toBe(false);
+    expect(grantsSecurityEventsWrite("      # security-events: write")).toBe(false);
+    expect(jobPermissions(body)).toEqual(["contents: read", "security-events: write"]);
+  });
+
   it("finds an extra disjunct without the author_association check, even on a gated line", () => {
     // Arrange
     // M2: one gated line, one ungated disjunct.
@@ -342,6 +382,14 @@ describe(".github/workflows on a public repository", () => {
     expect(writers).toEqual(["contracts-sync.yml"]);
   });
 
+  it("grant security-events: write only in scorecard.yml", () => {
+    // Act
+    const writers = files.filter((f) => grantsSecurityEventsWrite(workflow(f)));
+
+    // Assert
+    expect(writers).toEqual(["scorecard.yml"]);
+  });
+
   it("pass expressions to run scripts only through env:", () => {
     // Act
     const found = files.flatMap((f) => interpolatedRuns(workflow(f)).map((hit) => `${f}:${hit}`));
@@ -422,6 +470,48 @@ describe("the vendored contract tools", () => {
         ".github/contract-tools/contracts/manifest.json",
       ]),
     );
+  });
+});
+
+describe("scorecard.yml", () => {
+  const scorecard = files.includes("scorecard.yml") ? workflow("scorecard.yml") : "";
+  const jobs = jobBlocks(scorecard);
+  const [job = ""] = jobs.values();
+
+  it("runs on a push to main, on a schedule or by hand, never for a pull request", () => {
+    // Assert
+    expect(triggerNames(scorecard)).toEqual(["push", "schedule", "workflow_dispatch"]);
+    expect(triggers(scorecard)).toMatch(/^ {2}push:\n {4}branches: \[main\]$/m);
+  });
+
+  it("has one job that holds only security-events: write and contents: read", () => {
+    // Assert
+    expect([...jobs.keys()]).toHaveLength(1);
+    expect(jobPermissions(job)).toEqual(["contents: read", "security-events: write"]);
+  });
+
+  it("publishes nothing, so no job can mint an OIDC token", () => {
+    // Assert
+    expect(scorecard).not.toMatch(/id-token/);
+    expect(job).toMatch(/^ {10}publish_results: false$/m);
+  });
+
+  it("uploads the SARIF file to code scanning", () => {
+    // Assert
+    expect(job).toMatch(/^ {8}uses: ossf\/scorecard-action@\S+/m);
+    expect(job).toMatch(/^ {8}uses: github\/codeql-action\/upload-sarif@\S+/m);
+    expect(job).toMatch(/^ {10}sarif_file: results\.sarif$/m);
+  });
+
+  it("leaves no token in .git/config", () => {
+    // Assert
+    expect(job).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
+  });
+
+  it("reads no secret and uses no environment", () => {
+    // Assert
+    expect(readsSecret(scorecard)).toBe(false);
+    expect(usesEnvironment(scorecard)).toBe(false);
   });
 });
 
