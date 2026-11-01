@@ -21,7 +21,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { MongoClient } from "mongodb";
 import { Clock } from "../../../src/infra/clock";
 import { requiredValues } from "../../../src/infra/required-env";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
@@ -65,7 +65,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   fetched.length = 0;

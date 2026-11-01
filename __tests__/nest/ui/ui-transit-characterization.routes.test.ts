@@ -40,7 +40,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";
 import { Clock } from "../../../src/infra/clock";
-import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/transit-production.capture.json";
 
@@ -181,7 +181,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 const transitAt = (clock: ClockName, lang: Lang) =>
   request(apps.get(clock)!.getHttpServer()).get("/ui/home/transit").set("Accept-Language", lang);

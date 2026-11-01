@@ -34,6 +34,14 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 export const MONGOD_START_TIMEOUT_MS = 30_000;
 
 /**
+ * For the `afterAll` that stops mongod, which Jest cuts off at 5 s by default. One `stop()` (SIGINT, wait for exit,
+ * remove the dbPath) took 0.2 s at rest and at most 1.2 s alone under 16 `yes` burners (load 43). Inside a full
+ * `npm test` under the same burners (load above 100), 41 stops peaked at 2.6 s and `closeClient` at 67 ms,
+ * and the dbPath removal added about 25 ms of that. The hook gets 8 times the worst of those.
+ */
+export const MONGOD_STOP_TIMEOUT_MS = 20_000;
+
+/**
  * mongodb-memory-server's own launch limit, 10 s by default, inside the hook's MONGOD_START_TIMEOUT_MS: a loaded
  * deploy gate on 2026-11-01 failed transit-layout-dataset at 10 s while the hook still had 20 s left.
  */

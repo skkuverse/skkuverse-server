@@ -28,7 +28,7 @@ import os from "node:os";
 import path from "node:path";
 import type { Db } from "mongodb";
 import { z } from "zod";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const parts = require("../../../scripts/lib/datasets/parts");
@@ -119,7 +119,7 @@ afterAll(async () => {
   } finally {
     await mongod?.stop();
   }
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 beforeEach(async () => {
   await db.dropDatabase();

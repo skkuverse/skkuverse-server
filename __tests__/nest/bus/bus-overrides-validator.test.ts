@@ -8,7 +8,7 @@
 
 import { MongoClient, type Collection } from "mongodb";
 import { busOverrideDoc } from "../../../src/bus/schedule/bus-schedule.schema";
-import { MONGOD_START_TIMEOUT_MS, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, startMongod, type TestMongod, MONGOD_STOP_TIMEOUT_MS } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so these are requires.
 const { BUS_OVERRIDES_VALIDATOR, overrideViolations, assertValidOverrides } = require("../../../scripts/lib/bus-overrides-validator");
@@ -60,7 +60,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await client?.close();
   await mongod?.stop();
-});
+}, MONGOD_STOP_TIMEOUT_MS);
 
 async function isAcceptedByMongod(doc: Doc): Promise<boolean> {
   try {
