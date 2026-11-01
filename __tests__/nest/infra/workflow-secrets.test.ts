@@ -493,12 +493,39 @@ describe("scorecard.yml", () => {
   it("publishes nothing, so no job can mint an OIDC token", () => {
     // Assert
     expect(scorecard).not.toMatch(/id-token/);
-    expect(job).toMatch(/^ {10}publish_results: false$/m);
+    expect(job).toMatch(/^ {10}INPUT_PUBLISH_RESULTS: false$/m);
+  });
+
+  it("runs the Scorecard image by digest, not through the action that names it by tag", () => {
+    // Assert
+    expect(job).toMatch(/^ {8}uses: docker:\/\/ghcr\.io\/ossf\/scorecard-action@sha256:[0-9a-f]{64} # v\d+\.\d+\.\d+$/m);
+    expect(job).not.toMatch(/uses: ossf\/scorecard-action@/);
+  });
+
+  // WHY: a docker:// step gets none of the defaults in the action's action.yaml, and a missing input fails only on main.
+  it("sets each input the container reads, and nothing else", () => {
+    // Arrange
+    const env = /^ {6}- name: Run analysis\n(?: {8}.*\n)*? {8}env:\n((?: {10}.*\n)*)/m.exec(job)?.[1] ?? "";
+
+    // Act
+    const lines = env.split("\n").map((line) => line.trim()).filter((line) => line !== "");
+
+    // Assert
+    expect(lines.sort()).toEqual(
+      [
+        "INPUT_FILE_MODE: archive",
+        "INPUT_INTERNAL_DEFAULT_TOKEN: ${{ github.token }}",
+        "INPUT_INTERNAL_PUBLISH_BASE_URL: https://api.scorecard.dev",
+        "INPUT_PUBLISH_RESULTS: false",
+        "INPUT_REPO_TOKEN: ${{ github.token }}",
+        "INPUT_RESULTS_FILE: results.sarif",
+        "INPUT_RESULTS_FORMAT: sarif",
+      ],
+    );
   });
 
   it("uploads the SARIF file to code scanning", () => {
     // Assert
-    expect(job).toMatch(/^ {8}uses: ossf\/scorecard-action@\S+/m);
     expect(job).toMatch(/^ {8}uses: github\/codeql-action\/upload-sarif@\S+/m);
     expect(job).toMatch(/^ {10}sarif_file: results\.sarif$/m);
   });

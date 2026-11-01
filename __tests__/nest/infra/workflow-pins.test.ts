@@ -11,6 +11,11 @@
  *     which GitHub opens against `main` (docs/cicd-and-branch-protection.md,
  *     "Dependabot security updates").
  *
+ *   - a `docker://` step names its image as `@sha256:<64 hex>` followed by
+ *     `# v<version>`, and an action whose action.yaml runs its image by tag
+ *     (`RUNS_IMAGE_BY_TAG`) is not used: its commit pin would leave the image
+ *     it executes unpinned. Dependabot skips `docker://` steps, so a bump
+ *     changes the digest and the version comment together;
  *   - the two workflow linters that `ci.yml` downloads (`workflow-lint`) are
  *     pinned the same way: an exact version and the sha256 of its release
  *     archive, which the install script checks before it unpacks the archive.
@@ -25,12 +30,20 @@ import path from "path";
 const root = path.join(__dirname, "../../..");
 const WORKFLOWS = ".github/workflows";
 const PINNED = /^[\w.-]+\/[\w.-]+(?:\/[\w./-]+)?@[0-9a-f]{40} # v\d+(?:\.\d+)*$/;
+const PINNED_IMAGE = /^docker:\/\/[\w.-]+(?:\/[\w.-]+)*@sha256:[0-9a-f]{64} # v\d+(?:\.\d+)*$/;
 
-/** `<line>: <uses value>` for each `uses:` that is neither local nor pinned to a SHA with its version. */
+/** Actions whose action.yaml runs a container image by tag, so the commit pin on the action leaves the image unpinned. */
+const RUNS_IMAGE_BY_TAG = ["ossf/scorecard-action"];
+
+/**
+ * `<line>: <uses value>` for each `uses:` that is neither local, nor pinned to a SHA with its version, nor a
+ * `docker://` image pinned to a digest with its version, and for each action that runs its own image by tag.
+ */
 export function unpinnedUses(yaml: string): string[] {
   return yaml.split("\n").flatMap((line, i) => {
     const value = /^\s*(?:-\s+)?uses:\s*(.*?)\s*$/.exec(line)?.[1];
-    if (value === undefined || value.startsWith("./") || PINNED.test(value)) return [];
+    if (value === undefined || value.startsWith("./") || PINNED_IMAGE.test(value)) return [];
+    if (PINNED.test(value) && !RUNS_IMAGE_BY_TAG.some((action) => value.startsWith(`${action}@`))) return [];
     return [`${i + 1}: ${value}`];
   });
 }
@@ -56,22 +69,32 @@ export function unverifiedDownloads(job: string, tools: string[]): string[] {
 }
 
 describe("workflow pin rule applies as specified", () => {
+  const DIGEST = "1e1481c65fc2407d3fd6ab18a23c741eb4d1c0d9359ebafc4b3ab13aa61d8627";
+
   it.each([
     ["a tag", "      - uses: actions/checkout@v4"],
     ["a branch", "        uses: foo/bar@main"],
     ["a short SHA", "      - uses: actions/checkout@11d5960 # v4.4.0"],
     ["a SHA without its version", "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262"],
     ["a docker image", "      - uses: docker://alpine:3.20"],
+    ["a docker image by tag, even with a version comment", "      - uses: docker://ghcr.io/ossf/scorecard-action:v2.5.0 # v2.5.0"],
+    ["a docker image by a short digest", "      - uses: docker://ghcr.io/ossf/scorecard-action@sha256:1e1481c6 # v2.5.0"],
+    ["a docker image by digest without its version", `      - uses: docker://ghcr.io/ossf/scorecard-action@sha256:${DIGEST}`],
+    [
+      "an action that runs its image by tag",
+      "      - uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0",
+    ],
   ])("refuses %s", (_case, line) => {
     // Act & Assert
     expect(unpinnedUses(line)).toHaveLength(1);
   });
 
-  it("passes a SHA pin with its version, a sub-path action and a local workflow", () => {
+  it("passes a SHA pin with its version, a sub-path action, a digest-pinned image and a local workflow", () => {
     // Arrange
     const yaml = [
       "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0",
       "        uses: github/codeql-action/init@0123456789abcdef0123456789abcdef01234567 # v3",
+      `        uses: docker://ghcr.io/ossf/scorecard-action@sha256:${DIGEST} # v2.5.0`,
       "    uses: ./.github/workflows/reusable.yml",
       "      - run: echo uses: nothing",
     ].join("\n");
@@ -82,7 +105,7 @@ describe("workflow pin rule applies as specified", () => {
 });
 
 describe(".github/workflows", () => {
-  it("pin every external action to a commit SHA with its version", () => {
+  it("pin every external action to a commit SHA and every docker:// image to a digest, each with its version", () => {
     // Arrange
     const files = fs.readdirSync(path.join(root, WORKFLOWS)).filter((f) => /\.ya?ml$/.test(f));
 
