@@ -107,6 +107,10 @@ describe("AppConfigRepository.findPlatformGates", () => {
     "https://apps.apple.com:8443/app/id1",
     "https://apps.apple.com\\@evil.example/",
     "http://apps.apple.com/app/id1",
+    "https://apps.apple.com/app/id1",
+    "https://apps.apple.com/app/id64468134340",
+    "https://apps.apple.com/app/id6446813434?id=6446813434",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus",
     "",
     null,
     42,
@@ -122,6 +126,27 @@ describe("AppConfigRepository.findPlatformGates", () => {
     expect(stored).toEqual({ revision: 9, data: { ios: { ...gates.ios, updateUrl: null }, android: gates.android } });
     expect(mockLogger.error).toHaveBeenCalledTimes(1);
     expect(mockLogger.error.mock.calls[0][0]).toMatchObject({ event: "app_config.platform_gates.update_url_refused", platform: "ios", revision: 9 });
+  });
+
+  it.each([
+    "https://apps.apple.com/app/id6446813434",
+    "https://play.google.com/store/apps/details?id=com.example.other",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus.evil",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus&id=com.example.other",
+    "https://play.google.com/store/apps/details#id=com.zoyoong.skkubus",
+    "https://play.google.com/store/apps/dev?id=com.zoyoong.skkubus",
+  ])("serves updateUrl null for the stored Android updateUrl %j, logged at error as app_config.platform_gates.update_url_refused", async (updateUrl) => {
+    // Arrange
+    const gates = appPlatformGatesFixture();
+    findOne.mockResolvedValue({ _id: "app-platform-gates", revision: 9, data: { ...gates, android: { ...gates.android, updateUrl } } });
+
+    // Act
+    const stored = await new AppConfigRepository().findPlatformGates();
+
+    // Assert
+    expect(stored).toEqual({ revision: 9, data: { ios: gates.ios, android: { ...gates.android, updateUrl: null } } });
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockLogger.error.mock.calls[0][0]).toMatchObject({ event: "app_config.platform_gates.update_url_refused", platform: "android", revision: 9 });
   });
 
   it("serves both store addresses as stored, without a log", async () => {

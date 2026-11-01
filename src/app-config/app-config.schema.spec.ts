@@ -115,7 +115,14 @@ describe("appPlatformGatesDataset", () => {
     "https:\\\\apps.apple.com/app/id6446813434",
     "https://APPS.APPLE.COM/app/id6446813434",
     "https://apps.apple.com:443/app/id6446813434",
-  ])("refuses the iOS updateUrl %j, which is not an App Store address", (updateUrl) => {
+    "https://apps.apple.com/app/id1",
+    "https://apps.apple.com/app/id64468134340",
+    "https://apps.apple.com/app/id6446813434?id=6446813434",
+    "https://apps.apple.com/app/id6446813434?",
+    "https://apps.apple.com/app/id6446813434#id6446813434",
+    "https://apps.apple.com/kr/app/id6446813434",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus",
+  ])("refuses the iOS updateUrl %j, which is not this app's App Store listing", (updateUrl) => {
     // Arrange
     const raw = withGateField("ios", "updateUrl", updateUrl);
 
@@ -124,6 +131,25 @@ describe("appPlatformGatesDataset", () => {
 
     // Assert
     expect(paths).toEqual(["ios.updateUrl"]);
+  });
+
+  it.each([
+    "https://evil.example/store/apps/details?id=com.zoyoong.skkubus",
+    "https://play.google.com/store/apps/details?id=com.example.other",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus.evil",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus&id=com.example.other",
+    "https://play.google.com/store/apps/details?id=com.example.other&id=com.zoyoong.skkubus",
+    "https://play.google.com/store/apps/details#id=com.zoyoong.skkubus",
+    "https://play.google.com/store/apps/details?id=com.example.other#id=com.zoyoong.skkubus",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus&hl=ko",
+    "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus#x",
+    "https://play.google.com/store/apps/dev?id=com.zoyoong.skkubus",
+    "https://play.google.com/store/apps/details/?id=com.zoyoong.skkubus",
+    "https://play.google.com/store/apps/details",
+    "https://apps.apple.com/app/id6446813434",
+  ])("refuses the Android updateUrl %j, which is not this app's Play listing", (updateUrl) => {
+    // Act & Assert
+    expect(pathsOf(withGateField("android", "updateUrl", updateUrl))).toEqual(["android.updateUrl"]);
   });
 
   it("refuses a foreign Android updateUrl, and takes the Play Store one", () => {

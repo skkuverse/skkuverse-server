@@ -9,5 +9,9 @@ export const APP_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 export const IOS_VERSION_PATTERN = /^\d+(\.\d+){0,2}$/;
 export const ANDROID_API_LEVEL_PATTERN = /^\d+$/;
 
-// WHY: the app opens this URL from its blocking force-update screen, so only an app store's host is served.
-export const STORE_UPDATE_URL_HOSTS: ReadonlySet<string> = new Set(["apps.apple.com", "play.google.com"]);
+// WHY: the app opens this URL from its blocking force-update screen, so only this app's own listing is served. A string
+// compare, because the app's URL parser differs from WHATWG (iOS percent-encodes a backslash) and no parse can be trusted.
+export const APP_STORE_LISTING_URL = {
+  ios: "https://apps.apple.com/app/id6446813434",
+  android: "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus",
+} as const;

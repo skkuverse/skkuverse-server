@@ -230,8 +230,8 @@ describe("GET /app/config platform gates", () => {
   it("serves each platform's gate as the dataset stores it", async () => {
     // Arrange
     const gates = {
-      ios: { minOsVersion: "17.0", minVersion: "4.1.0", updateUrl: "https://apps.apple.com/app/id1" },
-      android: { minOsVersion: "26", minVersion: "4.2.0", updateUrl: "https://play.google.com/store/apps/details?id=x" },
+      ios: { minOsVersion: "17.0", minVersion: "4.1.0", updateUrl: "https://apps.apple.com/app/id6446813434" },
+      android: { minOsVersion: "26", minVersion: "4.2.0", updateUrl: "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus" },
     };
     other = await bootAppConfig(storedPlatformGatesRepository(gates));
 
@@ -240,8 +240,8 @@ describe("GET /app/config platform gates", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.ios).toEqual({ minVersion: "4.1.0", updateUrl: "https://apps.apple.com/app/id1", minOsVersion: "17.0" });
-    expect(res.body.data.android).toEqual({ minVersion: "4.2.0", updateUrl: "https://play.google.com/store/apps/details?id=x", minOsVersion: "26" });
+    expect(res.body.data.ios).toEqual({ minVersion: "4.1.0", updateUrl: "https://apps.apple.com/app/id6446813434", minOsVersion: "17.0" });
+    expect(res.body.data.android).toEqual({ minVersion: "4.2.0", updateUrl: "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus", minOsVersion: "26" });
     expect(Object.keys(res.body.data.ios)).toEqual(["minVersion", "updateUrl", "minOsVersion"]);
     expect(Object.keys(res.body.data.android)).toEqual(["minVersion", "updateUrl", "minOsVersion"]);
     expectWire(appClientConfig, res.body.data);
