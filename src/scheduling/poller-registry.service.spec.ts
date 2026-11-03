@@ -3,8 +3,8 @@
  *
  * Strategy:
  *   - the logger and Sentry are mocked, so the state-transition lines (failing,
- *     still failing, recovered), the one Issue per failing spell and the cron
- *     check-ins can be asserted.
+ *     still failing, recovered), the one Issue per failing spell and the absence
+ *     of any Sentry check-in can be asserted.
  *   - Fake timers drive setInterval deterministically.
  *   - A fresh service is constructed per test (no module-scoped state to reset
  *     — the registry/intervalIds live on the instance).
@@ -365,103 +365,11 @@ describe("PollerRegistryService", () => {
     });
   });
 
-  describe("Sentry cron heartbeat", () => {
-    const WEEK_MS = 7 * 24 * 60 * 60_000;
-
-    /** Advances one interval at a time, letting each tick's outcome settle. */
-    async function tick(intervalMs: number, times: number): Promise<void> {
-      for (let i = 0; i < times; i++) {
-        jest.advanceTimersByTime(intervalMs);
-        await settle();
-      }
-    }
-
-    it("checks in ok every 5 minutes, and error while a fast poller is failing", async () => {
-      // Arrange
-      let failing = false;
-      registry.registerPoller(
-        () => (failing ? Promise.reject(new Error("x")) : undefined),
-        10_000,
-        "p",
-      );
-
-      // Act
-      registry.onApplicationBootstrap();
-      await settle();
-      await tick(10_000, 30);
-
-      // Assert
-      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
-        { monitorSlug: "skkuverse-pollers", status: "ok" },
-        expect.objectContaining({ schedule: { type: "interval", value: 5, unit: "minute" } }),
-      );
-
-      failing = true;
-      await tick(10_000, 30);
-      expect(declaredFailing()).toEqual(["p"]);
-      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
-        { monitorSlug: "skkuverse-pollers", status: "error" },
-        expect.anything(),
-      );
-    });
-
-    it("checks in ok while only a slow poller is failing, which still reports through its own Issue", async () => {
-      // Arrange
-      registry.registerPoller(() => Promise.reject(new Error("crawl failed")), WEEK_MS, "weekly");
-
-      // Act
-      registry.onApplicationBootstrap();
-      await settle();
-      await tick(60_000, 5);
-
-      // Assert
-      expect(declaredFailing()).toEqual(["weekly"]);
-      expect(events(logger.error)).toEqual(["poller.failing"]);
-      expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-        tags: { poller: "weekly" },
-      });
-      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
-        { monitorSlug: "skkuverse-pollers", status: "ok" },
-        expect.anything(),
-      );
-    });
-
-    it("checks in error when a slow and a fast poller are both failing", async () => {
-      // Arrange
-      registry.registerPoller(() => Promise.reject(new Error("crawl failed")), WEEK_MS, "weekly");
-      registry.registerPoller(() => Promise.reject(new Error("upstream down")), 10_000, "fast");
-
-      // Act
-      registry.onApplicationBootstrap();
-      await settle();
-      await tick(10_000, 30);
-
-      // Assert
-      expect(declaredFailing()).toEqual(["weekly", "fast"]);
-      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
-        { monitorSlug: "skkuverse-pollers", status: "error" },
-        expect.anything(),
-      );
-    });
-
-    it("stops checking in after shutdown", () => {
-      // Arrange
-      registry.registerPoller(jest.fn(), 60_000, "p");
-
-      // Act
-      registry.onApplicationBootstrap();
-      registry.onApplicationShutdown();
-      jest.advanceTimersByTime(10 * 60_000);
-
-      // Assert
-      expect(Sentry.captureCheckIn).not.toHaveBeenCalled();
-    });
-  });
-
   // The Healthchecks.io check notices from outside the process when the pings stop.
   describe("Healthchecks.io heartbeat ping", () => {
     const PING_URL = "https://hc-ping.com/0f0e0d0c-test-ping-uuid";
     const HEARTBEAT_MS = 5 * 60_000;
+    const WEEK_MS = 7 * 24 * 60 * 60_000;
     const realFetch = global.fetch;
     const realSetImmediate = setImmediate;
     let fetchMock: jest.Mock;
@@ -491,7 +399,7 @@ describe("PollerRegistryService", () => {
       withPingUrl(savedUrl);
     });
 
-    it("pings the check once for every ok check-in", async () => {
+    it("pings the check once every 5 minutes", async () => {
       // Arrange
       registry.registerPoller(jest.fn(), 10_000, "p");
 
@@ -503,6 +411,27 @@ describe("PollerRegistryService", () => {
       // Assert
       expect(fetchMock).toHaveBeenCalledTimes(3);
       expect(fetchMock.mock.calls.every(([url]) => url === PING_URL)).toBe(true);
+    });
+
+    it("sends no Sentry check-in, while the pollers are healthy or a fast one is failing", async () => {
+      // Arrange
+      let failing = false;
+      registry.registerPoller(
+        () => (failing ? Promise.reject(new Error("upstream down")) : undefined),
+        10_000,
+        "fast",
+      );
+
+      // Act
+      registry.onApplicationBootstrap();
+      await settle();
+      await tick(10_000, 30);
+      failing = true;
+      await tick(10_000, 30);
+
+      // Assert
+      expect(declaredFailing()).toEqual(["fast"]);
+      expect(Sentry.captureCheckIn).not.toHaveBeenCalled();
     });
 
     it("does not ping while a fast poller is declared failing, and pings again once it recovers", async () => {
@@ -539,7 +468,51 @@ describe("PollerRegistryService", () => {
       await tick(HEARTBEAT_MS, 2);
 
       // Assert
-      expect(Sentry.captureCheckIn).toHaveBeenCalledTimes(2);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("keeps pinging while only a slow poller is failing, which still reports through its own Issue", async () => {
+      // Arrange
+      registry.registerPoller(() => Promise.reject(new Error("crawl failed")), WEEK_MS, "weekly");
+
+      // Act
+      registry.onApplicationBootstrap();
+      await settle();
+      await tick(HEARTBEAT_MS, 2);
+
+      // Assert
+      expect(declaredFailing()).toEqual(["weekly"]);
+      expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+        tags: { poller: "weekly" },
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not ping when a slow and a fast poller are both failing", async () => {
+      // Arrange
+      registry.registerPoller(() => Promise.reject(new Error("crawl failed")), WEEK_MS, "weekly");
+      registry.registerPoller(() => Promise.reject(new Error("upstream down")), 10_000, "fast");
+
+      // Act
+      registry.onApplicationBootstrap();
+      await settle();
+      await tick(10_000, 30);
+
+      // Assert
+      expect(declaredFailing()).toEqual(["weekly", "fast"]);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("stops pinging after shutdown", () => {
+      // Arrange
+      registry.registerPoller(jest.fn(), 60_000, "p");
+
+      // Act
+      registry.onApplicationBootstrap();
+      registry.onApplicationShutdown();
+      jest.advanceTimersByTime(10 * HEARTBEAT_MS);
+
+      // Assert
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
@@ -565,7 +538,7 @@ describe("PollerRegistryService", () => {
     it.each([
       ["rejects", () => Promise.reject(new Error(`request to ${PING_URL} failed, reason: ECONNRESET`))],
       ["answers 500", () => Promise.resolve(new Response(null, { status: 500 }))],
-    ])("keeps the pollers and check-ins going when the ping %s, and never logs the URL", async (_label, answer) => {
+    ])("keeps the pollers and the heartbeat going when the ping %s, and never logs the URL", async (_label, answer) => {
       // Arrange
       const unhandled: unknown[] = [];
       const onUnhandled = (reason: unknown): void => {
@@ -587,7 +560,6 @@ describe("PollerRegistryService", () => {
 
         // Assert
         expect(unhandled).toEqual([]);
-        expect(Sentry.captureCheckIn).toHaveBeenCalledTimes(2);
         expect(fetchMock).toHaveBeenCalledTimes(2);
         expect(fn).toHaveBeenCalledTimes(11);
         expect(events(logger.warn)).toContain("poller.healthchecks_ping_failed");

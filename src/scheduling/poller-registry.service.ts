@@ -33,16 +33,7 @@ const MINUTE_SCALE_POLLER_MS = 15 * 60_000;
 const MINUTE_SCALE_FAIL_AFTER = 2;
 const STILL_FAILING_EVERY_MS = 15 * 60_000;
 
-// QUIRK(sentry): the cron monitor is created from MONITOR_CONFIG on its first check-in, and raises an
-// Issue when check-ins report "error" or stop coming: a dead or hung poller process logs nothing.
 const HEARTBEAT_MS = 5 * 60_000;
-const MONITOR_SLUG = "skkuverse-pollers";
-const MONITOR_CONFIG = {
-  schedule: { type: "interval", value: 5, unit: "minute" },
-  checkinMargin: 5,
-  failureIssueThreshold: 2,
-  recoveryThreshold: 1,
-} as const;
 const PING_TIMEOUT_MS = 5_000;
 
 // SEE: docs/reference/logging.md for the poller.failing, poller.still_failing and poller.recovered lines.
@@ -193,19 +184,15 @@ export class PollerRegistryService
     );
   }
 
-  // WHY: a poller a minute or more between ticks already opened its own Issue when declared, and its
-  // "error" would last its whole interval, hiding the fast pollers.
+  // WHY: a poller a minute or more between ticks already opened its own Issue when declared, and
+  // withholding the ping for its whole interval would hide the fast pollers.
   private heartbeat(): void {
     const down = [...this.health.values()].some((h) => h.isFast && h.isDeclaredFailing);
-    Sentry.captureCheckIn(
-      { monitorSlug: MONITOR_SLUG, status: down ? "error" : "ok" },
-      MONITOR_CONFIG,
-    );
     if (!down) void this.pingHealthchecks();
   }
 
-  // WHY: a second heartbeat, outside Sentry, notices when these pings stop. The Healthchecks.io URL is
-  // the check's credential, so neither it nor an error message that may quote it is logged.
+  // WHY: the Healthchecks.io URL is the check's credential, so neither it nor an error message that
+  // may quote it is logged.
   private async pingHealthchecks(): Promise<void> {
     const url = config.healthchecks.pollerPingUrl();
     if (!url) return;
