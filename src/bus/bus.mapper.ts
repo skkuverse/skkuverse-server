@@ -1,5 +1,14 @@
 import { pick } from "../infra/i18n";
 import type { I18n, SupportedLang } from "../infra/types";
+import type { TopisAnswer } from "./bus.types";
+
+const AXIOS_TIMEOUT_CODES: ReadonlySet<string> = new Set(["ECONNABORTED", "ETIMEDOUT"]);
+
+export function toTopisAnswer(err: unknown): TopisAnswer {
+  const { response, code, message } = err as { response?: { status: number; data: unknown }; code?: string; message?: string };
+  if (response) return { status: response.status, body: response.data };
+  return { reason: code ?? message ?? "no answer", timedOut: code !== undefined && AXIOS_TIMEOUT_CODES.has(code) };
+}
 
 type LineStation = { name: string; stopId: string | null };
 

@@ -1,5 +1,45 @@
+import type { UpstreamFailure } from "../infra/types";
+import { isRecord } from "../shared/object.util";
 import { ARS_ID_PATTERN, SERVICE_CONFIG } from "./bus.constants";
-import type { ServiceConfigEntry, StopAliases, StopAreaMembership } from "./bus.types";
+import type { ServiceConfigEntry, StopAliases, StopAreaMembership, TopisAnswer } from "./bus.types";
+
+const AUTH_STATUSES: ReadonlySet<number> = new Set([401, 403]);
+const TOO_MANY_REQUESTS_STATUS = 429;
+const QUOTA_CODE_NAME = "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR";
+// QUIRK(topis): data.go.kr refuses a key's spent daily quota as code 22 LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR,
+// in its own XML or JSON envelope (data.go.kr 15000314's error table, 2026-10-24); which one ws.bus.go.kr relays is
+// unseen, so any text of the answer is read. Code 23, the per-second limit, is not the daily quota.
+const QUOTA_CODE_PATTERN = /LIMITED[ _]NUMBER[ _]OF[ _]SERVICE[ _]REQUESTS[ _]EXCEEDS|"headerCd":"22"|<returnReasonCode>22</;
+// QUIRK(topis): since 2026-11-03 a gateway in front refuses a missing or unknown key as a 401 JSON `{ error, message,
+// status }`; how it refuses a spent quota is unseen, so a 429 or its words for a limit count as the quota.
+const GATEWAY_LIMIT_PATTERN = /한도|초과|limit|quota|too many requests/i;
+
+// WHY: a refused key is the one failure its owner acts on, so a 401 or 403 is one only in the gateway's own JSON.
+export function toTopisFailure({ body, status, reason, timedOut }: TopisAnswer): UpstreamFailure | null {
+  if (timedOut) return { kind: "timeout" };
+  const refusal = toGatewayRefusal(body);
+  const quotaMessage = toQuotaMessage(body, status, refusal);
+  if (quotaMessage !== null) return { kind: "quota", message: quotaMessage };
+  if (status !== undefined && AUTH_STATUSES.has(status) && refusal) return { kind: "auth", status, message: refusal.message };
+  if (status !== undefined) return { kind: "outage", status };
+  return reason === undefined ? null : { kind: "outage", reason };
+}
+
+function toGatewayRefusal(body: unknown): { error: string; message: string } | null {
+  if (!isRecord(body) || typeof body.error !== "string") return null;
+  return { error: body.error, message: typeof body.message === "string" ? body.message : body.error };
+}
+
+function toQuotaMessage(body: unknown, status: number | undefined, refusal: { error: string; message: string } | null): string | null {
+  if (QUOTA_CODE_PATTERN.test(typeof body === "string" ? body : (JSON.stringify(body) ?? ""))) return QUOTA_CODE_NAME;
+  const isLimit = status === TOO_MANY_REQUESTS_STATUS || (refusal !== null && GATEWAY_LIMIT_PATTERN.test(`${refusal.error} ${refusal.message}`));
+  if (!isLimit) return null;
+  return refusal?.message ?? "Too Many Requests";
+}
+
+export function toTopisFailureMessage({ kind, ...fields }: UpstreamFailure, what: string): string {
+  return `TOPIS ${kind} (${[what, ...Object.values(fields)].join(", ")})`;
+}
 
 // WHY: own keys only, so a service id that names an Object.prototype member (`toString`) is unknown.
 export function serviceConfigOf(serviceId: string): ServiceConfigEntry | undefined {

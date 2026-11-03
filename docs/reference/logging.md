@@ -80,6 +80,16 @@ Each `ok` check-in also pings an external heartbeat check at `HEALTHCHECKS_POLLE
 
 Upstream answers that carry no usable data throw `UpstreamError` (`src/infra/upstream.error.ts`) with the upstream's code, so they count as failures too. A TOPIS `headerCd` of `"4"` (no result) is not a failure.
 
+A TOPIS call that fails also puts `failure` on the error, so the line alone says what failed (`toTopisFailure` in `src/bus/bus.rules.ts`). Its `kind` is one of these:
+
+- `outage`: an HTTP error status, or the `reason` no answer came (`ECONNREFUSED`)
+- `auth`: the gateway refused the key, with its `status` and `message`
+- `quota`: the key's daily quota is spent, with the `message` that says so
+- `timeout`: no answer in time
+- `shape`: an answer with no usable envelope, with a `detail`
+
+The message opens with the same kind: `TOPIS outage (jongro 07 list, 503)`.
+
 A Jongro realtime poller (`jongro-<code>`) whose route has no `jongro_routes` document rejects with a `BusRegistryBootstrappingError` (`src/bus/registry/bus-registry.error.ts`), naming the route and the identical observations counted so far, until the tick that inserts the route from TOPIS resolves. A bootstrap while buses run inserts at the third tick, before the poller is declared failing; a route that stays missing (overnight on a fresh database, or TOPIS disagreeing) is declared failing, and the insert logs `poller.recovered`.
 
 The TOPIS pollers' own lines (`src/bus/realtime/jongro/`, `src/bus/route-path/`):
@@ -87,7 +97,8 @@ The TOPIS pollers' own lines (`src/bus/realtime/jongro/`, `src/bus/route-path/`)
 | Event | Level | When |
 | --- | --- | --- |
 | `bus.regional.disabled` | info | At boot with `REGIONAL_BUS=off`: a regional route's poller (`jongro-7800`, `jongro-path-7800`) is not registered; one line per poller, named in `poller` |
-| `bus.topis.quota_exceeded` | error | TOPIS or the data.go.kr gateway refused a call over the key's daily quota (code 22), with the data.go.kr `operation` (`getArrInfoByRouteAllList`, `getBusPosByRtidList`) and the route's `code`; at most once a minute per operation, with `suppressed`; the tick still rejects, and every route of that operation fails until the quota resets. |
+| `bus.topis.quota_exceeded` | error | TOPIS or the data.go.kr gateway refused a call over the key's daily quota (code 22, an HTTP 429, or the gateway's words for a limit), with the data.go.kr `operation` (`getArrInfoByRouteAllList`, `getBusPosByRtidList`) and the route's `code`; at most once a minute per operation, with `suppressed`; the tick still rejects, and every route of that operation fails until the quota resets. |
+| `bus.topis.key_refused` | error | The gateway in front of TOPIS refused the service key (HTTP 401 or 403 with its JSON `message`: a missing or unregistered key), with the data.go.kr `operation` and the route's `code`; at most once a minute per operation, with `suppressed`; the tick still rejects, and every TOPIS route fails until the key is fixed. |
 
 The GBIS seat poller (`gbis-seats-<code>`, `src/bus/realtime/gbis/`) rejects with an `UpstreamError` that keeps the status, the GBIS result code or the gateway's reason code, and never the service key, a query parameter. Its own lines, and the live route's read of what it stores:
 

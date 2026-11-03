@@ -19,10 +19,18 @@
  * Which stop area holds each stop (ADR 0022, D4), which the bus-stops checks
  * and the stop index both read: the first area listing a stop holds it, and a
  * member that resolves to no stop, or to one an area holds already, is left out.
+ * What failed when a TOPIS call did, from what ws.bus.go.kr answered on
+ * 2026-11-03 (topis-gateway-answers.json): data and no result are no failure,
+ * the gateway's 401 JSON is a refused key with its message, Apache's 503 page
+ * an outage; a spent quota is code 22 in any envelope, a 429, or the gateway's
+ * words for a limit (how the gateway refuses one is unseen); a timeout and a
+ * call with no answer are told apart, and only the gateway's JSON makes a 401
+ * or 403 a refused key. Each failure's message opens with its kind.
  */
 import arrivals7800 from "../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import registryRoutes from "../../__tests__/nest/bus/fixtures/jongro-registry-routes.json";
-import { deepFreeze, isHsscPassThrough, isTopisPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toStationStopId, toStopAreaMembership, toTowards } from "./bus.rules";
+import gateway from "../../__tests__/nest/bus/fixtures/topis-gateway-answers.json";
+import { deepFreeze, isHsscPassThrough, isTopisPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toStationStopId, toStopAreaMembership, toTopisFailure, toTopisFailureMessage, toTowards } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -329,5 +337,63 @@ describe("toStopAreaMembership", () => {
       { stopAreaId: "first", areaIndex: 0, memberIndex: 2, memberId: "seoul-01618", stopId: "hssc-bus-lot", heldBy: "first" },
       { stopAreaId: "second", areaIndex: 1, memberIndex: 1, memberId: "hssc-bus-lot", stopId: "hssc-bus-lot", heldBy: "first" },
     ]);
+  });
+});
+
+describe("toTopisFailure", () => {
+  const GATEWAY_REFUSAL_XML =
+    "<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>22</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>";
+  const PER_SECOND_XML = "<returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_PER_SECOND_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>23</returnReasonCode>";
+  const QUOTA_CODE_NAME = "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR";
+
+  it.each([
+    ["data", { body: gateway.ok.body }, null],
+    ["no result", { body: gateway.noResult.body }, null],
+    ["the gateway's 401 for no key", gateway.noKey, { kind: "auth", status: 401, message: "serviceKey 파라미터가 필요합니다." }],
+    ["the gateway's 401 for an unregistered key", gateway.wrongKey, { kind: "auth", status: 401, message: "유효하지 않은 서비스키입니다: 등록되지 않은 서비스키" }],
+    ["Apache's 503 page", gateway.outage, { kind: "outage", status: 503 }],
+  ])("reads what TOPIS answered on 2026-11-03, %s", (_case, answer, expected) => {
+    // Act & Assert
+    expect(toTopisFailure(answer)).toEqual(expected);
+  });
+
+  it.each([
+    ["code 22 in TOPIS's envelope", { body: { msgHeader: { headerCd: "22", headerMsg: "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR." } } }, QUOTA_CODE_NAME],
+    ["data.go.kr's XML refusal in a 200", { body: GATEWAY_REFUSAL_XML }, QUOTA_CODE_NAME],
+    ["data.go.kr's XML refusal in a 429", { status: 429, body: GATEWAY_REFUSAL_XML }, QUOTA_CODE_NAME],
+    ["a bare 429", { status: 429, body: "" }, "Too Many Requests"],
+    ["the gateway's JSON in a 429", { status: 429, body: { error: "Too Many Requests", message: "요청이 많습니다.", status: 429 } }, "요청이 많습니다."],
+    ["the gateway's words for a daily limit in a 401", { status: 401, body: { error: "Unauthorized", message: "일일 호출 한도를 초과했습니다.", status: 401 } }, "일일 호출 한도를 초과했습니다."],
+    ["the gateway's words for a quota in a 403", { status: 403, body: { error: "Forbidden", message: "Quota exceeded for this service key", status: 403 } }, "Quota exceeded for this service key"],
+  ])("reads a spent quota from %s", (_case, answer, message) => {
+    // Act & Assert
+    expect(toTopisFailure(answer)).toEqual({ kind: "quota", message });
+  });
+
+  it.each([
+    ["a per-second limit (code 23)", { body: PER_SECOND_XML }, null],
+    ["the gateway's JSON in a 403", { status: 403, body: { error: "Forbidden", message: "허용되지 않은 IP입니다.", status: 403 } }, { kind: "auth", status: 403, message: "허용되지 않은 IP입니다." }],
+    ["the gateway's JSON with no message in a 401", { status: 401, body: { error: "Unauthorized" } }, { kind: "auth", status: 401, message: "Unauthorized" }],
+    ["a 401 that is no JSON", { status: 401, body: "<html>401 Authorization Required</html>" }, { kind: "outage", status: 401 }],
+    ["the gateway's JSON in a 400", { status: 400, body: { error: "Bad Request", message: "busRouteId", status: 400 } }, { kind: "outage", status: 400 }],
+    ["the gateway's JSON in a 502", { status: 502, body: { error: "Bad Gateway", message: "upstream", status: 502 } }, { kind: "outage", status: 502 }],
+    ["a timeout", { reason: "ECONNABORTED", timedOut: true }, { kind: "timeout" }],
+    ["a refused connection", { reason: "ECONNREFUSED", timedOut: false }, { kind: "outage", reason: "ECONNREFUSED" }],
+  ])("reads %s", (_case, answer, expected) => {
+    // Act & Assert
+    expect(toTopisFailure(answer)).toEqual(expected);
+  });
+});
+
+describe("toTopisFailureMessage", () => {
+  it.each([
+    [{ kind: "outage", status: 503 }, "TOPIS outage (jongro 07 list, 503)"],
+    [{ kind: "outage", reason: "ECONNREFUSED" }, "TOPIS outage (jongro 07 list, ECONNREFUSED)"],
+    [{ kind: "auth", status: 401, message: "serviceKey 파라미터가 필요합니다." }, "TOPIS auth (jongro 07 list, 401, serviceKey 파라미터가 필요합니다.)"],
+    [{ kind: "quota", message: "Too Many Requests" }, "TOPIS quota (jongro 07 list, Too Many Requests)"],
+    [{ kind: "timeout" }, "TOPIS timeout (jongro 07 list)"],
+  ] as const)("opens with the kind of %j, then the call and the failure's fields", (failure, message) => {
+    // Act & Assert
+    expect(toTopisFailureMessage(failure, "jongro 07 list")).toBe(message);
   });
 });

@@ -3,6 +3,10 @@
     "max": 217,
     "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list. Its max rises with each module added: that commit carries the Architecture-Debt trailer for this file and needs no other reason."
   },
+  "src/bus/bus.rules.ts": {
+    "max": 124,
+    "reason": "ADR 0010 D9, no domain seam a sub-module can take: `toTopisFailure` classifies every ws.bus.go.kr answer for the three TOPIS clients, `BusRealtimeJongroClient` (src/bus/realtime/jongro/), `BusRoutePathClient` (src/bus/route-path/) and `BusEtaProbeClient` (src/bus/eta/probe/), which are cousins under the bus root, and a cousin never imports another sub-module's rules (sub-modules.test.ts), so the classifier sits at the root beside the pole and station rules those flows already share."
+  },
   "src/bus/bus.wire.ts": {
     "max": 72,
     "reason": "ADR 0010 D9, no domain seam: `vehicle`, `vehiclePosition` and `operation` are the bus pieces of the one live shape that GET /bus/live/:groupId and the stop page both serve (ADR 0019), extending the shared call and vehicle of ADR 0022, and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the shapes the two routes share sit at the bus root beside the stop shapes /bus/config serves; each WHY a client reads to fall back on an open enum counts toward the cap."

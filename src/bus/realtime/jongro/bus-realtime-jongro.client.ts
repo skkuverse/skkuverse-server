@@ -3,17 +3,24 @@ import axios from "axios";
 import config from "../../../infra/config";
 import { createLogThrottle } from "../../../shared/log-throttle.util";
 import logger from "../../../infra/logger";
+import type { UpstreamFailure } from "../../../infra/types";
 import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";
+import { toTopisAnswer } from "../../bus.mapper";
+import { toTopisFailure, toTopisFailureMessage } from "../../bus.rules";
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "../bus-realtime.mapper";
 import { toArrmsg, toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
-import { isNoResultHeaderCd, isQuotaExceeded, isUsableHeaderCd, toBusType, toObservedAt, toServiceHours, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
+import { isNoResultHeaderCd, isUsableHeaderCd, toBusType, toObservedAt, toServiceHours, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 const REQUEST_TIMEOUT_MS = 10_000;
-// WHY: a spent quota refuses every tick until it resets; a line a minute per operation still feeds the 10-minute alert.
-const QUOTA_LOG_INTERVAL_MS = 60_000;
+// WHY: a spent quota or a refused key stops every route of the operation until it resets; a line a minute per operation tells it.
+const REFUSAL_LOG_INTERVAL_MS = 60_000;
+const REFUSAL_LINES: Partial<Record<UpstreamFailure["kind"], { event: string; message: string }>> = {
+  quota: { event: "bus.topis.quota_exceeded", message: "TOPIS refused a call over the key's daily quota" },
+  auth: { event: "bus.topis.key_refused", message: "TOPIS refused the service key" },
+};
 
 // QUIRK(topis): the envelope both endpoints answer with; itemList is null on "4" (no result).
 interface TopisEnvelope<TRow> {
@@ -61,7 +68,7 @@ interface TopisPositionRow {
 
 @Injectable()
 export class BusRealtimeJongroClient {
-  private readonly quotaThrottle = createLogThrottle(QUOTA_LOG_INTERVAL_MS);
+  private readonly refusalThrottle = createLogThrottle(REFUSAL_LOG_INTERVAL_MS);
 
   async fetchArrivals(route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroArrivalDoc[]> {
     const what = `jongro ${route.code} list`;
@@ -81,33 +88,26 @@ export class BusRealtimeJongroClient {
   private async fetchRows<TRow>(call: TopisCall): Promise<TRow[]> {
     const body = await this.fetchBody<TRow>(call);
     const headerCd = body?.msgHeader?.headerCd;
-    if (!isUsableHeaderCd(headerCd)) {
-      throw new UpstreamError(`TOPIS error code (${call.what})`, "topis", { headerCd, headerMsg: body.msgHeader?.headerMsg });
-    }
+    if (!isUsableHeaderCd(headerCd)) throw new UpstreamError(`TOPIS error code (${call.what})`, "topis", { headerCd, headerMsg: body.msgHeader?.headerMsg });
     if (isNoResultHeaderCd(headerCd)) return [];
     const rows = body?.msgBody?.itemList;
-    if (!Array.isArray(rows)) throw new UpstreamError(`TOPIS response has no itemList (${call.what})`, "topis", { headerCd });
+    if (!Array.isArray(rows)) throw new UpstreamError(`TOPIS response has no itemList (${call.what})`, "topis", { headerCd, failure: { kind: "shape", detail: "no itemList" } });
     return rows;
   }
 
-  // WHY: the gateway may refuse a spent quota with an HTTP error, whose body still says so; the request rejects either way.
+  // WHY: never rethrows the axios error, whose URL holds the key; the rejection carries what failed instead.
   private async fetchBody<TRow>(call: TopisCall): Promise<TopisEnvelope<TRow>> {
-    let body: TopisEnvelope<TRow>;
-    try {
-      body = (await axios.get<TopisEnvelope<TRow>>(call.url, { timeout: REQUEST_TIMEOUT_MS })).data;
-    } catch (err) {
-      if (isQuotaExceeded((err as { response?: { data?: unknown } }).response?.data)) this.logQuotaExceeded(call);
-      throw err;
-    }
-    if (!isQuotaExceeded(body)) return body;
-    this.logQuotaExceeded(call);
-    throw new UpstreamError(`TOPIS daily quota exceeded (${call.what})`, "topis", { headerCd: "22", headerMsg: "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR" });
+    const answer = await axios.get<TopisEnvelope<TRow>>(call.url, { timeout: REQUEST_TIMEOUT_MS }).then(({ data }) => ({ body: data }), toTopisAnswer);
+    const failure = toTopisFailure(answer);
+    if (failure === null) return answer.body as TopisEnvelope<TRow>;
+    this.logRefusal(call, failure);
+    throw new UpstreamError(toTopisFailureMessage(failure, call.what), "topis", { failure });
   }
 
-  // WHY: a spent quota stops every TOPIS route of the operation until it resets, so it is told apart for its alert.
-  private logQuotaExceeded({ operation, code }: TopisCall): void {
-    const ticket = this.quotaThrottle.take(operation);
-    if (ticket) logger.error({ event: "bus.topis.quota_exceeded", operation, code, suppressed: ticket.suppressed }, "TOPIS refused a call over the key's daily quota");
+  private logRefusal({ operation, code }: TopisCall, failure: UpstreamFailure): void {
+    const line = REFUSAL_LINES[failure.kind];
+    const ticket = line && this.refusalThrottle.take(`${failure.kind} ${operation}`);
+    if (line && ticket) logger.error({ event: line.event, operation, code, suppressed: ticket.suppressed }, line.message);
   }
 
   private toArrivalDoc(row: TopisArrivalRow, what: string): JongroArrivalDoc {
