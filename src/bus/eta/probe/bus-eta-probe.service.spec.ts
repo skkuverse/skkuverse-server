@@ -13,8 +13,8 @@ import { corridorFixture, corridorSnapshot } from "../../../../__tests__/helpers
 import { FakeBusEtaProbeClient } from "../../../../__tests__/helpers/fakes/bus/bus-eta-probe.client.fake";
 import { FakeBusEtaProbeRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta-probe.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import { UpstreamError } from "../../../infra/upstream.error";
 import { DailyCapError } from "../../../shared/daily-cap.error";
-import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { BusEtaProbeClient } from "./bus-eta-probe.client";
 import type { BusEtaProbeRepository } from "./bus-eta-probe.repository";
 import { BusEtaProbeService } from "./bus-eta-probe.service";
@@ -109,7 +109,7 @@ describe("BusEtaProbeService.legTime", () => {
   it("Bus position service down: a client failure rejects, and the minute does not ask again", async () => {
     // Arrange
     const { client, probe } = setup();
-    const outage = new BusEtaDirectionsError("topis", "http", "HTTP 503", 503);
+    const outage = new UpstreamError("TOPIS outage (getBusPosByRtid 228000175, 503)", "topis", { failure: { kind: "outage", status: 503 } });
     client.failWith = outage;
 
     // Act
@@ -134,7 +134,7 @@ describe("BusEtaProbeService.legTime", () => {
   it("asks again in the next minute after a failed one", async () => {
     // Arrange
     const { client, probe } = setup();
-    client.failWith = new BusEtaDirectionsError("topis", "timeout", "timed out (ECONNABORTED)");
+    client.failWith = new UpstreamError("TOPIS timeout (getBusPosByRtid 228000175)", "topis", { failure: { kind: "timeout" } });
     await probe.legTime(CORRIDOR, "southbound", NOW).catch(() => undefined);
     client.failWith = null;
 

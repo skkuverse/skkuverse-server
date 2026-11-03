@@ -2,7 +2,10 @@
  * BusEtaProbeClient over a mocked axios and the captured TOPIS answer: the URL
  * it sends (the stored key as it is, never encoded twice), the buses it
  * returns (empty on "no result", one from a lone object, a bad one left out
- * and logged), its one retry, its daily cap, and no key in any failure.
+ * and logged), its one retry, its daily cap, and no key in any failure. A
+ * failure rejects as an UpstreamError with what failed, as the other TOPIS
+ * clients do, from what TOPIS answered on 2026-11-03: the gateway's 401 as a
+ * refused key and Apache's 503 page as an outage.
  */
 jest.mock("../../../infra/config", () => ({ api: { seoulBusServiceKey: "k3y%2Bsecret%3D%3D" }, shuttleEta: { topisDailyCap: 2 } }));
 jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
@@ -14,8 +17,9 @@ jest.mock("axios", () => {
 import fs from "fs";
 import path from "path";
 import axios from "axios";
+import gateway from "../../../../__tests__/nest/bus/fixtures/topis-gateway-answers.json";
+import { UpstreamError } from "../../../infra/upstream.error";
 import { DailyCapError } from "../../../shared/daily-cap.error";
-import { BusEtaDirectionsError } from "../bus-eta.error";
 import { BusEtaProbeClient } from "./bus-eta-probe.client";
 
 const logger = require("../../../infra/logger");
@@ -28,9 +32,9 @@ const CAPTURED: { msgBody: { itemList: Array<Record<string, unknown>> } } = JSON
 );
 const captured = () => JSON.parse(JSON.stringify(CAPTURED));
 
-const axiosError = (fields: { status?: number; code?: string }) => {
+const axiosError = (fields: { status?: number; body?: unknown; code?: string }) => {
   const err = new axios.AxiosError("boom", fields.code, { url: `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=${KEY}` } as never);
-  if (fields.status) (err as { response?: unknown }).response = { status: fields.status };
+  if (fields.status) (err as { response?: unknown }).response = { status: fields.status, data: fields.body };
   return err;
 };
 
@@ -115,9 +119,9 @@ describe("BusEtaProbeClient.fetchPositions", () => {
   });
 
   it.each([
-    ["a header code other than data or no result", { msgHeader: { headerCd: "7", headerMsg: "인증 실패" } }],
-    ["a body that is not a TOPIS answer", "<html>maintenance</html>"],
-  ])("rejects %s as an api failure, without retrying", async (_case, data) => {
+    ["a header code other than data or no result", { msgHeader: { headerCd: "7", headerMsg: "인증 실패" } }, { headerCd: "7", headerMsg: "인증 실패" }],
+    ["a body that is not a TOPIS answer", "<html>maintenance</html>", { failure: { kind: "shape", detail: "not a bus position answer" } }],
+  ])("rejects %s as an UpstreamError, without retrying", async (_case, data, fields) => {
     // Arrange
     mockedGet.mockResolvedValue({ data });
 
@@ -125,8 +129,7 @@ describe("BusEtaProbeClient.fetchPositions", () => {
     const err = await failureOf(new BusEtaProbeClient().fetchPositions("228000175", NOW, { retryDelayMs: 0 }));
 
     // Assert
-    expect(err).toBeInstanceOf(BusEtaDirectionsError);
-    expect(err).toMatchObject({ provider: "topis", kind: "api" });
+    expect(err).toMatchObject({ name: "UpstreamError", upstream: "topis", ...fields });
     expect(mockedGet).toHaveBeenCalledTimes(1);
   });
 
@@ -157,9 +160,25 @@ describe("BusEtaProbeClient.fetchPositions", () => {
     const failed = await failureOf(client.fetchPositions("228000175", NOW, { retryDelayMs: 0 }));
 
     // Assert
-    expect(refused).toMatchObject({ provider: "topis", kind: "http", status: 404 });
-    expect(failed).toMatchObject({ provider: "topis", kind: "http", status: 502 });
+    expect(refused).toMatchObject({ name: "UpstreamError", upstream: "topis", failure: { kind: "outage", status: 404 } });
+    expect(failed).toMatchObject({ name: "UpstreamError", upstream: "topis", failure: { kind: "outage", status: 502 } });
     expect(mockedGet).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    ["the gateway's 401 for an unregistered key as a refused key, without retrying", gateway.wrongKey, { kind: "auth", status: 401, message: "유효하지 않은 서비스키입니다: 등록되지 않은 서비스키" }, 1],
+    ["a 429 as a spent quota, without retrying", { status: 429, body: "" }, { kind: "quota", message: "Too Many Requests" }, 1],
+    ["Apache's 503 page as an outage, after its one retry", gateway.outage, { kind: "outage", status: 503 }, 2],
+  ])("rejects %s", async (_case, answer, failure, callCount) => {
+    // Arrange
+    mockedGet.mockRejectedValue(axiosError(answer));
+
+    // Act
+    const err = await failureOf(new BusEtaProbeClient().fetchPositions("228000175", NOW, { retryDelayMs: 0 }));
+
+    // Assert
+    expect(err).toMatchObject({ name: "UpstreamError", upstream: "topis", failure });
+    expect(mockedGet).toHaveBeenCalledTimes(callCount);
   });
 
   it("never carries the key in a failure: the axios error holding the URL stays inside", async () => {
@@ -170,7 +189,7 @@ describe("BusEtaProbeClient.fetchPositions", () => {
     const err = await failureOf(new BusEtaProbeClient().fetchPositions("228000175", NOW, { retryDelayMs: 0 }));
 
     // Assert
-    expect(err).toBeInstanceOf(BusEtaDirectionsError);
+    expect(err).toBeInstanceOf(UpstreamError);
     expect(err).not.toHaveProperty("cause");
     expect(JSON.stringify(err) + err.message + String(err.stack)).not.toMatch(/k3y|secret|serviceKey/);
   });

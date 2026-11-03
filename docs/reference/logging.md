@@ -108,7 +108,7 @@ The GBIS seat poller (`gbis-seats-<code>`, `src/bus/realtime/gbis/`) rejects wit
 | `bus.gbis.quota_exceeded` | warn | The data.go.kr gateway refused a call over the key's daily quota (code 22), with the `operation` (`getBusLocationListv2`) and the route's `code`; at most once a minute, with `suppressed`; the tick rejects, and the route serves no seats until the quota resets. |
 | `bus.gbis.read_failed` | warn | The live route could not read `bus_seats` (a timeout, an unreachable database), with the `routeId` and `err`; at most once a minute per route, with `suppressed`. The answer is served with every `seatsLeft` null, never failed |
 
-The arrival-estimate pollers (`shuttle-eta-live`, `shuttle-eta-baseline`, `src/bus/eta/`) reject with a `DirectionsError` or a `DailyCapError`. Either carries only the provider, a kind and a status. Neither wraps the axios error, whose config holds the API keys. A tick writes what it got before rejecting, and keeps rejecting on later ticks until a call succeeds, so an outage reads as one failing spell. Their own lines:
+The arrival-estimate pollers (`shuttle-eta-live`, `shuttle-eta-baseline`, `src/bus/eta/`) reject with a `DirectionsError` (NAVER, TMAP), an `UpstreamError` (the bus-lane probe's TOPIS positions, with its `failure` as above) or a `DailyCapError`. Each carries only the upstream, a kind and what tells it apart, never the axios error, whose config holds the API keys. A tick writes what it got before rejecting, and keeps rejecting on later ticks until a call succeeds, so an outage reads as one failing spell. Their own lines:
 
 | Event | Level | When |
 | --- | --- | --- |

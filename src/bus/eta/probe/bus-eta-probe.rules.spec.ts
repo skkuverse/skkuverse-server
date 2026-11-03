@@ -1,9 +1,12 @@
 /**
  * The probe's rules: which bus positions lie on the corridor and in which direction, how a bus pairs with its own
- * position about ten minutes earlier into a span, and how spans become a corridor leg time.
+ * position about ten minutes earlier into a span, and how spans become a corridor leg time. A failed position
+ * request is asked once more after a timeout or an outage that is TOPIS's (a 5xx, or no answer at all), never
+ * after a 4xx, a refused key, a spent quota or an answer of the wrong shape.
  */
+import type { UpstreamFailure } from "../../../infra/types";
 import type { LaneCorridor, ProbeRoute } from "../lane/bus-eta-lane.types";
-import { toCorridorFix, toLegTime, toSpans } from "./bus-eta-probe.rules";
+import { isRetryable, toCorridorFix, toLegTime, toSpans } from "./bus-eta-probe.rules";
 import type { CorridorFix, LaneSpan } from "./bus-eta-probe.types";
 
 // Three vertices 0.01° of latitude apart: about 1,111.95 m each on a 6,371 km sphere.
@@ -227,5 +230,21 @@ describe("toLegTime", () => {
 
     // Assert
     expect(leg).toEqual({ kind: "unavailable", reason: "noSpans", spanCount: 0, coverage: 0 });
+  });
+});
+
+describe("isRetryable", () => {
+  it.each<[UpstreamFailure, boolean]>([
+    [{ kind: "timeout" }, true],
+    [{ kind: "outage", reason: "ECONNRESET" }, true],
+    [{ kind: "outage", status: 499 }, false],
+    [{ kind: "outage", status: 500 }, true],
+    [{ kind: "outage", status: 503 }, true],
+    [{ kind: "auth", status: 401, message: "유효하지 않은 서비스키입니다: 등록되지 않은 서비스키" }, false],
+    [{ kind: "quota", message: "Too Many Requests" }, false],
+    [{ kind: "shape", detail: "not a bus position answer" }, false],
+  ])("answers %j with %s", (failure, expected) => {
+    // Act & Assert
+    expect(isRetryable(failure)).toBe(expected);
   });
 });

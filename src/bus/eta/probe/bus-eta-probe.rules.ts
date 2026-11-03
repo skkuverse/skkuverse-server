@@ -1,6 +1,16 @@
+import type { UpstreamFailure } from "../../../infra/types";
 import { projectOntoPolyline } from "../../../shared/polyline.util";
 import type { LaneCorridor, LaneDirection, LegBounds, ProbeRoute } from "../lane/bus-eta-lane.types";
 import type { CorridorFix, LanePosition, LaneSpan, LegTime } from "./bus-eta-probe.types";
+
+const MIN_SERVER_ERROR_STATUS = 500;
+
+// WHY: TOPIS may answer a moment after a timeout or an outage of its own (a 5xx, or no answer at all); a 4xx, a
+// refused key, a spent quota or an answer of the wrong shape would come back the same.
+export function isRetryable(failure: UpstreamFailure): boolean {
+  if (failure.kind === "timeout") return true;
+  return failure.kind === "outage" && !("status" in failure && failure.status < MIN_SERVER_ERROR_STATUS);
+}
 
 // EVIDENCE: the two carriageways lie 20–40 m apart and TOPIS GPS strays about as far; a city road beside the expressway is farther.
 const MAX_CORRIDOR_OFFSET_M = 60;
