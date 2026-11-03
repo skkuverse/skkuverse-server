@@ -70,7 +70,24 @@ describe("serializeError", () => {
     const logged = serializeError(err);
 
     // Assert
-    expect(logged).toMatchObject({ type: "UpstreamError", message: "example auth (list, 401, unknown key)", upstream: "example", failure: { kind: "auth", status: 401, message: "unknown key" } });
+    expect(logged).toMatchObject({ type: "UpstreamError", message: "example auth (list, 401, unknown key)", upstream: "example" });
+    expect((logged as { failure?: unknown }).failure).toEqual({ kind: "auth", status: 401, message: "unknown key" });
+  });
+
+  it("logs a plain object with a message as it is, its URL masked and the request config still left out", () => {
+    // Arrange
+    const err = Object.assign(new Error("failed"), {
+      config: { url: `https://example.invalid/x?serviceKey=${FAKE_KEY}` },
+      refusal: { message: "refused", url: `https://example.invalid/x?serviceKey=${FAKE_KEY}` },
+    });
+
+    // Act
+    const logged = serializeError(err) as Record<string, unknown>;
+
+    // Assert
+    expect(logged.refusal).toEqual({ message: "refused", url: "https://example.invalid/x?serviceKey=%5BREDACTED%5D" });
+    expect(logged).not.toHaveProperty("config");
+    expect(JSON.stringify(logged)).not.toContain(FAKE_KEY);
   });
 
   it("logs the code and message an upstream answered with", () => {
