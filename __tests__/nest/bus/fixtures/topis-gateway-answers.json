@@ -1,0 +1,29 @@
+{
+  "_about": "What ws.bus.go.kr/api/rest answered on 2026-11-03 13:05 KST, by case: `ok` and `noResult` as data and no result (itemList trimmed to none), `noKey` with no serviceKey and `wrongKey` with an unregistered one (HTTP 401, application/json, from the gateway now in front of TOPIS), and `outage` while TOPIS was down (HTTP 503, text/html, Apache's default page; its exact bytes unseen, so a test reads only its status and that it is no JSON).",
+  "ok": {
+    "status": 200,
+    "body": {
+      "msgHeader": { "headerCd": "0", "headerMsg": "정상적으로 처리되었습니다.", "itemCount": 0 },
+      "msgBody": { "itemList": [] }
+    }
+  },
+  "noResult": {
+    "status": 200,
+    "body": {
+      "msgHeader": { "headerCd": "4", "headerMsg": "결과가 없습니다.", "itemCount": 0 },
+      "msgBody": { "itemList": null }
+    }
+  },
+  "noKey": {
+    "status": 401,
+    "body": { "error": "Unauthorized", "message": "serviceKey 파라미터가 필요합니다.", "status": 401 }
+  },
+  "wrongKey": {
+    "status": 401,
+    "body": { "error": "Unauthorized", "message": "유효하지 않은 서비스키입니다: 등록되지 않은 서비스키", "status": 401 }
+  },
+  "outage": {
+    "status": 503,
+    "body": "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head>\n<title>503 Service Unavailable</title>\n</head><body>\n<h1>Service Unavailable</h1>\n<p>The server is temporarily unable to service your\nrequest due to maintenance downtime or capacity\nproblems. Please try again later.</p>\n</body></html>\n"
+  }
+}

@@ -132,9 +132,18 @@ function axiosHttpFields(axios: AxiosLike): { method?: string; url?: string; sta
   };
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype;
+}
+
+// QUIRK(pino): stdSerializers.err serializes any field that holds a string `message` as an error, adding `type` and
+// `stack`, so each plain-object field it kept is put back as it is, scrubbed the same way.
 export function serializeError(err: unknown): unknown {
   if (!(err instanceof Error)) return err;
   const base = scrub(stdSerializers.err(err), 0) as Record<string, unknown>;
+  for (const [key, field] of Object.entries(err)) {
+    if (key in base && isPlainObject(field)) base[key] = scrub(field, 1);
+  }
   const axios = err as Error & AxiosLike;
   if (axios.isAxiosError) base.http = axiosHttpFields(axios);
   return base;

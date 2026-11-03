@@ -25,6 +25,7 @@
  */
 import moment from "moment-timezone";
 import { DailyCapError } from "../../../shared/daily-cap.error";
+import { UpstreamError } from "../../../infra/upstream.error";
 import { BusEtaDirectionsError, BusEtaLaneUnavailableError } from "../bus-eta.error";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { etaDocId } from "../bus-eta.mapper";
@@ -256,7 +257,7 @@ const CAR_OFFSETS = [0, 5400];
 const FORCED_ROUTE = { stopOffsetsSec: [0, 4620], corridorCarSec: 1920 };
 const PROBE: LegTime = { kind: "probe", corridorSec: 1080, spanCount: 6, coverage: 0.81 };
 const BUS_LANE_TRAVEL = { model: "busLane", corridorCarSec: 1920, corridorSec: 1080, spanCount: 6, coverage: 0.81 };
-const TOPIS_DOWN = new BusEtaDirectionsError("topis", "http", "HTTP 503", 503);
+const TOPIS_DOWN = new UpstreamError("TOPIS outage (getBusPosByRtid 228000175, 503)", "topis", { failure: { kind: "outage", status: 503 } });
 const CORRIDOR = corridorSnapshot();
 
 // The lane config's rule: campus-inja southbound and campus-jain northbound in lane hours, 07:00 to 21:00.

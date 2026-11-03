@@ -21,6 +21,6 @@ export const topisPosition = z.object({
 
 // QUIRK(topis): `itemList` is null on "4" (no result); a list of one may arrive as the object itself.
 export const topisPositionList = z.object({
-  msgHeader: z.object({ headerCd: z.string() }),
+  msgHeader: z.object({ headerCd: z.string(), headerMsg: z.string().nullish() }),
   msgBody: z.object({ itemList: z.union([z.array(z.unknown()), z.record(z.string(), z.unknown())]).nullish() }).nullish(),
 });

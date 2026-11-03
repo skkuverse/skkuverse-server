@@ -35,7 +35,7 @@
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Db as MongoDb } from "mongodb";
-import { BusEtaDirectionsError } from "../../../src/bus/eta/bus-eta.error";
+import { UpstreamError } from "../../../src/infra/upstream.error";
 import type { LanePosition } from "../../../src/bus/eta/probe/bus-eta-probe.types";
 import { FakeBusEtaProbeClient } from "../../helpers/fakes/bus/bus-eta-probe.client.fake";
 import { FakeBusEtaTravelClient } from "../../helpers/fakes/bus/bus-eta-travel.client.fake";
@@ -322,7 +322,7 @@ describe("the shuttle-eta-live tick when the position requests fail", () => {
   it("stores the 14:00 run's car-route value with travel model car at 13:00, then rejects with the TOPIS error", async () => {
     // Arrange
     const poller = await bootLivePoller();
-    const outage = new BusEtaDirectionsError("topis", "http", "HTTP 503", 503);
+    const outage = new UpstreamError("TOPIS outage (getBusPosByRtid 228000175, 503)", "topis", { failure: { kind: "outage", status: 503 } });
     poller.topis.failWith = outage;
 
     // Act

@@ -56,3 +56,6 @@ export interface StopAreaMembership {
   heldMembers: Array<{ areaIndex: number; memberIndex: number; stopId: string }>;
   leftOutMembers: LeftOutStopAreaMember[];
 }
+
+/** WHY: what a TOPIS call came back with: a 2xx body, an error answer's `status` and body, or the `reason` no answer came. */
+export interface TopisAnswer { body?: unknown; status?: number; reason?: string; timedOut?: boolean }

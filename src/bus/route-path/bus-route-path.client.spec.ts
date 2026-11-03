@@ -6,6 +6,10 @@
  * direction TOPIS names, which flips after the turnaround; and every
  * failure rejecting with no key in it: a refused key (HTTP 401), a header
  * code other than "0" ("4" included), an answer with no rows, a malformed row.
+ * A failed call rejects with what failed, from what TOPIS answered on
+ * 2026-11-03: the gateway's 401 as a refused key, Apache's 503 page as an
+ * outage, a timeout as one, code 22 as a spent quota, and an answer that is no
+ * route info list as its shape.
  */
 jest.mock("../../infra/config", () => ({ api: { seoulBusServiceKey: "k3y%2Bsecret%3D%3D" } }));
 jest.mock("axios", () => {
@@ -16,6 +20,7 @@ jest.mock("axios", () => {
 import fs from "fs";
 import path from "path";
 import axios from "axios";
+import gateway from "../../../__tests__/nest/bus/fixtures/topis-gateway-answers.json";
 import { UpstreamError } from "../../infra/upstream.error";
 import { BusRoutePathClient } from "./bus-route-path.client";
 
@@ -143,5 +148,31 @@ describe("BusRoutePathClient.fetchRoutePath", () => {
 
     // Assert
     expect(err.message).toBe("TOPIS row 3 is malformed (getRoutePath 100900004)");
+  });
+});
+
+describe("BusRoutePathClient.fetchRoutePath over a failed call", () => {
+  const failWith = (fields: { status?: number; body?: unknown; code?: string }) => {
+    const err = new axios.AxiosError("boom", fields.code, { url: `http://ws.bus.go.kr/x?serviceKey=${KEY}` } as never);
+    if (fields.status) (err as { response?: unknown }).response = { status: fields.status, data: fields.body };
+    mockedGet.mockRejectedValue(err);
+  };
+
+  it.each([
+    ["the gateway's 401 for an unregistered key as a refused key", () => failWith(gateway.wrongKey), { kind: "auth", status: 401, message: "유효하지 않은 서비스키입니다: 등록되지 않은 서비스키" }],
+    ["Apache's 503 page as an outage", () => failWith(gateway.outage), { kind: "outage", status: 503 }],
+    ["a timeout as one", () => failWith({ code: "ECONNABORTED" }), { kind: "timeout" }],
+    ["code 22 in a 200 as a spent quota", () => answer({ msgHeader: { headerCd: "22", headerMsg: "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR." } }), { kind: "quota" }],
+    ["an answer that is no route info list as its shape", () => answer({ error: "Unauthorized" }), { kind: "shape" }],
+  ])("rejects %s, with no key in it", async (_case, arrange, failure) => {
+    // Arrange
+    arrange();
+
+    // Act
+    const err = await failureOf(new BusRoutePathClient().fetchRoutePath("100900004"));
+
+    // Assert
+    expect(err).toMatchObject({ name: "UpstreamError", upstream: "topis", failure });
+    expect(JSON.stringify({ ...err, message: err.message })).not.toContain("k3y");
   });
 });

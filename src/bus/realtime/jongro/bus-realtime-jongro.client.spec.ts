@@ -17,10 +17,14 @@
  * midnight on the next day as TOPIS dates it; a value that is no number or no
  * 14-digit time is left out rather than guessed (ADR 0022, D7).
  * An answer saying the key's daily quota is spent, in TOPIS's envelope or the
- * data.go.kr gateway's (code 22), rejects like any refusal and also logs
+ * data.go.kr gateway's (code 22), rejects as a spent quota and also logs
  * `bus.topis.quota_exceeded` with the data.go.kr operation, at most once a
  * minute per operation, which an alert reads: every TOPIS route of that
- * operation stops until the quota resets.
+ * operation stops until the quota resets. A failed call rejects with what
+ * failed, from what TOPIS answered on 2026-11-03: the gateway's 401 for no or
+ * an unregistered key as a refused key, which also logs `bus.topis.key_refused`
+ * the same way, Apache's 503 page as an outage, a timeout as one; the logged
+ * rejection carries neither the key nor the request.
  * A bus's arrival text (and the station's eta, the first bus's text) is cut
  * to 64 characters: every captured text is 15 or fewer, and the arrival rules
  * match patterns on it per request (security scan F8).
@@ -33,10 +37,12 @@ import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jong
 import arrivals7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-arrivals.json";
 import positions7800 from "../../../../__tests__/nest/bus/fixtures/topis-7800-positions.json";
 import busTypesFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-bus-types.json";
+import gateway from "../../../../__tests__/nest/bus/fixtures/topis-gateway-answers.json";
 import serviceHoursFixture from "../../../../__tests__/nest/bus/fixtures/topis-arrivals-service-hours.json";
 import { ROUTE_7800, arrivalDocs7800, sightings7800 } from "../../../../__tests__/helpers/bus/topis-7800";
 import { serviceHoursDocs } from "../../../../__tests__/helpers/bus/topis-service-hours";
 import logger from "../../../infra/logger";
+import { serializeError } from "../../../infra/log-redact";
 import { JONGRO_ROUTES } from "../../bus.constants";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 
@@ -675,12 +681,12 @@ describe("BusRealtimeJongroClient over a spent daily quota", () => {
     "<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>22</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>";
   const quotaLines = () => jest.mocked(logger.error).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "bus.topis.quota_exceeded").map(([fields]) => fields);
 
-  it("Envelope says the limit is exceeded: rejects with its code and logs the arrivals operation", async () => {
+  it("Envelope says the limit is exceeded: rejects as a spent quota and logs the arrivals operation", async () => {
     // Arrange
     respond({ msgHeader: { headerCd: "22", headerMsg: "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR." }, msgBody: { itemList: null } });
 
     // Act & Assert
-    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({ name: "UpstreamError", upstream: "topis", headerCd: "22" });
+    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({ name: "UpstreamError", upstream: "topis", failure: { kind: "quota" } });
     expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 }]);
   });
 
@@ -689,17 +695,17 @@ describe("BusRealtimeJongroClient over a spent daily quota", () => {
     respond(GATEWAY_REFUSAL);
 
     // Act & Assert
-    await expect(new BusRealtimeJongroClient().fetchSightings(ROUTE_7800)).rejects.toMatchObject({ name: "UpstreamError", headerCd: "22" });
+    await expect(new BusRealtimeJongroClient().fetchSightings(ROUTE_7800)).rejects.toMatchObject({ name: "UpstreamError", failure: { kind: "quota" } });
     expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getBusPosByRtidList", code: "7800", suppressed: 0 }]);
   });
 
-  it("Gateway refuses with an HTTP error: rejects with that error and logs the operation", async () => {
+  it("Gateway refuses with an HTTP error: rejects as a spent quota and logs the operation", async () => {
     // Arrange
     const refused = Object.assign(new Error("Request failed with status code 429"), { response: { status: 429, data: GATEWAY_REFUSAL } });
     axios.get.mockRejectedValue(refused);
 
     // Act & Assert
-    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toBe(refused);
+    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({ name: "UpstreamError", upstream: "topis", failure: { kind: "quota" } });
     expect(quotaLines()).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 }]);
   });
 
@@ -744,6 +750,82 @@ describe("BusRealtimeJongroClient over a spent daily quota", () => {
   });
 });
 
+
+// WHY: the log line alone tells an outage from a refused key or a spent quota, so a refused key, the one a person
+// must act on, is told apart without probing TOPIS by hand.
+describe("BusRealtimeJongroClient over a failed call", () => {
+  const URL_WITH_KEY = `http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?serviceKey=${KEY}&busRouteId=100900004&resultType=json`;
+  const failWith = (fields: { response?: { status: number; data: unknown }; code?: string }) =>
+    axios.get.mockRejectedValue(Object.assign(new Error("Request failed"), { config: { url: URL_WITH_KEY } }, fields));
+  const refuseWith = ({ status, body }: { status: number; body: unknown }) => failWith({ response: { status, data: body } });
+  const linesOf = (event: string) => jest.mocked(logger.error).mock.calls.filter(([fields]) => (fields as { event?: string }).event === event).map(([fields]) => fields);
+
+  it.each([
+    ["no key", gateway.noKey, "serviceKey 파라미터가 필요합니다."],
+    ["an unregistered key", gateway.wrongKey, "유효하지 않은 서비스키입니다: 등록되지 않은 서비스키"],
+  ])("rejects the gateway's 401 for %s as a refused key and logs bus.topis.key_refused", async (_case, answer, message) => {
+    // Arrange
+    refuseWith(answer);
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({ name: "UpstreamError", upstream: "topis", failure: { kind: "auth", status: 401, message } });
+    expect(linesOf("bus.topis.key_refused")).toEqual([{ event: "bus.topis.key_refused", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 }]);
+  });
+
+  it.each([
+    ["Apache's 503 page as an outage", () => refuseWith(gateway.outage), { kind: "outage", status: 503 }],
+    ["a timeout as one", () => failWith({ code: "ECONNABORTED" }), { kind: "timeout" }],
+    ["a refused connection as an outage", () => failWith({ code: "ECONNREFUSED" }), { kind: "outage", reason: "ECONNREFUSED" }],
+  ])("rejects %s and logs no line of its own", async (_case, arrange, failure) => {
+    // Arrange
+    arrange();
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchSightings(route07)).rejects.toMatchObject({ name: "UpstreamError", upstream: "topis", failure });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("logs the rejection with its kind, and neither the key nor the request", async () => {
+    // Arrange
+    refuseWith(gateway.wrongKey);
+
+    // Act
+    const logged = serializeError(await new BusRealtimeJongroClient().fetchArrivals(route07).catch((err: unknown) => err));
+
+    // Assert
+    expect(logged).toMatchObject({ type: "UpstreamError", message: expect.stringContaining("auth"), upstream: "topis", failure: { kind: "auth", status: 401 } });
+    expect(JSON.stringify(logged)).not.toContain(KEY);
+    expect(logged).not.toHaveProperty("config");
+  });
+
+  it("logs a refused key once a minute per operation, apart from a spent quota's line", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: new Date("2026-11-03T04:00:00Z") });
+    const client = new BusRealtimeJongroClient();
+
+    // Act
+    try {
+      refuseWith(gateway.wrongKey);
+      for (const route of [route07, ROUTE_7800]) await client.fetchArrivals(route).catch(() => undefined);
+      await client.fetchSightings(route07).catch(() => undefined);
+      refuseWith({ status: 429, body: "" });
+      await client.fetchArrivals(route07).catch(() => undefined);
+      jest.setSystemTime(new Date("2026-11-03T04:01:00Z"));
+      refuseWith(gateway.noKey);
+      await client.fetchArrivals(route07).catch(() => undefined);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    // Assert
+    expect(linesOf("bus.topis.key_refused")).toEqual([
+      { event: "bus.topis.key_refused", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 },
+      { event: "bus.topis.key_refused", operation: "getBusPosByRtidList", code: "07", suppressed: 0 },
+      { event: "bus.topis.key_refused", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 1 },
+    ]);
+    expect(linesOf("bus.topis.quota_exceeded")).toEqual([{ event: "bus.topis.quota_exceeded", operation: "getArrInfoByRouteAllList", code: "07", suppressed: 0 }]);
+  });
+});
 
 describe("BusRealtimeJongroClient.fetchArrivals service hours", () => {
   it("keeps each captured row's headway and its station's first and last run, a last run after midnight on the next day", async () => {

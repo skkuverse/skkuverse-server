@@ -4,6 +4,8 @@ import type { z } from "zod";
 import config from "../../infra/config";
 import { UpstreamError } from "../../infra/upstream.error";
 import { SEOUL_BUS_API_URL } from "../bus.constants";
+import { toTopisAnswer } from "../bus.mapper";
+import { toTopisFailure, toTopisFailureMessage } from "../bus.rules";
 import { toFetchedRoutePath } from "./bus-route-path.mapper";
 import { topisRouteInfoAnswer, topisRoutePoint, topisRouteStationRow } from "./bus-route-path.schema";
 import type { FetchedRoutePath } from "./bus-route-path.types";
@@ -30,25 +32,23 @@ export class BusRoutePathClient {
     const what = `${operation} ${busRouteId}`;
     const url = `${SEOUL_BUS_API_URL}/busRouteInfo/${operation}?serviceKey=${config.api.seoulBusServiceKey}&busRouteId=${busRouteId}&resultType=json`;
     const answer = topisRouteInfoAnswer.safeParse(await this.fetchBody(url, what));
-    if (!answer.success) throw new UpstreamError(`TOPIS answer is not a route info list (${what})`, "topis");
+    if (!answer.success) throw new UpstreamError(`TOPIS answer is not a route info list (${what})`, "topis", { failure: { kind: "shape", detail: "not a route info list" } });
     const { headerCd, headerMsg } = answer.data.msgHeader;
-    if (headerCd !== DATA_HEADER_CD) throw new UpstreamError(`TOPIS error code (${what})`, "topis", headerCd, headerMsg ?? undefined);
+    if (headerCd !== DATA_HEADER_CD) throw new UpstreamError(`TOPIS error code (${what})`, "topis", { headerCd, headerMsg: headerMsg ?? undefined });
     const rows = answer.data.msgBody?.itemList ?? [];
-    if (rows.length === 0) throw new UpstreamError(`TOPIS answer has no rows (${what})`, "topis", headerCd);
+    if (rows.length === 0) throw new UpstreamError(`TOPIS answer has no rows (${what})`, "topis", { headerCd });
     return rows.map((raw, index) => {
       const parsed = row.safeParse(raw);
-      if (!parsed.success) throw new UpstreamError(`TOPIS row ${index} is malformed (${what})`, "topis", headerCd);
+      if (!parsed.success) throw new UpstreamError(`TOPIS row ${index} is malformed (${what})`, "topis", { headerCd });
       return parsed.data;
     });
   }
 
-  // WHY: an axios error carries the request URL, and so the key, wherever it is serialized; this one carries the status.
+  // WHY: an axios error carries the request URL, and so the key, wherever it is serialized; this one carries what failed.
   private async fetchBody(url: string, what: string): Promise<unknown> {
-    try {
-      return (await axios.get<unknown>(url, { timeout: REQUEST_TIMEOUT_MS })).data;
-    } catch (err) {
-      const status = axios.isAxiosError(err) ? (err.response?.status ?? err.code ?? "no response") : "no response";
-      throw new UpstreamError(`TOPIS request failed (${what}, ${status})`, "topis");
-    }
+    const answer = await axios.get<unknown>(url, { timeout: REQUEST_TIMEOUT_MS }).then(({ data }) => ({ body: data }), toTopisAnswer);
+    const failure = toTopisFailure(answer);
+    if (failure) throw new UpstreamError(toTopisFailureMessage(failure, what), "topis", { failure });
+    return answer.body;
   }
 }
