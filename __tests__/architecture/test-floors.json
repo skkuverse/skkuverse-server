@@ -73,7 +73,7 @@
   },
   "scheduling": {
     "tests": 30,
-    "expects": 78
+    "expects": 74
   },
   "scripts": {
     "tests": 30,

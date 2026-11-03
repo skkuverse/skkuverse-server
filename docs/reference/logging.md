@@ -74,9 +74,7 @@ A poller reports by resolving or rejecting; it does not log its own failures. Th
 | `poller.still_failing` | warn | Every 15 minutes while it stays down |
 | `poller.recovered` | info | The first success after being declared, with `failures` and `downMs` |
 
-The poller process also checks in to a Sentry cron monitor every 5 minutes — `error` while a fast poller (under a minute between ticks) is declared failing, `ok` otherwise. A poller ticking a minute or more apart reports only through its own Issue: its `error` would last at least one interval and hide the fast pollers. Sentry raises an Issue on failed check-ins and on missing ones, which is how a dead or hung poller process is noticed.
-
-Each `ok` check-in also pings an external heartbeat check at `HEALTHCHECKS_POLLER_PING_URL`, which alerts when the pings stop. Unset, nothing is sent. A ping that fails, answers non-2xx or takes over 5 seconds logs `poller.healthchecks_ping_failed` (warn) with the HTTP `status` or the error's `reason` (its name only), never the URL, which is the check's credential.
+Every 5 minutes the poller process pings the URL in `HEALTHCHECKS_POLLER_PING_URL`, except while a fast poller (under a minute between ticks) is declared failing. Unset, nothing is sent. A poller ticking a minute or more apart reports only through its own Issue: withholding the ping for its whole interval would hide the fast pollers. A ping that fails, answers non-2xx or takes over 5 seconds logs `poller.healthchecks_ping_failed` (warn) with the HTTP `status` or the error's `reason` (its name only), never the URL, which is the check's credential.
 
 Upstream answers that carry no usable data throw `UpstreamError` (`src/infra/upstream.error.ts`) with the upstream's code, so they count as failures too. A TOPIS `headerCd` of `"4"` (no result) is not a failure.
 
@@ -170,4 +168,4 @@ Sentry gets the same treatment, and its SDK is told not to collect cookies, bodi
 ## Related
 
 - [`src/infra/log-redact.ts`](../../src/infra/log-redact.ts) — the allowlists for headers, query values and errors
-- [`src/scheduling/poller-registry.service.ts`](../../src/scheduling/poller-registry.service.ts) — the poller states and check-ins above
+- [`src/scheduling/poller-registry.service.ts`](../../src/scheduling/poller-registry.service.ts) — the poller states and the heartbeat ping above

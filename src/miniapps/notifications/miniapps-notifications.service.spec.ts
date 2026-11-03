@@ -38,6 +38,7 @@ import type { MiniappsRepository } from "../miniapps.repository";
 import { MiniappsService } from "../miniapps.service";
 import { MiniappsSenderService } from "../sender/miniapps-sender.service";
 import type { MiniappsNotificationsClient } from "./miniapps-notifications.client";
+import { LOG_TITLE_CHARS } from "./miniapps-notifications.constants";
 import { FEED_CACHE_TTL_MS } from "../miniapps.constants";
 import type { MiniappsNotificationsRepository } from "./miniapps-notifications.repository";
 import { MiniappsNotificationsService } from "./miniapps-notifications.service";
@@ -842,6 +843,133 @@ describe("MiniappsNotificationsService.send — a send signed by a key", () => {
     // Assert
     const replayed = jest.mocked(logger.info).mock.calls.map(([fields]) => fields as unknown as Record<string, unknown>).filter((fields) => fields.event === "miniapps.notify.replayed");
     expect(replayed.map((fields) => [fields.miniAppId, fields.keyId])).toEqual([["eskara-2026", "0123456789abcdef"]]);
+  });
+});
+
+// WHY: each call to the push function leaves exactly one of two lines, so counting them counts the sends.
+describe("MiniappsNotificationsService.send — the record line of each call to the push function", () => {
+  const SIGNED: PushSender = { ...ESKARA, keyId: "0123456789abcdef" };
+  const linkedDraft = { title_ko: "가".repeat(LOG_TITLE_CHARS + 20), body_ko: validDraft.body_ko, actionType: "route", actionValue: "/campus" };
+  const cutTitle = "가".repeat(LOG_TITLE_CHARS);
+  const refusal = Object.assign(new Error("sendNotification 400: bad"), { status: 400 });
+  const abort = () => Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
+
+  // WHY: `sent` is logged at info and `send_failed` at error; the two are the whole record of a call.
+  const recordLines = (): Array<Record<string, unknown>> =>
+    [...jest.mocked(logger.info).mock.calls, ...jest.mocked(logger.error).mock.calls]
+      .map(([fields]) => fields as unknown as Record<string, unknown>)
+      .filter((fields) => fields.event === "miniapps.notify.sent" || fields.event === "miniapps.notify.send_failed");
+
+  const notificationIdOf = (outcome: unknown): string | null => (typeof outcome === "object" && outcome !== null && "notificationId" in outcome ? String(outcome.notificationId) : null);
+
+  it("logs one miniapps.notify.sent for a delivered send, naming the mini app, the key, the notification, the cut title, the link and the counts", async () => {
+    // Act
+    const outcome = await service.send(SIGNED, linkedDraft, "record-1");
+
+    // Assert
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(recordLines()).toEqual([
+      expect.objectContaining({
+        event: "miniapps.notify.sent",
+        miniAppId: "eskara-2026",
+        keyId: "0123456789abcdef",
+        notificationId: notificationIdOf(outcome),
+        title: cutTitle,
+        actionType: "route",
+        actionValue: "/campus",
+        sent: 12,
+        failed: 1,
+        cleanedUp: 1,
+      }),
+    ]);
+  });
+
+  it.each([
+    ["a 400, refused before any send", refusal, "not_sent"],
+    ["a 500, which may have failed mid-batch", Object.assign(new Error("sendNotification 500: boom"), { status: 500 }), "unknown"],
+    ["a timeout", abort(), "unknown"],
+  ])("logs one miniapps.notify.send_failed for %s, naming the same fields and the outcome in place of the counts", async (_label, err, outcome) => {
+    // Arrange
+    sendPush.mockRejectedValue(err);
+
+    // Act
+    const answer = await service.send(SIGNED, linkedDraft, "record-2");
+
+    // Assert
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(recordLines()).toEqual([
+      expect.objectContaining({
+        event: "miniapps.notify.send_failed",
+        miniAppId: "eskara-2026",
+        keyId: "0123456789abcdef",
+        notificationId: notificationIdOf(answer),
+        title: cutTitle,
+        actionType: "route",
+        actionValue: "/campus",
+        outcome,
+      }),
+    ]);
+  });
+
+  it("leaves the link off the line of a send that has none", async () => {
+    // Act
+    await service.send(SIGNED, validDraft, "record-3");
+
+    // Assert
+    const [line] = recordLines();
+    expect(line).toMatchObject({ event: "miniapps.notify.sent", title: validDraft.title_ko });
+    expect(line).not.toHaveProperty("actionType");
+    expect(line).not.toHaveProperty("actionValue");
+  });
+
+  it("still logs the one miniapps.notify.sent when the delivery record fails to write", async () => {
+    // Arrange
+    recordDelivery.mockRejectedValue(new Error("replica set step-down"));
+
+    // Act
+    await service.send(SIGNED, linkedDraft, "record-4");
+
+    // Assert
+    expect(recordLines()).toEqual([expect.objectContaining({ event: "miniapps.notify.sent", sent: 12, recordFailed: true })]);
+  });
+
+  it("still logs the one miniapps.notify.send_failed when the failure record fails to write", async () => {
+    // Arrange
+    sendPush.mockRejectedValue(abort());
+    recordDeliveryFailure.mockRejectedValue(new Error("atlas down"));
+
+    // Act
+    await service.send(SIGNED, linkedDraft, "record-5");
+
+    // Assert
+    expect(recordLines()).toEqual([expect.objectContaining({ event: "miniapps.notify.send_failed", outcome: "unknown" })]);
+  });
+
+  it.each([
+    ["delivered", undefined],
+    ["refused", refusal],
+  ])("calls nothing and logs no record line for a repeat of a send that %s", async (_label, firstFailure) => {
+    // Arrange
+    if (firstFailure) sendPush.mockRejectedValueOnce(firstFailure);
+    await service.send(SIGNED, linkedDraft, "record-6");
+    jest.clearAllMocks();
+
+    // Act
+    await service.send(SIGNED, linkedDraft, "record-6");
+
+    // Assert
+    expect(sendPush).not.toHaveBeenCalled();
+    expect(claimSentNotification).not.toHaveBeenCalled();
+    expect(recordLines()).toEqual([]);
+  });
+
+  it("logs one record line for two concurrent sends with the same key, the loser calling nothing", async () => {
+    // Act
+    await Promise.all([service.send(SIGNED, linkedDraft, "record-7"), service.send(SIGNED, linkedDraft, "record-7")]);
+
+    // Assert
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(recordLines()).toEqual([expect.objectContaining({ event: "miniapps.notify.sent" })]);
   });
 });
 
