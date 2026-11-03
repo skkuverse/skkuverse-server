@@ -32,12 +32,12 @@ export class BusRoutePathClient {
     const answer = topisRouteInfoAnswer.safeParse(await this.fetchBody(url, what));
     if (!answer.success) throw new UpstreamError(`TOPIS answer is not a route info list (${what})`, "topis");
     const { headerCd, headerMsg } = answer.data.msgHeader;
-    if (headerCd !== DATA_HEADER_CD) throw new UpstreamError(`TOPIS error code (${what})`, "topis", headerCd, headerMsg ?? undefined);
+    if (headerCd !== DATA_HEADER_CD) throw new UpstreamError(`TOPIS error code (${what})`, "topis", { headerCd, headerMsg: headerMsg ?? undefined });
     const rows = answer.data.msgBody?.itemList ?? [];
-    if (rows.length === 0) throw new UpstreamError(`TOPIS answer has no rows (${what})`, "topis", headerCd);
+    if (rows.length === 0) throw new UpstreamError(`TOPIS answer has no rows (${what})`, "topis", { headerCd });
     return rows.map((raw, index) => {
       const parsed = row.safeParse(raw);
-      if (!parsed.success) throw new UpstreamError(`TOPIS row ${index} is malformed (${what})`, "topis", headerCd);
+      if (!parsed.success) throw new UpstreamError(`TOPIS row ${index} is malformed (${what})`, "topis", { headerCd });
       return parsed.data;
     });
   }

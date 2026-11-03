@@ -36,7 +36,7 @@ export class BusRealtimeGbisClient {
     const { msgHeader, msgBody } = answer.data.response;
     if (isNoResult(msgHeader.resultCode)) return [];
     if (msgHeader.resultCode !== SUCCESS_RESULT_CODE || !msgBody) {
-      throw new UpstreamError(`GBIS ${route.code} seats: result code ${msgHeader.resultCode}`, UPSTREAM, String(msgHeader.resultCode), msgHeader.resultMessage ?? undefined);
+      throw new UpstreamError(`GBIS ${route.code} seats: result code ${msgHeader.resultCode}`, UPSTREAM, { headerCd: String(msgHeader.resultCode), headerMsg: msgHeader.resultMessage ?? undefined });
     }
     return [msgBody.busLocationList].flat().map((bus) => this.toVehicleSeats(bus));
   }
@@ -65,14 +65,14 @@ export class BusRealtimeGbisClient {
   }
 
   private toRefusalError({ code }: SeatRoute, refusal: GatewayRefusal): UpstreamError {
-    return new UpstreamError(`GBIS ${code} seats: gateway refused, ${refusal.message} (${refusal.code})`, UPSTREAM, refusal.code, refusal.message);
+    return new UpstreamError(`GBIS ${code} seats: gateway refused, ${refusal.message} (${refusal.code})`, UPSTREAM, { headerCd: refusal.code, headerMsg: refusal.message });
   }
 
   // WHY: a spent quota loses every route's seats until it resets, so it is told apart for its alert.
   private toQuotaError({ code }: SeatRoute): UpstreamError {
     const ticket = this.quotaThrottle.take(OPERATION);
     if (ticket) logger.warn({ event: "bus.gbis.quota_exceeded", operation: OPERATION, code, suppressed: ticket.suppressed }, "GBIS refused a call over the key's daily quota");
-    return new UpstreamError(`GBIS daily quota exceeded (${code} seats)`, UPSTREAM, QUOTA_REASON_CODE, "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR");
+    return new UpstreamError(`GBIS daily quota exceeded (${code} seats)`, UPSTREAM, { headerCd: QUOTA_REASON_CODE, headerMsg: "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR" });
   }
 
   private toVehicleSeats(bus: GbisBusLocation): VehicleSeats {

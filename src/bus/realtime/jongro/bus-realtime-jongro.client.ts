@@ -82,11 +82,11 @@ export class BusRealtimeJongroClient {
     const body = await this.fetchBody<TRow>(call);
     const headerCd = body?.msgHeader?.headerCd;
     if (!isUsableHeaderCd(headerCd)) {
-      throw new UpstreamError(`TOPIS error code (${call.what})`, "topis", headerCd, body.msgHeader?.headerMsg);
+      throw new UpstreamError(`TOPIS error code (${call.what})`, "topis", { headerCd, headerMsg: body.msgHeader?.headerMsg });
     }
     if (isNoResultHeaderCd(headerCd)) return [];
     const rows = body?.msgBody?.itemList;
-    if (!Array.isArray(rows)) throw new UpstreamError(`TOPIS response has no itemList (${call.what})`, "topis", headerCd);
+    if (!Array.isArray(rows)) throw new UpstreamError(`TOPIS response has no itemList (${call.what})`, "topis", { headerCd });
     return rows;
   }
 
@@ -101,7 +101,7 @@ export class BusRealtimeJongroClient {
     }
     if (!isQuotaExceeded(body)) return body;
     this.logQuotaExceeded(call);
-    throw new UpstreamError(`TOPIS daily quota exceeded (${call.what})`, "topis", "22", "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR");
+    throw new UpstreamError(`TOPIS daily quota exceeded (${call.what})`, "topis", { headerCd: "22", headerMsg: "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR" });
   }
 
   // WHY: a spent quota stops every TOPIS route of the operation until it resets, so it is told apart for its alert.

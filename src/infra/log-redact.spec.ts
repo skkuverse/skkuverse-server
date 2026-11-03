@@ -3,8 +3,12 @@
  * sent to Sentry: no service key, wherever the upstream wants it. A query key
  * is caught by its parameter name; Seoul's open APIs take the key as a path
  * segment instead (`/api/subway/<key>/json/...`), which a name rule never sees.
+ * What `serializeError` keeps of an upstream failure: the upstream, the code it
+ * answered with and the kind of failure, so the log line alone tells an outage
+ * from a refused key or a spent quota.
  */
-import { maskUrl } from "./log-redact";
+import { maskUrl, serializeError } from "./log-redact";
+import { UpstreamError } from "./upstream.error";
 
 const FAKE_KEY = "TESTKEY123";
 
@@ -54,5 +58,30 @@ describe("maskUrl", () => {
 
     // Act & Assert
     expect(maskUrl(relative)).toBe(relative);
+  });
+});
+
+describe("serializeError", () => {
+  it("logs an upstream failure's kind and fields beside the upstream", () => {
+    // Arrange
+    const err = new UpstreamError("example auth (list, 401, unknown key)", "example", { failure: { kind: "auth", status: 401, message: "unknown key" } });
+
+    // Act
+    const logged = serializeError(err);
+
+    // Assert
+    expect(logged).toMatchObject({ type: "UpstreamError", message: "example auth (list, 401, unknown key)", upstream: "example", failure: { kind: "auth", status: 401, message: "unknown key" } });
+  });
+
+  it("logs the code and message an upstream answered with", () => {
+    // Arrange
+    const err = new UpstreamError("example error code (list)", "example", { headerCd: "7", headerMsg: "refused" });
+
+    // Act
+    const logged = serializeError(err);
+
+    // Assert
+    expect(logged).toMatchObject({ upstream: "example", headerCd: "7", headerMsg: "refused" });
+    expect(logged).not.toHaveProperty("failure.kind");
   });
 });
