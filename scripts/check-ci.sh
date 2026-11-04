@@ -2,12 +2,41 @@
 # Every check CI runs, in CI's order: `npm run check:ci`, which .github/workflows/ci.yml passes to the shared workflow
 # as its check command, and which a local hook can run on the commit being pushed. The install comes first and stays
 # outside: CI runs `sfw npm ci` and `npm audit signatures`. __tests__/nest/infra/ci-workflow.test.ts pins the steps.
+#
+# Usage: check-ci.sh [--skip <step>]...  A skipped step is named in the output; a step name this script does not
+# have, or any other argument, fails before the first step runs.
+# WHY: the local push gate passes `--skip test`, because the full suite outlasts a push on a shared machine; the
+# commit gate's related tests, CI on every push to dev and the release pull request's `ci / gate` run it. CI never
+# passes --skip (ci-workflow.test.ts).
 set -euo pipefail
 export CI=true TZ=UTC LANG=C.UTF-8
+
+self=${BASH_SOURCE[0]}
+known_steps() { sed -n 's/^step \([^ ]*\) .*/\1/p' "$self" | tr '\n' ' '; }
+skip=" "
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skip)
+      name=${2:-}
+      case "$name" in "" | *[!a-z0-9-]*) echo "check-ci: --skip needs a step name: $(known_steps)" >&2; exit 2 ;; esac
+      if ! grep -q "^step $name " "$self"; then
+        echo "check-ci: no step named '$name' to skip; the steps are: $(known_steps)" >&2
+        exit 2
+      fi
+      skip="$skip$name "
+      shift 2
+      ;;
+    *)
+      echo "check-ci: unknown argument '$1' (usage: check-ci.sh [--skip <step>]...)" >&2
+      exit 2
+      ;;
+  esac
+done
 
 step() {
   local name=$1
   shift
+  case "$skip" in *" $name "*) echo "check-ci: skipped $name (--skip $name)"; return 0 ;; esac
   if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::group::$name"; fi
   "$@"
   if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::endgroup::"; fi

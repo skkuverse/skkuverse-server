@@ -11,12 +11,18 @@
  *     in order, the mongod binary check first: mongodb-memory-server's postinstall exits 0 when its download
  *     fails, so without it a failed download surfaces later as test files that find no binary;
  *   - scripts/check-ci.sh runs the same way everywhere: no line reads CI, GITHUB_* or RUNNER_*, except the lines
- *     that open and close a log group on GitHub Actions and do nothing else.
+ *     that open and close a log group on GitHub Actions and do nothing else;
+ *   - the only way to leave a step out is an explicit argument, `--skip <step>` (repeatable), which the local push
+ *     gate passes for `test`: the script says which step it skipped, and refuses a step it does not have, or any
+ *     other argument, before it runs anything. CI never passes `--skip`.
  *
  * Patterns rather than a YAML parser: the repo avoids the dependency. The rules are tested on the mutants they exist
- * to catch, then on the real files.
+ * to catch, then on the real files. The script's arguments are tested by running it with npm, node and python3
+ * replaced by stubs that only record what they were asked to run.
  */
+import { spawnSync } from "node:child_process";
 import fs from "fs";
+import os from "node:os";
 import path from "path";
 
 const root = path.join(__dirname, "../../..");
@@ -94,6 +100,7 @@ describe("the CI entry point rules apply as specified", () => {
   it.each([
     ["a second job", caller(CALL, ["  lint:", "    runs-on: ubuntu-latest", "    steps:", "      - run: npm run lint"])],
     ["a check command other than check:ci", caller(CALL.map((l) => l.replace("npm run check:ci", "npm test")))],
+    ["a check command that skips a step", caller(CALL.map((l) => l.replace('"npm run check:ci"', '"npm run check:ci -- --skip test"')))],
     ["an input left out", caller(CALL.filter((l) => !l.includes("public:")))],
     ["an extra input", caller([...CALL, "      check-cmd-extra: npm run knip"])],
     ["a tag instead of a commit", caller(CALL.map((l) => l.replace(`@${SHA} # v1.0.0`, "@v1")))],
@@ -152,6 +159,11 @@ describe(".github/workflows/ci.yml", () => {
     expect(callerProblems(ci)).toEqual([]);
   });
 
+  it("never passes --skip, so CI runs every step", () => {
+    // Act & Assert
+    expect(ci).not.toMatch(/--skip\b/);
+  });
+
   it("runs on a pull request to main or dev and on a push to dev, one run per ref", () => {
     // Act
     const on = /^on:\n((?: {2}.*\n|\s*\n)*)/m.exec(ci)?.[1] ?? "";
@@ -196,4 +208,57 @@ describe("scripts/check-ci.sh", () => {
     expect(script).not.toBe("");
     expect(runnerBranches(script)).toEqual([]);
   });
+
+  it("leaves out each step named by --skip, says so, and runs the others", () => {
+    // Act
+    const run = runWithStubs(["--skip", "test", "--skip", "lint"]);
+
+    // Assert
+    expect(run.status).toBe(0);
+    expect(run.ran).toHaveLength(checkSteps(script).length - 2);
+    expect(run.ran.filter((command) => /^npm (?:test|run lint)\b/.test(command))).toEqual([]);
+    expect(run.ran.at(-1)).toBe("npm run knip");
+    expect(run.stdout).toMatch(/skipped test\b/);
+    expect(run.stdout).toMatch(/skipped lint\b/);
+  });
+
+  it.each([
+    ["a step it does not have", ["--skip", "tests"], "tests"],
+    ["--skip without a step", ["--skip"], "--skip"],
+    ["an argument it does not take", ["--only", "test"], "--only"],
+  ])("refuses %s before it runs any step", (_case, args, named) => {
+    // Act
+    const run = runWithStubs(args);
+
+    // Assert
+    expect(run.status).not.toBe(0);
+    expect(run.ran).toEqual([]);
+    expect(run.stderr).toContain(named);
+  });
 });
+
+/**
+ * Runs scripts/check-ci.sh with npm, node and python3 replaced by stubs that record one line per call: the tool,
+ * its first argument and the first line of its second (`node -e` gets a multi-line script).
+ */
+function runWithStubs(args: string[]): { status: number | null; stdout: string; stderr: string; ran: string[] } {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "check-ci-"));
+  try {
+    const bin = path.join(scratch, "bin");
+    const log = path.join(scratch, "ran.log");
+    fs.mkdirSync(bin);
+    for (const tool of ["npm", "node", "python3"]) {
+      const stub = `#!/bin/sh\nprintf '%s %s %s\\n' ${tool} "$1" "$(printf '%s' "$2" | head -n 1)" >> "$STUB_LOG"\n`;
+      fs.writeFileSync(path.join(bin, tool), stub, { mode: 0o755 });
+    }
+    const run = spawnSync("bash", [path.join(root, "scripts/check-ci.sh"), ...args], {
+      cwd: scratch,
+      encoding: "utf8",
+      env: { PATH: `${bin}:/usr/bin:/bin`, STUB_LOG: log },
+    });
+    const ran = fs.existsSync(log) ? fs.readFileSync(log, "utf8").split("\n").filter((line) => line !== "") : [];
+    return { status: run.status, stdout: run.stdout, stderr: run.stderr, ran };
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+}
