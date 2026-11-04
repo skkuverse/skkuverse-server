@@ -14,6 +14,9 @@ updates:
     target-branch: dev
     schedule:
       interval: monthly
+    # WHY: a release younger than 5 days is not proposed, as npm installs wait (min-release-age=5 in .npmrc).
+    cooldown:
+      default-days: 5
     groups:
       github-actions:
         patterns:

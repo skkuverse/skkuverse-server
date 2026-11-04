@@ -7,17 +7,19 @@
  *   - every workflow sets `permissions:` at the top, read-only or empty, so a
  *     job gets write access only where it names it, and only contracts-sync.yml
  *     names `contents: write`;
- *   - only claude.yml and contracts-sync.yml read a secret, in any syntax, and
- *     each keeps its secrets in an environment of its own (`claude`,
+ *   - only claude.yml and contracts-sync.yml read a secret, in any syntax,
+ *     and each keeps its secrets in an environment of its own (`claude`,
  *     `contracts-sync`), which no other workflow uses;
+ *   - no workflow grants `security-events: write`;
  *   - no `run:` script interpolates an expression: an event field, a branch
  *     name or a step output reaches a script only through `env:`, so text an
  *     outsider wrote is never pasted into a shell command;
  *   - nothing under .github/ names a repository of the maintainer's personal
  *     account, where the private repositories live;
  *   - ci.yml reads no secret and clones no other repository: the contract and
- *     conventions checks run the copies vendored under .github/contract-tools/,
- *     hash-locked in .contracts.lock.json;
+ *     conventions checks in scripts/check-ci.sh, which it runs, use the copies
+ *     vendored under .github/contract-tools/, hash-locked in
+ *     .contracts.lock.json;
  *   - claude.yml has one job, and the gate sits on it: it starts only for an
  *     issue comment from an OWNER, MEMBER or COLLABORATOR, and every
  *     disjunct of its gate checks `author_association`;
@@ -27,13 +29,6 @@
  *   - contracts-sync.yml runs on a schedule or by hand, on the default branch,
  *     never for a pull request; it checks that its secrets are set before any
  *     other step, and its PR body links no private repository;
- *   - ci.yml's `workflow-lint` job runs actionlint and zizmor, zizmor with
- *     `--offline`, so the job holds no token and calls no API;
- *   - scorecard.yml (OpenSSF Scorecard) runs on a push to main, on a schedule
- *     or by hand, never for a pull request; it publishes nothing, so it has no
- *     `id-token` permission, and its one job holds `security-events: write`
- *     for the SARIF upload and `contents: read` for the checkout. No other
- *     workflow grants `security-events: write`.
  *
  * Patterns rather than a YAML parser: the repo has no parser dependency. The
  * rules are tested on the mutants they exist to catch, then on the real files.
@@ -65,6 +60,12 @@ const yamlLines = (yaml: string) => yaml.split("\n").filter((line) => !/^\s*#/.t
 
 /** A secret read in any syntax: `secrets.X`, `secrets['X']`, or the whole context. */
 export const readsSecret = (yaml: string) => /\bsecrets\s*[.[]|\(\s*secrets\s*\)/.test(yaml);
+
+/** Each secret read outside comment lines, as written: `secrets.X`, `secrets['X']` or `(secrets)`. */
+export const secretReads = (yaml: string) =>
+  yamlLines(yaml)
+    .join("\n")
+    .match(/\bsecrets\s*\.\s*\w+|\bsecrets\s*\[[^\]]*\]|\(\s*secrets\s*\)/g) ?? [];
 
 export const usesEnvironment = (yaml: string) => yamlLines(yaml).some((line) => /^\s*environment:/.test(line));
 
@@ -238,6 +239,22 @@ describe("the public-workflow rules apply as specified", () => {
     expect(readsSecret("# its secrets live in an environment; no secret, secrets, or secrets: here")).toBe(false);
   });
 
+  it("lists each secret read in any syntax, and none on a comment line", () => {
+    // Arrange
+    const body = [
+      "    steps:",
+      "      # reads secrets.IN_A_COMMENT",
+      "      - env:",
+      "          A: ${{ secrets.ONE }}",
+      "          B: ${{ secrets['TWO'] }}",
+      "          C: ${{ toJSON(secrets) }}",
+      "",
+    ].join("\n");
+
+    // Act & Assert
+    expect(secretReads(body)).toEqual(["secrets.ONE", "secrets['TWO']", "(secrets)"]);
+  });
+
   it.each([
     ["a step output on one line", "      - run: echo ${{ steps.mongod.outputs.version }}"],
     ["a step output in a block", "      - name: x\n        run: |\n          ls \"$DIR\"\n          ls x-\"${{ steps.mongod.outputs.version }}\""],
@@ -382,12 +399,12 @@ describe(".github/workflows on a public repository", () => {
     expect(writers).toEqual(["contracts-sync.yml"]);
   });
 
-  it("grant security-events: write only in scorecard.yml", () => {
+  it("grant security-events: write in no workflow", () => {
     // Act
     const writers = files.filter((f) => grantsSecurityEventsWrite(workflow(f)));
 
     // Assert
-    expect(writers).toEqual(["scorecard.yml"]);
+    expect(writers).toEqual([]);
   });
 
   it("pass expressions to run scripts only through env:", () => {
@@ -424,38 +441,20 @@ describe("ci.yml", () => {
     expect(ci).not.toMatch(/git clone|git@github\.com/);
   });
 
-  it("leaves no token in .git/config for the code it tests", () => {
-    // Assert
-    expect(ci).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
-  });
+  it("runs the contract and conventions checks from the vendored copies, through scripts/check-ci.sh", () => {
+    // Arrange
+    const checks = read("scripts/check-ci.sh");
 
-  it("runs the contract and conventions checks from the vendored copies", () => {
     // Assert
-    expect(ci).toMatch(/^ {8}run: python3 \.github\/contract-tools\/exported\/sync_contracts\.py check --repo server --root \.$/m);
-    expect(ci).toMatch(/python3 \.github\/contract-tools\/exported\/lint_conventions\.py --root \./);
-  });
-});
-
-describe("ci.yml workflow-lint", () => {
-  const lint = jobBlocks(workflow("ci.yml")).get("workflow-lint") ?? "";
-
-  it("runs actionlint, and zizmor offline over the workflows directory", () => {
-    // Assert
-    expect(lint).not.toBe("");
-    expect(lint).toMatch(/^ {6}- run: actionlint$/m);
-    expect(lint).toMatch(/^ {6}- run: zizmor --offline \.github\/workflows\/$/m);
-  });
-
-  it("holds no token and checks out without leaving one in .git/config", () => {
-    // Assert
-    expect(lint).not.toMatch(/GH_TOKEN|GITHUB_TOKEN|github\.token|ZIZMOR_GITHUB_TOKEN/);
-    expect(lint).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
-    expect(lint).not.toMatch(/^ {4}permissions:/m);
+    expect(ci).toMatch(/check-cmd: "npm run check:ci"/);
+    expect(checks).toMatch(/^step contracts python3 \.github\/contract-tools\/exported\/sync_contracts\.py check --repo server --root \.$/m);
+    expect(checks).toMatch(/python3 \.github\/contract-tools\/exported\/lint_conventions\.py --root \./);
+    expect(checks).not.toMatch(/git clone|git@github\.com/);
   });
 });
 
 describe("the vendored contract tools", () => {
-  it("are hash-locked in .contracts.lock.json at the paths ci.yml runs", () => {
+  it("are hash-locked in .contracts.lock.json at the paths scripts/check-ci.sh runs", () => {
     // Arrange
     const lock = JSON.parse(read(".contracts.lock.json")) as { contracts: Record<string, { path: string }> };
 
@@ -470,75 +469,6 @@ describe("the vendored contract tools", () => {
         ".github/contract-tools/contracts/manifest.json",
       ]),
     );
-  });
-});
-
-describe("scorecard.yml", () => {
-  const scorecard = files.includes("scorecard.yml") ? workflow("scorecard.yml") : "";
-  const jobs = jobBlocks(scorecard);
-  const [job = ""] = jobs.values();
-
-  it("runs on a push to main, on a schedule or by hand, never for a pull request", () => {
-    // Assert
-    expect(triggerNames(scorecard)).toEqual(["push", "schedule", "workflow_dispatch"]);
-    expect(triggers(scorecard)).toMatch(/^ {2}push:\n {4}branches: \[main\]$/m);
-  });
-
-  it("has one job that holds only security-events: write and contents: read", () => {
-    // Assert
-    expect([...jobs.keys()]).toHaveLength(1);
-    expect(jobPermissions(job)).toEqual(["contents: read", "security-events: write"]);
-  });
-
-  it("publishes nothing, so no job can mint an OIDC token", () => {
-    // Assert
-    expect(scorecard).not.toMatch(/id-token/);
-    expect(job).toMatch(/^ {10}INPUT_PUBLISH_RESULTS: false$/m);
-  });
-
-  it("runs the Scorecard image by digest, not through the action that names it by tag", () => {
-    // Assert
-    expect(job).toMatch(/^ {8}uses: docker:\/\/ghcr\.io\/ossf\/scorecard-action@sha256:[0-9a-f]{64} # v\d+\.\d+\.\d+$/m);
-    expect(job).not.toMatch(/uses: ossf\/scorecard-action@/);
-  });
-
-  // WHY: a docker:// step gets none of the defaults in the action's action.yaml, and a missing input fails only on main.
-  it("sets each input the container reads, and nothing else", () => {
-    // Arrange
-    const env = /^ {6}- name: Run analysis\n(?: {8}.*\n)*? {8}env:\n((?: {10}.*\n)*)/m.exec(job)?.[1] ?? "";
-
-    // Act
-    const lines = env.split("\n").map((line) => line.trim()).filter((line) => line !== "");
-
-    // Assert
-    expect(lines.sort()).toEqual(
-      [
-        "INPUT_FILE_MODE: archive",
-        "INPUT_INTERNAL_DEFAULT_TOKEN: ${{ github.token }}",
-        "INPUT_INTERNAL_PUBLISH_BASE_URL: https://api.scorecard.dev",
-        "INPUT_PUBLISH_RESULTS: false",
-        "INPUT_REPO_TOKEN: ${{ github.token }}",
-        "INPUT_RESULTS_FILE: results.sarif",
-        "INPUT_RESULTS_FORMAT: sarif",
-      ],
-    );
-  });
-
-  it("uploads the SARIF file to code scanning", () => {
-    // Assert
-    expect(job).toMatch(/^ {8}uses: github\/codeql-action\/upload-sarif@\S+/m);
-    expect(job).toMatch(/^ {10}sarif_file: results\.sarif$/m);
-  });
-
-  it("leaves no token in .git/config", () => {
-    // Assert
-    expect(job).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
-  });
-
-  it("reads no secret and uses no environment", () => {
-    // Assert
-    expect(readsSecret(scorecard)).toBe(false);
-    expect(usesEnvironment(scorecard)).toBe(false);
   });
 });
 

@@ -26,15 +26,10 @@ Run the same checks as CI ([docs/cicd-and-branch-protection.md](docs/cicd-and-br
 
 ```bash
 npm ci
-npm run typecheck
-npm run build
-python3 .github/contract-tools/exported/sync_contracts.py check --repo server --root .
-python3 .github/contract-tools/exported/lint_conventions.py --root . --only frontmatter --only structure
-npm test
-npm run lint
-npm run knip
-npm run depcheck
+npm run check:ci
 ```
+
+`npm run check:ci` runs `scripts/check-ci.sh`: typecheck, build, the contract and conventions checks, tests, lint and knip, in that order, stopping at the first failure. It needs the Node major in `.nvmrc`; `npm run` refuses any other.
 
 - Follow [CLAUDE.md](CLAUDE.md) and the architecture decision ([docs/decisions/0010-server-architecture.md](docs/decisions/0010-server-architecture.md)). The architecture tests in `__tests__/architecture/` and the ESLint rules enforce most of it.
 - Write the test first ([docs/decisions/0011-test-strategy.md](docs/decisions/0011-test-strategy.md)). Never weaken, skip or delete an existing test to get green.

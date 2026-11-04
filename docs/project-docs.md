@@ -3,7 +3,7 @@ title: 프로젝트 문서 (통합 인덱스 · 미이관)
 type: reference
 status: deprecated
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-05
 audience: internal
 ---
 
@@ -1372,10 +1372,10 @@ TypeScript 전환을 앞두고 (2026-05-24) 모든 의존성을 정확 버전으
 ### 규칙
 
 - **`package.json`의 모든 deps/devDeps는 정확 버전** (`^`, `~` 금지). `.npmrc`의 `save-exact=true`가 신규 install을 자동으로 정확 버전으로 저장.
-- **`engine-strict=true`**: `npm ci` and `npm install` fail when the running Node is outside `engines.node`. Nothing else checks it: `npm run dev`, `npm test` and `npx jest` run on whatever Node the shell has, so run `nvm use` first. The Dockerfile runs `npm ci` before `.npmrc` is copied, so the image does not check it either; `__tests__/nest/infra/node-version.test.ts` keeps both stages on the `.nvmrc` major.
+- **`engine-strict=true`**: `npm ci` and `npm install` fail when the running Node is outside `engines.node`, and `devEngines.runtime` makes every `npm run` (`npm run dev`, `npm test`) fail the same way. `npx jest` and a binary called directly still run on whatever Node the shell has, so run `nvm use` first. The Dockerfile runs `npm ci` before `.npmrc` is copied, so the image does not check it either; `__tests__/nest/infra/node-version.test.ts` keeps both stages on the `.nvmrc` major.
 - **업데이트 절차**:
   1. 단일 PR에 단일 패키지 bump (`npm install foo@X.Y.Z`).
-  2. `npm test` + `npm run lint` + `npm run knip` + `npm run depcheck` 모두 통과.
+  2. `npm run check:ci` passes.
   3. 메이저 bump는 사용처 영향 분석 commit 메시지에 명시.
 - **TS 전환 기간 중에는 패키지 추가/변경 동결.** 신규 의존성이 필요하면 별도 PR로 lock 정책에 맞춰 추가.
 
@@ -1389,7 +1389,6 @@ TypeScript 전환을 앞두고 (2026-05-24) 모든 의존성을 정확 버전으
 ### 도구
 
 - `npm run knip` — 미사용 파일/의존성 audit (exports check off; `knip.json` 참고)
-- `npm run depcheck` — 미사용 의존성 audit (`pino-pretty`, `node-cron` ignore — 동적/CLI 로드)
 
 ### Node runtime
 
