@@ -95,7 +95,7 @@ npm run typecheck        # Jest does not type-check, so run this after a TypeScr
 npm run lint             # ESLint, then markdownlint over docs/; 0 errors and 0 warnings
 ```
 
-Tests need no network and no database of yours: they start an in-memory `mongod` (mongodb-memory-server, whose install script downloads it during `npm ci`) and fail any connection that leaves loopback. npm 11 runs a dependency's install script only when `allowScripts` in `package.json` lists it, and this one is listed; if a test reports no `mongod` binary, run `npm rebuild mongodb-memory-server`. CI runs typecheck, build, the contract and conventions checks, tests, lint, knip and depcheck on every pull request ([docs/cicd-and-branch-protection.md](docs/cicd-and-branch-protection.md)).
+Tests need no network and no database of yours: they start an in-memory `mongod` (mongodb-memory-server, whose install script downloads it during `npm ci`) and fail any connection that leaves loopback. npm 11 runs a dependency's install script only when `allowScripts` in `package.json` lists it, and this one is listed; if a test reports no `mongod` binary, run `npm rebuild mongodb-memory-server`. `npm run check:ci` runs everything CI checks, in CI's order: typecheck, build, the contract and conventions checks, tests, lint and knip. CI runs it on every pull request and every push to `dev` ([docs/cicd-and-branch-protection.md](docs/cicd-and-branch-protection.md)).
 
 ## Architecture
 
