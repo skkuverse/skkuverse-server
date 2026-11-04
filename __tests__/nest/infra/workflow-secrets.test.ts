@@ -7,9 +7,9 @@
  *   - every workflow sets `permissions:` at the top, read-only or empty, so a
  *     job gets write access only where it names it, and only contracts-sync.yml
  *     names `contents: write`;
- *   - only claude.yml and contracts-sync.yml read a secret, in any syntax, and
- *     each keeps its secrets in an environment of its own (`claude`,
- *     `contracts-sync`), which no other workflow uses;
+ *   - only claude.yml, contracts-sync.yml and scorecard.yml read a secret, in
+ *     any syntax, and each keeps its secrets in an environment of its own
+ *     (`claude`, `contracts-sync`, `heartbeat`), which no other workflow uses;
  *   - no `run:` script interpolates an expression: an event field, a branch
  *     name or a step output reaches a script only through `env:`, so text an
  *     outsider wrote is never pasted into a shell command;
@@ -31,9 +31,13 @@
  *     `--offline`, so the job holds no token and calls no API;
  *   - scorecard.yml (OpenSSF Scorecard) runs on a push to main, on a schedule
  *     or by hand, never for a pull request; it publishes nothing, so it has no
- *     `id-token` permission, and its one job holds `security-events: write`
- *     for the SARIF upload and `contents: read` for the checkout. No other
- *     workflow grants `security-events: write`.
+ *     `id-token` permission. Its `analysis` job holds `security-events: write`
+ *     for the SARIF upload and `contents: read` for the checkout, and no secret
+ *     or environment, so the Scorecard image never holds one. Its `heartbeat`
+ *     job runs only after `analysis` succeeds, holds no permission, runs no
+ *     action, and reads one secret, the Healthchecks.io ping URL, from the
+ *     `heartbeat` environment. No other workflow grants
+ *     `security-events: write`.
  *
  * Patterns rather than a YAML parser: the repo has no parser dependency. The
  * rules are tested on the mutants they exist to catch, then on the real files.
@@ -47,7 +51,7 @@ const read = (rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
 const files = fs.readdirSync(path.join(root, WORKFLOWS)).filter((f) => /\.ya?ml$/.test(f));
 const workflow = (name: string) => read(`${WORKFLOWS}/${name}`);
 
-const SECRET_HOLDERS = ["claude.yml", "contracts-sync.yml"];
+const SECRET_HOLDERS = ["claude.yml", "contracts-sync.yml", "scorecard.yml"];
 const GATE = /^contains\(fromJSON\('\["OWNER","MEMBER","COLLABORATOR"\]'\), github\.event\.(comment|review)\.author_association\)$/;
 
 /** The top-level `on:` block. */
@@ -65,6 +69,12 @@ const yamlLines = (yaml: string) => yaml.split("\n").filter((line) => !/^\s*#/.t
 
 /** A secret read in any syntax: `secrets.X`, `secrets['X']`, or the whole context. */
 export const readsSecret = (yaml: string) => /\bsecrets\s*[.[]|\(\s*secrets\s*\)/.test(yaml);
+
+/** Each secret read outside comment lines, as written: `secrets.X`, `secrets['X']` or `(secrets)`. */
+export const secretReads = (yaml: string) =>
+  yamlLines(yaml)
+    .join("\n")
+    .match(/\bsecrets\s*\.\s*\w+|\bsecrets\s*\[[^\]]*\]|\(\s*secrets\s*\)/g) ?? [];
 
 export const usesEnvironment = (yaml: string) => yamlLines(yaml).some((line) => /^\s*environment:/.test(line));
 
@@ -236,6 +246,22 @@ describe("the public-workflow rules apply as specified", () => {
   it("finds no secret read in prose about secrets", () => {
     // Act & Assert
     expect(readsSecret("# its secrets live in an environment; no secret, secrets, or secrets: here")).toBe(false);
+  });
+
+  it("lists each secret read in any syntax, and none on a comment line", () => {
+    // Arrange
+    const body = [
+      "    steps:",
+      "      # reads secrets.IN_A_COMMENT",
+      "      - env:",
+      "          A: ${{ secrets.ONE }}",
+      "          B: ${{ secrets['TWO'] }}",
+      "          C: ${{ toJSON(secrets) }}",
+      "",
+    ].join("\n");
+
+    // Act & Assert
+    expect(secretReads(body)).toEqual(["secrets.ONE", "secrets['TWO']", "(secrets)"]);
   });
 
   it.each([
@@ -476,7 +502,8 @@ describe("the vendored contract tools", () => {
 describe("scorecard.yml", () => {
   const scorecard = files.includes("scorecard.yml") ? workflow("scorecard.yml") : "";
   const jobs = jobBlocks(scorecard);
-  const [job = ""] = jobs.values();
+  const analysis = jobs.get("analysis") ?? "";
+  const heartbeat = jobs.get("heartbeat") ?? "";
 
   it("runs on a push to main, on a schedule or by hand, never for a pull request", () => {
     // Assert
@@ -484,28 +511,29 @@ describe("scorecard.yml", () => {
     expect(triggers(scorecard)).toMatch(/^ {2}push:\n {4}branches: \[main\]$/m);
   });
 
-  it("has one job that holds only security-events: write and contents: read", () => {
+  it("has an analysis job that holds only security-events: write and contents: read, and a heartbeat job that holds none", () => {
     // Assert
-    expect([...jobs.keys()]).toHaveLength(1);
-    expect(jobPermissions(job)).toEqual(["contents: read", "security-events: write"]);
+    expect([...jobs.keys()]).toEqual(["analysis", "heartbeat"]);
+    expect(jobPermissions(analysis)).toEqual(["contents: read", "security-events: write"]);
+    expect(jobPermissions(heartbeat)).toEqual([]);
   });
 
   it("publishes nothing, so no job can mint an OIDC token", () => {
     // Assert
     expect(scorecard).not.toMatch(/id-token/);
-    expect(job).toMatch(/^ {10}INPUT_PUBLISH_RESULTS: false$/m);
+    expect(analysis).toMatch(/^ {10}INPUT_PUBLISH_RESULTS: false$/m);
   });
 
   it("runs the Scorecard image by digest, not through the action that names it by tag", () => {
     // Assert
-    expect(job).toMatch(/^ {8}uses: docker:\/\/ghcr\.io\/ossf\/scorecard-action@sha256:[0-9a-f]{64} # v\d+\.\d+\.\d+$/m);
-    expect(job).not.toMatch(/uses: ossf\/scorecard-action@/);
+    expect(analysis).toMatch(/^ {8}uses: docker:\/\/ghcr\.io\/ossf\/scorecard-action@sha256:[0-9a-f]{64} # v\d+\.\d+\.\d+$/m);
+    expect(analysis).not.toMatch(/uses: ossf\/scorecard-action@/);
   });
 
   // WHY: a docker:// step gets none of the defaults in the action's action.yaml, and a missing input fails only on main.
   it("sets each input the container reads, and nothing else", () => {
     // Arrange
-    const env = /^ {6}- name: Run analysis\n(?: {8}.*\n)*? {8}env:\n((?: {10}.*\n)*)/m.exec(job)?.[1] ?? "";
+    const env = /^ {6}- name: Run analysis\n(?: {8}.*\n)*? {8}env:\n((?: {10}.*\n)*)/m.exec(analysis)?.[1] ?? "";
 
     // Act
     const lines = env.split("\n").map((line) => line.trim()).filter((line) => line !== "");
@@ -526,19 +554,31 @@ describe("scorecard.yml", () => {
 
   it("uploads the SARIF file to code scanning", () => {
     // Assert
-    expect(job).toMatch(/^ {8}uses: github\/codeql-action\/upload-sarif@\S+/m);
-    expect(job).toMatch(/^ {10}sarif_file: results\.sarif$/m);
+    expect(analysis).toMatch(/^ {8}uses: github\/codeql-action\/upload-sarif@\S+/m);
+    expect(analysis).toMatch(/^ {10}sarif_file: results\.sarif$/m);
   });
 
   it("leaves no token in .git/config", () => {
     // Assert
-    expect(job).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
+    expect(analysis).toMatch(/uses: actions\/checkout@\S+.*\n {8}with:\n(?: {10}.*\n)* {10}persist-credentials: false$/m);
   });
 
-  it("reads no secret and uses no environment", () => {
+  it("keeps every secret and environment out of the analysis job, so the Scorecard image never holds one", () => {
     // Assert
-    expect(readsSecret(scorecard)).toBe(false);
-    expect(usesEnvironment(scorecard)).toBe(false);
+    expect(readsSecret(analysis)).toBe(false);
+    expect(usesEnvironment(analysis)).toBe(false);
+  });
+
+  // WHY: whoever holds the ping URL can report a run that never happened. Push and schedule runs are on main, which
+  // the environment admits, so a workflow pushed to another branch cannot read the URL.
+  it("pings only after the analysis succeeds, from the heartbeat environment, in a job that runs no action", () => {
+    // Assert
+    expect(heartbeat).toMatch(/^ {4}needs: analysis$/m);
+    expect(jobIf(heartbeat)).toBeUndefined();
+    expect(heartbeat).toMatch(/^ {4}environment: heartbeat$/m);
+    expect(heartbeat).not.toMatch(/^\s*(?:-\s+)?uses:/m);
+    expect(secretReads(heartbeat)).toEqual(["secrets.HEALTHCHECKS_SCORECARD_PING_URL"]);
+    expect(secretReads(scorecard)).toEqual(secretReads(heartbeat));
   });
 });
 

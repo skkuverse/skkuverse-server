@@ -45,3 +45,16 @@ jobs:
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: results.sarif
+
+  # WHY: a schedule that stops firing reports nothing, so each successful run pings a Healthchecks.io check, and a
+  # missed ping is noticed outside this repository. Whoever holds the ping URL can report a run that never happened,
+  # so it lives in an environment that admits only main, in its own job that runs no action.
+  heartbeat:
+    needs: analysis
+    runs-on: ubuntu-latest
+    environment: heartbeat
+    steps:
+      - name: Ping
+        env:
+          PING_URL: ${{ secrets.HEALTHCHECKS_SCORECARD_PING_URL }}
+        run: curl --fail --silent --show-error --max-time 10 --retry 5 --output /dev/null "${PING_URL:?HEALTHCHECKS_SCORECARD_PING_URL is not set}"
