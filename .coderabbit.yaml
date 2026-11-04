@@ -9,17 +9,20 @@ reviews:
       instructions: >-
         The rules are in CLAUDE.md. Before proposing a fix, check it against the ESLint boundary blocks in
         eslint.config.js and the architecture tests in __tests__/architecture/: a fix one of them rejects is not a fix.
-        A comment says only what the code cannot, under a tag (QUIRK, CONTRACT, EVIDENCE, WHY or SEE; ADR 0010 D10 in
-        docs/decisions/0010-server-architecture.md), so do not ask for a comment that restates the code.
+        In src/, a comment says only what the code cannot, under a tag (QUIRK, CONTRACT, EVIDENCE, WHY or SEE; ADR 0010
+        D10 in docs/decisions/0010-server-architecture.md), so do not ask for a comment that restates the code. Comments
+        in tests follow .claude/rules/tests.md instead.
     - path: "src/bus/**"
       instructions: >-
         Before reporting a TOPIS rejection that lacks `failure.kind`, read `toTopisFailure` in src/bus/bus.rules.ts,
-        `UpstreamError` in src/infra/upstream.error.ts, `UpstreamFailure` in src/infra/types.ts, and the TOPIS
-        paragraphs of docs/explanation/bus-architecture.md. `failure` classifies a call that returned no usable TOPIS
-        envelope: a timeout, the quota (code 22 anywhere in the answer, or a gateway limit), a refused key, any other
-        failed status, or a body that is not the envelope (`shape`). An envelope whose `msgHeader.headerCd` is not
-        the data code, an empty list, or a malformed row is rejected with `headerCd` (and `headerMsg`) and no
-        `failure`. That is the contract, not a missing classification.
+        `UpstreamError` in src/infra/upstream.error.ts, `UpstreamFailure` in src/infra/types.ts, the TOPIS paragraphs
+        of docs/explanation/bus-architecture.md, and the client's own QUIRK and WHY comments and spec. `failure`
+        classifies a call that returned no usable TOPIS envelope: a timeout, the quota (code 22 anywhere in the
+        answer, or a gateway limit), a refused key, any other failed status, or a body that is not the envelope
+        (`shape`). Each client decides which header codes are data and how it treats an empty or malformed answer: "4"
+        (no result) is an empty list in bus-realtime-jongro.client.ts and bus-eta-probe.client.ts and a rejection in
+        bus-route-path.client.ts, so check that client's rule before calling a rejection or an empty result a
+        regression.
     - path: "__tests__/**"
       instructions: >-
         Test conventions are in .claude/rules/tests.md (ADR 0011). Each test body marks its steps with `// Arrange`,
