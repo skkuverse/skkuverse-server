@@ -72,6 +72,12 @@ One image, three boot paths picked by `ROLE` (`src/main.ts`): `poller` polls ext
 - **This repository is public: it says nothing about how production runs or is guarded.** No hosting provider, host or reverse-proxy detail, monitoring or alerting setup, secret-store or config name, quota, capacity or cost figure, link to a private repository or name of one this code shares no contract with, incident or vulnerability history, or statement of what a route lacks, such as a missing limit or check. Keep the names code reads (env vars, log events, `QUIRK` tags), state the current rule, and write "outside this repository" for the rest. This holds for code, comments, tests, docs and commit messages.
 - **English everywhere** (code, comments, docs, commits). Korean is allowed only in user-facing product copy, whose files `.conventions.json` lists under `productCopy`.
 
+## Working here
+
+- **The main session orchestrates.** It plans, writes the subagent briefs, reviews what each subagent returns and reports to the user. Subagents do the hands-on work: reading across many files, edits, test runs, investigations and browser work.
+- **A subagent sees only its brief.** The brief carries the goal, the files to read and the constraints the work must meet.
+- **Code work runs under the pstack `poteto-mode` skill** (`/pstack:poteto-mode`). Enter it before you plan a code change.
+
 ## Reviews
 
 Reviewing a PR or a diff, here or through `@claude` (`.github/workflows/claude.yml`):
