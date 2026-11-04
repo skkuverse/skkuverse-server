@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# This repository's additions to the organization-wide CodeRabbit configuration, which `inheritance` keeps. Each path
+# instruction points the reviewer at the contract a finding there must be checked against first.
+inheritance: true
+reviews:
+  path_instructions:
+    - path: "**"
+      instructions: >-
+        The rules are in CLAUDE.md. Before proposing a fix, check it against the ESLint boundary blocks in
+        eslint.config.js and the architecture tests in __tests__/architecture/: a fix one of them rejects is not a fix.
+        A comment says only what the code cannot, under a tag (QUIRK, CONTRACT, EVIDENCE, WHY or SEE; ADR 0010 D10 in
+        docs/decisions/0010-server-architecture.md), so do not ask for a comment that restates the code.
+    - path: "src/bus/**"
+      instructions: >-
+        Before reporting a TOPIS rejection that lacks `failure.kind`, read `toTopisFailure` in src/bus/bus.rules.ts,
+        `UpstreamError` in src/infra/upstream.error.ts, `UpstreamFailure` in src/infra/types.ts, and the TOPIS
+        paragraphs of docs/explanation/bus-architecture.md. `failure` classifies a call that returned no usable TOPIS
+        envelope: a timeout, the quota (code 22 anywhere in the answer, or a gateway limit), a refused key, any other
+        failed status, or a body that is not the envelope (`shape`). An envelope whose `msgHeader.headerCd` is not
+        the data code, an empty list, or a malformed row is rejected with `headerCd` (and `headerMsg`) and no
+        `failure`. That is the contract, not a missing classification.
+    - path: "__tests__/**"
+      instructions: >-
+        Test conventions are in .claude/rules/tests.md (ADR 0011). Each test body marks its steps with `// Arrange`,
+        `// Act` and `// Assert`, a service spec uses the fakes in __tests__/helpers/fakes/ rather than mocks, and an
+        existing test, floor or allowlist entry is never edited, skipped or deleted to get green.
+    - path: ".github/workflows/**"
+      instructions: >-
+        The checks are scripts/check-ci.sh (`npm run check:ci`). ci.yml only calls the shared workflow in the
+        organization's `.github` repository, pinned to a commit, which installs, runs that command, lints the
+        workflows and reviews dependencies; __tests__/nest/infra/ci-workflow.test.ts pins both files.
