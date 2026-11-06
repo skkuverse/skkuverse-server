@@ -3,7 +3,7 @@ title: CI and Branch Protection
 type: reference
 status: accepted
 owner: spencer0124
-last-updated: 2026-11-05
+last-updated: 2026-11-06
 audience: public
 ---
 
@@ -21,7 +21,7 @@ The repository is public. Every change reaches `main` through a pull request: wo
 | --- | --- | --- | --- | --- |
 | `ci.yml` | Pull requests to `dev` or `main`, and pushes to `dev` | `contents: read` | None | One job, `ci`, which calls the shared workflow `checks.yml` of the organization's public [`.github` repository](https://github.com/skkuverse/.github), pinned to a commit. Its job `check` installs with `sfw npm ci`, checks the registry signatures (`npm audit signatures`) and runs `npm run check:ci`. Its job `workflows` runs actionlint and zizmor over this repository. Its job `dependency-review` fails a pull request that adds a dependency with a known vulnerability of high severity or worse. Its job `gate` passes only when each of the others succeeded or was skipped |
 | `claude.yml` | An issue or pull request comment that mentions `@claude`, from an owner, member or collaborator. Reviews and review comments start nothing | One job, `read`, in the `claude` environment: `contents: read`, `pull-requests: write`, `issues: write` and `actions: read`; Claude gets this job's own token, which cannot push. No `id-token`, so the job cannot mint the action's GitHub App token | `CLAUDE_CODE_OAUTH_TOKEN` | Answers in the pull request or issue and never edits or pushes. `@claude edit` is not a mode: such a comment is answered read-only like any other |
-| `contracts-sync.yml` | Daily at 06:00 KST, or by hand | `contents: write`, `pull-requests: write` | `UMBRELLA_DEPLOY_KEY`, `UMBRELLA_REPOSITORY`, `FLEET_READ_TOKEN`, in the `contracts-sync` environment | Compares the vendored contract files with their producers' `main`. When they drift, it checks the pulled files and opens or updates one pull request into `dev` |
+| `contracts-sync.yml` | None: the workflow is disabled in the repository's Actions settings, so neither its daily 06:00 KST schedule nor a run by hand starts it until it is re-enabled | `contents: write`, `pull-requests: write` | `UMBRELLA_DEPLOY_KEY`, `UMBRELLA_REPOSITORY`, `FLEET_READ_TOKEN`, in the `contracts-sync` environment | Compares the vendored contract files with their producers' `main`. When they drift, it checks the pulled files and opens or updates one pull request into `dev` |
 
 Every workflow sets an empty or read-only token at the top and grants more only on the job that needs it. Only `contracts-sync.yml` grants `contents: write`, and no workflow grants `security-events: write`. No workflow uses `pull_request_target`. No `run:` script contains a `${{ }}` expression: an event field, a branch name or a step output reaches a script only through `env:`. Nothing under `.github/` names a private repository. Every action, and the shared workflow `ci.yml` calls, is pinned to a commit SHA with its version as a trailing comment, and Dependabot proposes new pins once a month, for releases at least 5 days old. For npm it opens security updates only. The shared workflow pins what it downloads in its own repository's `tools/versions.env`, which Dependabot does not track: actionlint, zizmor and Socket Firewall, each by version and by the sha256 of what it downloads. `__tests__/nest/infra/workflow-secrets.test.ts`, `workflow-pins.test.ts` and `ci-workflow.test.ts` check these rules.
 
@@ -40,7 +40,7 @@ The `contracts-sync` environment limits deployments to the default branch, so a 
 
 `ci.yml` runs on every pull request to `dev` or `main` and on every push to `dev`, so a regression shows on the change that causes it, not only on the release. A newer run on the same ref cancels the older one. The checks are `npm run check:ci` (`scripts/check-ci.sh`), which a local hook runs on the commit it pushes, so CI and the hook check the same things; `ci.yml` only passes that command to the shared workflow. The hook passes `--skip test` and leaves the full Jest run to CI: the only way to leave a step out is that explicit argument, which names the skipped step and fails on a step the script does not have. `__tests__/nest/infra/ci-workflow.test.ts` fails if `ci.yml` does more or passes `--skip`, or if the script branches on whether it runs in CI. The shared workflow checks out the full history: the architecture tests compare the allowlists, exemptions and ratchets with the pull request's base, and fail in CI when the base is missing.
 
-The contract check and the conventions check run tools vendored under `.github/contract-tools/`: the contract checker, the conventions linter and this repository's slice of the contract manifest. They are hash-locked in `.contracts.lock.json` like every other vendored file, so CI clones nothing. `contracts-sync.yml` refreshes them with the rest.
+The contract check and the conventions check run tools vendored under `.github/contract-tools/`: the contract checker, the conventions linter and this repository's slice of the contract manifest. They are hash-locked in `.contracts.lock.json` like every other vendored file, so CI clones nothing. `contracts-sync.yml` refreshes them with the rest when it is enabled. While it is disabled, a maintainer runs `pull` in the umbrella repository and commits the result.
 
 | Failure | Where to look |
 | --- | --- |
@@ -59,13 +59,19 @@ A pull request from a fork waits for a maintainer to approve its workflow runs. 
 
 ## Branch protection
 
+Four rulesets protect the branches: `main`, `dev`, `owner-updates` and `creation-window`. None of them has a bypass, except that repository admins bypass `owner-updates`.
+
 | Rule | `main` | `dev` |
 | --- | --- | --- |
-| Pull request required | Yes | No |
+| Pull request required | Yes, with every review thread resolved | No |
 | Merge method | Merge commit only | — |
-| Required status checks | `ci / gate` (from `ci.yml`) | — |
+| Required status checks | `ci / gate` (from `ci.yml`), `GitGuardian Security Checks` and `CodeRabbit`, and the branch must be up to date with `main` | — |
+| Code scanning | CodeQL must report no alert of severity error and no security alert of high severity or higher | — |
+| Push and merge | Admins only (`owner-updates`) | Admins only (`owner-updates`) |
 | Force push | Blocked | Blocked |
 | Deletion | Blocked | Blocked |
+
+`creation-window` blocks creating any branch on GitHub except `dependabot/**`, `claude/**` and `contracts/**`, for everyone.
 
 Merge `dev` → `main` with a merge commit, never a squash, so `dev` and `main` keep one history.
 
