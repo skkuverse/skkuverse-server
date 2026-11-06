@@ -111,6 +111,9 @@
     "markdownlint": {
       "re2js": "2.8.8"
     },
+    "micromark-extension-math": {
+      "katex": "0.18.11"
+    },
     "nodemon": {
       "minimatch": "11.0.3"
     }
