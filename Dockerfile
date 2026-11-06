@@ -61,3 +61,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # tsc가 없어 실패하므로 우회. (legacy Express entry dist/index.js는 아직 빌드되어
 # 남아 있으나 더 이상 실행되지 않음 — 완전 제거는 후속 inline/cleanup 라운드.)
 CMD ["node", "dist/src/main.js"]
+
+# owner-gate test, closed unmerged
