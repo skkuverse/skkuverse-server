@@ -1,0 +1,128 @@
+name: Owner gate
+
+# WHY: a pull request to main that changes a file in .github/owner-gate-paths needs the `owner-approved` label.
+# pull_request_target runs this definition from main, so the pull request cannot change the check that judges it.
+# The job checks out nothing and runs no code from the pull request: it reads the files listing, the labels and
+# the list itself (from main) through the API, and its only write is removing the label.
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] no checkout, no code run, token limited to pull-requests: write
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions: {}
+
+concurrency:
+  group: owner-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
+      CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+      EVENT_ACTION: ${{ github.event.action }}
+      BEFORE: ${{ github.event.before }}
+      AFTER: ${{ github.event.after }}
+    steps:
+      - name: Check the owner list
+        run: |
+          set -euo pipefail
+          label=owner-approved
+          work=$(mktemp -d)
+
+          gh api "repos/$REPO/contents/.github/owner-gate-paths?ref=$BASE_REF" -H "Accept: application/vnd.github.raw" \
+            | grep -v -e '^[[:space:]]*#' -e '^[[:space:]]*$' > "$work/patterns"
+
+          matching() {
+            local name pattern
+            while IFS= read -r name; do
+              [ -n "$name" ] || continue
+              while IFS= read -r pattern; do
+                # shellcheck disable=SC2053
+                if [[ "$name" == $pattern ]]; then printf '%s\n' "$name"; break; fi
+              done < "$work/patterns"
+            done | sort -u
+          }
+
+          bullets() {
+            local line
+            while IFS= read -r line; do printf -- '- \x60%s\x60\n' "$line"; done
+          }
+
+          revoke_and_fail() {
+            gh api -X DELETE "repos/$REPO/issues/$PR/labels/$label" > /dev/null 2>&1 || true
+            {
+              echo "### owner-gate failed"
+              echo
+              echo "$1 The \`$label\` label was removed, and the owner adds it again after seeing the new commits."
+              if [ -s "$work/range-matches" ]; then
+                echo
+                echo "Listed files in the pushed range:"
+                bullets < "$work/range-matches"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::owner-gate failed: $1"
+            exit 1
+          }
+
+          if [ "$EVENT_ACTION" = synchronize ]; then
+            : > "$work/range-matches"
+            if ! gh api "repos/$REPO/compare/$BEFORE...$AFTER" > "$work/compare.json"; then
+              revoke_and_fail "The compare of the pushed range failed."
+            fi
+            status=$(jq -r '.status' "$work/compare.json")
+            listed=$(jq '.files | length' "$work/compare.json")
+            if [ "$status" != ahead ]; then
+              revoke_and_fail "The pushed range has status $status, not ahead."
+            fi
+            if [ "$listed" -ge 300 ]; then
+              revoke_and_fail "The pushed range lists $listed files, the most GitHub returns."
+            fi
+            jq -r '.files[] | .filename, (.previous_filename // empty)' "$work/compare.json" | matching > "$work/range-matches"
+            if [ -s "$work/range-matches" ]; then
+              revoke_and_fail "The pushed range changes a listed file."
+            fi
+          fi
+
+          gh api --paginate "repos/$REPO/pulls/$PR/files" \
+            --jq '.[] | [.filename, (.previous_filename // "")] | @tsv' > "$work/files.tsv"
+          listed_total=$(wc -l < "$work/files.tsv" | tr -d ' ')
+          if [ "$listed_total" -lt "$CHANGED_FILES" ] || [ "$listed_total" -ge 3000 ]; then
+            {
+              echo "### owner-gate failed"
+              echo
+              echo "The pull request changes $CHANGED_FILES files and the listing returned $listed_total, so the check cannot see every file."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::owner-gate failed: the files listing is incomplete"
+            exit 1
+          fi
+
+          tr '\t' '\n' < "$work/files.tsv" | matching > "$work/matches"
+          if [ ! -s "$work/matches" ]; then
+            echo "No changed file is on the owner list." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          gh api --paginate "repos/$REPO/issues/$PR/labels" --jq '.[].name' > "$work/labels"
+          if grep -qx "$label" "$work/labels"; then
+            {
+              echo "Files on the owner list, approved by the \`$label\` label:"
+              bullets < "$work/matches"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "### owner-gate failed"
+            echo
+            echo "These changed files are on the owner list, and the pull request lacks the \`$label\` label:"
+            bullets < "$work/matches"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::owner-gate failed: a listed file changed without the $label label"
+          exit 1
