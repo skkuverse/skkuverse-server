@@ -3,7 +3,7 @@ title: Games Registry API Reference
 type: reference
 status: draft
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -30,7 +30,7 @@ The registry says only whether and where the app may open a game. Whether a game
 
 ## `GET /games`: the index
 
-`Cache-Control: public, max-age=300`, with a weak `ETag` a client revalidates with. `meta` names no language. Every entry is listed, disabled ones included, in the dataset's order: a listed id is never opened from a copy the build bundles, so a disabled entry is how a game is hidden.
+`Cache-Control: public, max-age=300` (`GAMES_CACHE_CONTROL`). `meta` names no language. Every entry is listed, disabled ones included, in the dataset's order: a listed id is never opened from a copy the build bundles, so a disabled entry is how a game is hidden.
 
 ```json
 {
@@ -79,7 +79,7 @@ A stored revision the origins in code disagree with, after a deploy that changes
 
 ## Game origins
 
-Each hosted game is served from its own Cloudflare Pages project at `https://<id>.game.skkuverse.com`, and `GAME_ID_BY_FIRST_PARTY_ORIGIN` maps that origin to the id. The map is code, never data: adding a game is a deploy that adds its origin, then a push that lists it. `GET /app/config` publishes it as `games.origins`, which the app checks each game message's origin against. A game origin is in none of the lists a mini app is trusted through, `BRIDGE_ORIGINS`, the CORS grant (`ORIGIN_TRUST`) or `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN`, so the manifest pollers never fetch one and no game page gets a mini app's grants or shell; `src/infra/origins.spec.ts`, the CORS case beside the production `ORIGIN_TRUST` implementation and the `/app/config` route test pin each exclusion.
+Each hosted game is served from its own origin, `https://<id>.game.skkuverse.com`, and `GAME_ID_BY_FIRST_PARTY_ORIGIN` maps that origin to the id. The map is code, never data: adding a game is a deploy that adds its origin, then a push that lists it. `GET /app/config` publishes it as `games.origins`, which the app checks each game message's origin against. A game origin is in none of the lists a mini app is trusted through, `BRIDGE_ORIGINS`, the CORS grant (`ORIGIN_TRUST`) or `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN`, so the manifest pollers never fetch one and no game page gets a mini app's grants or shell; `src/infra/origins.spec.ts` and the `/app/config` route test pin the exclusions in this repository.
 
 To list a game:
 

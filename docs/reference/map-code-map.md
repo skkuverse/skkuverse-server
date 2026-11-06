@@ -3,7 +3,7 @@ title: Map Code Map
 type: reference
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-23
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -30,7 +30,7 @@ Read them in this order: each depends only on the ones before it.
 | When | What runs | If it fails |
 | --- | --- | --- |
 | boot | Base chips checked against the base layers (`assertValidChipSpecs`) and their link values (`assertValidLinkChips`, which refuses a `miniapp` link chip), when Nest builds `MapLayerSetService` | The boot stops: repository code, a PR fixes it |
-| boot | `MapRepository.ensureIndexes` on `places` and `activations` | Logged; the boot does not wait for it |
+| boot, polling roles only | `MapRepository`'s indexes on `places` and `activations`, through `ensureIndexesAtBoot` | Logged; the boot does not wait for it |
 | per request | The live layer set: the cached activation, checked against the clock | Caught in `/map/config`, which serves the base layers |
 | per `DATASET_CACHE_TTL_MS`, only while an activation is live | `map-layer-sets` read, each set checked on its own | A bad or repeated set is left out and logged once per revision; with no good value ever read, the base map serves and the event routes serve nothing |
 | per request | Layers and chips built, labels resolved to the request language | — |
@@ -55,6 +55,8 @@ Read them in this order: each depends only on the ones before it.
 | `src/map/map.schema.spec.ts`, `src/map/event/map-event.mapper.spec.ts` | The place schemas agreeing with the places importer; the overlay read refusing exactly the places drawing would throw on |
 | `__tests__/nest/map/map.routes.test.ts` | The config, campus and event routes through the production pipeline: envelope, Cache-Control, the retired URLs, the base map with no layer set read, a festival pushed with no restart, the ETag across revisions |
 | `__tests__/nest/map/map-places-import.test.ts`, `map-place-detail-import.test.ts`, `campus-shapes-import.test.ts`, `eventmap-db.test.ts` | The importers and the committed sheets, the sheet's categories against the stored layer set |
+| `__tests__/nest/map/eventmap-import-registry.test.ts` | The places importer refusing a `miniapp` button the stored registry lacks, and refusing to run with no registry |
+| `__tests__/nest/map/map-window.test.ts`, `map-revive-dev.test.ts` | `npm run eventmap` agreeing with `findActiveActivation` and rejecting a bad `--minutes`; `npm run eventmap:revive-dev` planning nothing that reaches production |
 
 ## Change map
 
@@ -64,7 +66,7 @@ Read them in this order: each depends only on the ones before it.
 | Move a place, fix a title, add a sheet button | `places`, through `npm run eventmap:import` | No; live within the event routes' TTL |
 | Change festival dates | `activations` → `activeFrom` / `activeUntil` | No |
 | Add a building footprint, a boundary, a path | `scripts/data/campus-shapes.json` → `npm run campus:shapes` | No |
-| Change a place's menu, photos or notices | upload photos to R2 first, then the sheet's `detail` → `npm run eventmap:import` | No |
+| Change a place's menu, photos or notices | upload photos to the media origin (`MEDIA_ORIGIN`) first, then the sheet's `detail` → `npm run eventmap:import` | No |
 | Make a category a backdrop, run a chip on tap, or name an area | the layer set in `map-layer-sets` → `itemDefaults` (`interactive`, `tapChip`, `locationAccuracy`), with `npm run data` | No; a new tap or field needs a deploy and an app release |
 | Add, rename or recolour a festival layer, add a chip, map a category | the layer set in `map-layer-sets` → `layers`, `chips`, `itemDefaults.byCategory`, with `npm run data` | No |
 | Add next year's festival | a new entry in `map-layer-sets` (`npm run data`), its places, then its window ([configure map overlays](../how-to/configure-map-overlays.md#add-or-edit-a-festival)) | No |
@@ -72,7 +74,7 @@ Read them in this order: each depends only on the ones before it.
 | Add a permanent chip | `BASE_CHIPS` in `map-layer-set.constants.ts` | Yes |
 | Show a base layer or chip on the transit tab | its `tabs` in `BASE_LAYERS` or `BASE_CHIPS` (absent is the map tab only) | Yes; installed builds ignore `tabs` |
 | Change how a pin or zone is drawn | `BASE_LAYERS[].style`, `EVENT_LAYER_STYLE`, `EVENT_SHAPE_STYLE` | Yes |
-| Recolour the Jongno route lines, change which one lies on top, or turn them on by default | `ROUTE_LINE_LAYER` in `map.constants.ts` (one style in the routes' `themeColor`, and the default), the order of their `BASE_LAYERS` entries | Yes; the default reaches installed apps with the next `/map/config` |
+| Recolour the Jongno route lines, change which one lies on top, or turn them on by default | `ROUTE_LINE_LAYER` in `map.constants.ts` (one style for every Jongno route, and the default), the order of their `BASE_LAYERS` entries | Yes; the default reaches installed apps with the next `/map/config` |
 | Fix a Jongno route's geometry | nothing in `src/map/`: `src/bus/route-path/` syncs it from TOPIS daily ([configure map overlays](../how-to/configure-map-overlays.md)) | No |
 | Fix or remeasure the HSSC loop | nothing in `src/map/`: push the `hssc-route-line` dataset ([ADR 0018, D9](../decisions/0018-hssc-arrival-estimates.md)); its color, edge and draw order are its `BASE_LAYERS` entry | No |
 | Add a field to every overlay | `map.wire.ts`, then every producer (`map-campus.mapper.ts`, `map-event.mapper.ts`) | Yes, plus an app release |

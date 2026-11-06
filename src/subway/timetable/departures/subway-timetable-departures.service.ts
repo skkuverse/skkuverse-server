@@ -14,7 +14,7 @@ import type { RideStopsOf } from "./subway-timetable-departures.types";
 
 type Ride = Pick<DepartureQuery, "lineId" | "boardStopId"> & { alightStopId: string };
 
-// SEE: docs/plans/transit-route-planner.md ("Producers"): the subway's door, over the service day's stored timetables.
+// SEE: docs/decisions/0022-journey-and-call-spec.md (D6): the subway's door, over the service day's stored timetables.
 @Injectable()
 export class SubwayTimetableDeparturesService implements DepartureSource {
   // WHY: by ride, for one service day: after the last train every poll needs the next day's first, whose tables a

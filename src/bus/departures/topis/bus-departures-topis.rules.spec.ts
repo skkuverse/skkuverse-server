@@ -1,5 +1,5 @@
 /**
- * What the TOPIS door decides (ADR 0022, D6 and D7; docs/plans/transit-route-planner.md "The doors"): which station
+ * What the TOPIS door decides (ADR 0022, D6 and D7; docs/archive/transit-route-planner-2026-10.md "The doors"): which station
  * indexes of a route a stop is at, read only while the live group's stations version is the index's; which board
  * and alight stations a leg rides between, the alight after the board; a stop's service day from TOPIS's first and
  * last run, read by time of day so a last run after midnight belongs to the day before; and the board itself: the

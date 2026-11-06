@@ -44,7 +44,7 @@ const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
 type TrackedPositionField = "vehId" | "sectOrd" | "sectDist" | "fullSectDist" | "dataTm";
 
-// QUIRK(topis): the data.go.kr operations whose daily quotas these calls spend (docs/project-docs.md, "Daily Usage and Quota Check").
+// QUIRK(topis): the data.go.kr operations whose daily quotas these calls spend (docs/explanation/bus-architecture.md, "Invariants").
 type TopisOperation = "getArrInfoByRouteAllList" | "getBusPosByRtidList";
 interface TopisCall { url: string; what: string; operation: TopisOperation; code: string }
 

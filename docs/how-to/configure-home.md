@@ -3,7 +3,7 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-23
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -43,7 +43,7 @@ Text (`alt`, `title`) is written as `{ "ko": ..., "en"?: ..., "zh"?: ... }`, and
 ## Prerequisites
 
 - What [edit-runtime-data.md](edit-runtime-data.md) lists for `npm run data`: a `.env` from `npm run env:pull`, and your `git config user.email`.
-- `wrangler` logged in to the Cloudflare account that owns the `skkuverse-media` R2 bucket (only needed to add an image).
+- Upload access to the media origin, kept outside this repository (only needed to add an image).
 
 ## Steps
 
@@ -63,14 +63,7 @@ Try it on `_dev` first, then make the same edit in production with `--prod` on e
 ### Add a banner image
 
 1. **Prepare the image** at the slot's aspect ratio, because the app crops with `cover`. About 2160 px wide is enough; the slot is roughly 1030 px wide on a 3x phone.
-2. **Upload it first.** Nothing fetches the URL at push, so a key with no object behind it becomes a blank page on every phone. The key includes a content hash, and the object is never overwritten (same rules as [event-places.md §5](../reference/event-places.md)):
-
-   ```bash
-   KEY=home/banners/<slug>-$(shasum -a 256 banner.jpg | cut -c1-8).jpg
-   npx wrangler@4 r2 object put skkuverse-media/$KEY --file banner.jpg --remote \
-     --content-type image/jpeg --cache-control "public, max-age=31536000, immutable"
-   curl -sI https://media.skkuverse.com/$KEY   # 200, image/jpeg
-   ```
+2. **Upload it first** to the media origin (`MEDIA_ORIGIN` in `src/infra/origins.ts`), under a key such as `home/banners/<slug>-<first 8 hex of its sha256>.jpg`. A push refuses an `imageUrl` off that origin (`isMediaUrl`), but nothing fetches the URL, so a key with no object behind it becomes a blank page on every phone. Never overwrite an object; a new image takes a new key (same rules as [event-places.md §5](../reference/event-places.md)). Check that `curl -sI <imageUrl>` answers 200 with the image's type before you push.
 
 3. **Add the item** to the carousel's `items` in the working file:
 
@@ -107,11 +100,9 @@ The rules are the home carousel's (`src/ui/campus/ui-campus.schema.ts`, `src/ui/
 - **Images only.** `{ "type": "default" }` is refused, because the campus sheet has no built-in banner for it to stand for.
 - **No empty slot.** When every image is outside its window, the section is left out of the response, and the sheet has no section at all.
 
-Add a banner the way [Add a banner image](#add-a-banner-image) describes, with keys under `campus/banners/`, then push `campus-banners`. The slot is 6:1. The ESKARA 2026 student banners are 2400 × 400 WebP, about 110 KB each: the app also opens a banner full screen, turned sideways, where its long edge spans the phone's height (about 2400 px on a 3x phone). A push refuses a banner whose `miniapp` target the registry does not hold, naming its `actionValue` path. The response sends a 5-minute `Cache-Control`.
+Add a banner the way [Add a banner image](#add-a-banner-image) describes, with keys under `campus/banners/`, then push `campus-banners`. The slot is 6:1. Make banners about 2400 × 400: the app also opens a banner full screen, turned sideways, where its long edge spans the phone's height (about 2400 px on a 3x phone). A push refuses a banner whose `miniapp` target the registry does not hold, naming its `actionValue` path. The response sends a 5-minute `Cache-Control`.
 
-The 28 ESKARA 2026 banners are stored with `endAt` set to the festival's end (`2026-10-03T00:00:00+09:00`), so the section is left out today. That is how to take a banner set down: an empty `items` is refused at push, a closed window is not. To show them again for a UI test, move `endAt` in `_dev` only.
-
-The app only draws this section while its festival gate is open (`isFestivalUnlocked()` in skkuverse-app). A store build shows the campus sheet empty until the festival-day flip.
+To take a banner set down, set each banner's `endAt` to the end: an empty `items` is refused at push, a closed window is not. To show closed banners again for a UI test, move `endAt` in `_dev` only.
 
 ### Transit layout
 
@@ -119,7 +110,7 @@ The app only draws this section while its festival gate is open (`isFestivalUnlo
 
 A push is checked against your checkout's bus groups and served stations: it must place each exactly once, a group's children counted, and name no other. A group meant to be hidden keeps its place and uses its visibility in the bus config.
 
-A section may carry `"campus": "hssc"` or `"campus": "nsc"`; one without it belongs to both campuses. The app uses the tag only to order the sections for the user's campus. The tag is new in the schema, and the schema refuses a key it does not know: deploy the code that knows it before you push a layout that sets it, or every running replica reads the pushed revision as invalid and keeps serving the last good one.
+A section may carry `"campus": "hssc"` or `"campus": "nsc"`; one without it belongs to both campuses. The app shows a tagged section only while the user's campus is that one.
 
 Bus groups and stations come from the code, so a deploy can change them while the stored layout stays. The order matters:
 
@@ -151,7 +142,7 @@ A `route` to a screen that an installed build does not have lands that build on 
 
 ### Show a mini app's live feed
 
-Add a `miniapp_feed` section where the card should sit. This is the section ESKARA 2026 ran during the festival; it was removed from the live layout on 2026-10-05:
+Add a `miniapp_feed` section where the card should sit:
 
 ```json
 {
@@ -179,4 +170,4 @@ The app fetches the entries itself from `GET /miniapps/:id/notifications` (cache
 
 - [edit-runtime-data.md](edit-runtime-data.md): every `npm run data` command, conflicts and rollback.
 - [register-a-miniapp.md](register-a-miniapp.md): the `miniapps` dataset the grids reference.
-- skkuverse-app `packages/shared/src/home/`: the client parser, which skips section, item and tile types it does not know.
+- skkuverse-app `apps/mobile/src/features/home/home.schema.ts`: the client parser, which skips section, item and tile types it does not know.

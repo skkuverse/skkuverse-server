@@ -1,5 +1,5 @@
 /**
- * The journey planner (ADR 0022, D5 and D7; docs/plans/transit-route-planner.md "The planner"): each ride boards the
+ * The journey planner (ADR 0022, D5 and D7; docs/archive/transit-route-planner-2026-10.md "The planner"): each ride boards the
  * first run the rider can catch after the legs before it, a catch margin ahead of their arrival at the stop, skipping
  * a vehicle with no seat left; the legs before the first ride are timed back from that boarding, so the option leaves
  * when it must, never before now; the wait is the boarding minus the arrival at the stop; up to two later catchable

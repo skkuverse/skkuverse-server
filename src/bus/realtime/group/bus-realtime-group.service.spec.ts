@@ -727,7 +727,7 @@ describe("BusRealtimeGroupService.recordDeprecatedCall", () => {
   });
 });
 
-// WHY: 7800 is on no card, so the attributes dataset holds no entry for it (docs/plans/7800-unified-arrivals.md,
+// WHY: 7800 is on no card, so the attributes dataset holds no entry for it (docs/archive/7800-unified-arrivals-2026-10.md,
 // section 4); its source reports no load, so no seat count is needed to read it.
 describe("BusRealtimeGroupService.findJongroReading for 7800", () => {
   it("reads 7800's cached rows and buses on its stored stations with no attributes stored for it", async () => {

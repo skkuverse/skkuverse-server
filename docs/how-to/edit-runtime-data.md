@@ -3,7 +3,7 @@ title: Edit Runtime Data
 type: how-to
 status: draft
 owner: spencer0124
-last-updated: 2026-10-25
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -33,12 +33,13 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `subway-topology` | `GET /subway/stations/:id/arrivals`, and the `subway-seoul` and `subway-trainmap` pollers | 503 `SUBWAY_TOPOLOGY_UNAVAILABLE`; each poller tick rejects before any upstream call | `subwayPlatforms`: exactly one entry per platform the checkout serves, and every named stop a served platform or a neighbor; each direction follows its platform's route in the stored `subway-timetables` ([below](#edit-subway-coverage)) |
 | `subway-station-coords` | `GET /subway/stations/:id/arrivals`, as `station.coords` | 200, each station's `coords` null | `subwayStations`: exactly one entry per station the checkout serves, each point inside South Korea ([below](#edit-a-subway-stations-coords)) |
 | `subway-timetables` (parted: one part per operator line and day type) | `GET /subway/stations/:id/arrivals` for a platform with no fresh arrival state, and the `subway-seoul` and `subway-trainmap` pollers | 503 `SUBWAY_TIMETABLES_UNAVAILABLE`, only for an answer that needs a table; a poller tick writes the platforms it could schedule, then rejects | none; each table parses with the server's schema, one per key, and every platform the checkout serves has one for each day type its source declares ([update-subway-timetables.md](update-subway-timetables.md)) |
+| `journey-routes` | `GET /journey/routes` | 503 `JOURNEY_ROUTES_UNAVAILABLE` | `bus-stops`: each cited stop, rechecked on every `bus-stops` push; each cited building, Jongno pole and subway station resolves through its owning catalog in the target, as stored there ([journey-architecture.md](../explanation/journey-architecture.md)) |
 
 A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two schedule datasets, `bus-stops` and `subway-topology` too, so a push reaches the shuttle estimates and the subway pollers within the same minute. `busGroups`, `subwayStations`, `subwayPlatforms`, `busServices` and `jongroRoutes` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
 Every push is validated with the server's own schema and rules, compiled from your checkout, and checked for references against the datasets stored in the database it targets: a home layout tile that names a mini app that database's `miniapps` does not hold is refused, naming the tile's path, and so is a `miniapps` push that drops an id a stored layout still names. Nothing is written while any issue stands.
 
-A dataset's check may also read a collection outside the content database, declared in its catalog entry: `bus-stops` reads `bus_campus.bus_schedules` (`$MONGO_DB_NAME_BUS_CAMPUS`, with `_dev` unless `--prod`). The tool prints `reads      <database>.<collection>` for each, reads it from the same target as the push, and never writes it. `push bus-stops --against <timetable file>` (or `rollback … --against`, `copy-prod-to-dev … --against`) checks the sequences against that file instead of the stored entries of the same service and pattern, then prints the `npm run schedule` command that applies it ([edit-bus-stops.md](edit-bus-stops.md#change-a-sequences-length)). A timetable pattern that ended before today (KST) serves no date ahead: the tool prints it as `skipped` and does not check it.
+A dataset's check may also read a collection outside the content database, declared in its catalog entry's `collections`: `bus-stops` reads `bus_schedules`, `jongro_routes` and `jongro_route_paths` (`$MONGO_DB_NAME_BUS_CAMPUS`), and `journey-routes` reads `buildings` (`$MONGO_BUILDING_DB_NAME`) and the two Jongno collections, each with `_dev` unless `--prod`. The tool prints `reads      <database>.<collection>` for each, reads it from the same target as the push, and never writes it. `push bus-stops --against <timetable file>` (or `rollback … --against`, `copy-prod-to-dev … --against`) checks the sequences against that file instead of the stored entries of the same service and pattern, then prints the `npm run schedule` command that applies it ([edit-bus-stops.md](edit-bus-stops.md#change-a-sequences-length)). A timetable pattern that ended before today (KST) serves no date ahead: the tool prints it as `skipped` and does not check it.
 
 | Target | Database | How |
 | --- | --- | --- |
@@ -49,7 +50,7 @@ The tool prints the database name first on every run. The `_dev` database is rea
 
 ## Prerequisites
 
-- A `.env` with `MONGO_URL` and `MONGO_CONTENT_DB_NAME` (and `MONGO_DB_NAME_BUS_CAMPUS` for `bus-stops`): maintainers render it with `npm run env:pull` from the maintainers' secret store.
+- A `.env` with `MONGO_URL` and `MONGO_CONTENT_DB_NAME` (and `MONGO_DB_NAME_BUS_CAMPUS` for `bus-stops` and `journey-routes`, `MONGO_BUILDING_DB_NAME` for `journey-routes`): maintainers render it with `npm run env:pull` from the maintainers' secret store.
 - `git config user.email` set, or `--by <email>` on every write: it is stored as the author of the revision.
 - A checkout of the code you mean to validate against. `npm run data` runs `npm run build` first and loads the schemas from `dist/src`, so the build output is always this checkout's.
 
@@ -252,7 +253,7 @@ A change that adds a station pushes its coords from that checkout before the dep
 
 ### Raise an app platform gate
 
-`app-platform-gates` holds the force-update gate of each platform, served on `GET /app/config` as `ios` and `android`: `{ "ios": { "minVersion": "3.6.2", "updateUrl": "https://apps.apple.com/app/id6446813434", "minOsVersion": "16.4" }, "android": { … } }`. Below `minVersion` the app blocks on its update screen, unless the device OS is below `minOsVersion`. Follow the checklist in [raise-the-minimum-app-version.md](raise-the-minimum-app-version.md) before a push; the push itself is:
+`app-platform-gates` holds the force-update gate of each platform, served on `GET /app/config` as `ios` and `android`: `{ "ios": { "minVersion": "3.6.2", "updateUrl": "<the iOS store listing>", "minOsVersion": "16.4" }, "android": { … } }`, where each `updateUrl` must be that platform's `APP_STORE_LISTING_URL` (`src/app-config/app-config.constants.ts`). Below `minVersion` the app blocks on its update screen, unless the device OS is below `minOsVersion`. Follow the checklist in [raise-the-minimum-app-version.md](raise-the-minimum-app-version.md) before a push; the push itself is:
 
 ```bash
 npm run data -- pull app-platform-gates --prod
@@ -260,16 +261,16 @@ npm run data -- pull app-platform-gates --prod
 npm run data -- push app-platform-gates --prod --note "iOS floor 3.6.2: <why>"
 ```
 
-The dataset has no default: a replica that never read a good revision answers 503 on the whole route, so a fresh database gets the dataset (`push --create`) before the deploy that first reads it. The deploy rolls back when an api replica answers `/app/config` with anything but 200.
+The dataset has no default: a replica that never read a good revision answers 503 on the whole route, so a fresh database gets the dataset (`push --create`) before any deploy points at it.
 
-Create it from the gates production serves now, and never from `__tests__/nest/app-config/fixtures/app-platform-gates.dataset.json`: that fixture holds the 2026-10-19 capture (3.5.0), which is lower than production's floor, so pushing it lowers the force-update floor.
+Create it from the gates production serves now, and never from `__tests__/nest/app-config/fixtures/app-platform-gates.dataset.json`: that fixture is test data below production's floor, so pushing it lowers the force-update floor.
 
 ```bash
 curl -s "https://api.skkuverse.com/app/config?cb=$RANDOM" | jq '.data | {ios, android}' > /tmp/app-platform-gates.json
 npm run data -- push app-platform-gates --create --file /tmp/app-platform-gates.json --prod
 ```
 
-The push prints the gates it will store. Before you type `y`, check that each platform's `minVersion`, `updateUrl` and `minOsVersion` are the values the `curl` printed from production. Run it from a checkout whose dataset catalog (`scripts/lib/datasets/`) knows `app-platform-gates`: `origin/dev` until the change that added it merges to `main`, and `main` after that. An older checkout answers `unknown dataset "app-platform-gates"`. What the move from the environment variables costs until that merge: [raise-the-minimum-app-version.md](raise-the-minimum-app-version.md#until-the-dataset-reaches-main).
+The push prints the gates it will store. Before you type `y`, check that each platform's `minVersion`, `updateUrl` and `minOsVersion` are the values the `curl` printed from production.
 
 ### Check before a deploy
 

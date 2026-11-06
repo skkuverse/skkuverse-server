@@ -6,6 +6,6 @@ export const SERVICE_WINDOW_END_MINUTE = 2 * 60 + 30;
 // WHY: two ticks and a request's timeout: one failed tick keeps the seats served, a second serves null.
 export const MAX_SEATS_AGE_MS = 200_000;
 
-// EVIDENCE: data.go.kr's development account allows 1,000 calls a day per operation (owner's account, 2026-10-24);
-// the window above fits 867 at this interval.
+// EVIDENCE: at this interval the window above makes 867 calls a day, inside data.go.kr's daily quota per operation
+// for the key's account type (2026-10-24).
 export const POLL_INTERVAL_MS = 90_000;

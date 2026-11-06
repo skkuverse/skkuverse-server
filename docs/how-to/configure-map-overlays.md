@@ -3,7 +3,7 @@ title: Configure Map Overlays
 type: how-to
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -15,7 +15,7 @@ audience: internal
 
 An **overlay** is one drawable thing: a pin, a zone, a route line. Every overlay
 carries a `kind` naming the renderer that draws it, and a `layerId` naming the
-toggle it sits behind. Both overlay routes serve one heterogeneous collection —
+toggle it sits behind. Each overlay route serves one heterogeneous collection —
 pins and shapes together — so a client draws the whole map with one fetch.
 
 ### What can be drawn
@@ -32,7 +32,7 @@ pins and shapes together — so a client draws the whole map with one fetch.
 | `groundImage` | No | No | an image pinned to a bounding box |
 
 The first three are real end to end. The rest are **reserved** — written down in
-the union's doc comment in `src/map/map.wire.ts`, with the arm, the
+[map-overlays-api.md §2.3](../reference/map-overlays-api.md), with the arm, the
 producer branch and the client component all still to build. See [Add a new overlay
 kind](#add-a-new-overlay-kind) for what that costs.
 
@@ -64,7 +64,8 @@ The single most useful question before any change: **does this need a deploy?**
 | A Jongno bus route's line | nothing: the bus module syncs it from TOPIS daily | No |
 | Take the whole festival down now | the activation's `enabled` flag | No |
 | Add a festival, or change its layers, chips or camera | its layer set in `map-layer-sets`, with `npm run data` | No |
-| A festival layer's colour, opacity, outline, zoom bounds | its layer set in `map-layer-sets` | No |
+| A festival layer's colour | its layer set in `map-layer-sets` | No |
+| Every festival layer's pin size, fill opacity, outline | `EVENT_LAYER_STYLE`, `EVENT_SHAPE_STYLE` in `map-layer-set.constants.ts` | Yes |
 | A permanent layer's style | `map.constants.ts` | Yes |
 | Which layer a booth category lands on | the layer set's category table (`itemDefaults`) | No |
 | Whether a category is tappable | the layer set's category table (`itemDefaults`) | No |
@@ -250,8 +251,10 @@ trusted answer; no line is committed
   layer. It reaches every installed app with the next `/map/config`, so decide
   it with the app owner first.
 - **A line that did not update:** look for `bus.jongro.path_change_held` in the
-  poller's log. A change of more than 30% of the points or the length, a line
-  of under 10 points or one with no station is held, never written. If the new
+  poller's log. A change of more than `MAX_PATH_CHANGE_SHARE_TO_APPLY` of the
+  points or the length, a line of fewer than `MIN_PATH_POINTS_TO_TRUST` points
+  or one with no station is held, never written
+  (`src/bus/route-path/bus-route-path.constants.ts`). If the new
   line is right, write it into the route's document by hand; the next sync
   compares with what is stored.
 - **A new Jongno route:** add it to `JONGRO_ROUTES` in `src/bus/bus.constants.ts`,
@@ -329,8 +332,8 @@ Two of these are not optional in practice, and the reason is the client's own
 defaults: its polygon overlay defaults `color` to **opaque black** and
 `outlineWidth` to **zero**, so a zone shipped without `fillOpacity` and an
 outline is a solid black blob with no border, hiding the booths inside it.
-`EVENT_SHAPE_STYLE` in `map-layer-set.constants.ts` supplies both for every festival
-layer, and derives the outline colour from the category colour.
+`EVENT_SHAPE_STYLE` in `map-layer-set.constants.ts` sets `fillOpacity` and
+`outlineWidth` for every festival layer, and the fill takes the layer's colour.
 
 Festival layer colours are authored per layer in the layer set, because a
 category colour is content. The permanent layers deliberately send **no**
@@ -348,15 +351,15 @@ edits:
    invent a shape only where the spec genuinely cannot, and use named
    `{ lat, lng }` fields when you do, since there is no spec to conform to and a
    named object cannot be transposed by accident.
-2. **A producer branch** — whichever of the two `*-overlays.data.ts` modules
-   emits it, plus its structural guard so a malformed document is skipped and
+2. **A producer branch** — whichever mapper emits it (`map-campus.mapper.ts`,
+   `map-transit.mapper.ts`, `map-event.mapper.ts`), plus its structural guard so a malformed document is skipped and
    counted rather than thrown.
 3. **The client** — a renderer component and a `kind` the parser accepts. Until
    this lands the overlay is served and silently skipped.
 
 The three that cannot be geometry-tagged (`circle`, `multiPath`, `groundImage`)
 are the reason the union is tagged on the renderer at all; the argument is in
-[map-architecture.md §12](../explanation/map-architecture.md).
+[map-overlays-api.md §2.3](../reference/map-overlays-api.md).
 
 ## Troubleshooting
 
@@ -371,7 +374,7 @@ Work top-down — the earlier entries are far more common.
 | Shape appears but cannot be tapped | The category is authored `interactive: false`, or a campus shape has `skkuId: null` | Both resolve to `tap: null`, which is the intended spelling for a backdrop |
 | Tapping a shape does nothing on one phone and runs a chip on another | Its category has `tapChip`, and the first phone's app predates the `chip` tap kind | Expected: an older build parses the tap as `null` and draws the shape inert |
 | Zone renders as a dark blob covering the booths | Its layer has no `fillOpacity` | The client defaults the fill to opaque — see [Style a layer](#style-a-layer) |
-| Zone has no border | Its layer has no `outlineWidth` | The client defaults it to zero |
+| Zone has no border | Its layer sends `outlineWidth: 0`, as every festival layer does through `EVENT_SHAPE_STYLE` | Expected for festival zones; a border needs a style change and a deploy |
 | Nothing on the campus route but a dozen buildings | The buildings collection read empty and the fallback engaged | The response is `no-store` in that state, so it self-heals; check the buildings sync |
 | Every festival layer and overlay vanished | The activation window closed, or `enabled` is false | This is the kill switch working. It is a Mongo edit, not a deploy |
 | A hand-edited Mongo document broke a shape | Nothing breaks — it is skipped and counted | Grep the logs for the skip warning naming its `_id` |

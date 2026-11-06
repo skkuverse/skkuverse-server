@@ -92,7 +92,7 @@ function toBoardHours(row: StopHours | undefined, isEnded: boolean, { from, unti
 
 /**
  * WHY: TOPIS predicts two vehicles a stop and nothing past them, so the board lists those and, while the stop's service
- * day runs, a headway from `term`; without `term` it extrapolates nothing (ADR 0022, D7). SEE: docs/plans/transit-route-planner.md ("The doors")
+ * day runs, a headway from `term`; without `term` it extrapolates nothing (ADR 0022, D7). SEE: docs/explanation/journey-architecture.md ("Invariants")
  */
 export function toTopisBoard(input: TopisBoardInput): DepartureBoard {
   const { group, row, legStations, query } = input;

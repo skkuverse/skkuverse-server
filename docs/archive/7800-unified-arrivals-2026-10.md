@@ -1,17 +1,20 @@
 ---
 title: 7800 and One Arrival Shape for Every Bus
 type: plan
-status: draft
+status: superseded
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
 # 7800 and One Arrival Shape for Every Bus
 
-> How the 7800 광역버스 joins the Jongno lines on `/bus/live` and the stop page in the ADR 0019 `arrival` shape, which upstream feeds it within which quota, and how the timetabled shuttles then produce the same shape from instants instead of the smart view's `"HH:mm"` strings, so the 길찾기 planner reads realtime and timetable buses through one model. Nothing here is built. It revises the 7800 and F1 sections of [transit-route-planner.md](transit-route-planner.md); the planner itself is out of scope.
+> How the 7800 광역버스 joins the Jongno lines on `/bus/live` and the stop page in the ADR 0019 `arrival` shape, which upstream feeds it within which quota, and how the timetabled shuttles then produce the same shape from instants instead of the smart view's `"HH:mm"` strings, so the 길찾기 planner reads realtime and timetable buses through one model. It revises the 7800 and F1 sections of [transit-route-planner-2026-10.md](transit-route-planner-2026-10.md); the planner itself is out of scope.
 
-> **Status 2026-10-25.** PRs 1–7 shipped (#330, #331, #332). PR 8 is cancelled: 7800 is never listed on `/bus/config` and serves 길찾기 and the stop pages only (owner, 2026-10-25). What comes next, the call shape on every board and the journey built on it, is [ADR 0022](../decisions/0022-journey-and-call-spec.md) and its plan, [transit-route-planner.md](transit-route-planner.md). The body below is kept as written.
+> [!NOTE]
+> Archived from `docs/plans/7800-unified-arrivals.md` on 2026-11-06, kept as written: a snapshot of the plan, not the current rules. The current spec is [ADR 0019](../decisions/0019-bus-live-api.md) and [ADR 0022](../decisions/0022-journey-and-call-spec.md); trust `src/` over anything below.
+
+> **Status 2026-10-25.** PRs 1–7 shipped (#330, #331, #332). PR 8 is cancelled: 7800 is never listed on `/bus/config` and serves 길찾기 and the stop pages only (owner, 2026-10-25). What comes next, the call shape on every board and the journey built on it, is [ADR 0022](../decisions/0022-journey-and-call-spec.md) and its plan, [transit-route-planner-2026-10.md](transit-route-planner-2026-10.md). Still open on 2026-11-06: §7.2 step 3 (the stop page's live entries read `LiveGroup`, not `StopCall`s) and Q5 (the `jongro` rename). The body below is kept as written.
 
 ## 1. Goal and scope
 
@@ -45,7 +48,7 @@ The raw answers were not kept; PR 2 captures the fixtures again.
 | Each row also carries `term` (`10`), per-stop `firstTm`/`lastTm` (성균관대학교 seq 24 05:26–23:21, 사당역9번출구앞 05:55–23:50, 성균관대학교 seq 58 06:26–00:24) and `nextBus`. The Jongno client reads none of them (`src/bus/realtime/jongro/bus-realtime-jongro.client.ts:82`) | same answer |
 | `getBusPosByRtid` answers 15 vehicles with GPS, `dataTm` 0–3 min old, `trnstnid` `121001315`, `busType` 0 or 2 | `getBusPosByRtid` |
 
-**GBIS, 4 calls** (`busrouteservice/v2` 2, `busarrivalservice/v2` 2). The data.go.kr account's one 일반 인증키 is the value of both `SEOUL_BUS_SERVICE_KEY` (stored URL-encoded) and `DATA_GO_KR_SERVICE_KEY` (stored raw): equal after URL-decoding. The calls used `SEOUL_BUS_SERVICE_KEY` and answered `resultCode 0` an hour after approval.
+**GBIS, 4 calls** (`busrouteservice/v2` 2, `busarrivalservice/v2` 2). The calls used `SEOUL_BUS_SERVICE_KEY` and answered `resultCode 0` an hour after approval.
 
 | Fact | Evidence |
 | --- | --- |
@@ -81,12 +84,12 @@ Fallback if TOPIS stops answering `200000150`: GBIS `getBusArrivalItemv2` for th
 
 Interval 30 s, all day, no service window. All day because TOPIS's own `운행종료` text is what makes a station `ended` (ADR 0019, D8) and a gap in the poll would make the group `noData` overnight instead; a window would save few calls and add code.
 
-- Every caller of the key shares each operation's daily quota, a laptop's `npm run dev` included (`docs/project-docs.md`, "Daily Usage and Quota Check"). Hence the switch in §4.
+- Every caller of the key shares each operation's daily quota, a laptop's `npm run dev` included. Hence the switch in §4.
 - 25 s instead of 30 s also fits. The 7800 owner (bis) keeps 30 s for now (Q4).
 
 ### 3.3 Seats
 
-TOPIS gives none (§2). Seats come from GBIS 위치 per vehicle, later (PR 7), polled where pollers run with `DATA_GO_KR_SERVICE_KEY`, which holds the same key. The server dropped that required value when skkuverse-crawler took over the public-holiday sync (2026-10-24), so PR 7 adds it back as a `poller` value, with both `config/env.*.keys` files. Before that PR: one capture of `getBusLocationListv2` beside a TOPIS answer, to check its labels and the plate join. 30 s polling needs the 운영계정.
+TOPIS gives none (§2). Seats come from GBIS 위치 per vehicle, later (PR 7), polled where pollers run with `DATA_GO_KR_SERVICE_KEY`. The server dropped that required value when skkuverse-crawler took over the public-holiday sync (2026-10-24), so PR 7 adds it back as a `poller` value, with both `config/env.*.keys` files. Before that PR: one capture of `getBusLocationListv2` beside a TOPIS answer, to check its labels and the plate join. 30 s polling needs the 운영계정.
 
 ### 3.4 API applications
 
@@ -216,7 +219,7 @@ Each PR is test-first (ADR 0011, D9: the test is written from the behavior and f
 
 PR 7 and PR 8 wait on outside facts (the GBIS capture, the app); PRs 5–6 do not depend on 7800 and can run in parallel with 2–4.
 
-**Status (2026-10-24).** PRs 1–4 are deployed. PRs 5 and 6 are built, pinned by `__tests__/nest/bus/stop-calls-characterization.routes.test.ts`, not yet deployed: `StopCall` is in `src/bus/bus.types.ts` and `toArrival` in `src/bus/bus.mapper.ts` (the bus root, since the type derives from the wire `arrival` and `src/shared` names no feature); the run read is `BusEtaSmartService.listRuns(serviceId, { from, weekCount })` rather than `{ from, until }`, since the stop page reads the following week only when the shown week lists fewer than three runs (review F2); §7.2 step 3 is not done: the stop page's live entries still read `LiveGroup`. PR 7 is built, not deployed: one `getBusLocationListv2` capture (2026-10-24 20:22 KST, `__tests__/nest/bus/fixtures/gbis-location-7800.json`) settled both §2 Unverified items on it, since its labels are not shifted and its `vehId` is TOPIS's for the same bus, so seats join by `vehId`, not plate. The poller is `gbis-seats-7800` in `src/bus/realtime/gbis/` behind the `GBIS` switch, every 90 s from 04:50 to 02:30 KST (the weekday last bus reaches 호매실 about 02:00; at most 867 calls a day), and it writes a `bus_seats` collection rather than a `bus_cache` key, whose 60 s TTL is shorter than the tick. `vehicle.seatsLeft` is served from an answer at most 200 s old (ADR 0019, D17). `capabilities.seats` is left to PR 8, so `/bus/config` stays byte for byte.
+**Status (2026-10-24).** PRs 1–4 are deployed. PRs 5 and 6 are built, pinned by `__tests__/nest/bus/stop-calls-characterization.routes.test.ts`, not yet deployed: `StopCall` is in `src/bus/bus.types.ts` and `toArrival` in `src/bus/bus.mapper.ts` (the bus root, since the type derives from the wire `arrival` and `src/shared` names no feature); the run read is `BusEtaSmartService.listRuns(serviceId, { from, weekCount })` rather than `{ from, until }`, since the stop page reads the following week only when the shown week lists fewer than three runs (review F2); §7.2 step 3 is not done: the stop page's live entries still read `LiveGroup`. PR 7 is built, not deployed: one `getBusLocationListv2` capture (2026-10-24 20:22 KST, `__tests__/nest/bus/fixtures/gbis-location-7800.json`) settled both §2 Unverified items on it, since its labels are not shifted and its `vehId` is TOPIS's for the same bus, so seats join by `vehId`, not plate. The poller is `gbis-seats-7800` in `src/bus/realtime/gbis/` behind the `GBIS` switch, every 90 s from 04:50 to 02:30 KST (the weekday last bus reaches 호매실 about 02:00), and it writes a `bus_seats` collection rather than a `bus_cache` key, whose 60 s TTL is shorter than the tick. `vehicle.seatsLeft` is served from an answer at most 200 s old (ADR 0019, D17). `capabilities.seats` is left to PR 8, so `/bus/config` stays byte for byte.
 
 Size and doc caps each PR must respect: `bus.wire.ts` (96), `bus-config.mapper.ts` (187), `bus-config.wire.ts` (71), `bus-realtime-group.rules.ts` (138) in `__tests__/architecture/exemptions/size-caps.json`; `docs/explanation/bus-architecture.md` is at the 200-line module-doc cap, so the PR that adds a glossary row (pass-through station, `topisIds`) trims first.
 
@@ -235,6 +238,5 @@ Size and doc caps each PR must respect: `bus.wire.ts` (96), `bus-config.mapper.t
 
 ## Related
 
-- [transit-route-planner.md](transit-route-planner.md): the planner, the dataset and the PR sequence this revises
+- [transit-route-planner-2026-10.md](transit-route-planner-2026-10.md): the planner, the dataset and the PR sequence this revises
 - [ADR 0012](../decisions/0012-runtime-roles.md), [ADR 0013](../decisions/0013-runtime-data-in-mongodb.md), [ADR 0014](../decisions/0014-jongro-realtime-from-topis.md), [ADR 0019](../decisions/0019-bus-live-api.md)
-- [docs/project-docs.md](../project-docs.md) ("Daily Usage and Quota Check"): the shared daily quotas

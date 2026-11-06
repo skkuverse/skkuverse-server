@@ -107,7 +107,7 @@ describe("JONGRO_ROUTES", () => {
   });
 });
 
-// WHY: the owner's decisions of 2026-10-24 (docs/plans/7800-unified-arrivals.md, Q2, Q4 and Q6).
+// WHY: the owner's decisions of 2026-10-24 (docs/archive/7800-unified-arrivals-2026-10.md, Q2, Q4 and Q6).
 describe("REGIONAL_ROUTES", () => {
   it("holds 7800 by the GBIS route id TOPIS answers it by, as group gyeonggi7800, unlisted, polled every 30 s", () => {
     // Act & Assert

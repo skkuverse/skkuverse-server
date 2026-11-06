@@ -178,10 +178,10 @@ const config = {
       return roleScoped("TMAP_APP_KEY");
     },
     naverDailyCap: 1000,
-    // WHY: about four times a Friday's bus-lane probe requests, and a tenth of the TOPIS function's daily quota.
+    // WHY: about four times a Friday's bus-lane probe requests, and well inside the TOPIS function's daily quota.
     topisDailyCap: 2000,
     // QUIRK(tmap): one app serves dev and prd (its terms count several apps for one service as abuse),
-    // so development gets a small share of the 1,000 daily calls.
+    // so development gets a small share of the app's daily calls.
     tmapDailyCap: isProduction ? 900 : 50,
   },
 
@@ -204,12 +204,12 @@ const config = {
     },
   },
 
-  // WHY: the regional bus pollers spend production's TOPIS quota per operation, which has 6,752 calls a day to spare.
+  // WHY: the regional bus pollers spend the daily TOPIS quota per operation that production's key holds.
   regionalBus: {
     enabled: switches.regionalBusEnabled,
   },
 
-  // WHY: the GBIS seat poller spends most of a 1,000-call daily quota on the key production holds.
+  // WHY: the GBIS seat poller spends most of the daily quota of the key production holds.
   gbis: {
     enabled: switches.gbisEnabled,
     get serviceKey(): string {

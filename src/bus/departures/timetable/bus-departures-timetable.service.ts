@@ -11,7 +11,7 @@ import { toStopPlace } from "../bus-departures.mapper";
 import { toKstDayStart, toLegStopIds, toLegStops, toTimetableBoard } from "./bus-departures-timetable.rules";
 import type { LegStopsByRouteType } from "./bus-departures-timetable.types";
 
-// SEE: docs/plans/transit-route-planner.md ("Producers"): the door for timetabled shuttles, read through the smart view's caches.
+// SEE: docs/decisions/0022-journey-and-call-spec.md (D6): the door for timetabled shuttles, read through the smart view's caches.
 @Injectable()
 export class BusDeparturesTimetableService implements DepartureSource {
   constructor(

@@ -3,7 +3,7 @@ title: Subway Architecture
 type: explanation
 status: draft
 owner: spencer0124
-last-updated: 2026-10-25
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -24,7 +24,7 @@ Subway owns the real-time arrivals of the served stations: physical stations, ea
 | Seoul open data `SearchSTNTimeTableByIDService` (`SEOUL_OPENAPI_GENERAL_KEY`) | — | Each line `2`, `3`, `4` and `8` station's timetable per day type and direction, Korail's line `4` section included, saved under `scripts/subway-timetable/seoul-rows/` for the stations added with those three; a line `2` trip to 성수 written as the circle it runs, `내선순환` or `외선순환`, and a branch trip refused | `scripts/subway-timetable/convert.py`, into a pulled `subway-timetables` directory |
 | The Seoul real-time subway API (`SEOUL_SUBWAY_API_KEY`, in the request path) | `seoul-subway-api` | Every train position of a line, and a station's arrival rows of every line there, each row naming its station by `statnId` and `statnNm`, with their countdowns, which lines `1`, `8` and `K1` never publish; line `2` numbers a train by its operational number and names a circle train's destination `성수` both ways; line `K1` positions never report a departure; line `8` writes two station names with a suffix the train map leaves out; line `D1` numbers its trainsets, not its trips, stamps a position response once and dates its arrival rows ahead | `SubwaySeoulApiClient` |
 | The Seoul Metro train map, crawled | `seoul-trainmap` | Every train of every line it covers, lines `1` to `8` and not `K1`, in one page (`ALL_LINES_PAGE`), by station and status, departures in Korail sections included; line `2` titles a circle train by its circle and gives a branch train its own direction digits | `SubwaySeoulTrainmapClient` |
-| The holidays module | — | Whether a service day is a public holiday, which picks its day type | `SubwayTimetableService`, through `CalendarService` |
+| The calendar module | — | Whether a service day is a public holiday, which picks its day type | `SubwayTimetableService`, through `CalendarService` |
 | MongoDB `subway_arrivals` | — | Each platform's next trains per direction, written by the tracker in the poller process | `SubwayRepository` |
 | MongoDB `subway_events` (time-series) and `subway_predictions` | `mongodb` | Each source's first report of a train's state at a served platform, and each served prediction at its horizons with the arrival that resolved it, written by the history in the poller process; both keep the platform id under its stored name `stationId` | `SubwayHistoryRepository` |
 
@@ -193,8 +193,7 @@ Adding a provider touches a sibling sub-module named after its jurisdiction, hol
 
 - [Subway API reference](../reference/subway-api.md): the routes' contracts
 - [ADR 0017](../decisions/0017-subway-arrivals.md): the sources, budget and accuracy policy
-- [Holidays architecture](calendar-architecture.md): the public holidays that choose a timetable's day type
+- [Calendar architecture](calendar-architecture.md): the public holidays that choose a timetable's day type
 - [Logging reference](../reference/logging.md): the subway pollers' own lines
-- [2026-10 late express postmortem](subway-late-express.md): why the watched stations, the longer hold and awaited trains exist
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape
 - [Docs index](../README.md): writing rules

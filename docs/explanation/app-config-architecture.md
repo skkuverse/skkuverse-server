@@ -3,7 +3,7 @@ title: App Config Architecture
 type: explanation
 status: draft
 owner: spencer0124
-last-updated: 2026-10-25
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -62,7 +62,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/schema/app-config.sc
 
 ## Invariants
 
-- The body is the same for every client; it is served with `APP_CONFIG_CACHE_CONTROL`, which Cloudflare's edge also honors. A pushed gate reaches every replica within `DATASET_CACHE_TTL_MS`, then the edge and device caches within `APP_CONFIG_CACHE_CONTROL`: a cold start about two minutes after the push applies it.
+- The body is the same for every client; it is served with `APP_CONFIG_CACHE_CONTROL`, which a shared cache may also keep. A pushed gate reaches every replica within `DATASET_CACHE_TTL_MS`, then the edge and device caches within `APP_CONFIG_CACHE_CONTROL`: a cold start about two minutes after the push applies it.
 - The body only grows: installed apps ignore keys they do not know, and a removed key breaks them (`CONTRACT(skkuverse-app)` on `AppClientConfig`). The one exception is `features`, the retired kill switches: installed builds read its absence as every switch off, so a build that still reads `sharedMapShell` keeps its NativeTabs shell, while later builds run the shared-map shell unconditionally.
 - A game origin is served only under `games.origins`, never in `webview.bridgeOrigins` or `miniapps.origins`, so no game page gets a mini app's grants or shell ([Web origins](web-origins.md)).
 - The platform gates have no default. A replica that never read a good `app-platform-gates` revision (none stored, only an invalid one, or a database that never answered) answers `503 APP_PLATFORM_GATES_UNAVAILABLE` with no `Cache-Control`, never a permissive gate, and logs the cause at error (`app_config.platform_gates.missing`, `.invalid`, `.read_failed`). A stored `updateUrl` that is not the platform's own store listing (`APP_STORE_LISTING_URL`, compared as a string) is served as `null` while the rest of the gate stays, logged as `.update_url_refused`. One that read a good revision keeps it through failed reloads for `DATASET_STALE_WINDOW_MS` ([ADR 0013, D6](../decisions/0013-runtime-data-in-mongodb.md)).

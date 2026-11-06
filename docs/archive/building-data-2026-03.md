@@ -9,7 +9,7 @@ audience: internal
 
 # Building Data Survey and Connections Guide (2026-03)
 
-> Snapshot of the building part of `docs/project-docs.md`, moved here on 2026-10-11: the 2026-03-15 data survey behind the building schema, and the 2026-03-16 connections guide written for the Flutter client. The current explanation is [explanation/building-architecture.md](../explanation/building-architecture.md); trust `src/building/` over anything below.
+> Snapshot of the building part of the legacy `project-docs.md` (deleted on 2026-11-06), moved here on 2026-10-11: the 2026-03-15 data survey behind the building schema, and the 2026-03-16 connections guide written for the Flutter client. The current explanation is [explanation/building-architecture.md](../explanation/building-architecture.md); trust `src/building/` over anything below.
 
 # Building Connections (건물 연결통로)
 

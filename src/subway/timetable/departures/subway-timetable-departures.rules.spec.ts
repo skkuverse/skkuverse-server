@@ -1,5 +1,5 @@
 /**
- * What the subway timetable door decides (ADR 0022, D2 and D6; docs/plans/transit-route-planner.md "Producers"):
+ * What the subway timetable door decides (ADR 0022, D2 and D6; docs/archive/transit-route-planner-2026-10.md "Producers"):
  * which trains of the service day's tables serve a ride from a board platform to an alight platform, joined within one
  * table by the train's own row and across two tables by train number, so a train that ends before the alight platform,
  * runs the other way or passes the alight platform (an express) is never listed, and a train whose number the alight

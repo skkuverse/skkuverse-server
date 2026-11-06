@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -25,7 +25,7 @@ A maintainer's local server holds credentials that reach real people. So `NODE_E
 | `GBIS` | `off` | `on` | No GBIS call for 7800's seats: its seat poller (`gbis-seats-7800`) does not run, so `/bus/live/gyeonggi7800` serves every `vehicle.seatsLeft` as `null` once the stored answer is 200 s old. The key's GBIS quota is limited. Production may set it `off`. |
 | `NOTICE_OVERVIEW` | `on` | `off` | No skkuverse-ai call for a search overview: `GET /notices/overview` answers `data.overview: null` with `meta.reason: "unavailable"` before it retrieves, so the app hides the card. The reverse of the others: production defaults it `off`, and development keeps the feature working. Tests turn it on in `jest.setup.ts`. |
 
-No switch turns the rate limit off: the perimeter mode chooses the limiter. `local-dev` limits each IP to 300 requests a minute in each rate-limit class (`general` covers every limited route but `/notices`), and every simulator request comes from one loopback address, so a burst past that answers 429 the way a deployed server does.
+No switch turns the rate limit off: the perimeter mode chooses the limiter. `local-dev` limits each IP to `LOCAL_DEV_REQUESTS_PER_MINUTE` in each rate-limit class (`general`, `notices`, `notices-overview`; `src/perimeter/local-dev/rate-limit-policy.ts`), and every simulator request comes from one loopback address, so a burst past that answers 429 the way a deployed server does.
 
 `CACHE=off` leaves two caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 
@@ -33,7 +33,7 @@ CORS follows `PERIMETER_MODE`, not `NODE_ENV`. Under `local-dev`, what `npm run 
 
 The bus pollers (HSSC, Jongro, station) keep running locally, because the bus screens need them.
 
-Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuilds `.ts`, a second watcher re-runs `scripts/copy-build-assets.js` when any `src/**/*.json` changes (only the files listed there reach `dist/`), and nodemon restarts on either. Data read once at boot (notice tabs, mini-app registry, timetable stops) changes only through that restart. The home layout is no file: it is the `home-layout` dataset in `_dev`, read on every request under `CACHE=off`, so a `npm run data` push shows on the next request ([configure-home.md](configure-home.md)).
+Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuilds `.ts`, a second watcher re-runs `scripts/copy-build-assets.js` when any `src/**/*.json` changes (only the files listed there reach `dist/`), and nodemon restarts on either. Config files read once at boot (the notice sources and categories behind `/notices/tabs`) change only through that restart. Datasets are no files: the home layout, the mini-app registry, the bus stops and the rest are datasets in `_dev`, read on every request under `CACHE=off`, so a `npm run data` push shows on the next request ([edit-runtime-data.md](edit-runtime-data.md)).
 
 ## Prerequisites
 
@@ -86,9 +86,9 @@ A production override may only reduce outbound effects (`PUSH_DELIVERY=suppresse
 
 The switches cover what the server sends out. With the maintainers' development `.env`, these are shared with production regardless. With the README's placeholder `.env`, the server holds no production credential: only the Firebase project and the production web pages below still apply.
 
-- **Firebase.** There is one project, `skkubus-95723`. A dev build's phone receives real production pushes. The local server verifies production ID tokens with the project id alone and holds no service-account key.
+- **Firebase.** There is one project. A dev build's phone receives real production pushes. The local server verifies production ID tokens with the project id alone and holds no service-account key.
 - **Databases.** The `_dev` databases hold real shared data. Never load-test against them. `NODE_ENV=production` with the dev `.env` resolves production database names. To run the production image locally, use `npm run verify:serve`, which overrides them.
-- **Upstream quotas.** The local bus pollers use a metered service key whose daily quota is limited ([project-docs.md](../project-docs.md#daily-usage-and-quota-check)). Stop them when you are done.
+- **Upstream quotas.** The local bus pollers use a metered service key whose daily quota per operation every caller of the key shares ([bus architecture](../explanation/bus-architecture.md#invariants)). Stop them when you are done.
 - **Web pages.** Webview and mini-app pages inside the app load from their production hosts and call the production API, even when native screens use the local server.
 - **`GET /notices/overview`.** It calls skkuverse-ai at `AI_API_URL`, a loopback address in the dev config. Without a local skkuverse-ai the overview answers "unavailable".
 
@@ -102,7 +102,7 @@ Sentry is off locally, so a local run does not reproduce what the Sentry SDK cha
 | Android cannot connect to `localhost` | Inside the emulator `localhost` is the emulator until `adb reverse tcp:3000 tcp:3000` forwards it. Run it again after the emulator restarts. |
 | A phone cannot connect | The phone is on a different network, or the macOS firewall blocks node. A `cloudflared` tunnel avoids both. |
 | A change in a `_dev` database does not show, and no request reaches the server log | The phone's HTTP cache is answering from an earlier run with `CACHE=on` (`max-age` up to 24 h, kept across app restarts). Clear the app's storage or reinstall it once. |
-| A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
+| A change does not show, and the request does reach the server | The data is a config file read once at boot (the notice sources and categories): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
 | Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the two refused combinations. |
 | Boot fails with `config.invalid_role` | `ROLE` is set to a value other than `api`, `poller` or `combined`. Leave it unset for a local run, which boots as `combined`. |
 | A local web page gets no `Access-Control-Allow-Origin` | Under `PERIMETER_MODE=local-dev`, only `http://localhost:*` and `http://127.0.0.1:*` are trusted, not LAN addresses. |

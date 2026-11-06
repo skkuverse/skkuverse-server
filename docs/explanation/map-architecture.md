@@ -3,7 +3,7 @@ title: Map Architecture
 type: explanation
 status: draft
 owner: spencer0124
-last-updated: 2026-10-23
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -78,13 +78,13 @@ flowchart LR
   r4 --> sheet["app: place sheet"]
 ```
 
-What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `skkuverse-app/packages/shared/src/map/placeDetail.ts`:
+What the app reads, from `skkuverse-app/apps/mobile/src/features/map/map-config.schema.ts`, `overlay.schema.ts` and `eventmap/place-detail.schema.ts`:
 
 | Field | App use |
 | --- | --- |
 | `/map/config` `campuses` | The campus toggle, each campus's camera, and `radiusM` to tell which campus the camera is on |
 | `/map/config` `layers` | The layer list and filter sheet; `defaultVisibleWhen`, `userConfigurable` and `style` decide what is on and how it draws; `tabs` names the tabs whose lens draws it, and installed builds ignore it, so they treat every layer as the map tab's |
-| `/map/config` `chips` | The chip row; a `focus` tap moves the camera, swaps layers within the chip group and opens the chip's list, a `webview` tap opens its page; `tabs` and `opensIn` place a chip on a tab; a chip of another action kind, `link` and `layers` included, is dropped by builds that do not list it in `CHIP_ACTION_KINDS` |
+| `/map/config` `chips` | The chip row; a `focus` tap moves the camera, swaps layers within the chip group and opens the chip's list, a `webview` tap opens its page; `tabs` and `opensIn` place a chip on a tab; a chip of an action kind a build does not parse is dropped, as older installed builds drop `link` and `layers` |
 | `/map/config` `cameraDefaults` | The camera for a marker tap, a search result and a campus switch |
 | overlay `kind`, `geometry`, `layerId` | The renderer and the layer that draws it; an unknown `kind` is skipped |
 | overlay `tap` | A building sheet, a place sheet, or a chip run; `null` draws a backdrop |
@@ -110,7 +110,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - A transit overlay is the stored line as stored on its route line layer (a Jongno line unclosed as TOPIS draws it, the HSSC loop closed as measured); the route line layers are off by default, so an installed app fetches `/map/overlays/transit` only once a user turns one on.
 - The HSSC loop comes after the Jongno lines and changes none of them. With no good `hssc-route-line` ever read, the transit overlay serves the Jongno lines alone, degraded, logged at error by the bus module ([ADR 0013, D6](../decisions/0013-runtime-data-in-mongodb.md#d6-the-read-contract)), never a `503` of its own; a Jongno read failure still answers the Jongno `503`.
 - The Jongno route line layers share one style, the map's own village-bus green in `ROUTE_LINE_LAYER`, never a route's stored card color; `hssc_route` takes SKKU green (`003626`) with a white edge, a constant too, so `/map/config` reads no bus dataset. Their order in `BASE_LAYERS` is their draw order: the app adds them in that order and the later one lies on top, so `jongro07_route` comes after `jongro08_route`, and `hssc_route` last ([Draw order](../reference/map-overlays-api.md#draw-order)).
-- Cloudflare caches `/map/overlays/campus`, `/map/overlays/transit` and both event routes without varying on `Accept-Language`, so their bodies carry every language and their `meta` names none: `ResponseInterceptor` leaves `lang` out of any response with a `public` or `s-maxage` `Cache-Control`.
+- `/map/overlays/campus`, `/map/overlays/transit` and both event routes are publicly cacheable, and a shared cache keys without `Accept-Language`, so their bodies carry every language and their `meta` names none: `ResponseInterceptor` leaves `lang` out of any response with a `public` or `s-maxage` `Cache-Control`.
 - Only `MapModule` binds the general limiter on `/map/config` and `/map/overlays`; the sub-modules bind nothing.
 - The `.wire` files publish what is served today, including the campus overlay's string `placeId`.
 

@@ -3,7 +3,7 @@ title: Building Architecture
 type: explanation
 status: draft
 owner: spencer0124
-last-updated: 2026-10-28
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -81,17 +81,17 @@ flowchart LR
   index -->|toPlaceDisplay| display["BuildingPlaceDisplayService"]
   detail -->|building, floors, connections, cafeterias| sheet["app: BuildingDetailSheet"]
   search -->|buildings, spaces, counts| sscreen["app: SearchScreen"]
-  map -->|pins, footprints| cscreen["app: CampusScreen"]
+  map -->|pins, footprints| cscreen["app: map tab"]
 ```
 
-What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` and the screens that use it:
+What the app reads, from `skkuverse-app/apps/mobile/src/features/map/building/building.schema.ts` and the screens that use it:
 
 | Field | App use |
 | --- | --- |
-| `GET /building/list` | No caller in the app, web or mini sources; `useBuildings` is exported and never used |
+| `GET /building/list` | No caller in the app, web or mini sources; the app holds only an endpoint constant |
 | `_id`, `campus` | Search: a tap moves the map to the building and switches campus; the detail sheet opens by `_id` |
 | `displayNo`, `name`, `campusLabel` | `BuildingHeader` in `BuildingDetailSheet`, and the rows of `SearchScreen` |
-| `name.ko` | `BuildingDetailSheet` matches it against `BuildingNameMapping.ts` for the HSSC floor map, so an SKKU rename unlinks it silently |
+| `name.ko` | `BuildingDetailSheet` matches it through `getHsscBuildingName` for the HSSC floor map, so an SKKU rename unlinks it silently |
 | `description` | `BuildingDetailSheet`, clamped with a more button |
 | `image.url` | `BuildingHeader` thumbnail |
 | `accessibility.elevator`, `accessibility.toilet` | `BuildingHeader` badges |

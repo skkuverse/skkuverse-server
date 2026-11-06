@@ -11,8 +11,8 @@ export function dateRange(from: string, until: string, fromTime?: string): BusGr
 
 export const FASTTRACK_VISIBILITY = dateRange("2026-03-01", "2026-03-07");
 
-// WHY: the commute shuttle card opens with the school's notice, a week before the first run (2026-10-19), and
-// its smart view opens on that run. SEE: docs/project-docs.md (Visibility)
+// WHY: the commute shuttle card opens with the school's notice, a week before the first run (2026-10-19); the smart
+// view looks one week ahead, so it opens on that run, where a card opened earlier would show noData.
 export const COMMUTE_VISIBILITY = dateRange("2026-10-12", "2026-12-18", "11:55");
 
 // WHY: the owner hid the commute stops' map cards on 2026-10-18; the catalog keeps every

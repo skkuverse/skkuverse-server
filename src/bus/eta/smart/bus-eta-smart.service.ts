@@ -51,7 +51,7 @@ export class BusEtaSmartService {
     return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `private, max-age=${maxAge}`);
   }
 
-  /** SEE: docs/plans/7800-unified-arrivals.md ("7.2 The run read, and how F1 ends"): each run of the shown week, and of the next for weekCount 2, still under way at `from`. */
+  /** WHY: the stored "HH:mm" timetable parsed once into instants, so the stop page and the timetable door never re-read the smart view: each run of the shown week, and of the next for weekCount 2, still under way at `from`. */
   async listRuns(serviceId: string, { from, weekCount }: RunWindow): Promise<RunList> {
     const smart = await this.resolveSchedule(serviceId);
     if (smart.status !== "active" || smart.from === null) return { status: smart.status, runs: [] };

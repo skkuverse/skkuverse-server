@@ -3,7 +3,7 @@ title: Subway Arrivals and Public Holidays — Sources, Budget and Accuracy Poli
 type: adr
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-25
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -54,6 +54,8 @@ A service day's table is weekday, Saturday or holiday by the calendar (owner, 20
 ### D9. Public holidays come from the official calendar, never edited by hand
 
 `src/calendar/` mirrors 한국천문연구원 특일 정보 (`getRestDeInfo`); the owner ruled out manual updates (2026-10-16). Rejected: packaged calendars (`@hyunbinseo/holidays-kr`, `@kyungseopk1m/holidays-kr`), which need a bump and a deploy for each new holiday, and `date-holidays` alone, which misses temporary holidays and election days. Every calendar holiday is a no-service day for a holiday-respecting service: the owner confirmed that the 인자셔틀 and the commute shuttle do not run on substitute, temporary or election-day holidays.
+
+Amended 2026-10-24: skkuverse-crawler mirrors 특일 정보 into `public_holidays`, and `src/calendar/` reads that collection instead of syncing it (`src/calendar/calendar.document.ts`). No one edits it by hand.
 
 ### D10. A line marker's color is for the light background
 

@@ -3,7 +3,7 @@ title: Adopt Diátaxis Docs Structure
 type: adr
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-22
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -23,6 +23,7 @@ audience: internal
 - Every doc has frontmatter, one H1 and a one-line summary, and points at the code instead of copying a path, version or count from it.
 - markdownlint gates `docs/`. Docs not yet migrated are listed in the lint `ignores`; that list is the migration backlog.
 - A legacy doc that is broken up becomes a `superseded` pointer stub, never deleted, so its inbound links keep working.
+- Amended 2026-11-06: there is no `internal/` folder. Production configuration and data are kept outside this repository.
 
 Rejected: keeping one flat folder with a prose precedence rule. It was the setup that drifted.
 

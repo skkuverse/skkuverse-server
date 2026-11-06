@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 2 of journey-routes as pushed to skku_content_dev on 2026-10-25: revision 1 (the two 인자셔틀 options) plus the 4호선 → 금정 → 1호선 option each way (ADR 0022 D7, docs/plans/transit-route-planner.md PR (f)); each new walk measured with TMAP pedestrian routing (POST /tmap/routes/pedestrian, WGS84GEO) on 2026-10-25 between the gate's building point and the station's subway-station-coords point, its path rounded to six decimals; ride fallback minutes from subway-timetables revision 3.",
+  "_about": "Revision 2 of journey-routes as pushed to skku_content_dev on 2026-10-25: revision 1 (the two 인자셔틀 options) plus the 4호선 → 금정 → 1호선 option each way (ADR 0022 D7, docs/archive/transit-route-planner-2026-10.md PR (f)); each new walk measured with TMAP pedestrian routing (POST /tmap/routes/pedestrian, WGS84GEO) on 2026-10-25 between the gate's building point and the station's subway-station-coords point, its path rounded to six decimals; ride fallback minutes from subway-timetables revision 3.",
   "catchMarginSec": 60,
   "lines": [
     {

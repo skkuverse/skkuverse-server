@@ -13,7 +13,7 @@ export class BusRealtimeGbisPoller implements OnModuleInit {
     private readonly seats: BusRealtimeGbisService,
   ) {}
 
-  // WHY: GBIS=off (the development default) registers nothing, so no laptop spends production's 1,000-call quota.
+  // WHY: GBIS=off (the development default) registers nothing, so no laptop spends production's daily quota.
   onModuleInit(): void {
     for (const route of REGIONAL_ROUTES) {
       const name = `gbis-seats-${route.code}`;

@@ -1,48 +1,48 @@
 ---
-title: Notices API 계약
+title: Notices API Contract
 type: reference
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-29
+last-updated: 2026-11-06
 audience: internal
 ---
 
-# Notices API 계약
+# Notices API Contract
 
-> `/notices/*` 읽기 전용 엔드포인트 + `/internal/notices/*` dispatch 트리거의 요청·응답 계약. 설계 근거는 [explanation/notices-architecture.md](../explanation/notices-architecture.md), FCM dispatch 결정은 [decisions/0003](../decisions/0003-fcm-dispatch-cloud-function-claim-lease.md) 참조.
+> The request and response contracts of the read-only `/notices/*` routes and the `/internal/notices/*` dispatch trigger. The design is in [explanation/notices-architecture.md](../explanation/notices-architecture.md), the FCM dispatch decision in [decisions/0003](../decisions/0003-fcm-dispatch-cloud-function-claim-lease.md).
 
 > [!NOTE]
-> 응답 envelope은 서버 공통 `{ meta, data }` 형태 (`src/http/response.interceptor.ts`). 모든 엔드포인트가 이 형태를 공유한다.
+> Every route except `GET /notices/proxy/attachment` answers in the server's common `{ meta, data }` envelope (`src/http/response.interceptor.ts`). The attachment proxy streams the file body itself.
 
-## 요약
+## Summary
 
-| Method | Path | 인증 | 용도 |
+| Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| GET | `/notices/tabs` | optional | 서버 주도 탭 구성 |
-| GET | `/notices/source/:sourceId` | optional | 단일 소스 공지 리스트 (커서 페이지네이션) |
+| GET | `/notices/tabs` | optional | The server-driven tab layout |
+| GET | `/notices/source/:sourceId` | optional | One source's notices, cursor-paged |
 | GET | `/notices` | optional | Several sources merged into one list, each article once (`?sourceIds=`) |
-| GET | `/notices/proxy/attachment` | optional | 첨부파일 프록시 |
-| GET | `/notices/:sourceId/:articleNo` | optional | 공지 상세 |
+| GET | `/notices/proxy/attachment` | optional | The attachment proxy |
+| GET | `/notices/:sourceId/:articleNo` | optional | One notice's detail |
 | GET | `/notices/overview` | optional | AI answer card for a search (`?q=&sourceIds=`) |
-| POST | `/internal/notices/dispatch-pending` | internal | 크롤러 ping → FCM dispatch sweep |
+| POST | `/internal/notices/dispatch-pending` | internal | The crawler's ping that starts an FCM dispatch sweep |
 
 The controllers are the source of truth for the routes: one per flow under `src/notices/` (`tabs/`, `list/`, `detail/`, `overview/`, `attachment/`, `dispatch/`), each `notices-<flow>.controller.ts`; the dispatch one is `@Controller("internal/notices")`.
 
-## 공통 규칙
+## Common rules
 
-- **Authentication:** optional. A request without a bearer token passes; one with a token is verified, and only a rejected token answers 401 `AUTH_INVALID`. `src/http/request-authentication.middleware.ts` asks `REQUEST_AUTHENTICATOR` (ADR 0023) and sets `req.principal`, bound on `/notices` before the rate limit (the explanation says why). `/internal/notices` has neither authentication nor a rate limit.
+- **Authentication:** optional on `/notices`. A request without a bearer token passes; one with a token is verified, and only a rejected token answers 401 `AUTH_INVALID`. `src/http/request-authentication.middleware.ts` asks `REQUEST_AUTHENTICATOR` (ADR 0023) and sets `req.principal`, bound on `/notices` before the rate limit (the design notes say why). `/internal/notices` is authorized by `INTERNAL_AUTHORIZER` instead, under the `notices.dispatch` scope (its section below).
 - **Rate limit:** `/notices` is limited by the `notices` rate-limit class, which `RATE_LIMIT_POLICY` decides ([ADR 0023](../decisions/0023-perimeter-ports.md)). A refused request answers 429 `RATE_LIMIT` with `Retry-After`, and may carry `RateLimit-*` headers. The limits and how requests are counted belong to the production implementation, outside this repository's contract.
-- **로컬라이즈:** `Accept-Language`로 `label` 등 로컬라이즈 (ko/en, zh → en fallback).
+- **Language:** `Accept-Language` picks the language of `label` and the other localized copy (`ko` or `en`; `zh` falls back to `en`).
 
 ## GET /notices/tabs
 
-서버 기반 탭 구성. 앱의 공지 탭 UI를 이 응답으로 렌더링. `categories.json` + `sources.json`(둘 다 `src/notices/`)을 조합.
+The tab layout the app's notices screen renders, built from `categories.json` and `sources.json` (both in `src/notices/`). `src/notices/tabs/notices-tabs.wire.ts` is the source of truth for the shape.
 
-- `Cache-Control: private, max-age=3600`
-- 배열 순서 = 탭 표시 순서
-- Tagged payload: `tabMode: "fixed"` → `fixed: { sourceId, name, campus }`, `tabMode: "picker"` → `picker: { sources, maxSelection, defaultIds, campusDefaultIds }`
-- 앱이 모르는 `tabMode` → 해당 탭 skip (forward compat)
-- `schemaVersion`으로 클라이언트가 스키마 호환성 판단
+- `Cache-Control: private, max-age=3600` (`TABS_CACHE_CONTROL`)
+- The array order is the tab order.
+- Tagged payload: `tabMode: "fixed"` carries `fixed: { sourceId, name, campus }`, `tabMode: "picker"` carries `picker: { sources, maxSelection, defaultIds, campusDefaultIds }`.
+- The app skips a tab whose `tabMode` it does not know.
+- `schemaVersion` tells the client whether it understands the shape.
 
 ```jsonc
 {
@@ -55,8 +55,8 @@ The controllers are the source of truth for the routes: one per flow under `src/
         "picker": {
           "sources": [
             { "id": "arch", "name": "건축학과", "campus": "nsc", "college": "공과대학",
-              "noticeAvailable": true, "excludeReason": null }
-            // ... ~125개
+              "noticeAvailable": true, "excludeReason": null, "excludeReasonText": null }
+            // ...
           ],
           "maxSelection": 5,
           "defaultIds": [],
@@ -67,18 +67,17 @@ The controllers are the source of truth for the routes: one per flow under `src/
         "key": "academic", "label": "학사", "tabMode": "fixed",
         "fixed": { "sourceId": "skku-notice02", "name": "성균관대_통합(학사)", "campus": "both" }
       }
-      // ... 9개 탭 (categories.json: dept, academic, scholarship, career, recruitment, event, library, dorm, general)
+      // ... one tab per entry of categories.json
     ]
   }
 }
 ```
 
-> [!NOTE]
-> 구 `GET /notices/sources`는 2026-04-15 삭제. 학과 목록은 `/notices/tabs`의 picker 탭 `sources` 배열에 포함된다.
+`excludeReason` is an i18n key and `excludeReasonText` its copy from `exclude-reasons.json` in the request's language. `maxSelection` is the category's cap, lowered to the number of sources the tab lists.
 
 ## GET /notices/source/:sourceId
 
-쿼리: `cursor` (base64url), `limit` (1~50, default 20), `type` (optional: `action_required | event | informational`), `q` (optional 검색어).
+Query: `cursor` (base64url), `limit` (clamped to 1–50; unreadable means 20), `type` (optional: `action_required | event | informational`), `q` (optional search text, matched against the title, the summary one-liner and the facts' short title; one that is empty, over 100 code points or holds a control character is dropped, never an error).
 
 ```jsonc
 {
@@ -102,8 +101,10 @@ The controllers are the source of truth for the routes: one per flow under `src/
         "summary": {
           "oneLiner": "2026-04-09까지 학생 창업유망팀 신청",
           "type": "action_required",
-          "endAt": { "date": "2026-04-09", "time": null }
-        }
+          "startAt": null,
+          "endAt": { "date": "2026-04-09", "time": null, "label": null }
+        },
+        "row": null
       }
     ],
     "nextCursor": "eyJkIjoi...",
@@ -112,10 +113,10 @@ The controllers are the source of truth for the routes: one per flow under `src/
 }
 ```
 
-- **리스트 summary는 brief** (4필드: `oneLiner`, `type`, `startAt`, `endAt`). full summary는 상세에서만. 앱 `formatDeadlineBadge`가 `type`별로 배지를 그린다.
-- **`startAt`·`endAt` 파생(요청 시각 기준):**
-  - v1 공지(`summaryVersion` 없음): `selectEffectivePeriod`. `action_required`는 `summaryPeriods` 중 다가오는 가장 이른 마감(같은 날 시간 박스 일정 제외, 모두 지났으면 가장 최근 마감), 그 밖은 `periods[0]`.
-  - v2 공지(`summaryVersion >= 2`, `summaryDates` 있음): `selectRoleBadge`. 신청 기간(`summaryApplication.windows`) → `due` 마감 → `happens` 행사 → 모두 지난 신청·마감("마감") → 여러 날 `runs` 범위 순으로 고른다. 저장된 `summaryType`은 보지 않고, 고른 일정에 맞춰 `type`을 정한다(시작 전 신청 기간은 `informational` 범위로 "D-n · 시작까지"). 근거: skkuverse-ai `openspec/changes/refine-notice-summary-v2` design D11.
+- **The list summary is brief:** `oneLiner`, `type`, `startAt`, `endAt`. The full summary is served only on the detail. The app's `formatDeadlineBadge` draws the badge by `type`.
+- **`startAt` and `endAt` are derived at request time:**
+  - A v1 notice (no `summaryVersion`): `selectEffectivePeriod`. For `action_required`, the earliest deadline still ahead in `summaryPeriods` (a timed same-day slot is no deadline), or the latest one when all have passed; for any other type, `periods[0]`.
+  - A v2 notice (`summaryVersion >= 2` with `summaryDates`): `selectRoleBadge`. It takes the first that applies: an application window (`summaryApplication.windows`), the next `due`, the next `happens` event, all windows and dues passed (closed), a multi-day `runs` range. It ignores the stored `summaryType` and sets `type` to fit what it picked (a window not yet open reads as an `informational` range). Source: skkuverse-ai `openspec/changes/refine-notice-summary-v2` design D11.
 - **Derived `summary`.** A notice with facts and no stored summary (`summaryAt` unset) gets a rough `summary` from its row so an installed app still shows a one-liner and a D-day: `oneLiner` is line 2 of the row, then its qualifier in full (the whole text, never the short form the row's 26 characters may take), led by the token word for a cancelled, stopped, postponed, extended or changed notice; `endAt` is the shown window's end; `type` is `action_required` for a window, `event` for a session and `informational` otherwise. A notice that carries a stored summary is served as before. `type=` and `q=` match a derived notice by its derived type and by `facts.shortTitle`; a typed page can hold fewer than `limit` notices, and `hasMore` and `nextCursor` still follow the read.
 - **`row` (the facts row).** Next to `summary`, an item carries `row`: finished Korean text from the crawler's `facts` record, rendered at the request's KST now (umbrella ADR 0009). It is `null` when the notice has no facts or its facts fail the record schema, and the item then reads as before. `summary` and every other field are unchanged. The fields follow the app sketch's `SketchRow`, and a part the notice lacks is `null`, not left out:
 
@@ -132,8 +133,8 @@ The controllers are the source of truth for the routes: one per flow under `src/
   | `day` | `today`, `yesterday`, `thisWeek` or `earlier`, by the notice's posting date `date`, the list's sort key, read as a KST calendar day (the first ten characters, so a stored minute is ignored); a week starts on Monday. A posting date after today reads `today`, and one that is no calendar day reads `earlier`. The list order is unchanged, so each group is contiguous |
 
   The text is Korean for every `Accept-Language`. The facts row's `status` and `itemId` stay on the server.
-- **커서는 filter-agnostic** — `(date, _id)` 페어로 페이징한다. `type`을 바꿔도 accept (일부 skip 가능 → 클라이언트가 필터 변경 시 리스트 리셋).
-- **커서 payload는 여전히 `{d, c, i}` 3필드** — `c`(구 `crawledAt`)는 더 이상 읽지 않지만 롤백 호환을 위해 계속 실어 보낸다. 클라이언트는 커서를 opaque 문자열로만 다루면 되고, 필드가 하나 줄어드는 후속 릴리스에도 영향받지 않는다. 배경은 [decisions/0007-notice-ordering-key.md](../decisions/0007-notice-ordering-key.md).
+- **A cursor ignores the filter.** It pages on `(date, _id)`, so a cursor read under another `type` is accepted and may skip rows; the app resets the list when the filter changes.
+- **The cursor payload is `{d, c, i}`.** `c` (the old `crawledAt`) is still sent and accepted but never read, so a rollback can decode it. Clients treat the cursor as an opaque string. Background: [decisions/0007-notice-ordering-key.md](../decisions/0007-notice-ordering-key.md).
 
 ## GET /notices (several sources)
 
@@ -182,9 +183,9 @@ Outbound policy (`OUTBOUND_POLICY`, purpose `notice-attachment`, [ADR 0023](../d
 }
 ```
 
-- **본문은 `contentMarkdown` 단일 경로.** `content`/`contentText`/`cleanHtml` 미노출. `contentMarkdown == null`이면 클라이언트는 `sourceUrl` 외부 링크로 fallback (빈 문자열 아님, `null`).
+- **One body field, `contentMarkdown`.** `content`, `contentText` and `cleanHtml` are not served. When `contentMarkdown` is `null` (never an empty string), the client opens `sourceUrl` instead.
 - **Derived full summary.** The detail serves the same derived `type` and `oneLiner` as a full summary with `text` null, empty `periods` and `locations`, null `details` and `model`, and `generatedAt` set to `crawledAt`, so the summary card hides.
-- **full summary는 9필드**: brief 3개 + `text`, `periods`, `locations`, `details`, `model`, `generatedAt`.
+- **The full summary** is `oneLiner` and `type`, as in the brief, plus `text`, `periods`, `locations`, `details`, `model` and `generatedAt`; it has no `startAt` or `endAt`.
 - **`screen` (the detail screen).** Next to `summary`, the detail carries `screen`: the header, status line, blocks, action bar and original of umbrella ADR 0009 D11 to D16 as finished Korean, rendered from the crawler's `facts` record at the request's KST now. It is `null` when the notice has no facts or its facts fail the record schema, and every other field is unchanged. The fields follow the app sketch's `SketchDetail`, grouped under one key because they are present together, and a part the notice lacks is `null` or empty, not left out:
 
   | Field | Meaning |
@@ -199,8 +200,8 @@ Outbound policy (`OUTBOUND_POLICY`, purpose `notice-attachment`, [ADR 0023](../d
   | `original` | `{ posterCount, attachments: [{ role, name, url }], links: [{ role, domain, url }] }`. An attachment's `url` is the one in the detail's `attachments` for that file, `null` when the list no longer holds it |
 
   The text is Korean for every `Accept-Language`. A place building cannot name, or one no building sheet holds, shows its quote with no action, and a fact the verifier disputed is left out. Renamed from `SketchDetail`: the fields sit under `screen`; `change.what` is `날짜` or `장소`; `posters` is `posterCount`; `action` also carries its `target`; `englishOnly` is dropped (umbrella ADR 0009, 2026-10-28), and the body is the existing `contentMarkdown`.
-- **ETag/304:** `If-None-Match` 지원. 서버는 `ETag` 세팅 후 조건부 요청에 304.
-- `isDeleted` 문서는 404.
+- **ETag/304:** the response carries Express's default weak `ETag`, and a matching `If-None-Match` answers 304.
+- A notice the crawler marked `isDeleted` answers 404.
 
 ## GET /notices/overview
 
@@ -264,25 +265,27 @@ Every response carries `Cache-Control: no-store`.
 
 ## POST /internal/notices/dispatch-pending
 
-크롤러가 크롤 cycle 끝에 호출하는 내부 엔드포인트, not callable by clients: `INTERNAL_AUTHORIZER` authorizes it under the `notices.dispatch` scope ([ADR 0023](../decisions/0023-perimeter-ports.md)).
+The internal route the crawler calls at the end of each crawl cycle, not callable by clients: `INTERNAL_AUTHORIZER` authorizes it under the `notices.dispatch` scope ([ADR 0023](../decisions/0023-perimeter-ports.md)).
 
-- **동작:** pending 공지를 sweep → claim-lease → FCM Cloud Function 호출로 fan-out. dispatch는 비동기 진행이라 응답이 빠르다.
-- **응답:** sweep 결과 카운트 (`swept`/`dispatched`/`skipped` 계열). The response is `SweepSummary` (`src/notices/dispatch/notices-dispatch.wire.ts`): `status`, `source`, `processed`, `sent`, `failed`, `skippedNoTopics`, `cfCalls`, `dedupedDocs`, `durationMs`.
-- dispatch 메커니즘(claim-lease, safety-net poller, retry/abandon)은 [decisions/0003](../decisions/0003-fcm-dispatch-cloud-function-claim-lease.md).
+- **What it does:** sweeps the pending notices, claims each under a lease and fans out through the FCM Cloud Function. A sweep already running answers `status: "in-progress"`.
+- **Response:** `SweepSummary` (`src/notices/dispatch/notices-dispatch.wire.ts`): `status`, `source`, `processed`, `sent`, `failed`, `skippedNoTopics`, `cfCalls`, `dedupedDocs`, `durationMs`.
+- The mechanism (claim lease, safety-net poller, retry and abandon) is [decisions/0003](../decisions/0003-fcm-dispatch-cloud-function-claim-lease.md).
 - **No topic, no push.** A claimed group whose boards have no push topic (today only `skku-main`, which no tab lists) gets no Cloud Function call. It is recorded as a skip: `pushedAt` is set, so no later claim takes it, `pushSkippedReason` is `"no-topic"`, and `pushAttempts` is not incremented. Count skips with `pushSkippedReason: "no-topic"`, not with `pushedAt`. The response counts them in `skippedNoTopics`.
 - **Push gate.** A notice is claimable once the crawler's live facts job has written `factsAt` (`toClaimFilter` in `src/notices/dispatch/notices-dispatch.query.ts`, [ADR 0024](../decisions/0024-dispatch-gate-on-facts.md)). `factsGate` `ok`, `failed` and `timeout` are all claimable. A notice the job never gated, such as a backfilled one, is never pushed.
 - **Claim order.** Each claim takes the newest claimable notice, `date` descending then `_id` descending (`CLAIM_SORT` in `src/notices/dispatch/notices-dispatch.query.ts`), so a backlog larger than `sweepBatchCap` sends the newest notices first.
 
-## 에러 코드
+## Error codes
 
-| HTTP | code | 상황 |
+| HTTP | code | When |
 | --- | --- | --- |
-| 400 | `INVALID_SOURCE_ID` | `sources.json`에 없는 sourceId |
-| 400 | `INVALID_PARAMS` | articleNo 숫자 아님, limit 범위 초과, 알 수 없는 type |
-| 400 | `INVALID_CURSOR` | base64url 디코딩·JSON 파싱·shape 검증 실패 |
-| 401 | `AUTH_INVALID` | 토큰 검증 실패 (optional auth — 토큰 없으면 401 아님) |
-| 404 | `NOT_FOUND` | 존재하지 않거나 isDeleted |
-| 429 | `RATE_LIMIT` | rate limit 초과 |
+| 400 | `INVALID_SOURCE_ID` | A `sourceId` that `sources.json` does not hold |
+| 400 | `INVALID_PARAMS` | A non-numeric `articleNo`, an unknown `type`, a missing or repeated `sourceIds` or one naming more than `MAX_SOURCE_IDS`, a bad overview `q`, a missing or malformed attachment `url`, a disallowed attachment `referer` |
+| 400 | `INVALID_CURSOR` | A cursor that fails base64url decoding, JSON parsing or its shape check |
+| 401 | `AUTH_INVALID` | A bearer token that fails verification (no token is not a 401) |
+| 403 | `FORBIDDEN` | An attachment `url` or redirect hop the outbound policy refuses |
+| 404 | `NOT_FOUND` | No such notice, or one marked `isDeleted` |
+| 429 | `RATE_LIMIT` | Over the rate limit |
+| 502 | `UPSTREAM_ERROR`, `UPSTREAM_TOO_LARGE` | The attachment host failed, or the file is over the size cap |
 
 ## Source of truth (file map)
 
@@ -319,9 +322,9 @@ The choices behind the routes above, kept out of the module doc.
 - **One row per article by scanning past the page.** A read of several sources scans `CLUSTER_SCAN_FACTOR × (limit + 1)` rows after the cursor, reading only `_id`, `dupOf`, `date` and `crawledAt` (`SCAN_PROJECTION`), and keeps a scanned row only when no copy of its article sorts before it. Copies before it in the batch are in hand; for the others it looks up the copies of the scanned articles in the same scope at or before the cursor, which an earlier page served. Page 1 has no cursor and needs no lookup. It scans again after the last row scanned until it holds `limit + 1` rows or the list ends, at most `MAX_SCANS_PER_PAGE` times. A page that runs out of scans is served short, with `hasMore` true and a cursor after its last scanned row, so the next page resumes there. It then reads the `limit` rows it serves in full with one `_id: { $in }` read. Rejected: a `$group` of the whole scope by `dupOf`, which reads every notice of the scope before it can serve page 1.
 - **The read indexes are the server's.** The crawler owns the unique `articleNo_1_sourceId_1`; the poller creates `sourceId_1_date_-1__id_-1` and `dupOf_1_sourceId_1__id_1` at boot (three attempts, an error-level log on failure). Every list read and scan is hinted to `sourceId_1_date_-1__id_-1`, and the lookup of a scanned batch's earlier copies to `dupOf_1_sourceId_1__id_1`; the read of the served rows by `_id` takes the `_id` index.
 
-## 관련 문서
+## Related
 
-- [explanation/notices-architecture.md](../explanation/notices-architecture.md) — 설계 근거·아키텍처
-- [decisions/0002](../decisions/0002-notices-read-only-ownership.md) — 읽기전용 소유권
-- [decisions/0003](../decisions/0003-fcm-dispatch-cloud-function-claim-lease.md) — FCM dispatch
-- [how-to/verify-notices-changes.md](../how-to/verify-notices-changes.md) — 변경 검증 체크리스트
+- [explanation/notices-architecture.md](../explanation/notices-architecture.md): the design
+- [decisions/0002](../decisions/0002-notices-read-only-ownership.md): read-only ownership
+- [decisions/0003](../decisions/0003-fcm-dispatch-cloud-function-claim-lease.md): the FCM dispatch
+- [how-to/verify-notices-changes.md](../how-to/verify-notices-changes.md): the change checklist

@@ -3,7 +3,7 @@ title: Miniapps Architecture
 type: explanation
 status: draft
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -73,7 +73,7 @@ flowchart LR
   r3 --> feed["app: MiniAppFeedSection, MiniAppFeedScreen"]
 ```
 
-What the app reads, from `skkuverse-app/packages/shared/src/miniapps/schema.ts` and `skkuverse-app/packages/shared/src/miniapps/feed-parse.ts`:
+What the app reads, from `skkuverse-app/apps/mobile/src/features/web/web.schema.ts` and `skkuverse-app/apps/mobile/src/features/web/feed/feed.rules.ts`:
 
 | Field | App use |
 | --- | --- |
