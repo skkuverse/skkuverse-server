@@ -2,8 +2,9 @@
  * The repository is public, so a workflow runs for people who are not its
  * maintainers, and its logs are public too:
  *
- *   - no workflow uses `pull_request_target`, which runs a fork's PR with the
- *     base repository's secrets and a write token;
+ *   - only owner-gate.yml uses `pull_request_target`, which runs a fork's PR
+ *     with the base repository's secrets and a write token; owner-gate.yml
+ *     checks out nothing (owner-gate.test.ts);
  *   - every workflow sets `permissions:` at the top, read-only or empty, so a
  *     job gets write access only where it names it, and only contracts-sync.yml
  *     names `contents: write`;
@@ -358,13 +359,13 @@ describe("the public-workflow rules apply as specified", () => {
 });
 
 describe(".github/workflows on a public repository", () => {
-  it("never use pull_request_target", () => {
+  it("use pull_request_target only in owner-gate.yml", () => {
     // Act
     const users = files.filter((f) => /pull_request_target/.test(workflow(f)));
 
     // Assert
     expect(files.length).toBeGreaterThan(0);
-    expect(users).toEqual([]);
+    expect(users).toEqual(["owner-gate.yml"]);
   });
 
   it("set a read-only or empty default for the token at the top of each workflow", () => {

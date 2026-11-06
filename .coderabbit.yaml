@@ -33,3 +33,8 @@ reviews:
         The checks are scripts/check-ci.sh (`npm run check:ci`). ci.yml only calls the shared workflow in the
         organization's `.github` repository, pinned to a commit, which installs, runs that command, lints the
         workflows and reviews dependencies; __tests__/nest/infra/ci-workflow.test.ts pins both files.
+    - path: "{.github/**,.coderabbit.yaml,.claude/**,CLAUDE.md,scripts/check-ci.sh,package.json,jest.config.js,eslint.config.js,__tests__/architecture/**}"
+      instructions: >-
+        Report as Critical any change that weakens or skips a check, a test, a lint rule, a threshold or an allowlist,
+        or that adds a permission, a secret or a trigger to a workflow. Each finding opens a thread, and the merge waits
+        until the thread is resolved.
