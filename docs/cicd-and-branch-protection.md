@@ -59,19 +59,14 @@ A pull request from a fork waits for a maintainer to approve its workflow runs. 
 
 ## Branch protection
 
-Four rulesets protect the branches: `main`, `dev`, `owner-updates` and `creation-window`. None of them has a bypass, except that repository admins bypass `owner-updates`.
-
 | Rule | `main` | `dev` |
 | --- | --- | --- |
 | Pull request required | Yes, with every review thread resolved | No |
 | Merge method | Merge commit only | — |
 | Required status checks | `ci / gate` (from `ci.yml`), `GitGuardian Security Checks` and `CodeRabbit`, and the branch must be up to date with `main` | — |
-| Code scanning | CodeQL must report no alert of severity error and no security alert of high severity or higher | — |
-| Push and merge | Admins only (`owner-updates`) | Admins only (`owner-updates`) |
+| Code scanning | CodeQL results gate the merge | — |
 | Force push | Blocked | Blocked |
 | Deletion | Blocked | Blocked |
-
-`creation-window` blocks creating any branch on GitHub except `dependabot/**`, `claude/**` and `contracts/**`, for everyone.
 
 Merge `dev` → `main` with a merge commit, never a squash, so `dev` and `main` keep one history.
 
