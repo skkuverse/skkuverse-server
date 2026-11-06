@@ -44,24 +44,28 @@ Public holidays need no step: the server reads them from the official calendar. 
 
 The committed timetable files are the only source of `bus_schedules`: `scripts/data/campus-schedule.json` (인자셔틀, the default) and `scripts/data/commute-schedule.json` (통학셔틀). Never write a pattern in `mongosh`: the database then disagrees with the repository and nothing reports it.
 
+Each `npm run schedule` command in these steps names the file you edit with `--file <file>`. Without `--file`, the script reads `scripts/data/campus-schedule.json`, so a command without it never writes the 통학셔틀 timetable.
+
 1. Edit the file. Each pattern has `patternId`, ISO `days` (1 is Monday), `serviceIds` and `entries`. The file's `effectiveFrom` and `effectiveUntil` bound every pattern, both days included. The header of `scripts/set-campus-schedule.js` lists every field and what the script refuses.
+
+   If an entry's `stopTimes` changes length, the dry run in step 2 refuses the file against the stored `bus-stops`. Follow [Change a sequence's length](edit-bus-stops.md#change-a-sequences-length) for `_dev` and then production instead of steps 2 and 3: push `bus-stops` with `--against <file>`, then run the schedule command it prints. Continue at step 4.
+
 2. Print the diff against `_dev`:
 
    ```bash
-   npm run schedule -- --dry-run
-   npm run schedule -- --file scripts/data/commute-schedule.json --dry-run
+   npm run schedule -- --file <file> --dry-run
    ```
 
 3. Write `_dev`, check the smart view, then write production:
 
    ```bash
-   npm run schedule
-   npm run schedule -- --prod
+   npm run schedule -- --file <file>
+   npm run schedule -- --file <file> --prod
    ```
 
-4. Commit the file, so the repository says what production serves. `npm run schedule -- --check --prod` exits 1 while the two differ.
+4. Commit the file, so the repository says what production serves. `npm run schedule -- --file <file> --check --prod` exits 1 while the two differ.
 
-To start a new semester beside the current one, give the new file an `effectiveFrom` after the current `effectiveUntil`. The script refuses patterns of one service whose weekdays and date ranges overlap. A pattern the database does not have yet needs `--create`. If an entry's `stopTimes` changes length, push `bus-stops` first ([edit-bus-stops.md](edit-bus-stops.md)).
+To start a new semester beside the current one, give the new file an `effectiveFrom` after the current `effectiveUntil`. The script refuses patterns of one service whose weekdays and date ranges overlap. A pattern the database does not have yet needs `--create`.
 
 ### Write an override
 
@@ -75,7 +79,7 @@ An override replaces one service's day. A `noService` override with `notices` al
 2. Run it with `--dry-run`, then with no flag (`_dev`), then with `--prod`.
 3. Commit the script, so the override is reviewable and can be rerun in another environment.
 
-MongoDB refuses an override of any other shape (`scripts/lib/bus-overrides-validator.js`). A past date is never read again, so an override needs no cleanup.
+MongoDB refuses an override of any other shape (`scripts/lib/bus-overrides-validator.js`), but it accepts any string as `date`. Write each date as a KST calendar date in `YYYY-MM-DD`: the server looks up that exact string, so an override dated `2026-12-4` is never read. A past date is never read again, so an override needs no cleanup.
 
 ### Add a timetabled service
 
@@ -85,7 +89,8 @@ A new service is code and data. Write each change test first ([ADR 0011](../deci
 2. Add the group, or the service to an existing group, in `toBusGroups` (`src/bus/config/bus-config.mapper.ts`), and a new group's id to `FIXED_GROUP_IDS`. The array order is the app's list order. Each route type the timetable uses needs a `routeBadges` entry. A group shown only for a while takes a `dateRange` visibility (`src/bus/config/bus-config.config.ts`).
 3. Add the label, service and badge strings to `src/infra/i18n.ts` (`busconfig.label.<groupId>`, `busconfig.service.<serviceId>`, `busconfig.badge.<routeType>`) in every supported language.
 4. If the service serves stops, add it to `STOP_SERVICE_IDS_BY_GROUP_ID` and push its sequences in `bus-stops` ([edit-bus-stops.md](edit-bus-stops.md)).
-5. Deploy, then write a new timetable file with the first load's `--create`:
+5. For a new group, push a `transit-layout` that places it, from the checkout you deploy, before the deploy ([configure-home.md](configure-home.md#transit-layout)). `toBusGroups` does not place a group in the stored layout, and the transit tab leaves out every group the layout does not place.
+6. Deploy, then write a new timetable file with the first load's `--create`:
 
    ```bash
    npm run schedule -- --file scripts/data/<name>-schedule.json --create --dry-run
