@@ -88,15 +88,16 @@ A new service is code and data. Write each change test first ([ADR 0011](../deci
 1. Add the service id to `SERVICE_CONFIG` (`src/bus/bus.constants.ts`) with its `nonOperatingDayDisplay`. `respectsKoreanHolidays` and `eta` are opt-in: without them the service runs on holidays and gets no arrival estimates. Leave `eta` out of this change: every replica refuses a stored `bus-stops` that lacks a sequence an `eta` opt-in names, and the sequence is pushed only after the deploy (step 7).
 2. Add the group, or the service to an existing group, in `toBusGroups` (`src/bus/config/bus-config.mapper.ts`), and a new group's id to `FIXED_GROUP_IDS`. The array order is the app's list order. Each route type the timetable uses needs a `routeBadges` entry. A group shown only for a while takes a `dateRange` visibility (`src/bus/config/bus-config.config.ts`).
 3. Add the label, service and badge strings to `src/infra/i18n.ts` (`busconfig.label.<groupId>`, `busconfig.service.<serviceId>`, `busconfig.badge.<routeType>`) in every supported language.
-4. If the service serves stops, add it to `STOP_SERVICE_IDS_BY_GROUP_ID`.
+4. If the service serves stops, add it to `STOP_SERVICE_IDS_BY_GROUP_ID`. A new service of the `campus` or `commute` group needs nothing more. A new group that serves stops also needs them read and served: add its id to `STOP_GROUP_IDS` (`src/bus/config/bus-config.constants.ts`), resolve its sequences in `BusConfigService.toGroups` (`src/bus/config/bus-config.service.ts`), and pass them to its builder in `toBusGroups`. `npm run typecheck` then asks for its `HAS_STOP_MAPS_BY_GROUP` entry.
 5. For a new group, push a `transit-layout` that places it, from the checkout you deploy, before the deploy ([configure-home.md](configure-home.md#transit-layout)). `toBusGroups` does not place a group in the stored layout, and the transit tab leaves out every group the layout does not place.
 6. Deploy, and wait until every replica runs the new code.
 7. If the service serves stops, push its sequences in `bus-stops` from a checkout at the deployed `main` ([edit-bus-stops.md](edit-bus-stops.md)). A replica refuses a whole revision that names a service its code does not know, so the push waits for the deploy.
 8. For arrival estimates, add `eta`, and any travel strategy in `LANE_STRATEGIES`, in a second change. Run `npm run data -- check --prod` from its checkout, then deploy it.
-9. Write a new timetable file with the first load's `--create`:
+9. Write the new timetable file to `_dev` with the first load's `--create`, check the smart view of a local `npm run dev`, then write production:
 
    ```bash
    npm run schedule -- --file scripts/data/<name>-schedule.json --create --dry-run
+   npm run schedule -- --file scripts/data/<name>-schedule.json --create
    npm run schedule -- --file scripts/data/<name>-schedule.json --create --prod
    ```
 
