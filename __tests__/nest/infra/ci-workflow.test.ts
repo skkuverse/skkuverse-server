@@ -188,6 +188,24 @@ describe("scripts/check-ci.sh", () => {
     expect(pkg.scripts["check:ci"]).toBe("bash scripts/check-ci.sh");
   });
 
+  it("calls npm scripts that package.json pins to their commands, so emptying one fails here", () => {
+    // Act
+    const pinned = Object.fromEntries(
+      ["typecheck", "build", "test", "lint", "lint:md", "knip"].map((name) => [name, pkg.scripts[name]]),
+    );
+
+    // Assert
+    expect(pinned).toEqual({
+      typecheck: "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
+      build:
+        "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && node scripts/copy-build-assets.js",
+      test: 'NODE_OPTIONS="${NODE_OPTIONS:-} --experimental-vm-modules" jest',
+      lint: "eslint . && npm run lint:md",
+      "lint:md": "markdownlint-cli2",
+      knip: "knip",
+    });
+  });
+
   it("stops at the first failing step and runs CI's steps in order, the mongod binary check first", () => {
     // Assert
     expect(script).toMatch(/^set -euo pipefail$/m);
