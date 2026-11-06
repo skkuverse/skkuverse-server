@@ -78,8 +78,8 @@ An empty database is enough to boot. The production data is not part of this rep
 
 | Routes | Answer | Why |
 | --- | --- | --- |
-| `/health`, `/notices/tabs`, `/map/config`, `/map/overlays/campus`, `/map/overlays/transit`, `/map/overlays/event`, `/map/overlays/event/details`, `/subway/stations`, `/ui/home/scroll`, `/bus/realtime/data/hssc` | `200` | Built from committed files and code, or empty where they read the database |
-| `/notices`, `/notices/overview`, `/building/list`, `/building/search`, `/meals/cafeterias`, `/meals` | `200`, empty | Notices, buildings and menus are written by a separate crawler; your collections are empty |
+| `/health`, `/notices/tabs`, `/map/config`, `/map/overlays/campus`, `/map/overlays/transit`, `/map/overlays/event`, `/map/overlays/event/details`, `/subway/stations`, `/ui/home/scroll`, `/bus/realtime/data/hssc`, `/bus/config/fasttrack` | `200` | Built from committed files and code, or empty where they read the database |
+| `/notices`, `/notices/overview`, `/building/list`, `/building/search`, `/meals/cafeterias?campus=hssc`, `/meals?campus=hssc` | `200`, empty | Notices, buildings and menus are written by a separate crawler; your collections are empty |
 | `/app/config`, `/ui/home`, `/ui/home/campus`, `/ui/home/transit`, `/ui/home/transitlist`, `/miniapps`, `/games`, the other `/bus/*` routes, `/journey/routes`, `/subway/stations/:stationId/arrivals` | `503` with a `*_UNAVAILABLE` code | They read datasets that live in MongoDB, edited with `npm run data` (ADR 0013), which your database does not have |
 
 `npm run schedule` does not fill the bus timetables on an empty database. It writes `scripts/data/campus-schedule.json` to the `_dev` database (production only with `--prod`), but first checks the stop times against the stored `bus-stops` dataset, and refuses, writing nothing, while that dataset is missing. The dataset is not in this repository.

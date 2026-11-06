@@ -360,7 +360,8 @@ local server reads `_dev`, so point a dev build at it (`EXPO_PUBLIC_BASE_URL`,
 [test-the-app-against-a-local-server.md](../how-to/test-the-app-against-a-local-server.md)); beta and
 TestFlight builds call production. The campus banners and the home layout are the `campus-banners`
 and `home-layout` datasets: push the festival versions to `_dev` with `npm run data`
-([configure-home.md](../how-to/configure-home.md)).
+([configure-home.md](../how-to/configure-home.md)). A banner whose window has passed is left out, so
+in the `_dev` copy move each festival banner's `startAt` and `endAt` around the replay before you push.
 
 ## 7. Source of truth (file map)
 

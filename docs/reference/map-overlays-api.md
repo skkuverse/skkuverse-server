@@ -684,7 +684,7 @@ Three filters apply independently, so a building lands on two layers, one, or no
 | no `displayNo` | absent from `building_numbers`, still named on `building_labels` |
 | no `name.ko` | absent from `building_labels` — a nameless marker is invisible but still occupies a tap target and a collision slot |
 
-Response, abridged to two overlays and the fields they share with every marker:
+Response, abridged to two overlays:
 
 ```json
 {
@@ -716,6 +716,15 @@ Response, abridged to two overlays and the fields they share with every marker:
         "campus": "hssc",
         "geometry": { "type": "Point", "coordinates": [126.994479, 37.587361] },
         "text": { "ko": "수선관", "en": "Suseon Hall" },
+        "subtitle": null,
+        "hours": [],
+        "fields": [],
+        "actions": [],
+        "order": 0,
+        "facets": {},
+        "orderByOption": {},
+        "pinPriority": 0,
+        "locationAccuracy": "exact",
         "tap": { "kind": "skku_building", "placeId": "2" }
       }
     ]
