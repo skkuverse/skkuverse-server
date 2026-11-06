@@ -3,7 +3,7 @@ title: Register a Mini App
 type: how-to
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -112,9 +112,10 @@ The origin is a trust decision held in code, so the code lands first:
    ```
 
    - The origin has no trailing slash: the app compares it with `new URL(pageUrl).origin`.
-   - Add the origin to the literal lists in `__tests__/nest/app-config/app-config.routes.test.ts`
-     ("grants the bridge to exactly these hosts, spelled out" and "maps each first-party mini-app
-     origin to its mini app, spelled out"), and a row to the first-party table in
+   - Add the origin to the spelled-out lists in `src/infra/origins.spec.ts` and
+     `__tests__/nest/app-config/app-config.routes.test.ts` ("grants the bridge to exactly these hosts,
+     spelled out" and "maps each first-party mini-app origin to its mini app, spelled out"), and a row
+     to the first-party table in
      [explanation/web-origins.md](../explanation/web-origins.md).
    - Grant it CORS, a change to the production `ORIGIN_TRUST` implementation ([ADR 0023](../decisions/0023-perimeter-ports.md)), only if the page calls this API from the browser rather than through
      the bridge. None does today.
@@ -163,18 +164,9 @@ Steps:
 1. Issue an Ed25519 key pair with the maintainers' key-issuing tool. It writes the private key to a
    file outside any git work tree and prints the public half. Hand the private key to
    the mini app's backend over a private channel, then delete your local copy.
-2. Push the dataset only after the deploy that knows `sender` is live and healthy on every replica.
-   An image built before it refuses the whole registry and logs `miniapps.registry.invalid`. A replica
-   that is already running keeps serving its last good revision, but one that boots fresh against the
-   new dataset (a restart, a crash, a rollback) has no revision to keep and answers `503` on
-   `/miniapps` and every route under it.
-3. Pull, add `sender` to the mini app's detail, and push, `_dev` then `--prod`, as for any registry
+2. Pull, add `sender` to the mini app's detail, and push, `_dev` then `--prod`, as for any registry
    edit.
-4. Every replica uses the new key within 60 seconds.
-
-To roll the server back to an image older than `sender`, roll the `miniapps` dataset back first, to the
-revision before `sender` was added (`npm run data -- history miniapps --prod`, then `npm run data -- rollback miniapps <revision> --prod`), and
-then the image.
+3. Every replica uses the new key within 60 seconds.
 
 To rotate a key, add the new key next to the old one, switch the backend, then remove the old one.
 To revoke a key, remove it. To stop a mini app's pushes at once, set `status` to `suspended`; it
@@ -193,7 +185,7 @@ leaves the tile out for up to 60 seconds and logs `ui.home_layout.item_left_out`
 1. Push every layout without it: the `home-layout` tiles and feed section, and any `miniapp` action
    in `campus-banners` or `transit-layout`.
 2. For a first-party mini app, land the removal of its `origins.ts` entry on `dev` first, with its
-   rows in `app-config.routes.test.ts` and [explanation/web-origins.md](../explanation/web-origins.md).
+   rows in `src/infra/origins.spec.ts`, `app-config.routes.test.ts` and [explanation/web-origins.md](../explanation/web-origins.md).
    Any checkout that still lists the owner refuses the next step with
    `miniapps  details  first-party origin <origin> belongs to "<id>", which is not registered`.
 3. Push `miniapps` without its index entry and detail, for a first-party mini app from that checkout.
@@ -220,7 +212,7 @@ curl -s https://api.skkuverse.com/app/config | jq '.data.miniapps.origins'   # f
 npm run data -- history miniapps --prod                    # your revision on top
 ```
 
-A `?b=$RANDOM` query skips Cloudflare's five-minute edge cache.
+A `?b=$RANDOM` query skips a shared cache's five-minute copy.
 
 ## Troubleshooting
 

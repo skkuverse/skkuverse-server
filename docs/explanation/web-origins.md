@@ -3,7 +3,7 @@ title: Web Origins and URL Rules
 type: explanation
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -19,11 +19,11 @@ The API hands clients URLs on hosts it owns: the web view SPA, the first-party m
 
 | Constant | What it is | Who may use it |
 | --- | --- | --- |
-| `WEBVIEW_ORIGIN` | The web view SPA (skkuverse-web `apps/webview`, on Cloudflare Pages) | Every web view URL; `BRIDGE_ORIGINS`; the CORS grant |
+| `WEBVIEW_ORIGIN` | The web view SPA (skkuverse-web `apps/webview`) | Every web view URL; `BRIDGE_ORIGINS`; the CORS grant |
 | `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` | Each origin of a mini app we host, mapped to the id of the mini app that owns it: a trust decision held in code, never in the registry dataset ([ADR 0013, D2](../decisions/0013-runtime-data-in-mongodb.md)) | `miniapps.origins` on `GET /app/config` |
 | `FIRST_PARTY_MINIAPP_ORIGINS` | The keys of `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN`, in its order | `BRIDGE_ORIGINS`; the manifest pollers |
 | `GAME_ID_BY_FIRST_PARTY_ORIGIN` | Each origin of a game we host, `https://<id>.game.skkuverse.com`, mapped to the id of the game that owns it: a trust list of its own (skkuverse-app add-game-factory, design D2) | `games.origins` on `GET /app/config`; the `games` dataset's push checks and `GamesService`; never `BRIDGE_ORIGINS`, the CORS grant or the mini-app owners |
-| `MEDIA_ORIGIN` | The `skkuverse-media` R2 bucket behind a custom domain | Image URLs in authored content only |
+| `MEDIA_ORIGIN` | The media host for authored images | Image URLs in authored content only |
 | `WEB_ORIGIN` | The marketing and launcher site | Share links, home-screen shortcuts, remote logos |
 | `BRIDGE_ORIGINS` | `WEBVIEW_ORIGIN` plus the first-party mini apps, except the closed ESKARA 2026 site | Published as `webview.bridgeOrigins` |
 | `ORIGIN_TRUST` (the CORS grant) | The browser origins that may read responses, decided by the production implementation, outside this repository's contract; `PERIMETER_MODE=local-dev` trusts loopback origins instead ([ADR 0023](../decisions/0023-perimeter-ports.md)) | `bootstrapHttpApp`, per request |
@@ -38,16 +38,16 @@ Each bridged entry hands every miniapp protocol method to every page its host se
 | `mukja.mini.skkuverse.com` | `mukja`, the 음식 룰렛 | `map.openPlace`, `haptic.impact` | No |
 | `playlist.mini.skkuverse.com` | `playlist`, the 플리 예습 setlist | `link.open` (with an `appUrl` to try first), `haptic.impact` | No |
 | `booth-box.mini.skkuverse.com` | `booth-box`, the 선물상자 gift box, whose message rides in its share link; also opens in a plain browser, where nothing is granted | `share.open`, `haptic.impact` | No |
-| `inja.mini.skkuverse.com` | `inja`, the 인자셔틀 timetable; its `/api/*` is Pages Functions on its own origin | `map.openPlace`, `haptic.impact`, `app.ready` | No |
+| `inja.mini.skkuverse.com` | `inja`, the 인자셔틀 timetable; its `/api/*` is served from its own origin | `map.openPlace`, `haptic.impact`, `app.ready` | No |
 | `timetable.mini.skkuverse.com` | `timetable`, the stage schedule; a static page | Nothing beyond what `MiniappRoot` sends | No |
 
-First-party mini apps are hosted one per Cloudflare Pages project at `<id>.mini.skkuverse.com`. ESKARA keeps `eskara.miniapp.skkuverse.com`, the one exception to that shape, because released builds and share links already name it.
+First-party mini apps are hosted one per origin at `<id>.mini.skkuverse.com`. ESKARA keeps `eskara.miniapp.skkuverse.com`, the one exception to that shape, because released builds and share links already name it.
 
 The ESKARA 2026 festival closed on 2026-10-09, so `BRIDGE_ORIGINS` leaves its origin out: no page there may call native code, while nothing addresses it any more. The origin keeps its owner in `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN`, because the `eskara-2026` entry of the `miniapps` dataset still has its `startUrl` there and the registry checks refuse a `skkuverse.com` start URL on no first-party origin. So an old link still opens in the `eskara-2026` shell and the page renders, but the app drops its `link.open` and `map.openPlace` messages. The origin leaves `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` once `eskara-2026` leaves the dataset.
 
 ### The first-party games
 
-A game is hosted like a mini app, one Cloudflare Pages project per game at `<id>.game.skkuverse.com`, but trusted apart. The app grants a page on a game origin only the game methods, checked per message against that game's id, and never opens it in a mini app's shell. So `GAME_ID_BY_FIRST_PARTY_ORIGIN` feeds none of the lists a mini app is trusted through: not the bridge, not CORS, not the manifest pollers. A game serves no manifest and reads no API. Which games are listed, and whether each is enabled, is the `games` dataset ([Games API](../reference/games-api.md)); which origin a game owns stays in code, and a push whose `entryUrl` is off that origin is refused.
+A game is hosted like a mini app, one origin per game at `<id>.game.skkuverse.com`, but trusted apart. The app grants a page on a game origin only the game methods, checked per message against that game's id, and never opens it in a mini app's shell. So `GAME_ID_BY_FIRST_PARTY_ORIGIN` feeds none of the lists a mini app is trusted through: not the bridge, not CORS, not the manifest pollers. A game serves no manifest and reads no API. Which games are listed, and whether each is enabled, is the `games` dataset ([Games API](../reference/games-api.md)); which origin a game owns stays in code, and a push whose `entryUrl` is off that origin is refused.
 
 ## Rationale / trade-offs
 
@@ -59,7 +59,7 @@ The CORS grant answers "may this page read a public GET response?", a far weaker
 
 ### A web view URL that is wrong does not fail
 
-The web view routes by path, so a fragment never reaches the origin; Cloudflare Pages answers any surviving path with the SPA shell at HTTP 200; and the app shows its error overlay only above status 400. A malformed URL therefore lands the user on the wrong page, with no retry and nothing logged anywhere. There is no signal after the fact, so `toWebviewUrl` is the signal:
+The web view routes by path, so a fragment never reaches the origin; the web view's host answers any surviving path with the SPA shell at HTTP 200; and the app shows its error overlay only above status 400. A malformed URL therefore lands the user on the wrong page, with no retry and nothing logged anywhere. There is no signal after the fact, so `toWebviewUrl` is the signal:
 
 - A root-relative path (`/eskara/entry`) is the preferred spelling and is joined onto `WEBVIEW_ORIGIN`, so a hand-authored value never types the host. An absolute URL is still accepted, since the admin console writes one, but it must land on this origin.
 - Both spellings are normalized first and validated once, so the same checks answer for both. The raw string meets the https link rule (`isAbsoluteHttpsUrl`) before the origin is compared, because the parser folds `\` into `/`, drops control characters and leaves userinfo out of `origin`: `…webview.skkuverse.com/a\b`, `…webview.skkuverse.com\@evil.com/x` and `https://u@webview.skkuverse.com/x` would otherwise compare equal to the origin and be served as written.

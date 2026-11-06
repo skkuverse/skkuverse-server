@@ -3,7 +3,7 @@ title: Ui Architecture
 type: explanation
 status: draft
 owner: spencer0124
-last-updated: 2026-10-23
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -76,12 +76,12 @@ flowchart LR
   scroll["UiScrollService"] -->|meta itemCount| r4["GET /ui/home/scroll"]
   layout -->|UI_CACHE_CONTROL| r5["GET /ui/home/transit"]
   r1 --> homeScreen["app: HomeScreen"]
-  r2 --> campusScreen["app: CampusScreen sheet"]
-  r3 --> transitTab["app: transit tab"]
-  r5 -->|not rendered yet| transitTab
+  r2 --> campusScreen["app: map tab campus sheet"]
+  r3 -->|builds before the transit layout| transitTab["app: transit tab"]
+  r5 --> transitTab
 ```
 
-What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `skkuverse-app/packages/shared/src/sdui/parser.ts` and `skkuverse-app/packages/shared/src/bus/parser.ts`:
+What the app reads, from `home/home.schema.ts`, `map/campus-sheet/campus-sheet.schema.ts` and `transit/layout.schema.ts` under `skkuverse-app/apps/mobile/src/features/`:
 
 | Field | App use |
 | --- | --- |
@@ -90,13 +90,13 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 | `/ui/home` tile `kind`, `id` | A `miniapp` tile joins the registry the app holds, a `game` tile the games it bundles; an unknown kind is dropped |
 | `/ui/home` feed `miniAppId`, `limit` | `MiniAppFeedSection` fetches that many entries of the mini app's feed |
 | `/ui/home` `version` | Parsed; the app falls back to its own when it is missing |
-| `/ui/home/campus` `sections` | `CampusScreen` draws them in the sheet, the carousel only while the festival gate is open |
+| `/ui/home/campus` `sections` | The map tab's campus sheet (`CampusSheetBody`) draws them |
 | `/ui/home/campus` `minAppVersion` | Parsed, not read |
-| `/ui/home/transitlist` `data` | The transit tab's list of bus cards in builds before the transit layout; a tap opens `action.route` for `action.groupId`. Its shape is frozen: an unknown `action.route` opens the bus realtime screen there |
+| `/ui/home/transitlist` `data` | The transit tab's list of bus cards in installed builds before the transit layout, which the app sources no longer call; a tap opens `action.route` for `action.groupId`. Its shape is frozen: an unknown `action.route` opens the bus realtime screen there |
 | `/ui/home/transitlist` `meta.busListCount` | Served, not read |
-| `/ui/home/transit` `sections` | No caller in the app sources yet; the sectioned transit tab is to draw each in order and drop a section of an unknown type |
-| `/ui/home/transit` item `kind`, `action` | The tab is to drop an item of an unknown kind and open `action` on a tap, never a route derived from `kind` |
-| `/ui/home/transit` group `initialState`, `items` | The tab is to draw a group as a gray box, folded or unfolded by `initialState` until the user toggles it, and its items inside |
+| `/ui/home/transit` `sections` | The transit tab draws each in order and drops a section of an unknown type; a `campus` section only while its campus is selected |
+| `/ui/home/transit` item `kind`, `action` | The tab drops an item of an unknown kind and opens `action` on a tap, never a route derived from `kind` |
+| `/ui/home/transit` group `initialState`, `items` | The tab draws a group as a box, folded or unfolded by `initialState` until the user toggles it (an unknown state draws folded), and its items inside |
 | `/ui/home/scroll` | No caller in the app sources |
 
 ## Invariants
@@ -108,7 +108,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 - A transit layout push is refused for a repeated section or item id, an empty section or group, a broken link action, a group inside a group or without `initialState`, a `visibleWith` bus group that is unknown or that its own section does not place, or a bus group or served station of the checkout not placed exactly once (a station with no campus at most once), children of groups counted (`transitLayoutFile`, `toTransitLayoutIssues`). Per request, `UiTransitTabService` hands `UiTransitService` the ids the running server serves: a left-out transit item is dropped, and an unplaced group or station is logged (`ui.transit_layout.unplaced`) and served nowhere, never appended. A group meant to be hidden keeps its place and uses its visibility. The bus groups are read per request from the bus config, whose Jongro stations come from the bus registry, so a missing registry route answers `503 JONGRO_REGISTRY_UNAVAILABLE` on both transit routes too ([bus](bus-architecture.md), "Invariants").
 - A transit item's id is `bus:`, `subway:` or `group:` and its referent's id, or a link's own slug (`toTransitItemId`); a transit item carries no arrival, which stays on each kind's own route.
 - Per request, a group whose `visibleWith` bus group is hidden is left out, then hidden bus items inside a group, then a group left with no item, then an emptied section (`toGroupTransitItems`, `UiTransitTabService`).
-- Section and banner ids share one namespace and tile ids another (`findDuplicateId`): each is an analytics item id for a tap.
+- Section and banner ids share one namespace and tile ids another (`findRepeatedId`): each is an analytics item id for a tap.
 - A banner shows inside its window on the injected `Clock` (`isBannerShowing`). `GET /ui/home`, `GET /ui/home/campus` and `GET /ui/home/transit` are cached for `UI_CACHE_CONTROL`, which also bounds how late a window takes effect.
 - An emptied home carousel is still sent, because the app draws its default banner there; an emptied campus carousel is left out, because the campus sheet has none.
 - A bus group card and a bus transit item show by their group's visibility: always, or a date range counting whole days in KST whose first day a `fromTime` (KST `HH:mm`) may open later (`isBusGroupVisible`). A malformed `fromTime` throws instead of hiding the card, and `bus-config.config.ts` refuses a malformed date or time at import.

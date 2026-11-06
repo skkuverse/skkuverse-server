@@ -3,7 +3,7 @@ title: Logging
 type: reference
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -35,7 +35,7 @@ Access lines (`msg: "request completed"`, or `"request errored"` for a 5xx) add 
 logger.warn({ event: "bus.hssc.fetch_failed", err }, "HSSC fetch failed");
 ```
 
-- **Fields first, with an `event`.** `domain.subject.verb`, lower-case, `snake_case` words: `notices.dispatch.sent`, `building.sync.completed`, `map.event_overlays.actions_dropped`. Reuse an event for the same happening in another place; never reuse one for something different.
+- **Fields first, with an `event`.** `domain.subject.verb`, lower-case, `snake_case` words: `notices.dispatch.sent`, `health.db_unreachable`, `map.event_overlays.actions_dropped`. Reuse an event for the same happening in another place; never reuse one for something different.
 - **A static message.** Values go in fields, where they can be grouped and filtered, not interpolated into the text.
 - **`err` is the Error itself**, never `err.message` or `String(err)`. The serializer keeps the type, message, stack and `cause`, and drops request config (`src/infra/log-redact.ts`).
 
@@ -57,7 +57,7 @@ logger.warn({ event: "bus.hssc.fetch_failed", err }, "HSSC fetch failed");
 
 Access lines take their level from the status: 5xx `error`, 4xx `warn`, but 401 and 404 `info`. `/health/*` is not logged at all.
 
-**Error-level lines do not become Sentry Issues.** A poller logs once per failed tick, so an upstream outage would raise an event per tick. Issues come only from unknown errors reaching the exception filter (5xx), a poller being declared failing (once per failing spell), a dropped schedule override (below), and uncaught exceptions and unhandled rejections (`src/instrument.ts`).
+**Error-level lines do not become Sentry Issues.** A poller logs once per failed tick, so an upstream outage would raise an event per tick. Issues come only from unknown errors reaching the exception filter (5xx), a poller being declared failing (once per failing spell), a dropped schedule override (below), a failed bootstrap (`src/main.ts`), and uncaught exceptions and unhandled rejections (`src/instrument.ts`).
 
 A `bus_overrides` document that fails its schema is left out of the read, so its day serves the weekly pattern the operator closed or replaced. Because that fails open, the repository (`src/bus/schedule/bus-schedule.repository.ts`) also raises `BusScheduleDroppedOverrideError` (`src/bus/schedule/bus-schedule.error.ts`) as an Issue tagged `collection: bus_overrides`, naming each dropped document's `serviceId` and `date`, at most once an hour per document.
 
@@ -111,7 +111,7 @@ The arrival-estimate pollers (`shuttle-eta-live`, `shuttle-eta-baseline`, `src/b
 | Event | Level | When |
 | --- | --- | --- |
 | `bus.eta.disabled` | info | At boot with `SHUTTLE_ETA=off`: the pollers are not registered; one line per poller, named in `poller` |
-| `bus.eta.indexes_failed` | warn | The `shuttle_eta` indexes could not be ensured at boot; the pollers still run |
+| `bus.eta.indexes.failed` | warn | The `shuttle_eta` indexes could not be ensured at boot; the pollers still run |
 | `bus.eta.read_failed` | warn | A smart schedule was served without estimates because the store read failed; at most once an hour per service, with `suppressed` |
 | `bus.eta.stops_unavailable` | warn | A smart schedule was served without estimates because no `bus-stops` revision was ever read (`BUS_STOPS_UNAVAILABLE` in `err`); at most once an hour per service, with `suppressed` |
 | `bus.eta.estimates_dropped` | info | A tick's write left out estimates fetched for a sequence whose stop count a `bus-stops` push changed during the tick, with `revision` and `droppedCount`; the next tick refetches them |
@@ -132,7 +132,7 @@ The subway pollers (`subway-seoul` every 10 s, `subway-trainmap` every 15 s, `sr
 | `subway.matching.unmatched` | info | A 신분당선 trainset event matched no timetable run (none of its direction within −120…+2,700 s, or a destination and row naming no direction) and was dropped, with `lineCode`, `unmatchedCount` and `trainsets`. At most once every 10 minutes per line, with `suppressed` |
 | `subway.history.write_failed` | warn | A write of the accuracy history (`records`: `events`, `predictions`, `arrivals` or `unresolved`) failed; the tick still resolves and the served arrivals are unaffected. At most once every 10 minutes, with `suppressed` |
 
-The mini app manifest pollers (`miniapp-manifest-<hostname>`, one per first-party origin, every 4 minutes, `src/miniapps/manifest/`) reject with a plain `Error` that names only the origin and what went wrong (`manifest 503 from <origin>`, `manifest redirected from <origin>`, a size cap, an abort or a `SyntaxError`), and store nothing on that tick. At 4 minutes each is declared on its second failed tick in a row, so a single timeout or reset that the next tick recovers from stays a `poller.tick_failed` debug line; a second is `poller.failing` and one Sentry event per failing spell. Sentry groups those events by error kind, not by origin, since the six pollers throw from the same lines; the event's `poller` tag names the origin. They write no line of their own.
+The mini app manifest pollers (`miniapp-manifest-<hostname>`, one per first-party origin, every 4 minutes, `src/miniapps/manifest/`) reject with a plain `Error` that names only the origin and what went wrong (`manifest 503 from <origin>`, `manifest redirected from <origin>`, a size cap, an abort or a `SyntaxError`), and store nothing on that tick. At 4 minutes each is declared on its second failed tick in a row, so a single timeout or reset that the next tick recovers from stays a `poller.tick_failed` debug line; a second is `poller.failing` and one Sentry event per failing spell. Sentry groups those events by error kind, not by origin, since every manifest poller throws from the same lines; the event's `poller` tag names the origin. They write no line of their own.
 
 `GET /miniapps/:id` reads what they stored (`MiniappsManifestService.shellFieldsFor`), one cached read for every origin:
 

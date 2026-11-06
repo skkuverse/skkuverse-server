@@ -3,7 +3,7 @@ title: Mini-App Registry API Reference
 type: reference
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -44,7 +44,7 @@ miniapps database — see §5.
 ## 2. `GET /miniapps` — the index
 
 `Cache-Control: public, max-age=300`. Like every response a shared cache may store, `meta` names no
-language: Cloudflare keys its edge copy without `Accept-Language`.
+language: a shared cache keys without `Accept-Language`.
 
 ```json
 {
@@ -91,7 +91,7 @@ On disk, a logo is one of three shapes:
 | --- | --- | --- |
 | `emoji` | `{ "kind": "emoji", "emoji": "😋" }` — exactly one emoji, checked by grapheme (`Intl.Segmenter`), not code point | passed through unchanged |
 | `remote` | `{ "kind": "remote", "path": "/miniapps/<id>.png" }` — site-root-relative, under `WEB_ORIGIN` | `{ "kind": "remote", "uri": "<WEB_ORIGIN><path>" }` |
-| `media` | `{ "kind": "media", "url": "https://media.skkuverse.com/…" }` — an absolute URL on the R2 media bucket, checked with `isMediaUrl` | `{ "kind": "remote", "uri": "<url>" }` |
+| `media` | `{ "kind": "media", "url": "https://media.skkuverse.com/…" }` — an absolute URL on `MEDIA_ORIGIN`, checked with `isMediaUrl` | `{ "kind": "remote", "uri": "<url>" }` |
 
 Both on-disk image spellings collapse into one wire shape (`{ kind: "remote", uri }`), so the client
 only ever needs to branch on `emoji` vs `remote`. The raw `path`/`url` fields never reach the wire.
@@ -259,14 +259,14 @@ check their mini app ids and targets against the `miniapps` stored in the same d
 
 ## 5. Notification endpoints
 
-The broadcast feed is the one part of the mini-app surface backed by Mongo (`sent_notifications`, in
-its own database per `config.miniapps.dbName`) rather than static JSON — see `SentNotificationDoc` in `src/miniapps/miniapps.document.ts` and the
+The broadcast feed is the one part of the mini-app surface the server writes (`sent_notifications`, in
+its own database per `config.miniapps.dbName`) rather than a dataset — see `SentNotificationDoc` in `src/miniapps/miniapps.document.ts` and the
 [module doc](../explanation/miniapps-architecture.md) for why it is broadcast-only with no per-user read state.
 
 ### 5.1 `GET /miniapps/:id/notifications` (public)
 
 No auth — the feed carries no user dimension. `Cache-Control: private, max-age=3`: private because
-`title`/`body` are in the request's language and Cloudflare keys its edge copy without
+`title`/`body` are in the request's language and a shared cache keys without
 `Accept-Language`, and deliberately no longer than the server's own cache: this is read seconds after a push woke the device, so a longer
 device-side copy would show the feed without the entry to exactly the person the notification was for. 404s with `MINIAPP_NOT_FOUND` for an unregistered
 id, same as §3.
@@ -363,7 +363,7 @@ carries no `outcome`. It is safe to retry once `npm run data -- check miniapps -
 A call whose *result* fails to record is logged but reported as delivered, since the push has already
 reached devices by then and re-sending would double it. Every step logs the `notificationId` with the
 title's first 80 characters, the action, the outcome and the round-trip time, so one send can be
-traced through `docker logs` and matched to the Cloud Function's `miniapp.dispatch.complete` line.
+traced through the server log and matched to the Cloud Function's `miniapp.dispatch.complete` line.
 
 ### 5.3 `GET /miniapps/:id/notifications/history` (signed)
 
