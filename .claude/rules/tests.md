@@ -64,7 +64,7 @@ ADR 0011 (`docs/decisions/0011-test-strategy.md`) is the decision and its why; `
 ## Fixtures and contracts
 
 - Every JSON file under a `fixtures/` folder is an object with an `_about` string: the source (endpoint and parameters), the `YYYY-MM-DD` capture date and what was trimmed, or "Synthetic" (or "Hand-written") and why it was never captured. No user data. Checked by `fixture-provenance`.
-- A client fixture is a captured, trimmed response in `__tests__/nest/<module>/fixtures/`; `__tests__/nest/bus/naver-directions.test.ts` is the model.
+- A client fixture is a captured, trimmed response in `__tests__/nest/<module>/fixtures/`; `src/bus/eta/travel/bus-eta-travel.client.spec.ts` is the model.
 - A test input that disagrees with the real payload is fixed in the test, never by widening production code.
 - `contracts/produced/` is generated from the `.wire` files: rerun `npm run contracts:export` after changing one. Each fixture in `contracts/produced/fixtures/<id>/` is `{ "_about": …, "data": … }`, parses, and holds only declared properties. Checked by `__tests__/contracts/`.
 

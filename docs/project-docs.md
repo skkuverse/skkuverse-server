@@ -3,7 +3,7 @@ title: 프로젝트 문서 (통합 인덱스 · 미이관)
 type: reference
 status: deprecated
 owner: spencer0124
-last-updated: 2026-11-05
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -23,7 +23,7 @@ audience: internal
 > - `docs/archive/api-v2-migration-2026-03.md` — 2026-03 envelope 통일 + v2 라우트 정리의 마이그레이션 기록
 > - `docs/archive/flutter-client-guides-2026-03.md` — 2026-03 당시 Flutter 클라이언트용 통합 가이드 모음 (현재 클라이언트는 `skkuverse-app` = RN + Expo + TS)
 >
-> **운영 진실의 우선순위**: `CLAUDE.md` > `README.md` > `features/<feature>/README.md` > `docs/notices-api-architecture.md` > `docs/cicd-and-branch-protection.md` > 본 문서. 충돌 시 위쪽이 이긴다.
+> **Source-of-truth order**: [docs/README.md](README.md) states it. This document ranks last.
 
 ---
 
@@ -33,7 +33,7 @@ audience: internal
 
 Production configuration, hosting and data are kept outside this repository. This repository keeps only what the app itself relies on.
 
-**Client IP.** `trust proxy 1` in `src/main.ts` takes the rightmost `X-Forwarded-For` entry as `req.ip`, the rate limiter's key, so the reverse proxy in front of the server must send the resolved client address as the only entry.
+**Client IP.** `trust proxy 1` in `src/http/http-app.bootstrap.ts` takes the rightmost `X-Forwarded-For` entry as `req.ip`, the rate limiter's key, so the reverse proxy in front of the server must send the resolved client address as the only entry.
 
 ---
 
@@ -1664,22 +1664,14 @@ pollers when you are done.
 | # | Source | Env Var | Purpose | Interval |
 |---|--------|---------|---------|----------|
 | 1 | SKKU shuttle system | `API_HSSC_NEW_PROD` / `_DEV` | HSSC campus shuttle bus positions | 10s |
-| 2 | skku.edu | Hardcoded URL | Building/space data sync (3-phase: buildList→buildInfo→spaceList) | 7 days |
 
-> **Building sync** moved from on-demand (per user request) to weekly background sync in `building.sync.js`. Data is stored in MongoDB (`skkubus_building`/`_dev` DB per `MONGO_BUILDING_DB_NAME`) and served via `/building/*` routes. See the Building API section below for endpoint details.
-
-### Internal Services
-
-| # | Service | Purpose |
-|---|---------|---------|
-| 3 | MongoDB Atlas | Database reads/writes (bus_cache, schedules) |
+> **Building data** is written by skkuverse-crawler, not by this server: [explanation/building-architecture.md](explanation/building-architecture.md).
 
 ---
 
 ## Notes
 
-- `API_STATION_HEWA` has no PROD/DEV split (single env var). All other polled APIs use `apiUrl()` for environment selection.
-- The `skku.edu` building sync URLs are hardcoded (not env-var-configured). Sync runs once per 7 days.
+- The HSSC API is the one polled API with a PROD/DEV split, chosen by `apiUrl()` (`src/infra/required-env.ts`).
 
 ---
 

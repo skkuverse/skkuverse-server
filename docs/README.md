@@ -3,7 +3,7 @@ title: Docs Index & Conventions
 type: reference
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-28
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -50,9 +50,9 @@ Docs are split by [Diátaxis](https://diataxis.fr/). **A doc is classified by th
 | [update-subway-timetables.md](how-to/update-subway-timetables.md) | Changing the subway timetables with no deploy — pull `subway-timetables`, rerun `convert.py` into the pulled directory, read the push report (tables unchanged, changed with their trains added and removed, added, removed), push to `_dev` then production, roll back |
 | [register-a-miniapp.md](how-to/register-a-miniapp.md) | Adding, editing or removing a mini app with `npm run data -- pull/push miniapps` — the index entry and detail, logos, a first-party origin in `origins.ts` before its push, the wait before a layout names it, and the order of a removal |
 | [configure-map-overlays.md](how-to/configure-map-overlays.md) | Everything the map can draw and how to add or change one — which tier you edit, whether it needs a deploy, and what to check when a shape does not appear |
-| [migrate-app-to-map-overlays.md](how-to/migrate-app-to-map-overlays.md) | The client half of the overlay change, for `skkuverse-app` — what changed on the wire, the ring winding the SDK needs reversed, and the fallback config that still points at a deleted route |
+| [migrate-app-to-map-overlays.md](how-to/migrate-app-to-map-overlays.md) | Deprecated: the client half of the overlay change, now done in `skkuverse-app` — what changed on the wire and the ring winding the SDK needs reversed |
 | [resync-the-jongro-registry.md](how-to/resync-the-jongro-registry.md) | When the Jongro station registry holds a TOPIS stop list change, or a route's document is missing — reading the held change from its log, checking it against TOPIS, and applying it with a guarded write on `jongro_routes` |
-| [raise-the-minimum-app-version.md](how-to/raise-the-minimum-app-version.md) | Raising `minVersion` or `minOsVersion` on `/app/config` — the store release live for everyone, `npm run app-gate:check`, the GA4 impact query, the `npm run data` push, the two 60-second caches, rollback, and creating the dataset from the live response (never the test fixture) |
+| [raise-the-minimum-app-version.md](how-to/raise-the-minimum-app-version.md) | Raising `minVersion` or `minOsVersion` on `/app/config` — the store release live for everyone, `npm run app-gate:check`, counting the gated devices, the `npm run data` push, the two 60-second caches, rollback, and creating the dataset from the live response (never the test fixture) |
 
 Production configuration and data are kept outside this repository.
 
@@ -61,12 +61,12 @@ Production configuration and data are kept outside this repository.
 | Document | Summary |
 | --- | --- |
 | [notices-api.md](reference/notices-api.md) | The `/notices/*` and `/internal/notices/*` request and response contracts, error codes and file map |
-| [event-places.md](reference/event-places.md) | How festival places are stored, written and run: the `places` and `activations` collections, their indexes, the sheet importer, a place's `detail` (the sheet's body) and the R2 photo rules, and the runbook for the window kill switch |
+| [event-places.md](reference/event-places.md) | How festival places are stored, written and run: the `places` and `activations` collections, their indexes, the sheet importer, a place's `detail` (the sheet's body) and the media-origin photo rule, and the runbook for the window kill switch |
 | [map-code-map.md](reference/map-code-map.md) | Where each part of `src/map/` lives, boot-time vs request-time work, which test pins what, and a change map |
-| [map-overlays-api.md](reference/map-overlays-api.md) | The one overlay schema every map layer draws — pins, zones and route lines tagged by `kind` — the `defaultVisibleWhen`/`userConfigurable` layer flags, and `GET /map/config` + `/map/overlays/{campus,event}` + `/map/overlays/event/details` |
+| [map-overlays-api.md](reference/map-overlays-api.md) | The one overlay schema every map layer draws — pins, zones and route lines tagged by `kind` — the `defaultVisibleWhen`/`userConfigurable` layer flags, and `GET /map/config` + `/map/overlays/{campus,transit,event}` + `/map/overlays/event/details` |
 | [miniapps-api.md](reference/miniapps-api.md) | `GET /miniapps` + `/miniapps/:id` — index and detail fields, the `shell` merge order (default < registry < the mini app's own manifest), first-party manifest fetch rules, push validation, and the broadcast feed endpoints |
 | [bus-live-api.md](reference/bus-live-api.md) | `GET /bus/live/:groupId` — a realtime line's vehicles and each station's next arrivals in one shape for Jongno and the HSSC shuttle: arrivals as instants, statuses, stops away, vehicles and positions, stop ids and pole numbers, open-enum fallbacks and the client's clock, minute and marker rules |
-| [bus-stops-api.md](reference/bus-stops-api.md) | `GET /bus/stops/:stopId/arrivals` — stop ids (`seoul-<ARS number>` for a Jongno pole, slugs for the shuttle and HSSC stops, aliases), the stop block, the live and timetable entries in configuration order, the next runs as scheduled arrivals, error codes, freshness and cost |
+| [bus-stops-api.md](reference/bus-stops-api.md) | `GET /bus/stops` + `/bus/stops/:stopId/arrivals` — stop ids (a Jongno pole's nine-digit station id, with `seoul-<ARS number>` as a legacy alias; slugs for the shuttle and HSSC stops; aliases and stop areas), the stop list, the stop block, the live and timetable entries in configuration order, the next runs as scheduled arrivals, error codes, freshness and cost |
 | [subway-api.md](reference/subway-api.md) | `GET /subway/stations/:stationId/arrivals` — the served stations, each field, what `source` means, counting down from `arrivalAt` with the device clock, `stopsAway` and the previous and next stations, the stale fallback and what `SUBWAY=off` stops, error codes and upstream data notes — and `GET /internal/subway/accuracy`, the error report by station, direction, horizon and source |
 | [games-api.md](reference/games-api.md) | `GET /games` + `/games/:id` — the registry the app resolves a game id against before it opens a hosted game, what a push of the `games` dataset is checked for, and the first-party game origins |
 | [logging.md](reference/logging.md) | What a log line contains (`event`, `reqId` = client id or CF-Ray), how to write one (lint-enforced), which lines become Sentry Issues, and what is never logged |
@@ -83,12 +83,12 @@ Production configuration and data are kept outside this repository.
 | [building-architecture.md](explanation/building-architecture.md) | What `src/building/` mirrors from SKKU's campus map, what each id means, the three routes, and which app screen reads which field |
 | [app-config-architecture.md](explanation/app-config-architecture.md) | What `GET /app/config` tells the app at boot: the version gate and minimum OS per platform and the origins it may trust |
 | [health-architecture.md](explanation/health-architecture.md) | What `/health` and `/health/ready` answer, who probes them, and what a 503 means |
-| [meals-architecture.md](explanation/meals-architecture.md) | What `src/meals/` serves for the cafeteria-menu screen, which cafeterias it lists and where they come from, and the crawler-writes, server-reads boundary the menus will cross |
+| [meals-architecture.md](explanation/meals-architecture.md) | What `src/meals/` serves for the cafeteria-menu screen: the cafeterias it lists and where they come from, and the daily menus it reads from skkuverse-crawler on `GET /meals` |
 | [calendar-architecture.md](explanation/calendar-architecture.md) | What `src/calendar/` answers about a date: the public holiday it mirrors from the official special-day calendar, the school rest day and the semester or vacation it reads from the rest days dataset and the crawled academic calendars, and what happens when a source fails |
 | [journey-architecture.md](explanation/journey-architecture.md) | What `GET /journey/routes` plans for the route planner, the `journey-routes` dataset it reads, the doors departures come through and how each cited place resolves |
 | [subway-architecture.md](explanation/subway-architecture.md) | What `src/subway/` serves about the stations nearest the two campuses, how a station is identified, where its data comes from, and what adding a station or a provider touches |
 | [subway-late-express.md](explanation/subway-late-express.md) | Why the subway tracker watches a station beyond the upstream ones, holds a missing train longer before the station and awaits trains: the 2026-10-17 late express that dropped out of the down list |
-| [ui-architecture.md](explanation/ui-architecture.md) | What `/ui/home` and its three siblings serve, the config files and modules they read, and which app screen reads which field |
+| [ui-architecture.md](explanation/ui-architecture.md) | What `/ui/home` and its four siblings serve, the datasets and modules they read, and which app screen reads which field |
 | [miniapps-architecture.md](explanation/miniapps-architecture.md) | What `/miniapps` and its routes serve, the registry and manifests they read, the broadcast feed and its send path, and which app screen reads which field |
 | [games-architecture.md](explanation/games-architecture.md) | What `/games` and `/games/:id` serve: the registry of hosted games, which says only whether and where the app may open each one, and which app screen reads which field |
 
@@ -125,8 +125,8 @@ Production configuration and data are kept outside this repository.
 
 | Document | Summary |
 | --- | --- |
-| [transit-route-planner.md](plans/transit-route-planner.md) | The route planner between the campuses, built against ADR 0022: the PR sequence from the shared call and the board reshape to the four options each way, the `journey-routes` dataset and its push checks, how each source fills the call, the source doors and the planner, the `journey/` module, the PoC options leg by leg, and the subway stations and probes they need |
-| [7800-unified-arrivals.md](plans/7800-unified-arrivals.md) | The 7800 express bus on `/bus/live` and the stop page in the ADR 0019 `arrival` shape, and the timetabled shuttles producing the same shape; PRs 1–7 shipped, PR 8 cancelled, the rest continues in ADR 0022 |
+| [transit-route-planner.md](plans/transit-route-planner.md) | The route planner between the campuses, built against ADR 0022: the PR sequence from the shared call and the board reshape to the four options each way, the `journey-routes` dataset and its push checks, how each source fills the call, the source doors and the planner, the `journey/` module, the PoC options leg by leg, and the subway stations and probes they need; (a) to (h) landed, only the HSSC first-mile door is left |
+| [7800-unified-arrivals.md](plans/7800-unified-arrivals.md) | The 7800 express bus on `/bus/live` and the stop page in the ADR 0019 `arrival` shape, and the timetabled shuttles producing the same shape; PRs 1–7 shipped, PR 8 cancelled, §7.2 step 3 and the `jongro` rename still open, the rest continues in ADR 0022 |
 
 ### archive (historical)
 
@@ -136,23 +136,23 @@ Production configuration and data are kept outside this repository.
 | [flutter-client-guides-2026-03.md](archive/flutter-client-guides-2026-03.md) | The 2026-03 integration guides for the legacy Flutter client |
 | [building-data-2026-03.md](archive/building-data-2026-03.md) | The 2026-03 building data survey and connections guide, from `project-docs.md` |
 
-### Not yet migrated (legacy, with a drift banner, waiting to be split)
+### Legacy (stubs and docs not yet migrated)
 
-These docs are not yet split into Diátaxis. Each carries a drift banner and is exempt from the lint gate (`ignores`). When one is split, remove its banner and its `ignores` entry.
+The two pointer stubs are kept for their inbound links. The two docs not yet migrated carry a drift banner and are exempt from the lint gate (`ignores`). When one is split, remove its banner and its `ignores` entry.
 
 | Document | Status |
 | --- | --- |
-| [notices-api-architecture.md](notices-api-architecture.md) | superseded: split into the five docs above; only a pointer stub is left |
+| [notices-api-architecture.md](notices-api-architecture.md) | superseded: split into the docs above; only a pointer stub is left |
 | [project-docs.md](project-docs.md) | Not yet split: the bus system and the external APIs; hosting is documented outside this repository. Express drift |
 | [skku-notice-sources.md](skku-notice-sources.md) | deprecated: only a pointer stub is left. The sources' source of truth is `src/notices/sources.json` and the crawler's `sources.json` and coverage |
 | [skku-departments.md](skku-departments.md) | Not yet migrated: an editorial reference to the department home pages |
 
 ## Migration backlog
 
-Flagship first: only notices is fully migrated so far. What moves next:
+Two legacy docs are left. What moves next:
 
-- **Split `project-docs.md` (large):** the bus schedule system into `explanation/bus-schedule-architecture.md`, `reference/bus-api.md` and `how-to/add-bus-route.md`; the external APIs (HSSC, Jongro, Hyehwa, map) into `reference/external-apis.md`; buildings are done: [explanation/building-architecture.md](explanation/building-architecture.md), with the 2026-03 data survey moved to [archive/building-data-2026-03.md](archive/building-data-2026-03.md). Fix the Express-to-NestJS drift throughout.
-- **`skku-departments.md`**: move it to `reference/` and bring it up to date. (`skku-notice-sources.md` is already a pointer stub to the crawler's and `src/notices/sources.json`'s source of truth.)
+- **Split or retire `project-docs.md` (large):** most of it is now covered by [explanation/bus-architecture.md](explanation/bus-architecture.md), the bus ADRs (0014, 0015, 0018, 0019), the bus how-tos and `contracts/produced/`. What it alone still holds is a how-to for adding a timetabled bus or a holiday override. It is written against the Express files, so rewrite it against `src/bus/schedule/` before the file goes.
+- **`skku-departments.md`**: move it to `reference/` and bring it up to date.
 - When you split a doc, remove its line from `ignores` in `.markdownlint-cli2.jsonc`.
 
 ## Writing rules
