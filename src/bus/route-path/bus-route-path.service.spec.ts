@@ -402,7 +402,7 @@ describe("BusRoutePathService.sync on an empty store", () => {
   });
 });
 
-// WHY: 7800 is unlisted (docs/plans/7800-unified-arrivals.md, Q2): its line is synced like a Jongno one but drawn
+// WHY: 7800 is unlisted (docs/archive/7800-unified-arrivals-2026-10.md, Q2): its line is synced like a Jongno one but drawn
 // nowhere, so the map's read leaves it out and only a read by id answers it.
 describe("BusRoutePathService over 7800's capture", () => {
   it("inserts 7800's line at its first sync: 80 stations, 사당역 for seq 1-39 and 호매실동차고지 after, the turnaround at seq 39", async () => {

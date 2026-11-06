@@ -3,7 +3,7 @@ title: Journey Architecture
 type: explanation
 status: draft
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -77,7 +77,7 @@ flowchart LR
 - A `bus-stops` push reruns this dataset's checks (`recheckTriggers`), so it cannot drop a cited stop, the alias an unlisted route's cited pole needs, or the sequence order a cited ride boards by.
 - Each ride boards the first run catchable a catch margin after the legs before it; the legs before the first ride are timed back from it (`planOption`). A vehicle with no seat left is skipped, and unknown seats are boardable.
 - A ride's `basis` is the weaker of its two calls (`toLegBasis`); an alight the door cannot place takes the leg's ride minutes as an estimate: the `rideMinutesBands` band of the board's day type (`weekend` on a Saturday, a Sunday or a public holiday, `isKstRestDay`) that its KST time of day falls in, else the flat `rideMinutes`.
-- A subway ride lists only trains that call at its board platform and then at its alight one: within one table joined by the train's row, so a train ending short or an express passing the alight platform is never boarded; across two tables by train number, a train the alight table numbers apart still listed with no alight call. Every PoC ride's two platforms read one table, and the 남태령 probe found every through train numbered alike ([transit-route-planner.md](../plans/transit-route-planner.md#probes)). Its first and last flags are across the ride's trains, so the last train of a ride is the last that reaches the alight platform.
+- A subway ride lists only trains that call at its board platform and then at its alight one: within one table joined by the train's row, so a train ending short or an express passing the alight platform is never boarded; across two tables by train number, a train the alight table numbers apart still listed with no alight call. Every PoC ride's two platforms read one table, and the 남태령 probe found every through train numbered alike ([transit-route-planner-2026-10.md](../archive/transit-route-planner-2026-10.md#probes)). Its first and last flags are across the ride's trains, so the last train of a ride is the last that reaches the alight platform.
 - A ride starts at its board call's time, departure first, or at its expected arrival when that is later, since a run running late leaves no earlier than it arrives (`toBoardTime`), and ends at its alight call's arrival, falling back to its departure (`toAlightTime`; [ADR 0022, D5](../decisions/0022-journey-and-call-spec.md), amended): a subway alight call stays the station board's, both scheduled instants included, while the rider leaves at the arrival.
 - A subway ride boards a train its board platform's station board lists live or estimated by the very call that board serves for its run, with the ride's first and last flags; the train's delay past its timetable arrival there moves its alight call's expected arrival by as much, as an estimate. Past the stored trains, and for a platform whose state is stale, it boards from the timetable.
 - A TOPIS ride boards the predicted vehicles the live route lists at its board pole inside the plan's window (TOPIS names two a stop), each call exactly as `/bus/live` serves it, and its alight is the same vehicle's call at the alight pole when TOPIS names it there, else the leg's `rideMinutes` (`toTopisBoard`). Past them, while the pole's service day runs (`toServiceSpan`, by the time of day of its stored first and last run), the ride boards half the stored headway after the rider is ready, naming no vehicle, as an estimate; with no stored `term` it extrapolates nothing. Before the first run it boards that run from TOPIS's published time; once TOPIS says the service ended at the pole or its last run has passed, it lists no headway and names the next service day's first run. Overnight TOPIS answers no rows (header code `4`), so the pole's first and last run then come from the hours the poller last stated on the route's registry document (`BusRealtimeJongroService.listServiceHours`); a route with none stored names no next service.
@@ -95,10 +95,11 @@ flowchart LR
 ## Open questions
 
 - Stop areas resolve at push in `bus-stops` but not in the planner; a route end at a stop area waits for that.
+- The HSSC shuttle as a first mile has no door yet (`bus/departures/hssc/`, over [ADR 0018](../decisions/0018-hssc-arrival-estimates.md)'s engine); no option cites it.
 
 ## Related
 
 - [ADR 0022](../decisions/0022-journey-and-call-spec.md): the call, places, legs, options and doors
-- [transit-route-planner.md](../plans/transit-route-planner.md): the PR sequence and the dataset's options
+- [transit-route-planner-2026-10.md](../archive/transit-route-planner-2026-10.md): the archived plan: the PR sequence and the dataset's options
 - [ADR 0013](../decisions/0013-runtime-data-in-mongodb.md): the dataset's push and read contract
 - [Docs index](../README.md): writing rules

@@ -1,7 +1,7 @@
 /**
  * Characterization of every route that serves the `arrival` shape or the smart view's run times, before the live
  * mappers produce domain stop calls and the stop page reads shuttle runs instead of re-parsing the smart view's
- * "HH:mm" strings (docs/plans/7800-unified-arrivals.md §7, PR 5 and PR 6; ADR 0011, D6): GET
+ * "HH:mm" strings (docs/archive/7800-unified-arrivals-2026-10.md §7, PR 5 and PR 6; ADR 0011, D6): GET
  * /bus/schedule/data/:serviceId/smart of every service, GET /bus/stops/:stopId/arrivals of the shuttle stops at both
  * campuses and the commute stations, two HSSC stops, a Jongno pole and the four 7800 stops, and GET /bus/live/jongro02,
  * jongro07, hssc and gyeonggi7800, each in ko, en and zh, answer the status, `Cache-Control`, `ETag` and bytes pinned in

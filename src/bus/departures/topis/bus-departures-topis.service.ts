@@ -18,7 +18,7 @@ import type { TopisLegStations } from "./bus-departures-topis.types";
 
 type LegRead = { stationsVersion: string | null; lang: SupportedLang };
 
-// SEE: docs/plans/transit-route-planner.md ("The doors"): the door for TOPIS routes, over the live route's calls.
+// SEE: docs/decisions/0022-journey-and-call-spec.md (D6): the door for TOPIS routes, over the live route's calls.
 @Injectable()
 export class BusDeparturesTopisService implements DepartureSource {
   constructor(

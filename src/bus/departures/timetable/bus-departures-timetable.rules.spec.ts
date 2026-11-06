@@ -1,5 +1,5 @@
 /**
- * What the timetabled-shuttle door decides (ADR 0022, D6; docs/plans/transit-route-planner.md "Producers"): where a
+ * What the timetabled-shuttle door decides (ADR 0022, D6; docs/archive/transit-route-planner-2026-10.md "Producers"): where a
  * service's sequence places a leg's board and alight stops for each route type, with the alight after the board; the
  * departures of every route type that calls at both, joined by run, a board call and an alight call of the same run
  * filled as the stop page fills them (toTimetabledCall), listed from the current minute to the window's end by board

@@ -1,7 +1,7 @@
 ---
 title: Transit Route Planner
 type: plan
-status: accepted
+status: superseded
 owner: spencer0124
 last-updated: 2026-11-06
 audience: internal
@@ -10,6 +10,9 @@ audience: internal
 # Transit Route Planner
 
 > How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-11-06: (a) to (h) have landed on `main`, (a) to (g) in production since PR #342. What is left is the Scope's Out list, the HSSC door (`bus/departures/hssc/`) waiting for the HSSC first-mile option. The body below is kept as written: its "Today" column and the Subway coverage table describe the code before (b).
+
+> [!NOTE]
+> Archived from `docs/plans/transit-route-planner.md` on 2026-11-06, kept as written: a snapshot of the plan, not the current rules. The current spec is [ADR 0022](../decisions/0022-journey-and-call-spec.md) and [journey-architecture.md](../explanation/journey-architecture.md); trust `src/` over anything below.
 
 ## Scope
 
@@ -373,6 +376,6 @@ Two things (b) settles before it pushes:
 
 - [ADR 0022](../decisions/0022-journey-and-call-spec.md): the spec this plan builds
 - [ADR 0010](../decisions/0010-server-architecture.md), [ADR 0012](../decisions/0012-runtime-roles.md), [ADR 0013](../decisions/0013-runtime-data-in-mongodb.md), [ADR 0017](../decisions/0017-subway-arrivals.md), [ADR 0018](../decisions/0018-hssc-arrival-estimates.md), [ADR 0019](../decisions/0019-bus-live-api.md)
-- [7800-unified-arrivals.md](7800-unified-arrivals.md): how 7800 joined the TOPIS pipeline, its stops, quota and seats
+- [7800-unified-arrivals-2026-10.md](7800-unified-arrivals-2026-10.md): how 7800 joined the TOPIS pipeline, its stops, quota and seats
 - [docs/explanation/subway-architecture.md](../explanation/subway-architecture.md): what adding a station touches
 - [docs/how-to/edit-runtime-data.md](../how-to/edit-runtime-data.md): pull, push and roll back a dataset

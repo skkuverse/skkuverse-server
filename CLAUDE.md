@@ -122,5 +122,5 @@ Push: this server never talks to FCM directly. It calls a deployed Cloud Functio
 - Map: `docs/explanation/map-architecture.md`, `docs/reference/map-overlays-api.md`, `docs/how-to/configure-map-overlays.md`, `docs/reference/event-places.md`
 - Mini apps and home: `docs/reference/miniapps-api.md`, `docs/how-to/register-a-miniapp.md`, `docs/how-to/configure-home.md`
 - Production config and data are kept outside this repository. CI and branch rules: `docs/cicd-and-branch-protection.md`
-- Bus and external APIs: `docs/project-docs.md` (legacy, describes the Express layout; check claims against `src/`)
+- Bus: `docs/explanation/bus-architecture.md`, `docs/reference/bus-live-api.md`, `docs/reference/bus-stops-api.md`, `docs/how-to/change-a-shuttle-timetable.md`
 - Test conventions: `.claude/rules/tests.md` (loads when you touch `__tests__/` or a `src/**/*.spec.ts`)

@@ -2,7 +2,7 @@ import type { JongroRoute, JongroRouteCapabilities, ServiceConfigEntry, ServiceC
 
 export const SEOUL_BUS_API_URL = "http://ws.bus.go.kr/api/rest"; // QUIRK(topis): HTTP only, so the key is cleartext (443 timed out, 2026-10-26).
 
-// EVIDENCE: TOPIS's dataTm advances about every 20 s (2026-10-17). SEE: docs/project-docs.md ("Daily Usage and Quota Check")
+// EVIDENCE: TOPIS's dataTm advances about every 20 s (2026-10-17). SEE: docs/explanation/bus-architecture.md ("Invariants")
 const JONGRO_POLL_INTERVAL_MS = 25_000;
 const JONGRO_CAPABILITIES: JongroRouteCapabilities = Object.freeze({ positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true, lowFloor: true });
 const jongroRoute = (code: string, busRouteId: string): JongroRoute =>
@@ -12,7 +12,7 @@ const jongroRoute = (code: string, busRouteId: string): JongroRoute =>
 export const JONGRO_ROUTES: ReadonlyArray<JongroRoute> = Object.freeze([jongroRoute("02", "100900008"), jongroRoute("07", "100900004"), jongroRoute("08", "100900005")]);
 
 // QUIRK(topis): a Gyeonggi route answers by its GBIS route id and sends no load (rerdie_Div 2, 0 aboard; 2026-10-24).
-// Polled only with REGIONAL_BUS on, on no card. SEE: docs/project-docs.md ("Daily Usage and Quota Check")
+// Polled only with REGIONAL_BUS on, on no card. SEE: docs/explanation/bus-architecture.md ("Invariants")
 const REGIONAL_CAPABILITIES: JongroRouteCapabilities = Object.freeze({ positionSource: "gps", occupancy: false, plateNumber: true, lastBus: true, lowFloor: true });
 export const REGIONAL_ROUTES: ReadonlyArray<JongroRoute> = Object.freeze([Object.freeze({ id: "gyeonggi7800", code: "7800", busRouteId: "200000150", capabilities: REGIONAL_CAPABILITIES, isListed: false, pollIntervalMs: 30_000 })]);
 

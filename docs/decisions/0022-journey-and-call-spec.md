@@ -3,7 +3,7 @@ title: Journey and Call Spec
 type: adr
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -13,7 +13,7 @@ audience: internal
 
 ## Status
 
-Accepted 2026-10-25. It supersedes, where they disagree, [transit-route-planner.md](../plans/transit-route-planner.md) and [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md).
+Accepted 2026-10-25. It superseded, where they disagreed, the two implementation plans, now archived as [transit-route-planner-2026-10.md](../archive/transit-route-planner-2026-10.md) and [7800-unified-arrivals-2026-10.md](../archive/7800-unified-arrivals-2026-10.md).
 
 ## Context
 
@@ -144,7 +144,10 @@ A ride leg's `startAt` and `endAt` are its calls' times. Its `basis` is the weak
 - Amended 2026-10-25 (PR (h)): a ride boards at its board call's time or, when later, at the call's expected arrival (`toBoardTime`), since a run running late leaves no earlier than it arrives. A live subway call keeps its timetable departure beside its expected arrival, so D2's order alone would board a late train at its timetable time. Every other producer's board call carries no expected arrival beside a departure, so its board time is D2's.
 - Amended 2026-10-25 (PR (h)): `later` holds only listed calls, never a headway estimate past a source's predicted vehicles (D7's realtime reach).
 - Amended 2026-10-26 (app request, owner-approved): a ride leg adds `upcoming`, at most the next two listed calls at its board stop counted from the plan's now, not from the connection. These are the first board calls whose board time (`toBoardTime`) is now or later, in board order, with no catch margin. A full vehicle is skipped and unknown seats count, as for boarding. A headway estimate never enters it, so a board that lists nothing from now gives none. Each upcoming call's vehicle joins `vehicles`. The app shows them as minutes away, mainly on a later ride, whose `board` is the connection's call.
-- Amended 2026-10-26 (app request, owner-approved): a ride leg adds `stops`, the places it passes between its board and alight stops, in travel order and never either end, each `{ place }` with no time. Its door lists them from data it already stores, through a cached read. A bus ride takes its route's sequence between the two poles, as the door placed them (the nearest alight after a board on a loop). It leaves out a station TOPIS names `(미정차)`, since 7800 passes it without stopping. A stop the catalog holds keeps its catalog id and tap action; a pole only an unlisted route names keeps its station id, TOPIS's name, the coords of the stored route line and no action. A shuttle ride takes its sequence's stops when every route type serving the leg calls at the same ones. A stop with no coords leaves the leg's `stops` null, never a partial list. A subway ride takes the stops of the train it boards, from that train's own timetable row, so an express lists only the stations it calls at; a station between two served ones is a `subway-topology` neighbor placed by its station id and coords, with no action (amended 2026-10-26: it served null before the topology held them). Amended 2026-10-27 (owner): that neighbor is named in every language, and a push refuses a neighbor with a station id and no name, so a ride never lists a Korean name in another language. `warnings` are `tightTransfer`, a connection under 120 s, and `connectionAtRisk`, one under the uncertainty of an estimate it rests on: 150 s, plus half the headway for a ride boarded on one. The evidence for both numbers is in [transit-route-planner.md](../plans/transit-route-planner.md#the-planner).
+- Amended 2026-10-26 (app request, owner-approved): a ride leg adds `stops`, the places it passes between its board and alight stops, in travel order and never either end, each `{ place }` with no time. Its door lists them from data it already stores, through a cached read. A bus ride takes its route's sequence between the two poles, as the door placed them (the nearest alight after a board on a loop). It leaves out a station TOPIS names `(미정차)`, since 7800 passes it without stopping. A stop the catalog holds keeps its catalog id and tap action; a pole only an unlisted route names keeps its station id, TOPIS's name, the coords of the stored route line and no action. A shuttle ride takes its sequence's stops when every route type serving the leg calls at the same ones. A stop with no coords leaves the leg's `stops` null, never a partial list. A subway ride takes the stops of the train it boards, from that train's own timetable row, so an express lists only the stations it calls at; a station between two served ones is a `subway-topology` neighbor placed by its station id and coords, with no action (amended 2026-10-26: it served null before the topology held them). Amended 2026-10-27 (owner): that neighbor is named in every language, and a push refuses a neighbor with a station id and no name, so a ride never lists a Korean name in another language. `warnings` are `tightTransfer`, a connection under 120 s, and `connectionAtRisk`, one under the uncertainty of an estimate it rests on: 150 s, plus half the headway for a ride boarded on one. The evidence for both numbers:
+  - **120 s (`TIGHT_TRANSFER_SEC`).** TOPIS predictions 0–3 min out miss by 60–80 s at p90 ([ADR 0014](0014-jongro-realtime-from-topis.md)). The dataset's walks are whole minutes that leave out the walk inside a station. So the 60 s catch margin covers no such miss under 120 s.
+  - **150 s (`ESTIMATE_UNCERTAINTY_SEC`).** The p90 error of this server's bus estimates at their longest measured horizon: TOPIS 1.5–2.5 min at 3–10 min (ADR 0014), and the HSSC engine 142 s three stops ahead ([ADR 0018](0018-hssc-arrival-estimates.md)). Longer rides are unmeasured, so 150 s is a floor.
+  - **Half the headway.** A ride boarded on a TOPIS headway can come anywhere within the stored `term`, and the estimate sits mid-way. A headway board names no run, so it cannot be missed.
 
 A new mode adds a kind only when it needs different required fields. Taxi will add `taxi`, its fare and its pickup wait, with times from a travel-time source fed by a poller over fixed pairs ([ADR 0012](0012-runtime-roles.md), D2). The wire carries no reserved, unserved kind.
 
@@ -198,4 +201,5 @@ A stored field a new release adds is optional on read, because api replicas depl
 ## Related
 
 - [ADR 0010](0010-server-architecture.md), [ADR 0012](0012-runtime-roles.md), [ADR 0013](0013-runtime-data-in-mongodb.md), [ADR 0017](0017-subway-arrivals.md), [ADR 0019](0019-bus-live-api.md)
-- [transit-route-planner.md](../plans/transit-route-planner.md): the implementation plan: the planner, the dataset and the PR sequence
+- [journey-architecture.md](../explanation/journey-architecture.md): the journey module as built
+- [transit-route-planner-2026-10.md](../archive/transit-route-planner-2026-10.md): the archived implementation plan and its PR sequence

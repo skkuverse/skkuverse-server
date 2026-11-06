@@ -88,7 +88,7 @@ The switches cover what the server sends out. With the maintainers' development 
 
 - **Firebase.** There is one project. A dev build's phone receives real production pushes. The local server verifies production ID tokens with the project id alone and holds no service-account key.
 - **Databases.** The `_dev` databases hold real shared data. Never load-test against them. `NODE_ENV=production` with the dev `.env` resolves production database names. To run the production image locally, use `npm run verify:serve`, which overrides them.
-- **Upstream quotas.** The local bus pollers use a metered service key whose daily quota is limited ([project-docs.md](../project-docs.md#daily-usage-and-quota-check)). Stop them when you are done.
+- **Upstream quotas.** The local bus pollers use a metered service key whose daily quota per operation every caller of the key shares ([bus architecture](../explanation/bus-architecture.md#invariants)). Stop them when you are done.
 - **Web pages.** Webview and mini-app pages inside the app load from their production hosts and call the production API, even when native screens use the local server.
 - **`GET /notices/overview`.** It calls skkuverse-ai at `AI_API_URL`, a loopback address in the dev config. Without a local skkuverse-ai the overview answers "unavailable".
 

@@ -13,13 +13,13 @@ audience: internal
 
 ## Which source wins (when docs disagree)
 
-This absorbs the rules once scattered through `project-docs.md`. When two docs, or a doc and the code, disagree, trust them in this order:
+This absorbs the rules once scattered through the legacy flat docs. When two docs, or a doc and the code, disagree, trust them in this order:
 
 1. **The code (`src/`)**: the final word on file names, constants and endpoints. A doc points here instead of copying values.
 2. **`README.md`**: the current stack, layout and how to run it (it reflects the 2026-05-31 NestJS migration).
 3. **`docs/` (as this index lists it)**: the Diátaxis docs. `status: accepted` is authoritative; `draft` is a draft.
 4. **`CLAUDE.md`**: the agent guide: commands, the `src/` map and the hard rules, pointing at code and docs instead of copying them. Area-specific agent rules live in `.claude/rules/`.
-5. **Legacy flat docs** (`project-docs.md` and others): not yet migrated, with a drift banner. The least trusted.
+5. **Legacy pointer stubs** (`notices-api-architecture.md`, `skku-notice-sources.md`): kept for their inbound links. The least trusted.
 
 ## Folder structure (Diátaxis)
 
@@ -46,11 +46,11 @@ Docs are split by [Diátaxis](https://diataxis.fr/). **A doc is classified by th
 | [test-the-app-against-a-local-server.md](how-to/test-the-app-against-a-local-server.md) | Pointing a simulator or phone at `npm run dev` — the `PUSH_DELIVERY`/`CACHE` switches a local run defaults to off, the base URL per device, and what still reaches production |
 | [configure-home.md](how-to/configure-home.md) | What `GET /ui/home` serves — the banner carousel (images, rotation, the app default's place, time windows) and the tile grids (mini apps, bundled games and links, mixed); uploading a banner and why released apps still read `hidden` |
 | [edit-runtime-data.md](how-to/edit-runtime-data.md) | Editing a dataset in the content database with `npm run data` — pull, edit, push, history, rollback, copying production into `_dev`, the `_dev` default and the production confirmation, and `check --prod` before a schema change or removing a referenced identity |
+| [change-a-shuttle-timetable.md](how-to/change-a-shuttle-timetable.md) | Changing what a timetabled shuttle serves — a semester's timetable with `npm run schedule`, a day off as a rest day or an override, a day with its own runs, and the code a new timetabled service needs |
 | [edit-bus-stops.md](how-to/edit-bus-stops.md) | Changing a shuttle stop, its photo, street view or map guide, a sequence's labels, or an HSSC station label with `npm run data -- pull/push bus-stops` and no deploy — what a push checks, what stays in code, `_dev` then production, roll back |
 | [update-subway-timetables.md](how-to/update-subway-timetables.md) | Changing the subway timetables with no deploy — pull `subway-timetables`, rerun `convert.py` into the pulled directory, read the push report (tables unchanged, changed with their trains added and removed, added, removed), push to `_dev` then production, roll back |
 | [register-a-miniapp.md](how-to/register-a-miniapp.md) | Adding, editing or removing a mini app with `npm run data -- pull/push miniapps` — the index entry and detail, logos, a first-party origin in `origins.ts` before its push, the wait before a layout names it, and the order of a removal |
 | [configure-map-overlays.md](how-to/configure-map-overlays.md) | Everything the map can draw and how to add or change one — which tier you edit, whether it needs a deploy, and what to check when a shape does not appear |
-| [migrate-app-to-map-overlays.md](how-to/migrate-app-to-map-overlays.md) | Deprecated: the client half of the overlay change, now done in `skkuverse-app` — what changed on the wire and the ring winding the SDK needs reversed |
 | [resync-the-jongro-registry.md](how-to/resync-the-jongro-registry.md) | When the Jongro station registry holds a TOPIS stop list change, or a route's document is missing — reading the held change from its log, checking it against TOPIS, and applying it with a guarded write on `jongro_routes` |
 | [raise-the-minimum-app-version.md](how-to/raise-the-minimum-app-version.md) | Raising `minVersion` or `minOsVersion` on `/app/config` — the store release live for everyone, `npm run app-gate:check`, counting the gated devices, the `npm run data` push, the two 60-second caches, rollback, and creating the dataset from the live response (never the test fixture) |
 
@@ -87,7 +87,6 @@ Production configuration and data are kept outside this repository.
 | [calendar-architecture.md](explanation/calendar-architecture.md) | What `src/calendar/` answers about a date: the public holiday it mirrors from the official special-day calendar, the school rest day and the semester or vacation it reads from the rest days dataset and the crawled academic calendars, and what happens when a source fails |
 | [journey-architecture.md](explanation/journey-architecture.md) | What `GET /journey/routes` plans for the route planner, the `journey-routes` dataset it reads, the doors departures come through and how each cited place resolves |
 | [subway-architecture.md](explanation/subway-architecture.md) | What `src/subway/` serves about the stations nearest the two campuses, how a station is identified, where its data comes from, and what adding a station or a provider touches |
-| [subway-late-express.md](explanation/subway-late-express.md) | Why the subway tracker watches a station beyond the upstream ones, holds a missing train longer before the station and awaits trains: the 2026-10-17 late express that dropped out of the down list |
 | [ui-architecture.md](explanation/ui-architecture.md) | What `/ui/home` and its four siblings serve, the datasets and modules they read, and which app screen reads which field |
 | [miniapps-architecture.md](explanation/miniapps-architecture.md) | What `/miniapps` and its routes serve, the registry and manifests they read, the broadcast feed and its send path, and which app screen reads which field |
 | [games-architecture.md](explanation/games-architecture.md) | What `/games` and `/games/:id` serve: the registry of hosted games, which says only whether and where the app may open each one, and which app screen reads which field |
@@ -123,10 +122,7 @@ Production configuration and data are kept outside this repository.
 
 ### plans (work queues)
 
-| Document | Summary |
-| --- | --- |
-| [transit-route-planner.md](plans/transit-route-planner.md) | The route planner between the campuses, built against ADR 0022: the PR sequence from the shared call and the board reshape to the four options each way, the `journey-routes` dataset and its push checks, how each source fills the call, the source doors and the planner, the `journey/` module, the PoC options leg by leg, and the subway stations and probes they need; (a) to (h) landed, only the HSSC first-mile door is left |
-| [7800-unified-arrivals.md](plans/7800-unified-arrivals.md) | The 7800 express bus on `/bus/live` and the stop page in the ADR 0019 `arrival` shape, and the timetabled shuttles producing the same shape; PRs 1–7 shipped, PR 8 cancelled, §7.2 step 3 and the `jongro` rename still open, the rest continues in ADR 0022 |
+No plan is open. A finished plan moves to `archive/` as `<name>-YYYY-MM.md`.
 
 ### archive (historical)
 
@@ -134,26 +130,18 @@ Production configuration and data are kept outside this repository.
 | --- | --- |
 | [api-v2-migration-2026-03.md](archive/api-v2-migration-2026-03.md) | The 2026-03 envelope unification and v2 route cleanup, as a migration record |
 | [flutter-client-guides-2026-03.md](archive/flutter-client-guides-2026-03.md) | The 2026-03 integration guides for the legacy Flutter client |
-| [building-data-2026-03.md](archive/building-data-2026-03.md) | The 2026-03 building data survey and connections guide, from `project-docs.md` |
+| [building-data-2026-03.md](archive/building-data-2026-03.md) | The 2026-03 building data survey and connections guide, from the legacy `project-docs.md` |
+| [transit-route-planner-2026-10.md](archive/transit-route-planner-2026-10.md) | The route planner's implementation plan against ADR 0022: the PR sequence (a) to (h), the `journey-routes` dataset, the doors, the planner and the subway probes, as written |
+| [7800-unified-arrivals-2026-10.md](archive/7800-unified-arrivals-2026-10.md) | The plan that brought 7800 onto `/bus/live` and the stop page and gave timetabled shuttles the same arrival shape, as written |
 
 ### Legacy (stubs and docs not yet migrated)
 
-The two pointer stubs are kept for their inbound links. The two docs not yet migrated carry a drift banner and are exempt from the lint gate (`ignores`). When one is split, remove its banner and its `ignores` entry.
+The two pointer stubs are kept for their inbound links.
 
 | Document | Status |
 | --- | --- |
 | [notices-api-architecture.md](notices-api-architecture.md) | superseded: split into the docs above; only a pointer stub is left |
-| [project-docs.md](project-docs.md) | Not yet split: the bus system and the external APIs; hosting is documented outside this repository. Express drift |
 | [skku-notice-sources.md](skku-notice-sources.md) | deprecated: only a pointer stub is left. The sources' source of truth is `src/notices/sources.json` and the crawler's `sources.json` and coverage |
-| [skku-departments.md](skku-departments.md) | Not yet migrated: an editorial reference to the department home pages |
-
-## Migration backlog
-
-Two legacy docs are left. What moves next:
-
-- **Split or retire `project-docs.md` (large):** most of it is now covered by [explanation/bus-architecture.md](explanation/bus-architecture.md), the bus ADRs (0014, 0015, 0018, 0019), the bus how-tos and `contracts/produced/`. What it alone still holds is a how-to for adding a timetabled bus or a holiday override. It is written against the Express files, so rewrite it against `src/bus/schedule/` before the file goes.
-- **`skku-departments.md`**: move it to `reference/` and bring it up to date.
-- When you split a doc, remove its line from `ignores` in `.markdownlint-cli2.jsonc`.
 
 ## Writing rules
 

@@ -674,7 +674,7 @@ describe("BusRealtimeJongroService.refresh time at a stop", () => {
   });
 });
 
-// WHY: 7800 runs through this flow unchanged (docs/plans/7800-unified-arrivals.md, section 4), keyed by its code.
+// WHY: 7800 runs through this flow unchanged (docs/archive/7800-unified-arrivals-2026-10.md, section 4), keyed by its code.
 describe("BusRealtimeJongroService.refresh over 7800's capture", () => {
   it("stores its 80 arrival rows and 15 buses under its code, each bus on a stored station, and warns nothing", async () => {
     // Arrange

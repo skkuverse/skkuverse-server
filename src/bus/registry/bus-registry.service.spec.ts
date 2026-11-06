@@ -512,7 +512,7 @@ describe("BusRegistryService.bootstrap", () => {
   });
 });
 
-// WHY: 7800 joins the TOPIS route list unlisted (docs/plans/7800-unified-arrivals.md, Q2), so the config's read of
+// WHY: 7800 joins the TOPIS route list unlisted (docs/archive/7800-unified-arrivals-2026-10.md, Q2), so the config's read of
 // every route never reads it, while the live route and the stop index read it by id.
 describe("BusRegistryService over 7800's capture", () => {
   const sightingTurnarounds = () => sightings7800().map((sighting) => sighting.turnaroundStationId);

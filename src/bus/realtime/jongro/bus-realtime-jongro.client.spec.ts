@@ -674,8 +674,8 @@ describe("BusRealtimeJongroClient bus type", () => {
   });
 });
 
-// WHY: a laptop polling on production's key can spend arrivals' 6,752 calls a day of margin (docs/project-docs.md,
-// "Daily Usage and Quota Check"), so a spent quota is told apart from any other refusal for its alert.
+// WHY: a laptop polling on production's key can spend arrivals' 6,752 calls a day of margin (docs/explanation/bus-architecture.md,
+// "Invariants"), so a spent quota is told apart from any other refusal for its alert.
 describe("BusRealtimeJongroClient over a spent daily quota", () => {
   const GATEWAY_REFUSAL =
     "<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>22</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>";

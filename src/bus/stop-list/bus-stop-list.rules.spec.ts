@@ -43,7 +43,7 @@ describe("toStopListEtag", () => {
   });
 });
 
-// WHY: 7800 also stops at aliased poles (docs/plans/7800-unified-arrivals.md, section 6), and Sadang is on neither campus.
+// WHY: 7800 also stops at aliased poles (docs/archive/7800-unified-arrivals-2026-10.md, section 6), and Sadang is on neither campus.
 describe("toCampusPoles", () => {
   const jongroRoute = (groupId: string) => ({ kind: "jongro" as const, groupId, stationIndex: 0, towards: null, stationsVersion: "v" });
 

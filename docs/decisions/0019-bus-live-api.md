@@ -50,7 +50,7 @@ Every key is always present, and what a source cannot supply is null, never a mi
 - Added 2026-10-25 ([ADR 0022](0022-journey-and-call-spec.md), D4): an alias never retires an id. `seoul-<arsId>` keeps resolving to the stop that aliases it, so a reference written with either id stays valid. An unlisted route's pole exists only through its alias, so that alias cannot be removed while the journey dataset names the pole.
 - Amended 2026-10-25 (owner): a pole's canonical stop id is its national nine-digit station id (TOPIS `stId`, the registry's `topisId`, equal to GBIS `stationId`; 국토교통부고시 제2021-200호 §14① nine digits, §14⑤ never reused, §15② kept through a rename), no longer `seoul-<arsId>`, since ARS numbers collide (`01013` is both 종로2가 and 수원 성균관대학교), stand at `0` and are reassigned. The rules above keep which stations are a stop; only the id changes. `seoul-<arsId>` is a legacy alias that never retires: a stop page asked by it answers the stop that pole is under its canonical id, with the same `503` and `404`, and a stop area may name a member by it. `GET /bus/stops` and every served `stopId` carry only canonical ids, and a catalog slug and a stop area id hold a letter, so neither can take a numeric id. ARS stays display only (`arsId`, `arsIds`, `stationNumber`).
 
-Agreed with the session that owns the stop catalog, 2026-10-22; the TOPIS alias and the unlisted rule by the owner, 2026-10-24 (Q3 of [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md)).
+Agreed with the session that owns the stop catalog, 2026-10-22; the TOPIS alias and the unlisted rule by the owner, 2026-10-24 (Q3 of [7800-unified-arrivals-2026-10.md](../archive/7800-unified-arrivals-2026-10.md)).
 
 ### D6. One vehicle object per bus; two clocks on its position
 
@@ -128,7 +128,7 @@ Not chosen: a split from the registry's turnaround stop alone, which places the 
 
 ### D17. Seats left are the vehicle's, from GBIS, only while fresh
 
-Owner, 2026-10-24 ([7800 plan](../plans/7800-unified-arrivals.md), §3.3 and §5). TOPIS reports no load for 7800 (`reride_Num` is 0 on every row), but GBIS's location API counts each bus's free seats, and 7800 is a seated express bus a rider lets pass when it is full.
+Owner, 2026-10-24 ([7800 plan](../archive/7800-unified-arrivals-2026-10.md), §3.3 and §5). TOPIS reports no load for 7800 (`reride_Num` is 0 on every row), but GBIS's location API counts each bus's free seats, and 7800 is a seated express bus a rider lets pass when it is full.
 
 - A vehicle carries `seatsLeft`, an integer from 0, or null, right after `occupancy`. It is a key of its own: `occupancy` requires a crowding level, and a seat count is not one.
 - The source is GBIS `buslocationservice/v2/getBusLocationListv2` per route: each bus's `remainSeatCnt`, joined by `vehId`, which is the id TOPIS gives the same bus (13 of the 14 buses GBIS named on 2026-10-24 at 20:22 KST; the 14th stood at the 호매실 terminal with no TOPIS position). Its labels are not shifted, unlike `getBusArrivalItemv2`'s. A negative count, which GBIS's guide documents as no information, is null.

@@ -572,7 +572,7 @@ describe("BusStopIndexService.listStops", () => {
   });
 });
 
-// WHY: 7800 is unlisted (docs/plans/7800-unified-arrivals.md, section 6): until its poller stores its stations it is
+// WHY: 7800 is unlisted (docs/archive/7800-unified-arrivals-2026-10.md, section 6): until its poller stores its stations it is
 // not a failing route, and once stored it adds only the poles a local stop aliases.
 describe("BusStopIndexService with 7800 unlisted", () => {
   const SKKU_TO_SADANG = { id: "nsc-skku-to-sadang", name: { ko: "성균관대학교" }, coords: { lat: 37.297198, lng: 126.9710096 }, topisIds: ["200000162"], campus: "nsc" };

@@ -2,9 +2,8 @@
 /**
  * Write the committed campus shuttle timetable into bus_campus.bus_schedules.
  *
- * The timetable used to live only in MongoDB, and docs/project-docs.md still
- * shows an operator a hand-typed `db.bus_schedules.insertOne(...)` for it. That
- * is how the 2026-1 timetable survived into the 2026-2 semester unnoticed: no
+ * The timetable used to live only in MongoDB, written by a hand-typed
+ * `db.bus_schedules.insertOne(...)`. That is how the 2026-1 timetable survived into the 2026-2 semester unnoticed: no
  * file in the repo answered "what is prod supposed to be serving", so nothing
  * could disagree with it. scripts/data/campus-schedule.json is now that file,
  * and this script is the only thing that should write it.
