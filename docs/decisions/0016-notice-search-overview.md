@@ -3,7 +3,7 @@ title: Notice Search Overview — Hybrid Retrieval, Per-Replica State
 type: adr
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -29,11 +29,13 @@ Rejected: a `?overview=1` flag on the list (couples list latency to the LLM, and
 
 The overview cache, the pause after a `budget_exhausted` and the overview rate limit are per replica. Accepted: up to one ai call per replica for each distinct search; skkuverse-ai's token budget bounds the spend. Rejected: a Mongo-backed cache (database reads on the hot path) and Redis (new infrastructure).
 
+Amended 2026-10-26: the overview rate limit is the `notices-overview` class of `RATE_LIMIT_POLICY` ([ADR 0023](0023-perimeter-ports.md)); how production counts it is outside this repository. The cache and the budget pause stay per replica.
+
 Retrieval runs on every request, cache hits included, because the cache key holds the candidates' content hashes, so each request runs one `$rankFusion` with query-time embedding, bounded by the rate limit.
 
-### D3. A 24-second answer under the proxy's 30 seconds
+### D3. A 24-second answer
 
-Retrieval gets `RETRIEVAL_MAX_TIME_MS` (query-time embedding included) and the ai call `AI_TIMEOUT_MS`, so the answer lands under 24 s. The app waits about 25 s with no retry, and the upstream proxy times out at 30 s: a server timeout rises only after those two.
+Retrieval gets `RETRIEVAL_MAX_TIME_MS` (query-time embedding included) and the ai call `AI_TIMEOUT_MS`, so the answer lands under 24 s. The app waits about 25 s with no retry, and a timeout outside this repository bounds the request: a server timeout rises only after those two.
 
 ## Consequences
 

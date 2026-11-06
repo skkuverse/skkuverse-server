@@ -3,13 +3,13 @@ title: Transit Route Planner
 type: plan
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
 # Transit Route Planner
 
-> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-10-25: (a) to (g) are in production (PR #342), serving `journey-routes` revision 3's eight options; (h) is built and needs no dataset change.
+> How [ADR 0022](../decisions/0022-journey-and-call-spec.md) gets built: the PR sequence from the shared call to 길찾기's four options each way, the `journey-routes` dataset that makes a route a data push, how each source fills the call, the source doors and the planner over them, the `journey/` module, the PoC options leg by leg, and the subway coverage the options need. The ADR is the spec (the call, places, legs, options, producers, the owner's PoC decisions in D7); this file is the work. Status on 2026-11-06: (a) to (h) have landed on `main`, (a) to (g) in production since PR #342. What is left is the Scope's Out list, the HSSC door (`bus/departures/hssc/`) waiting for the HSSC first-mile option. The body below is kept as written: its "Today" column and the Subway coverage table describe the code before (b).
 
 ## Scope
 

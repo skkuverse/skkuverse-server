@@ -3,7 +3,7 @@ title: Bus Live API — One Arrival Shape for Every Source
 type: adr
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-25
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -136,6 +136,7 @@ Owner, 2026-10-24 ([7800 plan](../plans/7800-unified-arrivals.md), §3.3 and §5
 - Null is every Jongno and HSSC bus (no source), a 7800 bus GBIS did not name or said it does not know, and every 7800 bus with no fresh answer. A null never means full; `0` does.
 - The poller writes one `bus_seats` document per route and the api reads it ([ADR 0012](0012-runtime-roles.md)). It is not a `bus_cache` key: that collection's TTL index drops a key a minute after its write, sooner than the 90 s tick.
 - `capabilities.seats` on `/bus/config` (D2) comes when 7800 is listed there (the plan's PR 8 and Q2): `/bus/config` stays byte for byte until then, and while no listed route has seats, a client shows a seat count only where `seatsLeft` is a number.
+- Amended 2026-10-25 (owner): 7800 is never listed on `/bus/config` and the plan's PR 8 is cancelled, so `capabilities.seats` is not served; a client shows a seat count where `seatsLeft` is a number.
 - Additive: the key is new on the vehicle of the live route and the stop page, which clients parse key by key (D3) and whose published schemas allow other keys, so no version moves. Every key stays present (D2): it is null, not missing, where there is no source.
 
 Not chosen: polling every 30 s, which needs the operating account (the plan's Q7), and a join by plate, since the ids match.

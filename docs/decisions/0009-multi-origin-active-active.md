@@ -1,19 +1,19 @@
 ---
-title: Multiple Origins, Active-Active, Behind Cloudflare Load Balancing
+title: Multiple Origins, Active-Active
 type: adr
 status: deprecated
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
-# 0009. Multiple Origins, Active-Active, Behind Cloudflare Load Balancing
+# 0009. Multiple Origins, Active-Active
 
 > Withdrawn: a multi-origin setup was tried and removed. Production topology is kept outside this repository; a future scale-out starts from a new decision. What remains is the one constraint other decisions rely on.
 
 ## Status
 
-Deprecated.
+Deprecated. Its every-role seeding is superseded by [ADR 0012](0012-runtime-roles.md), D3.
 
 ## What still holds
 
