@@ -3,7 +3,7 @@ title: Subway API Reference
 type: reference
 status: draft
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -369,7 +369,7 @@ The median and the percentile are nearest-rank: the value at position ⌈p × n�
   The 2026-10-18 position rows and train-map pages named every added station as the topology does, and so did the 2026-10-25 12:23 and 12:27 KST ones for the stations 사당, 금정 and 종로5가 added. Line 1's position rows cover the Seoul Metro section the tracker now follows: those two captures put 1/1 rows at 회기, 2/0 at 청량리, 3/4 at 제기동, 4/2 at 신설동, 0/2 at 동묘앞, 2/0 at 동대문, 1/4 at 종로5가, 4/2 at 종각, 4/2 at 시청 and 2/2 at 서울, so a train unseen there has not entered the stretch.
 - **Event times.** An API row's time is taken as the moment the train's state changed. On line `1` that is still to be checked against the train map; the accuracy report measures it.
 - **Timetables** are the operators' published tables (the Korail xlsx files, line `1` revised 2026-08-28 (its 경부, 서동탄, 서울급행 and 경인 sheets) and line `K1` effective 2026-08-22, the Seoul timetable for lines `2`, `3`, `4` and `8`, Korail's line `4` section included, and the 신분당선 operator's station timetables, revision 2026-09-28, to the minute), mirrored by `scripts/subway-timetable/convert.py` into the `subway-timetables` dataset, which a push updates within a minute with no deploy. A train the day's timetable does not list is not served. A platform with no fresh arrival state whose table cannot be read answers `503` `SUBWAY_TIMETABLES_UNAVAILABLE`.
-- **Day type** follows the calendar: weekday, Saturday (lines `2`, `3`, `4` and `8`) or holiday, from the public holidays the holidays module syncs. An operator that runs another table on a substitute holiday is not detected.
+- **Day type** follows the calendar: weekday, Saturday (lines `2`, `3`, `4` and `8`) or holiday, from the public holidays the calendar module reads (`CalendarService`). An operator that runs another table on a substitute holiday is not detected.
 
 ## Related
 

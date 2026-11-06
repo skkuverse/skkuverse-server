@@ -3,7 +3,7 @@ title: 2026-10 Subway Late Express Drop-Out Postmortem
 type: explanation
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -32,7 +32,7 @@ audience: internal
 
 ## Timeline
 
-KST, from `subway_events` and `subway_predictions` in `bus_campus`.
+KST, from `subway_events` and `subway_predictions`.
 
 | Time | Event |
 | --- | --- |
@@ -59,7 +59,7 @@ All in `75a233f6`; the module doc's Glossary and Invariants carry the rules.
 | Change | What it does |
 | --- | --- |
 | Geumjeong (`KR-1-P149`) in the Korail timetables | `scripts/subway-timetable/convert.py` covers it and the two Korail tables were regenerated: every down express of the Gyeongbu sheets now starts its rows there (weekday `1945`, from the Seoul express sheet, has no Geumjeong row) |
-| Watched stations (`watchedStationIds`) | A station the tracker observes beyond the upstream ones; Geumjeong for the station's down direction. It joins the Seoul name table only: it is never a previous station and gives no stops away, so what the app renders is unchanged, and it costs no upstream call |
+| Watched stations (`watchedStationIds`, now `watchedPlatformIds`) | A station the tracker observes beyond the upstream ones; Geumjeong for the station's down direction. It joins the Seoul name table only: it is never a previous station and gives no stops away, so what the app renders is unchanged, and it costs no upstream call |
 | Longer hold before the station | A missing train not yet at the station keeps its history 15 min instead of 90 s (`MISSING_TRAIN_HOLD_MS`); the longest scheduled run between two row stops is 510 s, Geumjeong to the station by express. A train seen at or past the station keeps the 47 min hold, so it is never awaited again |
 | Awaited train (`isAwaitedTrain`) | On the tracker's path only, an overdue train with a row stop before the station and nothing seen of it at or past the station stays listed at now plus its scheduled run from its first row stop. It goes once its departure plus `MAX_DELAY_SEC` passes, or once a later train of the same kind (express or local) is seen at or past the station; a local can overtake a late express on the four-track section, so kinds are not compared across. The timetable-only document is unchanged |
 | Pass on the run into the station | Found by an existing test while adding Geumjeong: a pass of Uiwang by `1913`, whose first row stop became Geumjeong, read as its departure from Geumjeong and served it 5.5 min late. A pass on a train's run into its stop at the served station now stays its progress, timed from its passing stop |
