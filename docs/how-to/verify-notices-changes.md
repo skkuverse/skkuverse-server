@@ -1,56 +1,57 @@
 ---
-title: Notices 변경 검증하기
+title: Verify Notices Changes
 type: how-to
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-26
+last-updated: 2026-11-06
 audience: internal
 ---
 
-# Notices 변경 검증하기
+# Verify Notices Changes
 
-> `/notices/*` 관련 코드를 고친 뒤 머지·배포 전에 돌리는 검증 절차. 계약은 [reference/notices-api.md](../reference/notices-api.md) 참조.
+> The checks to run after changing `/notices/*` code, before merging and deploying it. The contract is [reference/notices-api.md](../reference/notices-api.md).
 
-## 사전 준비
+## Before you start
 
-- Local `.env` rendered with `npm run env:pull`. A missing required variable crashes the strict config ([decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)); the names are listed in `config/env.dev.keys`.
-- dev DB(`skku_notices_dev` 계열) 접근 가능.
+- A local `.env` with the names in `config/env.dev.keys` (`npm run env:pull` for maintainers). A missing required variable crashes the strict config ([decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)).
+- Access to the development notices database (`MONGO_NOTICES_DB_NAME` with the `_dev` suffix).
 
-## 정적 검증
+## Static checks
 
 ```bash
-npm run typecheck   # tsc --noEmit (src + test)
-npm run lint        # eslint + markdownlint (lint:md 체인)
-npm test            # jest — notices 스위트 포함
+npm run typecheck   # tsc over src/ and the tests
+npm run lint        # ESLint, then markdownlint
+npm test            # Jest, the notices suites included
 ```
 
-- The specs sit next to each flow under `src/notices/` (`tabs/`, `list/`, `detail/`, `overview/`, `attachment/`, `dispatch/`), the route tests in `__tests__/nest/notices/`. They pin the cursor round-trip for every stored date shape, `NoticesListCursorError`, the `summary: null` invariant and the sampled production documents (`notices-documents.routes.test.ts`).
-- coverage threshold는 `jest.config.js`가 SSOT.
+- The specs sit next to each flow under `src/notices/` (`tabs/`, `list/`, `detail/`, `overview/`, `attachment/`, `dispatch/`, `facts/`, `row/`, `screen/`, `legacy/`), the route tests in `__tests__/nest/notices/`. They pin the cursor round-trip for every stored date shape, `NoticesListCursorError` and the sampled production documents (`notices-documents.routes.test.ts`).
+- `jest.config.js` holds the coverage thresholds.
 
-## 런타임 스모크 (dev DB 대상)
+## Runtime smoke test (against the development database)
 
-서버 기동 후:
+With the server running (`npm run dev`):
 
-1. `GET /notices/tabs` — 9개 탭 + picker `sources` 반환, `Accept-Language` 로컬라이즈 확인.
-2. `GET /notices/source/<sourceId>?limit=2` → `nextCursor` 받기 → 같은 커서로 재요청 → 중복·스킵 없이 다음 페이지.
-3. `GET /notices/<sourceId>/<articleNo>` — `contentMarkdown` 존재, legacy `content`/`contentText`/`cleanHtml` **미노출**.
-4. 에러 경로: 없는 `articleNo` → 404, 없는 `sourceId` → 400(DB 호출 없이 즉시), 알 수 없는 `type` → 400, 깨진 `cursor` → 400.
-5. `If-None-Match`로 조건부 요청 → 304.
+1. `GET /notices/tabs`: every tab of `categories.json`, the picker tabs with their `sources`, labels in the `Accept-Language` language.
+2. `GET /notices/source/<sourceId>?limit=2`, then the same request with the returned `nextCursor`: the next page, with no row repeated or skipped.
+3. `GET /notices?sourceIds=<a>,<b>`: an article posted on both boards appears once, and paging with `nextCursor` never repeats it.
+4. `GET /notices/<sourceId>/<articleNo>`: `contentMarkdown` is there, and `content`, `contentText` and `cleanHtml` are not.
+5. Error paths: an unknown `articleNo` is 404; an unknown `sourceId` is 400 `INVALID_SOURCE_ID`, with no database call; an unknown `type` is 400; a broken `cursor` is 400 `INVALID_CURSOR`; a repeated `sourceIds` key is 400 `INVALID_PARAMS`.
+6. A repeat request with `If-None-Match` set to the returned `ETag` answers 304.
 
-## 인덱스 소유권 확인
+## Index ownership
 
-- Check in MongoDB that the server's read index `sourceId_1_date_-1__id_-1` exists. The server creates it at startup and hints every list query to it (`FORCE_INDEX` in `src/notices/list/notices-list.query.ts`), and a hint against a missing index fails the query.
-- 크롤러 소유 `articleNo_1_sourceId_1` unique 인덱스를 **건드리지 않았는지** — 서버는 이 인덱스에 손대면 안 된다 ([decisions/0002](../decisions/0002-notices-read-only-ownership.md)).
+- Check in MongoDB that the server's read indexes exist: `FORCE_INDEX` and `CLUSTER_INDEX` in `src/notices/list/notices-list.query.ts`. A polling role creates them at boot, and every list query is hinted to `FORCE_INDEX`, so a missing index fails the query.
+- Check that the change leaves the crawler's unique `articleNo_1_sourceId_1` index alone: the server never touches it ([decisions/0002](../decisions/0002-notices-read-only-ownership.md)).
 
-## dispatch 변경 시 추가 확인
+## Extra checks for a dispatch change
 
-`src/notices/dispatch/` (service, poller, internal controller)를 고쳤다면:
+After changing `src/notices/dispatch/` (service, poller, internal controller):
 
 - Call `POST /internal/notices/dispatch-pending`; it answers the sweep counts. Under `PERIMETER_MODE=local-dev` (what `npm run dev` sets) `INTERNAL_AUTHORIZER` allows every internal call. A local run sends nothing: `PUSH_DELIVERY` resolves to `suppressed` in development, so each push is logged as `push.delivery.suppressed` and the claimed `_dev` notices are marked `pushedAt` ([test-the-app-against-a-local-server.md](test-the-app-against-a-local-server.md)).
-- claim-lease 동시성: 같은 후보를 두 번 sweep해도 두 번 발송 안 됨 (lease 유효).
-- config 변경(dispatch 상수·FCM URL)이면 배포 전 pre-deploy dry-load가 잡는지 확인 ([decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)).
+- The claim lease holds: sweeping the same candidates twice sends each notice once.
+- A config change (the dispatch settings, `FCM_FUNCTION_URL`) is caught by the strict config at boot ([decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)).
 
-## 관련 문서
+## Related
 
-- [reference/notices-api.md](../reference/notices-api.md) — 엔드포인트 계약
-- [explanation/notices-architecture.md](../explanation/notices-architecture.md) — 왜 이렇게 검증하는가
+- [reference/notices-api.md](../reference/notices-api.md): the route contracts
+- [explanation/notices-architecture.md](../explanation/notices-architecture.md): the design behind these checks

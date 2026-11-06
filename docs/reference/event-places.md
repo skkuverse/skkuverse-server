@@ -3,7 +3,7 @@ title: Event Places — Storage, Authoring and Operations
 type: reference
 status: accepted
 owner: spencer0124
-last-updated: 2026-10-27
+last-updated: 2026-11-06
 audience: internal
 ---
 
@@ -54,6 +54,8 @@ interface MapPlaceDoc {
   fields: { label: I18n; value: I18n }[];    // ordered card rows
   actions: PlaceAction[];
   order: number;
+  facets?: Record<string, string[]>;         // tag facet options, by facet id — see §5
+  orderByOption?: Record<string, number>;    // per-option order — see §5
   detail?: PlaceDetailDoc | null;            // the sheet body — see §5.3
   updatedAt: Date;
 }
@@ -89,14 +91,14 @@ interface ActivationDoc {
 }
 ```
 
-This tier survived the snapshot deletion deliberately. The window could have moved into the config
-file, which would have made `activeLayerSet` pure and synchronous and deleted a fair amount of
-error-swallowing at the `/map/config` seam. Keeping it in Mongo is what buys a kill switch that does
-not need a deploy — see §6.2.
+This tier survived the snapshot deletion deliberately. The window could have moved into the layer set,
+which would have made the live-layer-set answer pure and deleted a fair amount of error-swallowing at
+the `/map/config` seam. Keeping it in its own collection is what buys a kill switch that needs neither
+a deploy nor a dataset push — see §6.2.
 
 ## 4. Indexes
 
-Three, created by `MapService.onModuleInit` (`src/map/map.repository.ts`):
+Three, created by `MapRepository` (`src/map/map.repository.ts`) through `ensureIndexesAtBoot`, on a polling role:
 
 | Index | Why |
 | --- | --- |
@@ -252,18 +254,11 @@ A bad detail rejects its whole place, the same verdict every other field gets.
 
 - **Put the first `table` first when it is the point.** The app lifts the first table into the
   collapsed card and uses the first `image` as its hero, so a truck opens on its menu.
-- **Photos live in the R2 media bucket**, `skkuverse-media`, served at `https://media.skkuverse.com`.
-  The reader checks only the URL's text and never fetches it, so **upload before you import** — an
-  imported key with no object behind it is a blank image on every phone. Keys carry a hash of the
-  content (`<layerSetId>/<purpose>/<placeId>/<nn>-<sha256[:8]>.jpg`) and are uploaded with
-  `Cache-Control: public, max-age=31536000, immutable`, so an object is **never overwritten**: a
-  replaced photo is a new key, a new URL, and no device or edge ever holds a stale copy.
-
-  ```bash
-  npx wrangler@4 r2 object put skkuverse-media/<key> --file <photo.jpg> --remote \
-    --content-type image/jpeg --cache-control "public, max-age=31536000, immutable"
-  curl -sI https://media.skkuverse.com/<key>   # 200, image/jpeg
-  ```
+- **Photos are served from the media origin** (`MEDIA_ORIGIN`). The reader checks only the URL's
+  text and never fetches it, so **upload before you import** (the upload happens outside this
+  repository) — an imported key with no object behind it is a blank image on every phone. Keys carry
+  a hash of the content (`<layerSetId>/<purpose>/<placeId>/<nn>-<sha256[:8]>.jpg`), so a replaced
+  photo is a new key and a new URL, never an overwrite, and no device holds a stale copy.
 
 ### 5.1 The old keys fail loudly
 
@@ -308,33 +303,6 @@ missing booths are invisible and the ones that made it look authoritative.
 `--delete-missing` really deletes — there is no `lifecycle: "retired"` to fall back on. It is opt-in
 because a truncated sheet plus an automatic delete is how a festival disappears mid-afternoon.
 
-The first import after `detail` shipped reports **every** place as updated, once: the stored documents
-have no `detail` key and the reader now writes `null`. That is the only time an unchanged sheet
-rewrites `updatedAt`.
-
-### 6.1.1 The one-time cutover from the pre-collapse schema
-
-**`--delete-missing` is mandatory the first time, and `sessions`/`snapshots` have to go with it.**
-
-The old `places` documents carry the same `layerSetId` and are keyed `nsc-*`, while the reader now
-emits `<layerSetId>-*` ids — so an ordinary import does not overwrite them, it sits beside them. They
-have `name` where the projection reads `title` and no `hours` at all. The place read skips them and
-logs a count, so the map still serves; but 62 skipped places with nothing drawn is not a state to
-leave production in.
-
-```bash
-NODE_ENV=production npm run eventmap:import -- --file <sheet> --dry-run       # lists them as orphans
-NODE_ENV=production npm run eventmap:import -- --file <sheet> --delete-missing
-```
-
-Then drop the two collections the snapshot tier left behind, which nothing reads and no index
-covers:
-
-```javascript
-db.sessions.drop()
-db.snapshots.drop()
-```
-
 ### 6.2 The window — and the kill switch
 
 `scripts/eventmap-window.js` is the only lever that decides whether anybody sees the event map.
@@ -348,8 +316,7 @@ npm run eventmap -- close --prod
 **`--prod`, not `NODE_ENV`.** Every other script here resolves its database from `NODE_ENV`, which is
 right for an importer: the dangerous direction is the one you have to type. It is the wrong mechanism
 here, because an env var is silently lost the moment a command is pasted across two lines, and the
-failure is invisible — a cheerful success against a database nobody meant to touch. That happened on
-the first real run. Omit the flag and the target is `<name>_dev`, printed on its own line either way.
+failure is invisible — a cheerful success against a database nobody meant to touch. Omit the flag and the target is `<name>_dev`, printed on its own line either way.
 
 `open` defaults to **15 minutes**, not open-ended: a rehearsal is the common case and a forgotten
 `enabled: true` is the expensive mistake, so `activeUntil` is a dead man's switch. A real festival
@@ -377,17 +344,10 @@ fetched can linger on a device for up to a minute. **Rehearse before the festiva
 
 ### 6.3 Staging before the window opens
 
-Import at any time. `/map/config` advertises no festival layers and `/map/overlays/event` returns `[]`
+Import at any time. `/map/config` advertises no festival layers and `/map/overlays/event` serves no overlay
 until `activeFrom`, so content can sit on production with zero exposure.
 
-### 6.4 When the database refuses with `SSL alert number 80`
-
-A connection accepted and then dropped before the handshake completes is the database refusing the
-source address, not a client TLS fault. If the network synthesizes IPv6 addresses for IPv4-only hosts
-(NAT64), the connection may leave from an address other than the one you expect; prefix the command
-with `NODE_OPTIONS=--dns-result-order=ipv4first`, which both npm scripts already carry.
-
-### 6.5 Replaying a past festival on `_dev`
+### 6.4 Replaying a past festival on `_dev`
 
 ```bash
 npm run eventmap:revive-dev                    # sync _dev to the sheet, open a 240-minute dev window
@@ -398,9 +358,8 @@ npm run eventmap -- close                      # end it early (no --prod: _dev)
 It refuses `NODE_ENV=production` and `--prod`, and runs both steps with `NODE_ENV=development`. Only a
 local server reads `_dev`, so point a dev build at it (`EXPO_PUBLIC_BASE_URL`,
 [test-the-app-against-a-local-server.md](../how-to/test-the-app-against-a-local-server.md)); beta and
-TestFlight builds call production. The campus banners are a committed file: reverse-apply their
-takedown commit on a local checkout to see them too. The home layout is the `home-layout` dataset
-since 2026-10-19: push the festival layout to `_dev` with `npm run data`
+TestFlight builds call production. The campus banners and the home layout are the `campus-banners`
+and `home-layout` datasets: push the festival versions to `_dev` with `npm run data`
 ([configure-home.md](../how-to/configure-home.md)).
 
 ## 7. Source of truth (file map)

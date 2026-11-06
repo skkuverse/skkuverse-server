@@ -1,24 +1,24 @@
 ---
 title: Migrate the App to Map Overlays
 type: how-to
-status: accepted
+status: deprecated
 owner: spencer0124
-last-updated: 2026-08-31
+last-updated: 2026-11-06
 audience: internal
 ---
 
 # Migrate the App to Map Overlays
 
-> The client half of the overlay change, for whoever works in `skkuverse-app`. The server side is deployed and this break is live, so read [Urgency](#urgency) first. Full wire contract: [reference/map-overlays-api.md](../reference/map-overlays-api.md).
+> The client half of the overlay change, for whoever works in `skkuverse-app`. Full wire contract, the current source of truth: [reference/map-overlays-api.md](../reference/map-overlays-api.md).
 
-## Urgency
+## Status
 
-**This is already in production and the shipped app is broken by it.** The
-marker routes return 404, so `parseMarkerData` reads an absent `data.markers`,
-coalesces to `[]`, and the map draws nothing — no building pins, no booths. A
-festival activation was open at deploy time, so this is user-visible now.
-
-Ships JS-only over OTA, so adoption is not gated on a store release.
+**Done in the app.** The current app parses `data.overlays` per `kind`
+(`apps/mobile/src/features/map/overlay.schema.ts`), reverses polygon rings in one
+adapter (`components/canvas/overlay-geometry.rules.ts`), and its
+`DEFAULT_MAP_CONFIG` points both building layers at `/map/overlays/campus`. The
+steps below record what the change took; the names they cite (`parseMarkerData`,
+`LAYER_TYPES`, `MapPolylineLayer` and the rest) are the app's names before it.
 
 ## What changed
 
