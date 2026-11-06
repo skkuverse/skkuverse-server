@@ -22,9 +22,9 @@
 # the api reads the datasets from (docs/decisions/0013-runtime-data-in-mongodb.md).
 # A new database must be
 # added here too: env_file .env injects the production names, and one left out
-# is read or written in production. eventmap was in exactly that state once
-# (skkuverse#14). __tests__/nest/infra/replica-topology.test.ts fails while a
-# database name in src/infra/required-env.ts has no override in either block.
+# is read or written in production. __tests__/nest/infra/replica-topology.test.ts
+# fails while a database name in src/infra/required-env.ts has no override in
+# either block.
 #
 # Side effects (src/infra/runtime-switches.ts):
 #   - PUSH_DELIVERY=suppressed: every push — the notices sweep, POST
@@ -36,9 +36,9 @@
 #   - SUBWAY=off: no Seoul subway API call or train-map crawl, which share a
 #     daily quota with production.
 #   - REGIONAL_BUS=off: no TOPIS call for the regional routes (7800), whose
-#     daily quota production shares, leaving 6,752 arrival calls a day.
-#   - GBIS=off: no GBIS call for 7800's seats, whose 1,000-call daily quota
-#     production spends most of.
+#     daily quota production shares.
+#   - GBIS=off: no GBIS call for 7800's seats, whose daily quota production
+#     spends most of.
 #   - NOTICE_OVERVIEW=off on the api replicas: no skkuverse-ai call for a
 #     notice search overview, each one a paid LLM call.
 #   - DISPATCH_SWEEP_ENABLED=false on the poller: the base file sets it true;

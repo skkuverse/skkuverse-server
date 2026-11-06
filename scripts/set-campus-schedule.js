@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 /**
- * Write the committed campus shuttle timetable into bus_campus.bus_schedules.
+ * Write a committed shuttle timetable file into bus_campus.bus_schedules.
  *
- * The timetable used to live only in MongoDB, written by a hand-typed
- * `db.bus_schedules.insertOne(...)`. That is how the 2026-1 timetable survived into the 2026-2 semester unnoticed: no
- * file in the repo answered "what is prod supposed to be serving", so nothing
- * could disagree with it. scripts/data/campus-schedule.json is now that file,
- * and this script is the only thing that should write it.
+ * The committed files are the only source of bus_schedules, and this script is
+ * their only writer. A pattern written by hand in mongosh leaves the database
+ * disagreeing with the repository, and nothing reports it.
  *
  * Usage:
  *   node scripts/set-campus-schedule.js --dry-run   # print the diff, write nothing

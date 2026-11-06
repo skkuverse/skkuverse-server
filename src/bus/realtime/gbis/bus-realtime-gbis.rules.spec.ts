@@ -1,6 +1,6 @@
 /**
  * The GBIS seat rules: the poller calls only inside 7800's service window, 04:50 to 02:30 KST every day, so the
- * 1,000-call daily quota holds; a cached answer is served for at most 200 s after this server fetched it; a negative
+ * daily quota holds; a cached answer is served for at most 200 s after this server fetched it; a negative
  * remainSeatCnt is no information, never a seat count; resultCode 4 is GBIS's "no result"; and a data.go.kr refusal
  * of the key's spent daily quota is told apart, in the gateway's XML or JSON envelope; and any gateway refusal is read as
  * its returnReasonCode and message, errMsg unless it is the generic SERVICE ERROR, else returnAuthMsg.
