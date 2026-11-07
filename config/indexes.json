@@ -1,0 +1,253 @@
+{
+  "MONGO_BUILDING_DB_NAME": {
+    "campus_shapes": [
+      {
+        "name": "geometry_2dsphere",
+        "key": {
+          "geometry": "2dsphere"
+        }
+      },
+      {
+        "name": "order_1__id_1",
+        "key": {
+          "order": 1,
+          "_id": 1
+        }
+      }
+    ],
+    "connections": [
+      {
+        "name": "a.skkuId_1",
+        "key": {
+          "a.skkuId": 1
+        }
+      },
+      {
+        "name": "b.skkuId_1",
+        "key": {
+          "b.skkuId": 1
+        }
+      }
+    ],
+    "facilities": [
+      {
+        "name": "buildNo_1",
+        "key": {
+          "buildNo": 1
+        }
+      }
+    ],
+    "spaces": [
+      {
+        "name": "buildNo_1",
+        "key": {
+          "buildNo": 1
+        }
+      }
+    ]
+  },
+  "MONGO_DB_NAME_BUS_CAMPUS": {
+    "bus_cache": [
+      {
+        "name": "ttl_updatedAt",
+        "key": {
+          "_updatedAt": 1
+        },
+        "expireAfterSeconds": 60
+      }
+    ],
+    "bus_lane_spans": [
+      {
+        "name": "expiresAt_ttl",
+        "key": {
+          "expiresAt": 1
+        },
+        "expireAfterSeconds": 0
+      }
+    ],
+    "bus_overrides": [
+      {
+        "name": "serviceId_1_date_1",
+        "key": {
+          "serviceId": 1,
+          "date": 1
+        },
+        "unique": true
+      }
+    ],
+    "bus_schedules": [
+      {
+        "name": "serviceId_1_patternId_1",
+        "key": {
+          "serviceId": 1,
+          "patternId": 1
+        },
+        "unique": true
+      }
+    ],
+    "hssc_feed_events": [
+      {
+        "name": "lineNo_seq_getDate_inout_unique",
+        "key": {
+          "lineNo": 1,
+          "seq": 1,
+          "getDate": 1,
+          "inout": 1
+        },
+        "unique": true
+      },
+      {
+        "name": "polledAt_ttl",
+        "key": {
+          "polledAt": 1
+        },
+        "expireAfterSeconds": 15552000
+      }
+    ],
+    "perimeter_counters": [
+      {
+        "name": "perimeter_counters_ttl",
+        "key": {
+          "expiresAt": 1
+        },
+        "expireAfterSeconds": 0
+      }
+    ],
+    "shuttle_eta": [
+      {
+        "name": "expiresAt_ttl",
+        "key": {
+          "expiresAt": 1
+        },
+        "expireAfterSeconds": 0
+      },
+      {
+        "name": "serviceId_date_kind",
+        "key": {
+          "serviceId": 1,
+          "date": 1,
+          "kind": 1
+        }
+      }
+    ],
+    "subway_events": [
+      {
+        "name": "meta_1_at_1",
+        "key": {
+          "meta": 1,
+          "at": 1
+        }
+      }
+    ],
+    "subway_predictions": [
+      {
+        "name": "made_at_ttl",
+        "key": {
+          "madeAt": 1
+        },
+        "expireAfterSeconds": 15552000
+      },
+      {
+        "name": "open_predicted_at",
+        "key": {
+          "predictedAt": 1
+        },
+        "partialFilterExpression": {
+          "status": "open"
+        }
+      },
+      {
+        "name": "prediction_key",
+        "key": {
+          "serviceDate": 1,
+          "trainNo": 1,
+          "stationId": 1,
+          "horizonMin": 1
+        },
+        "unique": true
+      }
+    ]
+  },
+  "MONGO_EVENTMAP_DB_NAME": {
+    "activations": [
+      {
+        "name": "enabled_1_activeFrom_-1",
+        "key": {
+          "enabled": 1,
+          "activeFrom": -1
+        }
+      }
+    ],
+    "places": [
+      {
+        "name": "layerSetId_1",
+        "key": {
+          "layerSetId": 1
+        }
+      },
+      {
+        "name": "location_2dsphere",
+        "key": {
+          "location": "2dsphere"
+        }
+      }
+    ]
+  },
+  "MONGO_MINIAPPS_DB_NAME": {
+    "sent_notifications": [
+      {
+        "name": "miniAppId_1_sentAt_-1",
+        "key": {
+          "miniAppId": 1,
+          "sentAt": -1
+        }
+      },
+      {
+        "name": "miniAppId_idempotencyKey_unique",
+        "key": {
+          "miniAppId": 1,
+          "idempotencyKey": 1
+        },
+        "partialFilterExpression": {
+          "idempotencyKey": {
+            "$type": "string"
+          }
+        },
+        "unique": true
+      }
+    ]
+  },
+  "MONGO_NOTICES_DB_NAME": {
+    "notices": [
+      {
+        "name": "dispatch_pending_facts_idx",
+        "key": {
+          "date": -1,
+          "_id": -1
+        },
+        "partialFilterExpression": {
+          "pushedAt": null,
+          "factsAt": {
+            "$type": "date"
+          }
+        }
+      },
+      {
+        "name": "dupOf_1_sourceId_1__id_1",
+        "key": {
+          "dupOf": 1,
+          "sourceId": 1,
+          "_id": 1
+        }
+      },
+      {
+        "name": "sourceId_1_date_-1__id_-1",
+        "key": {
+          "sourceId": 1,
+          "date": -1,
+          "_id": -1
+        }
+      }
+    ]
+  }
+}
