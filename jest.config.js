@@ -12,6 +12,9 @@ const HAS_OVERLAY = fs.existsSync(path.join(__dirname, "src/private/perimeter.ov
 
 module.exports = {
   testEnvironment: "node",
+  // EVIDENCE: on a machine short of memory a single mongod round trip in a beforeEach or a test outran Jest's 5 s
+  // default (2026-11-07); 30 s matches MONGOD_START_TIMEOUT_MS in __tests__/helpers/mongod.ts.
+  testTimeout: 30_000,
   moduleNameMapper: HAS_OVERLAY ? {} : { "^.*/src/private/perimeter\\.overlay$": "<rootDir>/__tests__/helpers/perimeter/stand-in.overlay.ts" },
   setupFiles: ["<rootDir>/__tests__/helpers/esm-flag-guard.ts", "<rootDir>/__tests__/helpers/network-guard.ts", "<rootDir>/jest.setup.ts"],
   // ts-jest only transpiles. Type checking is the job of `npm run typecheck`
